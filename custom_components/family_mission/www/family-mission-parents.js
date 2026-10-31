@@ -1818,7 +1818,7 @@ class FamilyMissionParents extends HTMLElement {
       .dialog { left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 32px)); border-radius: 16px; border-top: 6px solid var(--kc); }
       .dialog p { margin: 0 0 8px; font-size: 15px; }
       .dialog ul { margin: 0 0 12px; padding-left: 20px; font-size: 15px; font-weight: 600; }
-      .sheet { left: 0; right: 0; bottom: 0; border-radius: 20px 20px 0 0; border-top: 6px solid var(--kc); max-height: 90vh; overflow: auto; }
+      .sheet { left: 0; right: 0; bottom: 0; border-radius: 20px 20px 0 0; border-top: 6px solid var(--kc); max-height: 90vh; overflow: auto; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
       .grab { width: 40px; height: 4px; border-radius: 2px; background: var(--p-line); margin: -8px auto 12px; }
       .amount { font-size: 44px; font-weight: 900; text-align: center; margin: 0 0 8px; }
       .amount.plus { color: var(--p-ok); } .amount.minus { color: var(--p-danger); }
@@ -1828,7 +1828,7 @@ class FamilyMissionParents extends HTMLElement {
       #reason-input { width: 100%; height: 48px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--p-line); background: var(--primary-background-color, #fafafa); color: var(--primary-text-color); font-size: 16px; font-family: inherit; margin-bottom: 14px; }
       .dialog-actions { display: flex; gap: 10px; justify-content: flex-end; }
       .dialog-actions .btn { flex: 1; }
-      #toast { position: fixed; left: 50%; top: 16px; transform: translate(-50%, -20px); z-index: 1000; max-width: calc(100vw - 32px); padding: 12px 20px; border-radius: 24px; background: #263238; color: #fff; font-size: 15px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
+      #toast { position: fixed; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -20px); z-index: 1000; max-width: calc(100vw - 32px); padding: 12px 20px; border-radius: 24px; background: #263238; color: #fff; font-size: 15px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; }
       #toast.show { opacity: 1; transform: translate(-50%, 0); }
 
       .tabs { display: flex; gap: 4px; padding: 4px; margin-bottom: 14px; border-radius: 14px; background: var(--secondary-background-color, #f0f0f0); }

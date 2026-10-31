@@ -712,6 +712,7 @@ class FamilyMissionHelp extends HTMLElement {
         <div class="scroll">
           <nav class="toc" aria-label="${escHelp(c.toc)}"><div class="toc-title">${escHelp(c.toc)}</div><div class="toc-list">${toc}</div></nav>
           <div id="list"></div>
+          ${overlay ? `<button class="close-bottom" data-action="close">✕ ${escHelp(c.close)}</button>` : ''}
         </div>
       </section>`;
     this._renderList();
@@ -730,6 +731,10 @@ class FamilyMissionHelp extends HTMLElement {
       .scrim { position: absolute; inset: 0; background: rgba(0,0,0,0.55); }
       .panel { position: relative; display: flex; flex-direction: column; background: var(--h-bg); color: var(--h-text); width: 100%; min-height: 0; border-radius: var(--ha-card-border-radius, 12px); }
       :host([overlay]) .panel { border-radius: 0; height: 100%; }
+      /* Phones with a notch / status bar (HA uses viewport-fit=cover): keep the close button reachable */
+      :host([overlay]) .head { padding-top: calc(16px + env(safe-area-inset-top, 0px)); padding-left: calc(16px + env(safe-area-inset-left, 0px)); padding-right: calc(16px + env(safe-area-inset-right, 0px)); }
+      :host([overlay]) .scroll { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+      .close-bottom { display: block; width: 100%; margin: 20px 0 8px; height: 52px; border-radius: 14px; border: 1px solid var(--h-line); background: var(--h-soft); color: var(--h-text); font-size: 17px; font-weight: 600; font-family: inherit; cursor: pointer; }
       .head { flex: none; padding: 16px 16px 10px; border-bottom: 1px solid var(--h-line); background: var(--h-bg); border-radius: inherit; }
       .head-row { display: flex; align-items: flex-start; gap: 12px; }
       .head-text { flex: 1; min-width: 0; }

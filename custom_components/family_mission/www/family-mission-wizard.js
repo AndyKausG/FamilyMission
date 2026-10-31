@@ -956,7 +956,7 @@ class FamilyMissionWizard extends HTMLElement {
       .busy { opacity: 0.55; transition: opacity 0.15s; }
       @media (max-width: 600px) {
         .overlay { align-items: stretch; }
-        .wz { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; }
+        .wz { width: 100vw; height: 100vh; height: 100dvh; border-radius: 0; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
         .head { padding: 10px 12px; } .head h2 { font-size: 16px; }
         .steps { display: none; } .stepline { display: block; } .bar { display: block; }
         .body { padding: 12px; } .foot { padding: 10px 12px; } .foot .btn { flex: 1; padding: 0 10px; }
