@@ -1,6 +1,6 @@
 reset_monthly_points:
   name: Reset monthly points
-  description: Manually resets all roommate points to 0 and archives the month.
+  description: Manually resets all kids' points to 0 and archives the month.
   
 complete_task_by_name:
   name: Complete task

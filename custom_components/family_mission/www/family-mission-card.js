@@ -637,11 +637,6 @@ class FamilyMissionCard extends HTMLElement {
     let html = '';
     const pointStepPct = (0.5 / (task.complexity || 5)) * 100;
 
-    // Render spider chart container only for 3+ users
-    if (uids.length > 2) {
-        html += `<div id="spider-container" style="display:flex; justify-content:center; margin-bottom: 0px;"></div>`;
-    }
-
     // Distribute Fairly Button (Right-aligned closer to the diagram)
     html += `
         <div style="display:flex; justify-content:flex-end; margin-top: -10px; margin-bottom: 8px;">
@@ -668,102 +663,10 @@ class FamilyMissionCard extends HTMLElement {
 
     container.innerHTML = html;
 
-    // Only initialize the spider chart if more than 2 users are involved
-    if (uids.length > 2) {
-        this._renderSpiderChart();
-    }
     // Attach input listeners for individual user sliders
     this.shadowRoot.querySelectorAll('.user-dist-slider').forEach(slider => {
         slider.addEventListener('input', (e) => this._handleUserSliderChange(e.target.dataset.uid, parseFloat(e.target.value)));
     });
-  }
-
-  /**
-   * Renders a spider chart for 3+ users.
-   */
-  _renderSpiderChart() {
-    const container = this.shadowRoot.getElementById('spider-container');
-    if (!container) return;
-    
-    const uids = this._activeUids || [];
-    const n = uids.length;
-    if (n < 3) return;
-
-    const svgWidth = 200;
-    const svgHeight = 200;
-    const cx = svgWidth / 2, cy = svgHeight / 2;
-    const r = 80; 
-
-    const angleOffset = -Math.PI / 2;
-    const vertices = uids.map((_, i) => ({
-        x: cx + r * Math.cos(2 * Math.PI * i / n + angleOffset),
-        y: cy + r * Math.sin(2 * Math.PI * i / n + angleOffset)
-    }));
-
-    // Current position of the handle based on current distribution
-    let hx = cx, hy = cy;
-    const currentUserId = this._hass.user?.id;
-    if (this._distribution[currentUserId] === 100) {
-        const idx = uids.indexOf(currentUserId);
-        hx = vertices[idx].x; hy = vertices[idx].y;
-    }
-
-    const polyPath = vertices.map(v => `${v.x},${v.y}`).join(' ');
-
-    container.innerHTML = ` 
-        <svg width="${svgWidth}" height="${svgHeight}" style="overflow:visible; cursor:crosshair;" id="spider-svg">
-            <polygon points="${polyPath}" fill="var(--secondary-background-color)" stroke="var(--divider-color)" stroke-width="1" />
-            ${vertices.map((v, i) => {
-                const anchor = "middle";
-                const dx = 0;
-                const dy = v.y < cy ? -10 : 20;
-                const name = this.users[uids[i]].split(' ')[0];
-
-                return `
-                    <line x1="${cx}" y1="${cy}" x2="${v.x}" y2="${v.y}" stroke="var(--divider-color)" stroke-dasharray="2" />
-                    <text x="${v.x}" y="${v.y}" dx="${dx}" dy="${dy}" text-anchor="${anchor}" font-size="10" fill="var(--primary-text-color)">${name}</text>
-                    <circle cx="${v.x}" cy="${v.y}" r="3" fill="var(--divider-color)" />
-                `;
-            }).join('')}
-            <circle id="spider-handle" cx="${hx}" cy="${hy}" r="8" fill="var(--primary-color)" stroke="white" stroke-width="2" style="cursor:grab; shadow: 0 2px 4px rgba(0,0,0,0.3);" />
-        </svg>
-    `;
-
-    const svg = this.shadowRoot.getElementById('spider-svg');
-    const handle = this.shadowRoot.getElementById('spider-handle');
-
-    // Ensure svg and handle exist before attaching listeners
-    if (!svg || !handle) return;
-
-    const update = (e) => {
-        const rect = svg.getBoundingClientRect();
-        const x = (e.clientX || e.touches[0].clientX) - rect.left;
-        const y = (e.clientY || e.touches[0].clientY) - rect.top;
-
-        handle.setAttribute('cx', x);
-        handle.setAttribute('cy', y);
-
-        let totalWeight = 0;
-        const rawWeights = {};
-        uids.forEach((uid, i) => {
-            const d = Math.sqrt((x - vertices[i].x)**2 + (y - vertices[i].y)**2);
-            rawWeights[uid] = Math.pow(Math.max(0, (2 * r) - d), 3);
-            totalWeight += rawWeights[uid];
-        });
-
-        uids.forEach(uid => {
-            this._distribution[uid] = (rawWeights[uid] / totalWeight) * 100;
-        });
-
-        this._normalizeDistribution();
-        this._updateDistributionUI();
-    };
-
-    const onMove = (e) => { if (e.buttons > 0 || e.type === 'touchmove') update(e); };
-    svg.addEventListener('mousedown', update);
-    svg.addEventListener('mousemove', onMove);
-    svg.addEventListener('touchstart', update);
-    svg.addEventListener('touchmove', onMove);
   }
 
   /**
@@ -862,7 +765,6 @@ class FamilyMissionCard extends HTMLElement {
     }
   this._normalizeDistribution();
     this._updateDistributionUI();
-    this._updateSpiderHandlePosition(); // Update spider handle after preset
   }
 
   /**
@@ -896,7 +798,6 @@ class FamilyMissionCard extends HTMLElement {
 
     this._normalizeDistribution(changedUid); // Lock the slider the user is touching
     this._updateDistributionUI();
-    this._updateSpiderHandlePosition(); // Update spider handle after slider change
   }
 
   /**
@@ -932,48 +833,6 @@ class FamilyMissionCard extends HTMLElement {
         console.error("FamilyMission: Fehler beim Abschließen der Aufgabe", err);
         this._showToast("Fehler: " + (err.message || "Unbekannter Fehler beim Abschließen"));
       });
-  }
-
-  /**
-   * Updates the position of the spider chart handle based on the current distribution.
-   * This is called after preset buttons or individual sliders are used.
-   */
-  _updateSpiderHandlePosition() {
-    const uids = this._activeUids || [];
-    const n = uids.length;
-    if (n < 3) return;
-
-    const svg = this.shadowRoot.getElementById('spider-svg');
-    const handle = this.shadowRoot.getElementById('spider-handle');
-    if (!svg || !handle) return;
-
-    const svgWidth = 200;
-    const svgHeight = 200;
-    const cx = svgWidth / 2, cy = svgHeight / 2;
-    const r = 80; 
-
-    const angleOffset = -Math.PI / 2;
-    const vertices = uids.map((_, i) => ({
-        x: cx + r * Math.cos(2 * Math.PI * i / n + angleOffset),
-        y: cy + r * Math.sin(2 * Math.PI * i / n + angleOffset)
-    }));
-
-    let weightedX = 0;
-    let weightedY = 0;
-    let totalWeight = 0;
-
-    uids.forEach((uid, i) => {
-        const weight = this._distribution[uid] / 100; // Use current percentage as weight
-        weightedX += vertices[i].x * weight;
-        weightedY += vertices[i].y * weight;
-        totalWeight += weight;
-    });
-
-    let finalCx = weightedX / totalWeight;
-    let finalCy = weightedY / totalWeight;
-
-    handle.setAttribute('cx', finalCx);
-    handle.setAttribute('cy', finalCy);
   }
 
   /**

@@ -14,9 +14,10 @@ How to make FamilyMission work well at home
 6. [Choosing rewards well](#rewards)
 7. [Praising](#praise)
 8. [Monthly goals, family rocket, ring above 100 %](#goals)
-9. [Phasing out](#fade)
-10. [Frequent questions / problems](#faq)
-11. [About FamilyMission](#about)
+9. [We parents: parent tasks and the parents hub](#parents)
+10. [Phasing out](#fade)
+11. [Frequent questions / problems](#faq)
+12. [About FamilyMission](#about)
 
 <a id="basics"></a>
 
@@ -38,7 +39,7 @@ The effect depends mostly on you as parents: **consistent** (the rules apply eve
 
 - **Kid profiles + PIN:** settings card, Kids section: enable the person as a kid, pick an avatar and colour, enter the birth year (or birthday) and a 4-digit secret number. The PIN stops siblings from ticking things off for each other.
 - **Parent role:** in the same section you decide who may approve, praise and give points. That keeps the wall tablet harmless for kids.
-- **Quick start:** the 🚀 Kids mode quick start button proposes age-appropriate tasks, points and goals and creates everything with one click. Five steps, also on a phone.
+- **Quick start:** the 🚀 Kids mode quick start button proposes age-appropriate tasks, points and goals and creates everything with one click. Six steps (the “We parents” step is optional), also on a phone.
 - **Tablet dashboard (kiosk):** the kids card in full screen on a wall tablet (for example with Fully Kiosk Browser, landscape). Kids tap their tile, enter the PIN and see their missions.
 - **Own devices (`mode: mine`):** with `mode: mine` the card shows the tasks of the logged-in person right away, without tiles and PIN. Ideal for the phone or tablet of an older child.
 - **Bonus triggers:** a bonus can open by itself, for example when the dishwasher has finished (settings card, Bonus triggers section). The tablet can announce it by voice.
@@ -131,9 +132,29 @@ The **❤️ Praise** button complements the personal word, it does not replace 
 
 > 💡 Set the goal so that a child with normal effort reaches about 75 % of the maximum. That keeps it reachable without every day having to be perfect.
 
+<a id="parents"></a>
+
+## 9. 👪 We parents: parent tasks and the parents hub
+
+The adults' housework is work too, and often invisible. **We parents** makes it visible and shares it fairly: no points, no ranking, no blame. Set it up once, then just tick it off.
+
+- **Parents hub:** the parents card has three tabs: **Today** (approvals and your parent tasks), **Kids** and **More** (settings, Sunday summary, history).
+- **Setting up:** the quick start has an optional **We parents** step. Pick from a list of templates such as dinner, meal plan, shopping, bathrooms, finances or check-ups. A small selection is already ticked.
+- **Me / You / Take turns:** for each task you decide who is responsible. With “Take turns” the task passes to the other person after every completion, without anyone keeping score.
+- **No points:** parent tasks have no points, no balance and no goals. All that counts is done or not done.
+- **Quiet carry-over:** whatever is left today quietly moves to tomorrow. No red, no “overdue”, no reminder, no blame.
+- **🧠 Planning:** meal plan, shopping list or calendar check are thinking work (mental load). Only these get a gentle reminder the evening before (“Tomorrow: meal plan, about 20 min.”). Set the time in the settings, section We parents.
+- **Can you?:** if today does not work, ask your partner with one tap. They receive a message with “I'll do it” or “Can't”. If they take it, that applies to this one time only.
+- **Sunday summary:** on Sunday evening a neutral note arrives: how many hours each person did this week and what was left over. It judges nothing, it only makes talking easier. It can be switched off in the settings.
+- **Role-model band:** the kids tablet shows a quiet line such as “Mom and Dad also have 3 missions today”, with progress dots and no points. Kids see that everybody pitches in. The band and its wording are configurable.
+- **Own device:** with `mode: mine` your own parent tasks (no points, with duration) appear on your own phone and can be ticked off there.
+
+> 💡 Start small: five to eight tasks are enough. Leave out whatever does not fit. There are no required fields.
+
+
 <a id="fade"></a>
 
-## 9. 🌿 Phasing out
+## 10. 🌿 Phasing out
 
 The aim is **habit, not collecting points**. When a routine has run stably for 4 weeks, lead it step by step away from the reward:
 
@@ -147,7 +168,7 @@ Pass the attention that frees up to a new habit, but only one at a time (see ram
 
 <a id="faq"></a>
 
-## 10. ❓ Frequent questions / problems
+## 11. ❓ Frequent questions / problems
 
 - **My child ticks everything off without doing it.** Turn on approval or spot checks for those tasks and take a quick look. Talk about it honestly. Use “Cheated” only for deliberate cheating, calmly and with a conversation. Visible steps (for example “bed made”) make checking easier.
 - **Arguments about the bonus.** Whoever taps “Take it” has priority for a few minutes. You can allow “Together” for tasks, give a spontaneous bonus to one specific kid, or set a minimum age.
@@ -158,7 +179,7 @@ Pass the attention that frees up to a new habit, but only one at a time (see ram
 
 <a id="about"></a>
 
-## 11. ℹ️ About FamilyMission
+## 12. ℹ️ About FamilyMission
 
 FamilyMission is based on **TaskOrganizer** by Patrick von Wiegen (MIT license) and continued by AndyKausG as a project of its own: https://github.com/AndyKausG/FamilyMission
 

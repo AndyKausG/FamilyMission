@@ -29,6 +29,8 @@ const I18N_KIDS = {
     adult_bonus_title: "Open bonus tasks", adult_bonus_hint: "Done it yourself? Takes it off the bonus board (no points).",
     adult_bonus_done: "✅ I did it", adult_bonus_thanks: "Thanks! Taken off the bonus board.",
     no_tasks: "All done! You are awesome!",
+    role_model_default: "Mom and Dad", role_model_one: "👪 {who} have 1 mission today too", role_model_many: "👪 {who} have {n} missions today too",
+    role_model_done: "{d} of {n} done", parent_min: "~{n} min.", parent_planning: "Planning", parent_done_toast: "Done, thank you!",
     tasks_open_one: "1 task open", tasks_open: "{n} tasks open", all_done_badge: "All done!",
     family_rocket: "Family rocket", reward: "Reward", points_unit: "pts", goal_reached: "Goal reached!",
     claim: "Take it", done_btn: "Done!", locked_basis: "Your tasks first!", claimed_other: "{name} is on it",
@@ -96,6 +98,8 @@ const I18N_KIDS = {
     adult_bonus_title: "Offene Bonus-Aufgaben", adult_bonus_hint: "Selbst erledigt? Nimmt die Aufgabe vom Bonus-Brett (ohne Punkte).",
     adult_bonus_done: "✅ Hab ich erledigt", adult_bonus_thanks: "Danke! Vom Bonus-Brett genommen.",
     no_tasks: "Alles erledigt! Du bist spitze!",
+    role_model_default: "Mama und Papa", role_model_one: "👪 Auch {who} haben heute 1 Mission", role_model_many: "👪 Auch {who} haben heute {n} Missionen",
+    role_model_done: "{d} von {n} geschafft", parent_min: "ca. {n} Min.", parent_planning: "Planung", parent_done_toast: "Erledigt, danke!",
     tasks_open_one: "1 Aufgabe offen", tasks_open: "{n} Aufgaben offen", all_done_badge: "Alles geschafft!",
     family_rocket: "Familien-Rakete", reward: "Belohnung", points_unit: "Pkt.", goal_reached: "Ziel erreicht!",
     claim: "Übernehmen", done_btn: "Fertig!", locked_basis: "Erst deine Aufgaben!", claimed_other: "{name} macht das",
@@ -907,6 +911,8 @@ class FamilyMissionKids extends HTMLElement {
   _duties(kid) {
     const list = this._sortTasks(Object.values(this.tasks).filter(t =>
       ['basis', 'auftrag'].includes(this._category(t)) &&
+      // parent tasks only appear for an adult on the own device, never in kid lists
+      (!t.parent_task || kid.adult) &&
       this._assignees(t).includes(kid.id) &&
       this._isOpen(t) && !this._expired(t) && this._oldEnough(t, kid) && !this._replacedBy(t)));
     const start = (t) => this._hhmm(t.available_from) || 0;
@@ -919,7 +925,7 @@ class FamilyMissionKids extends HTMLElement {
   /** Muted lines for today's replaced duties: [{ text }] (kid view only). */
   _replacedLines(kid) {
     return Object.values(this.tasks).filter(t =>
-      ['basis', 'auftrag'].includes(this._category(t)) &&
+      ['basis', 'auftrag'].includes(this._category(t)) && !t.parent_task &&
       this._assignees(t).includes(kid.id) && this._isOpen(t) && !this._expired(t)).map(t => {
       const by = this._replacedBy(t);
       if (!by) return null;
@@ -934,7 +940,7 @@ class FamilyMissionKids extends HTMLElement {
   /** Due bonus tasks the kid may do (unassigned or assigned to the kid, old enough). */
   _bonusFor(kid) {
     return this._sortTasks(Object.values(this.tasks).filter(t =>
-      this._category(t) === 'bonus' && this._isOpen(t) &&
+      this._category(t) === 'bonus' && !t.parent_task && this._isOpen(t) &&
       (this._assignees(t).length === 0 || this._assignees(t).includes(kid.id)) &&
       !this._expired(t) && this._oldEnough(t, kid)));
   }
@@ -942,7 +948,39 @@ class FamilyMissionKids extends HTMLElement {
   /** All currently due bonus tasks (for the bonus board on the home screen). */
   _allBonus() {
     return this._sortTasks(Object.values(this.tasks).filter(t =>
-      this._category(t) === 'bonus' && this._isOpen(t) && !this._expired(t)));
+      this._category(t) === 'bonus' && !t.parent_task && this._isOpen(t) && !this._expired(t)));
+  }
+
+  /**
+   * Role-model band data: parent tasks due today (open) plus those completed today.
+   * Returns { open, done, total }. Parent tasks have no points and are never listed here.
+   */
+  _parentsToday() {
+    const open = Object.values(this.tasks).filter(t => t.parent_task && this._isOpen(t)).length;
+    const today = this._localToday();
+    const seen = new Set();
+    this.history.forEach(h => {
+      if (h.type !== 'parent' || this._dateKey(h.timestamp) !== today) return;
+      seen.add(h.completion_id || h.id);
+    });
+    return { open, done: seen.size, total: open + seen.size };
+  }
+
+  /** "Mom and Dad also have N missions today" band (family mode only, quiet, no points). */
+  _renderRoleModel() {
+    if (this._isMine() || (this.settings && this.settings.role_model_band === false)) return '';
+    const p = this._parentsToday();
+    if (p.total <= 0) return '';
+    const who = (this.settings && String(this.settings.role_model_label || '').trim()) || this.localize('role_model_default');
+    const text = this.localize(p.total === 1 ? 'role_model_one' : 'role_model_many', { who, n: p.total });
+    const shown = Math.min(p.total, 12);
+    const doneShown = Math.min(p.done, shown);
+    const dots = Array.from({ length: shown }, (_, i) => `<span class="rm-dot ${i < doneShown ? 'on' : ''}"></span>`).join('');
+    return `
+      <section class="rolemodel" aria-label="${escKids(text)}">
+        <div class="rm-text">${escKids(text)}</div>
+        <div class="rm-dots" role="img" aria-label="${escKids(this.localize('role_model_done', { d: p.done, n: p.total }))}">${dots}${p.total > shown ? '<span class="rm-more">…</span>' : ''}</div>
+      </section>`;
   }
 
   /** Duties that count as "open" right now: tasks outside their time window do not. */
@@ -1596,9 +1634,17 @@ class FamilyMissionKids extends HTMLElement {
     this._busy = true;
     this._render();
     const kid = this._sessionKid();
+    const isParentTask = !!(this.tasks[taskId] && this.tasks[taskId].parent_task);
     try {
       const payload = this._kidCmd('complete_task', { task_id: taskId });
       const res = await this._hass.callWS(payload);
+      if (res.success && isParentTask) {
+        // No points, no confetti: a short thank-you only
+        this._busy = false;
+        this._showToast(this.localize('parent_done_toast'));
+        this._fetchData();
+        return;
+      }
       if (res.success) {
         this._busy = false;
         this._celebrate(res.points, kid ? kid.name : '', !!res.pending);
@@ -1990,6 +2036,7 @@ class FamilyMissionKids extends HTMLElement {
         ${banners}
         <section class="tiles">${tiles || `<div class="empty-state">${escKids(this.localize('no_kids'))}</div>`}</section>
         ${this._config.show_family_goal ? this._renderFamily(kids) : ''}
+        ${this._renderRoleModel()}
         ${this._config.show_bonus_board ? this._renderBoard(kids) : ''}
       </div>`;
   }
@@ -2254,6 +2301,24 @@ class FamilyMissionKids extends HTMLElement {
       : '';
 
     const cat = this._category(task);
+    if (task.parent_task) {
+      // Parent task (own device of an adult): no points, no stars, quiet look
+      const mins = parseInt(task.minutes) || 0;
+      return `
+      <article class="task duty cat-basis parent-task">
+        <div class="t-top">
+          <div class="t-icon"><ha-icon icon="${escKids(task.icon || 'mdi:account-heart')}"></ha-icon></div>
+          <div class="t-main">
+            <div class="t-name">${escKids(task.name)}</div>
+            <div class="t-meta">
+              ${mins > 0 ? `<span class="age">${escKids(this.localize('parent_min', { n: mins }))}</span>` : ''}
+              ${task.planning ? `<span class="age" title="${escKids(this.localize('parent_planning'))}">🧠 ${escKids(this.localize('parent_planning'))}</span>` : ''}
+            </div>
+          </div>
+          <div class="t-action"><button class="btn btn-done" data-action="complete" data-task="${escKids(task.id)}" ${busy}>${escKids(this.localize('done_btn'))} ✅</button></div>
+        </div>
+      </article>`;
+    }
     return `
       <article class="task ${mode} cat-${cat} ${claimedByMe ? 'mine' : ''}">
         <div class="t-top">
@@ -2349,6 +2414,13 @@ class FamilyMissionKids extends HTMLElement {
       .fam-rocket { position: absolute; top: -17px; transform: translateX(-50%) rotate(45deg); font-size: 50px; line-height: 1; min-width: 50px; text-align: center; }
       .fam-num { flex: none; min-width: 190px; text-align: right; font-size: 30px; font-weight: 800; }
 
+      .rolemodel { display: flex; align-items: center; gap: 8px 20px; flex-wrap: wrap; padding: 8px 24px; border-radius: 24px; background: color-mix(in srgb, var(--k-sub) 10%, var(--k-card)); border: 2px solid var(--k-line); }
+      .rm-text { font-size: 24px; font-weight: 700; color: var(--k-text); min-width: 0; }
+      .rm-dots { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .rm-dot { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--k-sub); box-sizing: border-box; }
+      .rm-dot.on { background: var(--k-good); border-color: var(--k-good); }
+      .rm-more { font-size: 20px; font-weight: 800; color: var(--k-sub); }
+
       .board { display: flex; flex-direction: column; gap: 6px; }
       .board-title { font-size: 26px; font-weight: 800; }
       .board-list { display: flex; gap: 14px; overflow-x: auto; padding: 2px 2px 8px; }
@@ -2378,6 +2450,8 @@ class FamilyMissionKids extends HTMLElement {
       :host([short]) .fam-reward { font-size: 18px; }
       :host([short]) .fam-num { font-size: 24px; }
       :host([short]) .board-title { font-size: 22px; }
+      :host([short]) .rolemodel { padding: 6px 18px; }
+      :host([short]) .rm-text { font-size: 20px; }
       :host([short]) .chip { min-height: 64px; }
       :host([short]) .chip-icon { width: 44px; height: 44px; }
 
@@ -2616,6 +2690,9 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .fam-rocket { font-size: 32px; top: -12px; min-width: 32px; }
       :host([narrow]) .fam-num { min-width: 0; flex: 1 1 100%; text-align: left; font-size: 20px; }
       :host([narrow]) .board-title { font-size: 19px; }
+      :host([narrow]) .rolemodel { padding: 8px 14px; border-radius: 18px; gap: 6px 12px; }
+      :host([narrow]) .rm-text { font-size: 16px; }
+      :host([narrow]) .rm-dot { width: 14px; height: 14px; border-width: 2px; }
       :host([narrow]) .board-empty { font-size: 15px; }
       :host([narrow]) .chip { min-height: 56px; gap: 8px; padding: 6px 12px 6px 8px; max-width: 78%; }
       :host([narrow]) .chip-icon { width: 38px; height: 38px; --mdc-icon-size: 24px; }

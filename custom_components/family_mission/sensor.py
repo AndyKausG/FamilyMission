@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 
 from .const import DEFAULT_OVERDUE_DAYS, DOMAIN, EVENT_TASK_UPDATED
@@ -24,10 +25,18 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
         FamilyMissionDueAndOverdueTasksSensor(hass),
         FamilyMissionSettingsSensor(hass),
         FamilyMissionPointsSensor(hass),
-        FamilyMissionLeaderboardSensor(hass),
         FamilyMissionTemplatesSensor(hass),
     ]
     async_add_entities(sensors)
+    _remove_orphaned_leaderboard(hass)
+
+
+def _remove_orphaned_leaderboard(hass: HomeAssistant) -> None:
+    """Drop the entity of the removed leaderboard sensor from the entity registry."""
+    registry = er.async_get(hass)
+    entity_id = registry.async_get_entity_id("sensor", DOMAIN, "family_mission_leaderboard")
+    if entity_id:
+        registry.async_remove(entity_id)
 
 
 class FamilyMissionBaseSensor(SensorEntity):
@@ -155,7 +164,7 @@ class FamilyMissionOverdueTasksSensor(FamilyMissionBaseSensor):
 
         overdue_tasks = []
         for task in self._data.get("tasks", {}).values():
-            if task.get("due_date"):
+            if task.get("due_date") and not task.get("parent_task"):  # parents' tasks are never overdue
                 paused_until_str = task.get("paused_until")
                 is_paused = False
                 if paused_until_str:
@@ -281,45 +290,6 @@ class FamilyMissionPointsSensor(FamilyMissionBaseSensor):
             "data": points_list,
             "history": self._data.get("history", [])
         }
-
-
-class FamilyMissionLeaderboardSensor(FamilyMissionBaseSensor):
-    """Sensor tracking the current leaderboard leader."""
-
-    def __init__(self, hass: HomeAssistant):
-        super().__init__(hass, "family_mission_leaderboard", "leaderboard")
-        self._attr_icon = "mdi:trophy"
-
-    @property
-    def native_value(self) -> str:
-        """Return the name of the user with the most points."""
-        points = self._data.get("points", {})
-        if not points:
-            return "Niemand"
-        best_user_id = max(points, key=points.get)
-        if points[best_user_id] == 0:
-            return "Niemand"
-        return resolve_participant_name(self.hass.states.async_all("person"), best_user_id)
-
-    @property
-    def extra_state_attributes(self) -> dict:
-        """Return the sorted leaderboard as state attributes."""
-        points = self._data.get("points", {})
-        point_goals = self._data.get("settings", {}).get("point_goals", {})
-
-        sorted_users = sorted(points.items(), key=lambda item: item[1], reverse=True)
-        person_states = self.hass.states.async_all("person")
-        leaderboard = []
-        for uid, pts in sorted_users:
-            name = resolve_participant_name(person_states, uid)
-            
-            goal = point_goals.get(uid, 0)
-            entry = {"user_id": uid, "name": name, "points": pts, "goal": goal}
-            if goal > 0:
-                entry["goal_percent"] = round((pts / goal) * 100, 1)
-                
-            leaderboard.append(entry)
-        return {"json_string": json.dumps(leaderboard), "data": leaderboard}
 
 
 class FamilyMissionTemplatesSensor(FamilyMissionBaseSensor):

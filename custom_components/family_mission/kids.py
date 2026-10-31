@@ -50,9 +50,11 @@ TYPE_SKIPPED = "skipped"
 TYPE_REDEEM = "redeem"
 TYPE_REFUND = "refund"
 TYPE_PRAISE = "praise"
+# Parents' tasks (FamilyMission 2.0): never points, wallet or goals - only time for the weekly summary
+TYPE_PARENT = "parent"
 HISTORY_TYPES = (
     TYPE_TASK, TYPE_BONUS, TYPE_PENALTY, TYPE_BIRTHDAY, TYPE_MISSED, TYPE_SKIPPED, TYPE_REDEEM, TYPE_REFUND,
-    TYPE_PRAISE,
+    TYPE_PRAISE, TYPE_PARENT,
 )
 # Reward shop entries only move the wallet, never the monthly points / goals
 WALLET_ONLY_TYPES = (TYPE_REDEEM, TYPE_REFUND)
@@ -882,6 +884,8 @@ def check_eligibility(
     """Return ``None`` when the kid may work on the task, else an error code."""
     overdue_days = settings.get("overdue_days", DEFAULT_OVERDUE_DAYS)
 
+    if task.get("parent_task"):
+        return ERR_NOT_ELIGIBLE  # parents' tasks are never kids' duties
     if not is_open(task, now, overdue_days) or is_expired(task, now):
         return ERR_NOT_ELIGIBLE
     if is_replaced(task, tasks, now, overdue_days):

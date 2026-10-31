@@ -49,7 +49,8 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Freigaben & Bonus
+            heading: Wir Eltern, Freigaben & Bonus
+          # Eltern-Zentrale: Heute / Kinder / Mehr (inkl. Eltern-Aufgaben "Wir Eltern")
           - type: custom:family-mission-parents
             title: Eltern
           - type: heading
@@ -68,10 +69,7 @@ views:
       - type: grid
         cards:
           - type: heading
-            heading: Punkte & Auswertung
-          - type: custom:family-mission-leaderboard
-            title: Familien-Rangliste
-            show_history: true
+            heading: Auswertung
           - type: custom:family-mission-stats
           - type: heading
             heading: Einstellungen

@@ -186,10 +186,10 @@ async def test_complete_task_for_person_without_user(hass, hass_ws_client, setup
     # recurring: not due anymore -> a second tap is rejected
     res = (await _call(ws, "family_mission/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="1234"))["result"]
     assert res["error"] == "not_eligible"
-    # name resolution for the person without user (leaderboard sensor)
-    ent = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, "family_mission_leaderboard")
+    # name resolution for the person without user (points sensor)
+    ent = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, "family_mission_points")
     await hass.async_block_till_done()
-    assert hass.states.get(ent).state == "Anna"
+    assert hass.states.get(ent).attributes["data"][0]["name"] == "Anna"
 
 
 async def test_complete_by_name_service_with_person_entity(hass, hass_ws_client, setup):

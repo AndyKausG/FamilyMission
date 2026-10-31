@@ -23,13 +23,12 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.helpers.storage import Store
-from homeassistant.util import dt as dt_util
+from homeassistant.util import dt as dt_util, slugify
 
 from .migration import async_auto_migrate, async_import_now, notify_migrated
 from .const import (
     DOMAIN,
     EVENT_TASK_UPDATED,
-    EVENT_LEADERBOARD_CHANGED,
     EVENT_TASK_COMPLETED,
     EVENT_TASK_CREATED,
     EVENT_RESET,
@@ -41,12 +40,17 @@ from .const import (
     EVENT_REWARD_REQUESTED,
     EVENT_REWARD_RESOLVED,
     EVENT_PRAISE,
+    EVENT_HANDOVER_REQUESTED,
+    EVENT_HANDOVER_RESOLVED,
+    EVENT_WEEKLY_SUMMARY,
     EVENT_MOBILE_APP_ACTION,
     ACTION_REWARD_APPROVE,
     ACTION_REWARD_REJECT,
     ACTION_APPROVE,
     ACTION_NOT_DONE,
     ACTION_CHEAT,
+    ACTION_TAKE,
+    ACTION_DECLINE,
     STORAGE_KEY,
     STORAGE_VERSION,
     WS_TYPE_ADD_TASK,
@@ -95,6 +99,14 @@ from .const import (
     WS_TYPE_SEND_PRAISE,
     WS_TYPE_KID_PRAISE_SEEN,
     WS_TYPE_MY_PRAISE_SEEN,
+    WS_TYPE_PARENTS_CATALOG,
+    WS_TYPE_PARENTS_APPLY,
+    WS_TYPE_PARENT_TASK_SET,
+    WS_TYPE_PARENT_TASK_ADD,
+    WS_TYPE_PARENT_TASK_DONE,
+    WS_TYPE_HANDOVER_ASK,
+    WS_TYPE_HANDOVER_ANSWER,
+    WS_TYPE_WEEKLY_SUMMARY,
     SERVICE_ADJUST_POINTS,
     SERVICE_IMPORT_FROM_TASK_ORGANIZER,
     SERVICE_ADD_TASK,
@@ -109,7 +121,7 @@ from .const import (
     SERVICE_REMOVE_TEMPLATE_BY_NAME,
     SERVICE_EDIT_TEMPLATE_BY_NAME,
 )
-from . import kids_catalog
+from . import kids_catalog, parents_catalog
 from .kids import (
     ERR_NOT_ELIGIBLE,
     ERR_STEPS_OPEN,
@@ -137,6 +149,7 @@ from .kids import (
     TYPE_REDEEM,
     TYPE_REFUND,
     TYPE_PRAISE,
+    TYPE_PARENT,
     PRAISE_STICKERS,
     MAX_PRAISE_MESSAGE,
     MAX_PRAISE_PER_KID,
@@ -236,34 +249,6 @@ def _get_user_id(hass: HomeAssistant, target: str) -> str | None:
             return state.attributes.get("user_id")
             
     return target
-
-
-def _fire_leaderboard_event_if_changed(hass: HomeAssistant, old_points: dict, new_points: dict):
-    """
-    Compares the old and new points. Fires an event if the top 3 user order changes.
-    """
-    # Sort by points (descending) and then by user_id (ascending) for stable tie-breaking
-    old_sorted = sorted(old_points.items(), key=lambda item: (-item[1], item[0]))
-    new_sorted = sorted(new_points.items(), key=lambda item: (-item[1], item[0]))
-    
-    # Get top 3
-    old_top_3 = [{"user_id": uid, "points": pts} for uid, pts in old_sorted[:3]]
-    new_top_3 = [{"user_id": uid, "points": pts} for uid, pts in new_sorted[:3]]
-    
-    # Check if the order of user_ids changed in the top 3
-    old_order = [item["user_id"] for item in old_top_3]
-    new_order = [item["user_id"] for item in new_top_3]
-    
-    if old_order != new_order:
-        # Resolve friendly names for a better event payload experience
-        person_states = hass.states.async_all("person")
-        for item in old_top_3 + new_top_3:
-            item["name"] = resolve_participant_name(person_states, item["user_id"])
-            
-        hass.bus.async_fire(EVENT_LEADERBOARD_CHANGED, {
-            "old_leaderboard": old_top_3,
-            "new_leaderboard": new_top_3,
-        })
 
 
 # ---------------------------------------------------------------------------
@@ -370,6 +355,13 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
     response_data["family_points"] = _family_points(hass)
     response_data["my_role"] = _role(hass, connection.user)
     response_data["ha_users"] = _parent_candidates(hass, entry.options)
+    adults = _adults(hass)
+    adult_ids = [a["id"] for a in adults]
+    me = _my_participant(hass, connection)
+    me = me if me in adult_ids else None
+    response_data["adults"] = [{**a, "push": bool(_push_services(hass, a["id"]))} for a in adults]
+    response_data["me"] = me
+    response_data["partner"] = parents_catalog.partner_of(adult_ids, me) if me else None
     
     connection.send_result(msg["id"], response_data)
 
@@ -457,7 +449,6 @@ def _award_task_points(
     both produce identical history entries and events. All entries of one
     completion share a ``completion_id`` (used to undo them together).
     """
-    old_points = data["points"].copy()
     now = dt_util.utcnow().isoformat()
     completion_id = str(uuid.uuid4())
 
@@ -480,7 +471,6 @@ def _award_task_points(
             history_entry.update(copy.deepcopy(undo))
         data["history"].insert(0, history_entry)
 
-    _fire_leaderboard_event_if_changed(hass, old_points, data["points"])
     hass.bus.async_fire(EVENT_TASK_COMPLETED, {
         "task_id": task_id,
         "task_name": task_name,
@@ -508,6 +498,10 @@ async def _async_complete_task_internal(
         return False
 
     task = data["tasks"][task_id]
+    if _is_parent_task(task):
+        # Parents' tasks never carry points: ticked off like parent_task_done
+        done = await _async_parent_done(hass, task_id, completed_by[0] if completed_by else None)
+        return done is not None
     total_points = float(task.get("complexity", 1))
 
     # Create mapping for users receiving points (either from distribution or fair share)
@@ -787,6 +781,26 @@ _PROTECTED_SETTING_KEYS = (
 )
 
 
+def _sanitize_parent_settings(incoming: dict) -> None:
+    """Keep only well-formed values of the parents' settings (anything else is dropped)."""
+    for key in ("role_model_band", "weekly_summary", "planning_reminders"):
+        if key in incoming and not isinstance(incoming[key], bool):
+            del incoming[key]
+    for key, default in (
+        ("weekly_summary_time", parents_catalog.DEFAULT_WEEKLY_SUMMARY_TIME),
+        ("planning_reminder_time", parents_catalog.DEFAULT_PLANNING_REMINDER_TIME),
+    ):
+        if key in incoming:
+            incoming[key] = parents_catalog.valid_clock(incoming[key], default)
+    if "role_model_label" in incoming:
+        incoming["role_model_label"] = str(incoming["role_model_label"] or "").strip()[:40]
+    if "parent_notify" in incoming:
+        raw = incoming["parent_notify"] if isinstance(incoming["parent_notify"], dict) else {}
+        incoming["parent_notify"] = {
+            str(uid): target for uid, value in raw.items() if (target := normalize_reminder_target(value))
+        }
+
+
 @websocket_api.websocket_command({
     vol.Required("type"): WS_TYPE_UPDATE_SETTINGS,
     vol.Required("settings"): dict,
@@ -810,6 +824,7 @@ async def ws_update_settings(hass: HomeAssistant, connection: websocket_api.Acti
     # Runtime data (pending approvals, history, points, birthday memory) is not a setting
     for key in _PROTECTED_SETTING_KEYS:
         incoming.pop(key, None)
+    _sanitize_parent_settings(incoming)
     new_options.update(incoming)
     
     hass.config_entries.async_update_entry(entry, options=new_options)
@@ -858,15 +873,14 @@ async def ws_delete_history_item(hass: HomeAssistant, connection: websocket_api.
     entry_to_delete = next((item for item in history if item["id"] == entry_id), None)
     
     if entry_to_delete:
-        old_points = data["points"].copy()
         u_id = entry_to_delete["user_id"]
         pts = float(entry_to_delete.get("points", 0))
         
-        _history_revert(data, entry_to_delete.get("type"), u_id, pts, _wallet_points_of(entry_to_delete))
+        if entry_to_delete.get("type") != TYPE_PARENT:  # parents' tasks never moved points
+            _history_revert(data, entry_to_delete.get("type"), u_id, pts, _wallet_points_of(entry_to_delete))
             
         data["history"] = [item for item in history if item["id"] != entry_id]
         
-        _fire_leaderboard_event_if_changed(hass, old_points, data["points"])
         
         await hass.data[DOMAIN]["store"].async_save(data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -892,8 +906,11 @@ async def ws_edit_history_item(hass: HomeAssistant, connection: websocket_api.Ac
     history = data["history"]
     entry = next((item for item in history if item["id"] == entry_id), None)
     
-    if entry:
-        old_all_points = data["points"].copy()
+    if entry and entry.get("type") == TYPE_PARENT:
+        entry["user_id"] = new_user_id  # parents' tasks have no points: only the person can change
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    elif entry:
         
         old_u_id = entry["user_id"]
         old_pts = float(entry.get("points", 0))
@@ -905,7 +922,6 @@ async def ws_edit_history_item(hass: HomeAssistant, connection: websocket_api.Ac
         entry["user_id"] = new_user_id
         entry["points"] = new_points
         
-        _fire_leaderboard_event_if_changed(hass, old_all_points, data["points"])
         
         await hass.data[DOMAIN]["store"].async_save(data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -1452,7 +1468,6 @@ def _apply_adjustment(
     A penalty never drives the points below 0; the amount that was actually
     applied is recorded. Does not save. Returns the applied amount.
     """
-    old_points = data["points"].copy()
     current = float(data["points"].get(kid_id, 0) or 0)
     applied = round(clamp_adjustment(current, points), 1)
     data["points"][kid_id] = round(current + applied, 1)
@@ -1478,7 +1493,6 @@ def _apply_adjustment(
     if wallet_applied != applied:
         entry["wallet_points"] = wallet_applied
     data["history"].insert(0, entry)
-    _fire_leaderboard_event_if_changed(hass, old_points, data["points"])
     return applied
 
 
@@ -1776,6 +1790,8 @@ def _restore_task_after_undo(data: dict, task_id: str, source: dict | None) -> N
         data["tasks"][task_id] = task
     task["due_date"] = due
     task["paused_until"] = paused
+    if source.get("parent_undo"):
+        _restore_parent_fields(task, source)
     task.pop("claimed_by", None)
     task.pop("claimed_until", None)
     subtasks = task.get("subtasks")
@@ -1802,7 +1818,7 @@ async def ws_undo_completion(hass: HomeAssistant, connection: websocket_api.Acti
     data = hass.data[DOMAIN]["data"]
     history = data["history"]
     entry = next(
-        (h for h in history if h.get("id") == msg["history_id"] and h.get("type", TYPE_TASK) == TYPE_TASK),
+        (h for h in history if h.get("id") == msg["history_id"] and h.get("type", TYPE_TASK) in (TYPE_TASK, TYPE_PARENT)),
         None,
     )
     if entry is None:
@@ -1813,10 +1829,11 @@ async def ws_undo_completion(hass: HomeAssistant, connection: websocket_api.Acti
     group = [h for h in history if h.get("completion_id") == completion_id] if completion_id else [entry]
     group_ids = {h.get("id") for h in group}
 
-    old_points = data["points"].copy()
     removed_points = {}
     for h in group:
         uid = h.get("user_id")
+        if h.get("type") == TYPE_PARENT:
+            continue  # parents' tasks never moved points or the wallet
         try:
             pts = float(h.get("points", 0))
         except (TypeError, ValueError):
@@ -1832,7 +1849,6 @@ async def ws_undo_completion(hass: HomeAssistant, connection: websocket_api.Acti
     if entry.get("task_id"):
         _restore_task_after_undo(data, entry["task_id"], source)
 
-    _fire_leaderboard_event_if_changed(hass, old_points, data["points"])
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     connection.send_result(msg["id"], {
@@ -1932,6 +1948,9 @@ async def ws_parent_complete_for(hass: HomeAssistant, connection: websocket_api.
     task = hass.data[DOMAIN]["data"]["tasks"].get(msg["task_id"])
     if task is None:
         connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    if _is_parent_task(task):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_ELIGIBLE})
         return
     kid_id = _get_user_id(hass, msg["kid_id"])
     if not kid_id or not _known_participant(hass, kid_id):
@@ -2056,9 +2075,15 @@ async def _async_remove_expired_adhoc(hass: HomeAssistant) -> int:
 # ---- push notification actions -------------------------------------------------
 
 async def _async_handle_push_action(hass: HomeAssistant, action: str) -> None:
-    """Execute ``FM_APPROVE_<id>`` / ``FM_NOTDONE_<id>`` / ``FM_CHEAT_<id>`` and ``FM_RAPPROVE_`` / ``FM_RREJECT_``."""
+    """Execute ``FM_APPROVE_<id>`` / ``FM_NOTDONE_<id>`` / ``FM_CHEAT_<id>``, ``FM_RAPPROVE_`` / ``FM_RREJECT_`` and ``FM_TAKE_`` / ``FM_DECLINE_``."""
     if DOMAIN not in hass.data:
         return
+    for prefix, accept in ((ACTION_TAKE, True), (ACTION_DECLINE, False)):
+        if action.startswith(prefix):
+            result = await _async_answer_handover(hass, action[len(prefix):], accept)
+            if result is None:
+                _LOGGER.debug("Notification action %s ignored: no open handover request", action)
+            return
     for prefix, approve in ((ACTION_REWARD_APPROVE, True), (ACTION_REWARD_REJECT, False)):
         if action.startswith(prefix):
             result = await _async_resolve_redemption(hass, action[len(prefix):], approve)
@@ -2089,7 +2114,7 @@ def _birthday_unlocks(hass: HomeAssistant, data: dict, kid_id: str, settings: di
     found = []
     candidates = [
         t for t in data["tasks"].values()
-        if t.get("generated_by") != kids_catalog.GENERATED_BY
+        if t.get("generated_by") != kids_catalog.GENERATED_BY and not t.get("parent_task")
         and (not t.get("assignees") or kid_id in (t.get("assignees") or []))
     ]
     candidates += [
@@ -2120,7 +2145,8 @@ def _skip_duties_for(hass: HomeAssistant, data: dict, kid_id: str, settings: dic
         if isinstance(assignees, str):
             assignees = [assignees]
         if (
-            list(assignees) == [kid_id]
+            not task.get("parent_task")
+            and list(assignees) == [kid_id]
             and normalize_category(task.get("category")) == "basis"
             and task.get("interval", 7) > 0
             and is_open(task, now, overdue_days)
@@ -2464,6 +2490,14 @@ def _my_context(hass: HomeAssistant, connection, msg: dict, with_task: bool = Tr
 @websocket_api.async_response
 async def ws_my_complete_task(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
     """Complete a task as the calling user (same checks as ``kid_complete_task``, no PIN, no helpers)."""
+    if _is_parent_task(hass.data[DOMAIN]["data"]["tasks"].get(msg["task_id"])):
+        mine = _my_participant(hass, connection)
+        if not mine or mine not in [a["id"] for a in _adults(hass)]:
+            connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_ELIGIBLE})
+            return
+        result = await _async_parent_done(hass, msg["task_id"], mine)
+        connection.send_result(msg["id"], {"success": True, "points": 0, "history_id": result["history_id"]})
+        return
     error, ctx = _my_context(hass, connection, msg)
     if error:
         connection.send_result(msg["id"], error)
@@ -2583,7 +2617,7 @@ async def _async_check_reminders(hass: HomeAssistant) -> int:
     overdue_days = _get_entry(hass).options.get("overdue_days", 5)
     due = []
     for task_id, task in data["tasks"].items():
-        at = normalize_time(task.get("reminder_at")) if isinstance(task, dict) else None
+        at = normalize_time(task.get("reminder_at")) if isinstance(task, dict) and not task.get("parent_task") else None
         if not at or clock < at or task.get("reminded_on") == today:
             continue
         if not is_open(task, now, overdue_days) or is_expired(task, now) or window_state(task, now) == WINDOW_TOO_LATE:
@@ -3111,7 +3145,7 @@ async def _async_open_bonus_task(hass: HomeAssistant, trig: dict) -> None:
         return
     data = hass.data[DOMAIN]["data"]
     task = _find_trigger_task(data["tasks"], trig)
-    if task is None:
+    if task is None or task.get("parent_task"):
         _LOGGER.debug("Bonus trigger %s: task not found", trig)
         return
     if is_open(task, dt_util.now(), data.get("settings", {}).get("overdue_days", 5)):
@@ -3213,6 +3247,724 @@ async def ws_set_parents(hass: HomeAssistant, connection: websocket_api.ActiveCo
     connection.send_result(msg["id"], {"success": True, "parents": parents, "parents_manage": manage})
 
 
+# ---------------------------------------------------------------------------
+# FamilyMission 2.0: parents' tasks (mental load, no points, no comparison)
+# ---------------------------------------------------------------------------
+
+class _ParentError(Exception):
+    """Validation error of a parents' command (code + message)."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def _is_parent_task(task) -> bool:
+    return isinstance(task, dict) and bool(task.get("parent_task"))
+
+
+def _adults(hass: HomeAssistant) -> list[dict]:
+    """Adults: person entities with a Home Assistant user and without a kid profile."""
+    kids = _get_entry(hass).options.get("kids") or {}
+    result = []
+    for state in hass.states.async_all("person"):
+        uid = state.attributes.get("user_id")
+        if uid and uid not in kids:
+            result.append({"id": uid, "name": state.attributes.get("friendly_name") or state.entity_id})
+    return sorted(result, key=lambda a: a["name"].lower())
+
+
+def _push_services(hass: HomeAssistant, uid: str) -> list[str]:
+    """notify services (without the ``notify.`` prefix) that reach an adult.
+
+    ``parent_notify[uid]`` of the settings wins; otherwise the companion app
+    devices of the user (``mobile_app`` entries) whose notify service exists.
+    """
+    options = _get_entry(hass).options
+    configured = normalize_reminder_target((options.get("parent_notify") or {}).get(uid))
+    if configured:
+        return [configured.split(".", 1)[1]]
+    services: list[str] = []
+    for config_entry in hass.config_entries.async_entries("mobile_app"):
+        if config_entry.data.get("user_id") != uid:
+            continue
+        device = config_entry.data.get("device_name")
+        if not device:
+            continue
+        service = f"mobile_app_{slugify(device)}"
+        if service not in services and hass.services.has_service("notify", service):
+            services.append(service)
+    return services
+
+
+async def _async_push_adult(
+    hass: HomeAssistant, uid: str, title: str, message: str, actions: list | None = None, tag: str | None = None
+) -> bool:
+    """Send a push to an adult. Errors are only logged. True if at least one service took it."""
+    sent = False
+    for service in _push_services(hass, uid):
+        payload: dict = {"title": title, "message": message}
+        extra: dict = {}
+        if actions:
+            extra["actions"] = actions
+        if tag:
+            extra["tag"] = tag
+        if extra:
+            payload["data"] = extra
+        try:
+            await hass.services.async_call("notify", service, payload, blocking=True)
+            sent = True
+        except Exception as err:  # unknown service, offline device ...
+            _LOGGER.warning("Push to %s via notify.%s failed: %s", uid, service, err)
+    return sent
+
+
+def _day_start_iso(day: date) -> str:
+    """ISO timestamp (UTC) of the start of the local day ``day`` - the due date format of parents' tasks."""
+    return dt_util.as_utc(dt_util.start_of_local_day(day)).isoformat()
+
+
+def _local_day_of(value) -> date | None:
+    """Local day of an ISO date/time string (naive values are local)."""
+    stamp = parse_dt(value)
+    if stamp is None:
+        return None
+    if stamp.tzinfo is not None:
+        stamp = dt_util.as_local(stamp)
+    return stamp.date()
+
+
+def _parent_context(hass: HomeAssistant, connection, msg: dict) -> tuple[str | None, str | None, list[dict]]:
+    """``(me, partner, adults)`` of a parents' command.
+
+    ``me`` is the explicit ``me`` of the payload, otherwise the caller's own
+    participant, otherwise the only adult. ``partner`` is the explicit one or
+    the only other adult.
+    """
+    adults = _adults(hass)
+    ids = [a["id"] for a in adults]
+    me = msg.get("me")
+    if me:
+        me = _get_user_id(hass, me)
+        if me not in ids:
+            raise _ParentError("unknown_person", "me is not an adult")
+    else:
+        mine = _my_participant(hass, connection)
+        if mine in ids:
+            me = mine
+        elif len(ids) == 1:
+            me = ids[0]
+    partner = msg.get("partner")
+    if partner:
+        partner = _get_user_id(hass, partner)
+        if partner not in ids or partner == me:
+            raise _ParentError("unknown_person", "partner is not another adult")
+    else:
+        partner = parents_catalog.partner_of(ids, me) if me else None
+    return me, partner, adults
+
+
+def _check_parent_actor(hass: HomeAssistant, connection, msg: dict) -> bool:
+    """Parents' roles may act; so may every adult for the day-to-day commands."""
+    if _role(hass, connection.user) in _DAILY_ROLES:
+        return True
+    mine = _my_participant(hass, connection)
+    if mine and mine in [a["id"] for a in _adults(hass)]:
+        return True
+    connection.send_error(msg["id"], "unauthorized", "Permission required")
+    return False
+
+
+def _build_parent_task(
+    name: str, interval: int, minutes: int, planning: bool, due_day: date, assign: dict,
+    parent_key: str | None = None,
+) -> dict:
+    """A new parents' task: no points, category basis, owned by one adult."""
+    task = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "description": "",
+        "area": "",
+        "interval": interval,
+        "assignees": list(assign["assignees"]),
+        "complexity": 0,
+        "category": "basis",
+        "min_age": 0,
+        "requires_approval": False,
+        "requires_routine": False,
+        "allow_together": False,
+        "available_from": None,
+        "available_until": None,
+        "reminder_at": None,
+        "reminder_target": "",
+        "icon": "mdi:head-lightbulb-outline" if planning else "mdi:home-heart",
+        "due_date": _day_start_iso(due_day),
+        "paused_until": None,
+        "override_overdue_days": None,
+        "subtasks": [],
+        "parent_task": True,
+        "generated_by": parents_catalog.GENERATED_BY,
+        "minutes": minutes,
+        "planning": bool(planning),
+        "parent_mode": assign["parent_mode"],
+    }
+    if assign["parent_pair"]:
+        task["parent_pair"] = list(assign["parent_pair"])
+    if parent_key:
+        task["parent_key"] = parent_key
+    return task
+
+
+def _assign_mode(task: dict, assign: dict) -> None:
+    """Apply a resolved mode (see ``parents_catalog.resolve_mode``) to a task; a handover ends."""
+    task["assignees"] = list(assign["assignees"])
+    task["parent_mode"] = assign["parent_mode"]
+    if assign["parent_pair"]:
+        task["parent_pair"] = list(assign["parent_pair"])
+    else:
+        task.pop("parent_pair", None)
+    task.pop("handover", None)
+    task.pop("handover_original", None)
+
+
+def _mode_unchanged(task: dict, assign: dict) -> bool:
+    """True if the task already has this mode (an alternating task keeps whoever's turn it is)."""
+    if task.get("parent_mode") != assign["parent_mode"]:
+        return False
+    if assign["parent_mode"] == parents_catalog.PARENT_MODE_ALTERNATE:
+        return set(task.get("parent_pair") or []) == set(assign["parent_pair"] or [])
+    return _assignee_ids(task) == list(assign["assignees"])
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENTS_CATALOG,
+    vol.Optional("me"): str,
+    vol.Optional("partner"): str,
+})
+@websocket_api.async_response
+async def ws_parents_catalog(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """The parents' task catalog with the adults and what already exists (admin / manager / parent)."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    try:
+        me, partner, adults = _parent_context(hass, connection, msg)
+    except _ParentError as err:
+        connection.send_error(msg["id"], err.code, err.message)
+        return
+    lang = _lang(hass)
+    items = parents_catalog.catalog_items()
+    for item in items:
+        item["name"] = item["name_de"] if lang == "de" else item["name_en"]
+    existing = {}
+    for task_id, task in hass.data[DOMAIN]["data"]["tasks"].items():
+        if _is_parent_task(task) and task.get("parent_key") and task["parent_key"] not in existing:
+            existing[task["parent_key"]] = {"task_id": task_id, "mode": parents_catalog.mode_of(task, me)}
+    connection.send_result(msg["id"], {
+        "items": items,
+        "adults": [{**a, "push": bool(_push_services(hass, a["id"]))} for a in adults],
+        "me": me,
+        "partner": partner,
+        "existing": existing,
+        "language": lang,
+    })
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENTS_APPLY,
+    vol.Required("items"): [vol.Schema({
+        vol.Required("key"): str,
+        vol.Optional("mode", default=parents_catalog.MODE_ME): vol.In(parents_catalog.MODES),
+        vol.Optional("minutes"): vol.All(int, vol.Range(min=parents_catalog.MIN_MINUTES, max=parents_catalog.MAX_MINUTES)),
+        vol.Optional("planning"): bool,
+    })],
+    vol.Optional("me"): str,
+    vol.Optional("partner"): str,
+})
+@websocket_api.async_response
+async def ws_parents_apply(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Create the chosen catalog tasks (admin / manager / parent).
+
+    A catalog key that already exists only gets its mode updated - never a
+    duplicate. Without a partner every mode is ``me``.
+    """
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    try:
+        me, partner, _adults_list = _parent_context(hass, connection, msg)
+    except _ParentError as err:
+        connection.send_error(msg["id"], err.code, err.message)
+        return
+    if not me:
+        connection.send_error(msg["id"], "no_adult", "No adult found (a person with a Home Assistant user)")
+        return
+    chosen: dict[str, dict] = {}
+    for item in msg["items"]:
+        if item["key"] not in parents_catalog.CATALOG_BY_KEY:
+            connection.send_error(msg["id"], "unknown_key", f"Unknown catalog entry: {item['key']}")
+            return
+        chosen.setdefault(item["key"], item)
+
+    data = hass.data[DOMAIN]["data"]
+    existing = {}
+    for task in data["tasks"].values():
+        if _is_parent_task(task) and task.get("parent_key"):
+            existing.setdefault(task["parent_key"], task)
+
+    today = dt_util.now().date()
+    new_keys = [k for k in chosen if k not in existing]
+    starts = parents_catalog.stagger_start_dates([parents_catalog.CATALOG_BY_KEY[k] for k in new_keys], today)
+    de = _lang(hass) == "de"
+    created: list[dict] = []
+    updated = 0
+    for key, item in chosen.items():
+        entry = parents_catalog.CATALOG_BY_KEY[key]
+        assign = parents_catalog.resolve_mode(item["mode"], me, partner)
+        task = existing.get(key)
+        if task is not None:
+            changed = False
+            if not _mode_unchanged(task, assign):
+                _assign_mode(task, assign)
+                changed = True
+            if "minutes" in item and task.get("minutes") != item["minutes"]:
+                task["minutes"] = item["minutes"]
+                changed = True
+            if "planning" in item and bool(task.get("planning")) != item["planning"]:
+                task["planning"] = item["planning"]
+                changed = True
+            updated += 1 if changed else 0
+            continue
+        task = _build_parent_task(
+            entry["name_de"] if de else entry["name_en"], entry["interval"],
+            item.get("minutes", entry["minutes"]), item.get("planning", entry["planning"]),
+            starts[key], assign, parent_key=key,
+        )
+        data["tasks"][task["id"]] = task
+        created.append(task)
+
+    if created or updated:
+        for task in created:
+            hass.bus.async_fire(EVENT_TASK_CREATED, dict(task))
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    connection.send_result(msg["id"], {"success": True, "created": len(created), "updated": updated})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENT_TASK_SET,
+    vol.Required("task_id"): str,
+    vol.Optional("mode"): vol.In(parents_catalog.MODES),
+    vol.Optional("planning"): bool,
+    vol.Optional("minutes"): vol.All(int, vol.Range(min=parents_catalog.MIN_MINUTES, max=parents_catalog.MAX_MINUTES)),
+    vol.Optional("me"): str,
+    vol.Optional("partner"): str,
+})
+@websocket_api.async_response
+async def ws_parent_task_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Change mode, planning flag or duration of a parents' task (admin / manager / parent)."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(msg["task_id"])
+    if not _is_parent_task(task):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    try:
+        me, partner, _adults_list = _parent_context(hass, connection, msg)
+    except _ParentError as err:
+        connection.send_error(msg["id"], err.code, err.message)
+        return
+    if "mode" in msg:
+        if not me:
+            connection.send_error(msg["id"], "no_adult", "No adult found (a person with a Home Assistant user)")
+            return
+        assign = parents_catalog.resolve_mode(msg["mode"], me, partner)
+        if not _mode_unchanged(task, assign):
+            _assign_mode(task, assign)
+    if "planning" in msg:
+        task["planning"] = msg["planning"]
+    if "minutes" in msg:
+        task["minutes"] = msg["minutes"]
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    connection.send_result(msg["id"], {"success": True})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENT_TASK_ADD,
+    vol.Required("name"): str,
+    vol.Optional("minutes", default=parents_catalog.DEFAULT_MINUTES): vol.All(
+        int, vol.Range(min=parents_catalog.MIN_MINUTES, max=parents_catalog.MAX_MINUTES)),
+    vol.Optional("planning", default=False): bool,
+    vol.Optional("interval", default=parents_catalog.DEFAULT_INTERVAL): vol.All(
+        int, vol.Range(min=0, max=parents_catalog.MAX_INTERVAL)),
+    vol.Optional("mode", default=parents_catalog.MODE_ME): vol.In(parents_catalog.MODES),
+    vol.Optional("me"): str,
+    vol.Optional("partner"): str,
+})
+@websocket_api.async_response
+async def ws_parent_task_add(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Create an own parents' task without a catalog template (admin / manager / parent)."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    name = msg["name"].strip()
+    if not name or len(name) > 80:
+        connection.send_error(msg["id"], "invalid_name", "Name is required (max 80 characters)")
+        return
+    try:
+        me, partner, _adults_list = _parent_context(hass, connection, msg)
+    except _ParentError as err:
+        connection.send_error(msg["id"], err.code, err.message)
+        return
+    if not me:
+        connection.send_error(msg["id"], "no_adult", "No adult found (a person with a Home Assistant user)")
+        return
+    task = _build_parent_task(
+        name, msg["interval"], msg["minutes"], msg["planning"], dt_util.now().date(),
+        parents_catalog.resolve_mode(msg["mode"], me, partner),
+    )
+    data = hass.data[DOMAIN]["data"]
+    data["tasks"][task["id"]] = task
+    hass.bus.async_fire(EVENT_TASK_CREATED, dict(task))
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    connection.send_result(msg["id"], {"success": True, "task_id": task["id"]})
+
+
+def _parent_undo_info(task: dict) -> dict:
+    """Undo information of a parents' task (``_undo_info`` plus assignment, handover, carry-over)."""
+    info = _undo_info(task)
+    info["parent_undo"] = True
+    info["previous_assignees"] = _assignee_ids(task)
+    info["previous_handover"] = copy.deepcopy(task.get("handover"))
+    info["previous_handover_original"] = copy.deepcopy(task.get("handover_original"))
+    info["previous_carried_since"] = task.get("carried_since")
+    return info
+
+
+def _restore_parent_fields(task: dict, source: dict) -> None:
+    """Undo of a parents' task: whoever was responsible, handover and carry-over come back."""
+    task["assignees"] = list(source.get("previous_assignees") or [])
+    for key in ("handover", "handover_original"):
+        value = source.get(f"previous_{key}")
+        if value:
+            task[key] = copy.deepcopy(value)
+        else:
+            task.pop(key, None)
+    if source.get("previous_carried_since"):
+        task["carried_since"] = source["previous_carried_since"]
+    else:
+        task.pop("carried_since", None)
+
+
+async def _async_parent_done(hass: HomeAssistant, task_id: str, uid: str | None) -> dict | None:
+    """Tick off a parents' task: history (type ``parent``, 0 points), next date, handover / alternation.
+
+    :return: ``{"history_id", "completion_id"}`` or ``None`` for an unknown task.
+    """
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(task_id)
+    if not _is_parent_task(task):
+        return None
+    today = dt_util.now().date()
+    undo = _parent_undo_info(task)
+    task.pop("claimed_by", None)
+    task.pop("claimed_until", None)
+    task.pop("carried_since", None)
+    task.pop("planning_reminded_for", None)
+
+    # The handover was for this time only: back to whoever it belonged to
+    original = task.pop("handover_original", None)
+    task.pop("handover", None)
+    if original:
+        task["assignees"] = list(original)
+    # Alternating: the turn goes to the other one (relative to the responsible, not to who did it)
+    if task.get("parent_mode") == parents_catalog.PARENT_MODE_ALTERNATE:
+        current = (_assignee_ids(task) or [None])[0]
+        other = parents_catalog.other_of_pair(task.get("parent_pair"), current)
+        if other:
+            task["assignees"] = [other]
+
+    interval = task.get("interval", parents_catalog.DEFAULT_INTERVAL)
+    if interval > 0:
+        task["due_date"] = _day_start_iso(today + timedelta(days=interval))
+        task["paused_until"] = None
+        for st in task.get("subtasks") or []:
+            st["done"] = False
+    else:
+        del data["tasks"][task_id]
+
+    try:
+        minutes = int(task.get("minutes") or 0)
+    except (TypeError, ValueError):
+        minutes = 0
+    entry = {
+        "id": str(uuid.uuid4()),
+        "task_id": task_id,
+        "task_name": task.get("name") or "",
+        "user_id": uid,
+        "points": 0,
+        "minutes": minutes,
+        "timestamp": dt_util.utcnow().isoformat(),
+        "type": TYPE_PARENT,
+        "completion_id": str(uuid.uuid4()),
+        **undo,
+    }
+    data["history"].insert(0, entry)
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    return {"history_id": entry["id"], "completion_id": entry["completion_id"]}
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENT_TASK_DONE,
+    vol.Required("task_id"): str,
+})
+@websocket_api.async_response
+async def ws_parent_task_done(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Tick off a parents' task (every adult / parents' role may tick off any of them)."""
+    if not _check_parent_actor(hass, connection, msg):
+        return
+    uid = _my_participant(hass, connection) or connection.user.id
+    result = await _async_parent_done(hass, msg["task_id"], uid)
+    if result is None:
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    connection.send_result(msg["id"], {"success": True, "history_id": result["history_id"]})
+
+
+# ---- handover ----------------------------------------------------------------
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_HANDOVER_ASK,
+    vol.Required("task_id"): str,
+    vol.Optional("to"): str,
+})
+@websocket_api.async_response
+async def ws_handover_ask(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Ask the partner to take over a task this time (push with "I'll do it" / "Can't")."""
+    if not _check_parent_actor(hass, connection, msg):
+        return
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(msg["task_id"])
+    if not _is_parent_task(task):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    if (task.get("handover") or {}).get("state") == parents_catalog.HANDOVER_ACCEPTED:
+        connection.send_result(msg["id"], {"success": False, "error": "handover_active"})
+        return
+    ids = [a["id"] for a in _adults(hass)]
+    current = (_assignee_ids(task) or [_my_participant(hass, connection)])[0]
+    if msg.get("to"):
+        target = _get_user_id(hass, msg["to"])
+    elif task.get("parent_mode") == parents_catalog.PARENT_MODE_ALTERNATE:
+        target = parents_catalog.other_of_pair(task.get("parent_pair"), current)
+    else:
+        target = parents_catalog.partner_of(ids, current)
+    if not current or not target or target == current or target not in ids:
+        connection.send_result(msg["id"], {"success": False, "error": "no_partner"})
+        return
+    task["handover"] = {
+        "from": current, "to": target, "state": parents_catalog.HANDOVER_ASKED,
+        "at": dt_util.utcnow().isoformat(),
+    }
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_HANDOVER_REQUESTED, {
+        "task_id": msg["task_id"], "task_name": task.get("name"),
+        "from": current, "from_name": _participant_name(hass, current),
+        "to": target, "to_name": _participant_name(hass, target),
+    })
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    title, text, take, decline = parents_catalog.handover_ask_texts(
+        _participant_name(hass, current), task.get("name") or "", _lang(hass))
+    pushed = await _async_push_adult(
+        hass, target, title, text,
+        actions=[
+            {"action": f"{ACTION_TAKE}{msg['task_id']}", "title": take},
+            {"action": f"{ACTION_DECLINE}{msg['task_id']}", "title": decline},
+        ],
+        tag=f"{DOMAIN}_handover_{msg['task_id']}",
+    )
+    connection.send_result(msg["id"], {"success": True, "to": target, "pushed": pushed})
+
+
+async def _async_answer_handover(hass: HomeAssistant, task_id: str, accept: bool, by: str | None = None) -> dict | None:
+    """Answer an open handover request.
+
+    :param by: who answers; ``None`` skips the check (push action, administrator).
+    :return: ``{"accepted", "from", "to"}`` or ``None`` when there is no open request (or ``by`` is not the asked one).
+    """
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(task_id)
+    handover = task.get("handover") if _is_parent_task(task) else None
+    if not handover or handover.get("state") != parents_catalog.HANDOVER_ASKED:
+        return None
+    if by is not None and by != handover.get("to"):
+        return None
+    sender, receiver = handover.get("from"), handover.get("to")
+    if accept:
+        task["handover_original"] = _assignee_ids(task)
+        task["assignees"] = [receiver]
+        handover["state"] = parents_catalog.HANDOVER_ACCEPTED
+    else:
+        task.pop("handover", None)
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_HANDOVER_RESOLVED, {
+        "task_id": task_id, "task_name": task.get("name"), "accepted": bool(accept),
+        "from": sender, "from_name": _participant_name(hass, sender),
+        "to": receiver, "to_name": _participant_name(hass, receiver),
+    })
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    if not accept and sender:
+        title, text = parents_catalog.handover_decline_texts(
+            _participant_name(hass, receiver), task.get("name") or "", _lang(hass))
+        await _async_push_adult(hass, sender, title, text)
+    return {"accepted": bool(accept), "from": sender, "to": receiver}
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_HANDOVER_ANSWER,
+    vol.Required("task_id"): str,
+    vol.Required("accept"): bool,
+})
+@websocket_api.async_response
+async def ws_handover_answer(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Accept or decline a handover request (only the asked adult, or an administrator)."""
+    admin = _role(hass, connection.user) == ROLE_ADMIN
+    mine = _my_participant(hass, connection)
+    task = hass.data[DOMAIN]["data"]["tasks"].get(msg["task_id"])
+    asked = (task.get("handover") or {}).get("to") if _is_parent_task(task) else None
+    if not admin and not (mine and mine in [a["id"] for a in _adults(hass)]):
+        connection.send_error(msg["id"], "unauthorized", "Permission required")
+        return
+    if not admin and asked and asked != mine:
+        connection.send_error(msg["id"], "unauthorized", "Only the asked person may answer")
+        return
+    result = await _async_answer_handover(hass, msg["task_id"], msg["accept"], None if admin else mine)
+    if result is None:
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    connection.send_result(msg["id"], {"success": True, **result})
+
+
+# ---- midnight rollover, planning reminder, weekly summary ------------------------
+
+async def _async_rollover_parent_tasks(hass: HomeAssistant) -> int:
+    """Silently carry unfinished parents' tasks over to today (no history, no push, no points)."""
+    if DOMAIN not in hass.data:
+        return 0
+    data = hass.data[DOMAIN]["data"]
+    today = dt_util.now().date()
+    count = 0
+    for task in data["tasks"].values():
+        if not _is_parent_task(task):
+            continue
+        paused = _local_day_of(task.get("paused_until"))
+        if paused is not None and paused >= today:
+            continue
+        result = parents_catalog.rollover(_local_day_of(task.get("due_date")), task.get("carried_since"), today)
+        if result is None:
+            continue
+        task["carried_since"], new_due = result
+        task["due_date"] = _day_start_iso(new_due)
+        count += 1
+    if count:
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    return count
+
+
+async def _async_check_planning_reminders(hass: HomeAssistant) -> int:
+    """Push the responsible adult once per due date: "due tomorrow" for planning tasks only."""
+    if DOMAIN not in hass.data:
+        return 0
+    options = _get_entry(hass).options
+    if options.get("planning_reminders", True) is False:
+        return 0
+    now = dt_util.now()
+    at = parents_catalog.valid_clock(options.get("planning_reminder_time"), parents_catalog.DEFAULT_PLANNING_REMINDER_TIME)
+    if not parents_catalog.clock_reached(now.strftime("%H:%M"), at):
+        return 0
+    tomorrow = now.date() + timedelta(days=1)
+    data = hass.data[DOMAIN]["data"]
+    due = []
+    for task in data["tasks"].values():
+        if not _is_parent_task(task) or not task.get("planning"):
+            continue
+        if _local_day_of(task.get("due_date")) != tomorrow or task.get("planning_reminded_for") == tomorrow.isoformat():
+            continue
+        paused = _local_day_of(task.get("paused_until"))
+        if paused is not None and paused >= tomorrow:
+            continue
+        task["planning_reminded_for"] = tomorrow.isoformat()
+        due.append(task)
+    if not due:
+        return 0
+    await hass.data[DOMAIN]["store"].async_save(data)
+    lang = _lang(hass)
+    for task in due:
+        title, text = parents_catalog.planning_reminder_texts(task.get("name") or "", int(task.get("minutes") or 0), lang)
+        for uid in _assignee_ids(task)[:1]:
+            await _async_push_adult(hass, uid, title, text, tag=f"{DOMAIN}_planning_{task['id']}")
+    return len(due)
+
+
+def _weekly_summary_data(hass: HomeAssistant) -> dict:
+    """Hours per adult (last 7 local days), the tasks left over and the neutral push text."""
+    now = dt_util.now()
+    first, last = parents_catalog.last_seven_days(now.date())
+    data = hass.data[DOMAIN]["data"]
+    minutes = parents_catalog.minutes_by_user(data["history"], first, last, now.tzinfo)
+    rows = [
+        {"id": a["id"], "name": a["name"], "minutes": minutes.get(a["id"], 0),
+         "hours": parents_catalog.hours_of(minutes.get(a["id"], 0))}
+        for a in _adults(hass)
+    ]
+    carried = [
+        {"task_id": tid, "name": t.get("name") or "", "carried_since": t["carried_since"],
+         "assignees": _assignee_ids(t)}
+        for tid, t in data["tasks"].items()
+        if _is_parent_task(t) and t.get("carried_since")
+    ]
+    title, message = parents_catalog.summary_texts(rows, [c["name"] for c in carried], _lang(hass))
+    return {
+        "from": first.isoformat(), "to": last.isoformat(), "adults": rows, "carried": carried,
+        "title": title, "message": message,
+    }
+
+
+async def _async_check_weekly_summary(hass: HomeAssistant) -> bool:
+    """On Sunday at ``weekly_summary_time``: event + neutral push to every adult, once per Sunday."""
+    if DOMAIN not in hass.data:
+        return False
+    options = _get_entry(hass).options
+    if options.get("weekly_summary", True) is False:
+        return False
+    now = dt_util.now()
+    if now.weekday() != parents_catalog.SUNDAY:
+        return False
+    at = parents_catalog.valid_clock(options.get("weekly_summary_time"), parents_catalog.DEFAULT_WEEKLY_SUMMARY_TIME)
+    data = hass.data[DOMAIN]["data"]
+    if not parents_catalog.clock_reached(now.strftime("%H:%M"), at) or data.get("weekly_summary_sent") == now.date().isoformat():
+        return False
+    data["weekly_summary_sent"] = now.date().isoformat()
+    await hass.data[DOMAIN]["store"].async_save(data)
+    summary = _weekly_summary_data(hass)
+    hass.bus.async_fire(EVENT_WEEKLY_SUMMARY, summary)
+    for adult in summary["adults"]:
+        await _async_push_adult(hass, adult["id"], summary["title"], summary["message"], tag=f"{DOMAIN}_weekly")
+    return True
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_TYPE_WEEKLY_SUMMARY})
+@websocket_api.async_response
+async def ws_weekly_summary(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """The data of the weekly summary right now (admin / manager / parent)."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    connection.send_result(msg["id"], _weekly_summary_data(hass))
+
+
 def _migrate_replaced_by(item: dict) -> None:
     """Wizard tasks created before ``replaced_by_key`` existed get it from the catalog."""
     if item.get("replaced_by_key") or item.get("generated_by") != kids_catalog.GENERATED_BY:
@@ -3266,8 +4018,8 @@ async def _async_expire_missed(hass: HomeAssistant) -> int:
         if isinstance(t, dict) and is_replaced(t, data["tasks"], now, overdue_days)
     }
     for task_id, task in list(data["tasks"].items()):
-        if not isinstance(task, dict) or normalize_category(task.get("category")) != "basis":
-            continue
+        if not isinstance(task, dict) or task.get("parent_task") or normalize_category(task.get("category")) != "basis":
+            continue  # parents' tasks never expire as missed
         kid_ids = [a for a in _assignee_ids(task) if a in kids]
         if not kid_ids:
             continue
@@ -3360,7 +4112,6 @@ async def _async_check_monthly_reset(hass: HomeAssistant, force: bool = False):
         data["current_month"] = current_actual_month
         data["current_period_start"] = dt_util.utcnow().isoformat()
         
-        _fire_leaderboard_event_if_changed(hass, old_points, data["points"])
         
         await store.async_save(data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -3465,15 +4216,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Remove expired ad-hoc bonus tasks (at least every minute)."""
         await _async_remove_expired_adhoc(hass)
         await _async_check_reminders(hass)
+        await _async_check_planning_reminders(hass)
+        await _async_check_weekly_summary(hass)
 
     await _async_remove_expired_adhoc(hass)
 
     async def _missed_check(now=None):
-        """Duties missed on a previous day expire at midnight (and on startup)."""
+        """Parents' tasks roll over silently, kids' missed duties expire (midnight and startup)."""
+        await _async_rollover_parent_tasks(hass)
         await _async_expire_missed(hass)
 
     # Before the monthly reset / birthday handling; also catches missed midnights on startup
     entry.async_on_unload(async_track_time_change(hass, _missed_check, hour=0, minute=0, second=10))
+    await _async_rollover_parent_tasks(hass)
     await _async_expire_missed(hass)
     entry.async_on_unload(async_track_time_interval(hass, _adhoc_check, timedelta(minutes=1)))
 
@@ -3508,7 +4263,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     async def handle_factory_reset(call: ServiceCall):
         """Service handle to perform a factory reset."""
-        old_points = hass.data[DOMAIN]["data"].get("points", {}).copy()
         
         new_data = {
             "tasks": {}, "points": {}, "history": [], "settings": {}, 
@@ -3519,7 +4273,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         }
         hass.data[DOMAIN]["data"] = new_data
         
-        _fire_leaderboard_event_if_changed(hass, old_points, new_data["points"])
         
         await store.async_save(new_data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -3544,11 +4297,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         
         if not completed_by: 
             return
+        if _is_parent_task(task):
+            await _async_parent_done(hass, target_task_id, completed_by[0])
+            return
             
         total_points = float(task.get("complexity", 1))
         points_per_user = _calculate_points_per_user(total_points, len(completed_by))
         
-        old_points = data["points"].copy()
         undo = _undo_info(task)
         completion_id = str(uuid.uuid4())
         
@@ -3583,7 +4338,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 st["done"] = False
 
         # Trigger events
-        _fire_leaderboard_event_if_changed(hass, old_points, data["points"])
         hass.bus.async_fire(EVENT_TASK_COMPLETED, {
             "task_id": target_task_id,
             "task_name": task.get("name"),
@@ -3994,6 +4748,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_send_praise)
     websocket_api.async_register_command(hass, ws_kid_praise_seen)
     websocket_api.async_register_command(hass, ws_my_praise_seen)
+    websocket_api.async_register_command(hass, ws_parents_catalog)
+    websocket_api.async_register_command(hass, ws_parents_apply)
+    websocket_api.async_register_command(hass, ws_parent_task_set)
+    websocket_api.async_register_command(hass, ws_parent_task_add)
+    websocket_api.async_register_command(hass, ws_parent_task_done)
+    websocket_api.async_register_command(hass, ws_handover_ask)
+    websocket_api.async_register_command(hass, ws_handover_answer)
+    websocket_api.async_register_command(hass, ws_weekly_summary)
     
     # Register static path for frontend cards
     frontend_path = hass.config.path(f"custom_components/{DOMAIN}/www")
@@ -4022,7 +4784,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         base_path = "/family_mission_frontend"
         needed_cards = [
             f"{base_path}/family-mission-card.js", 
-            f"{base_path}/family-mission-leaderboard.js", 
             f"{base_path}/family-mission-stats.js", 
             f"{base_path}/family-mission-settings.js",
             f"{base_path}/family-mission-protocol.js",

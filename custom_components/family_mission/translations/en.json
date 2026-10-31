@@ -33,7 +33,6 @@
       "settings": { "name": "FamilyMission: Settings" },
       "protocol": { "name": "FamilyMission: Protocol" },
       "points": { "name": "Points" },
-      "leaderboard": { "name": "Roommate of the Month" }, 
       "entry_saved": { "name": "Entry saved!" },
       "entry_deleted": { "name": "Entry deleted!" },
       "success": { "name": "Settings successfully saved!" },
@@ -47,7 +46,7 @@
   "services": {
     "reset_monthly_points": {
       "name": "Reset monthly points",
-      "description": "Manually resets all roommates' points to 0 and archives the month."
+      "description": "Manually resets all kids' points to 0 and archives the month."
     },
     "factory_reset": {
       "name": "Factory reset",

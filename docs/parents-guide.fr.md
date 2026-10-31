@@ -14,9 +14,10 @@ Comment faire fonctionner FamilyMission à la maison
 6. [Bien choisir les récompenses](#rewards)
 7. [Féliciter](#praise)
 8. [Objectifs mensuels, fusée de la famille, anneau au-delà de 100 %](#goals)
-9. [Réduire progressivement](#fade)
-10. [Questions fréquentes / problèmes](#faq)
-11. [À propos de FamilyMission](#about)
+9. [Nous les parents : tâches des parents et centrale des parents](#parents)
+10. [Réduire progressivement](#fade)
+11. [Questions fréquentes / problèmes](#faq)
+12. [À propos de FamilyMission](#about)
 
 <a id="basics"></a>
 
@@ -38,7 +39,7 @@ L'effet dépend surtout de vous, les parents : **cohérents** (les règles valen
 
 - **Profils d'enfants + code PIN :** carte Réglages, section Enfants : activer la personne comme enfant, choisir l'avatar et la couleur, saisir l'année de naissance (ou la date d'anniversaire) et un code secret à 4 chiffres. Le PIN évite qu'un frère ou une sœur coche à la place d'un autre.
 - **Rôle parent :** dans la même section, vous définissez qui peut valider, féliciter et attribuer des points. La tablette murale reste ainsi sans danger pour les enfants.
-- **Démarrage rapide :** le bouton 🚀 Démarrage rapide du mode enfants propose des tâches, des points et des objectifs adaptés à l'âge et crée tout en un clic. Cinq étapes, aussi sur téléphone.
+- **Démarrage rapide :** le bouton 🚀 Démarrage rapide du mode enfants propose des tâches, des points et des objectifs adaptés à l'âge et crée tout en un clic. Six étapes (l'étape « Nous les parents » est facultative), aussi sur téléphone.
 - **Tableau de bord tablette (kiosque) :** la carte Enfants en plein écran sur une tablette murale (par exemple avec Fully Kiosk Browser, en mode paysage). Les enfants touchent leur vignette, saisissent leur PIN et voient leurs missions.
 - **Appareils personnels (`mode: mine`) :** avec `mode: mine`, la carte affiche directement les tâches de la personne connectée, sans vignette ni PIN. Idéal pour le téléphone ou la tablette d'un enfant plus grand.
 - **Déclencheurs de bonus :** un bonus peut s'ouvrir tout seul, par exemple quand le lave-vaisselle a terminé (carte Réglages, section Déclencheurs de bonus). La tablette peut l'annoncer à voix haute.
@@ -131,9 +132,29 @@ Le bouton **❤️ Féliciter** complète le mot personnel, il ne le remplace pa
 
 > 💡 Fixez l'objectif pour qu'un enfant atteigne environ 75 % du maximum avec un effort normal. Il reste atteignable sans que chaque jour doive être parfait.
 
+<a id="parents"></a>
+
+## 9. 👪 Nous les parents : tâches des parents et centrale des parents
+
+Le travail domestique des adultes est aussi un travail, souvent invisible. **Nous les parents** le rend visible et le répartit équitablement : sans points, sans classement, sans reproches. À configurer une fois, ensuite il suffit de cocher.
+
+- **Centrale des parents :** la carte des parents a trois onglets : **Aujourd'hui** (validations et vos tâches de parents), **Enfants** et **Plus** (réglages, résumé du dimanche, historique).
+- **Configurer :** le démarrage rapide propose l'étape facultative **Nous les parents**. Vous choisissez dans une liste de modèles, par exemple dîner, plan des repas, courses, salles de bain, finances ou visites médicales. Une petite sélection est déjà cochée.
+- **Moi / Toi / Chacun son tour :** pour chaque tâche, vous décidez qui en est responsable. Avec « Chacun son tour », la tâche passe à l'autre après chaque réalisation, sans que personne ne tienne les comptes.
+- **Sans points :** les tâches des parents n'ont ni points, ni solde, ni objectifs. Seul compte : fait ou pas fait.
+- **Report discret :** ce qui reste aujourd'hui glisse tranquillement à demain. Pas de rouge, pas de « en retard », pas de rappel, pas de reproche.
+- **🧠 Planification :** plan des repas, liste de courses ou synchronisation des rendez-vous sont un travail de réflexion (charge mentale). Seules ces tâches reçoivent un rappel discret la veille au soir (« Demain : plan des repas, env. 20 min. »). L'heure se règle dans les réglages, section Nous les parents.
+- **Tu peux ?** Si cela ne convient pas aujourd'hui, demandez à votre partenaire d'un geste. Il reçoit un message avec « Je m'en occupe » ou « Impossible ». S'il accepte, cela ne vaut que pour cette fois.
+- **Résumé du dimanche :** le dimanche soir arrive une note neutre : combien d'heures chaque personne a faites cette semaine et ce qui est resté en suspens. Elle ne juge rien, elle facilite seulement la discussion. Désactivable dans les réglages.
+- **Bandeau modèle :** la tablette des enfants affiche une ligne discrète comme « Maman et Papa ont aussi 3 missions aujourd'hui », avec des points de progression sans score. Les enfants voient que tout le monde participe. Le bandeau et son texte sont réglables.
+- **Appareil personnel :** avec `mode: mine`, vos propres tâches de parents (sans points, avec la durée) apparaissent sur votre téléphone et s'y cochent.
+
+> 💡 Commencez petit : cinq à huit tâches suffisent. Laissez de côté ce qui ne convient pas. Il n'y a aucun champ obligatoire.
+
+
 <a id="fade"></a>
 
-## 9. 🌿 Réduire progressivement
+## 10. 🌿 Réduire progressivement
 
 Le but est l'**habitude, pas la collecte de points**. Quand une routine tient depuis 4 semaines, éloignez-la peu à peu de la récompense :
 
@@ -147,7 +168,7 @@ Reportez l'attention libérée sur une nouvelle habitude, mais une seule à la f
 
 <a id="faq"></a>
 
-## 10. ❓ Questions fréquentes / problèmes
+## 11. ❓ Questions fréquentes / problèmes
 
 - **Mon enfant coche tout sans rien faire.** Activez la validation ou les contrôles par sondage pour ces tâches et jetez un coup d'œil. Parlez-en honnêtement. « Triché » seulement en cas de triche délibérée, calmement et avec une discussion. Des étapes visibles (par exemple « lit fait ») aident à contrôler.
 - **Dispute à propos du bonus.** Celui qui touche « Prendre » a la priorité quelques minutes. Vous pouvez autoriser « Ensemble » pour des tâches, donner un bonus spontané à un enfant précis ou fixer un âge minimum.
@@ -158,7 +179,7 @@ Reportez l'attention libérée sur une nouvelle habitude, mais une seule à la f
 
 <a id="about"></a>
 
-## 11. ℹ️ À propos de FamilyMission
+## 12. ℹ️ À propos de FamilyMission
 
 FamilyMission est basé sur **TaskOrganizer** de Patrick von Wiegen (licence MIT) et poursuivi par AndyKausG comme projet indépendant : https://github.com/AndyKausG/FamilyMission
 

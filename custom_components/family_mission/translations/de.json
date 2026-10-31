@@ -33,7 +33,6 @@
       "settings": { "name": "FamilyMission: Einstellungen" },
       "protocol": { "name": "FamilyMission: Protokoll" },
       "points": { "name": "Punktestand" },
-      "leaderboard": { "name": "Mitbewohner des Monats" }, 
       "entry_saved": { "name": "Eintrag gespeichert!" },
       "entry_deleted": { "name": "Eintrag gelöscht!" },
       "success": { "name": "Einstellungen erfolgreich gespeichert!" },
@@ -47,7 +46,7 @@
   "services": {
     "reset_monthly_points": {
       "name": "Monatspunkte zurücksetzen",
-      "description": "Setzt die Punkte aller Mitbewohner manuell auf 0 und archiviert den Monat."
+      "description": "Setzt die Punkte aller Kinder manuell auf 0 und archiviert den Monat."
     },
     "factory_reset": {
       "name": "Werkseinstellungen",
