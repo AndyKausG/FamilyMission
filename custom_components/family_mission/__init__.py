@@ -3958,9 +3958,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Register static path for frontend cards
     frontend_path = hass.config.path(f"custom_components/{DOMAIN}/www")
-    await hass.http.async_register_static_paths([
-        StaticPathConfig("/family_mission_frontend", frontend_path, False)
-    ])
+    # The static path survives a reload of the integration; registering it a
+    # second time would raise "route already registered".
+    if not hass.data.get(f"{DOMAIN}_static_path"):
+        await hass.http.async_register_static_paths([
+            StaticPathConfig("/family_mission_frontend", frontend_path, False)
+        ])
+        hass.data[f"{DOMAIN}_static_path"] = True
 
     async def register_lovelace_resources(event=None):
         """Register the custom cards in Lovelace resources."""

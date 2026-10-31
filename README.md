@@ -76,7 +76,7 @@ data:
 | Events | `task_organizer_<event>` (e.g. `task_organizer_task_completed`) | `family_mission_<event>` |
 | Push action prefixes | `TO_APPROVE_`, `TO_NOTDONE_`, `TO_CHEAT_`, `TO_RAPPROVE_`, `TO_RREJECT_` | `FM_APPROVE_`, `FM_NOTDONE_`, `FM_CHEAT_`, `FM_RAPPROVE_`, `FM_RREJECT_` |
 | Websocket API | `task_organizer/<command>` | `family_mission/<command>` |
-| Entities | `sensor.task_organizer_*`, `button.task_organizer_*` | `sensor.family_mission_*`, `button.family_mission_*` (check the real entity ids in your installation) |
+| Entities | `sensor.task_organizer_*`, `button.task_organizer_*` | `sensor.family_mission_*`, `button.family_mission_*` |
 
 Entity ids of the new sensors differ from the old ones, so update dashboards and automations that reference them.
 

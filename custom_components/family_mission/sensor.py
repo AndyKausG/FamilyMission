@@ -46,6 +46,9 @@ class FamilyMissionBaseSensor(SensorEntity):
         self.hass = hass
         self._attr_unique_id = unique_id
         self._attr_translation_key = translation_key
+        # Stable, prefixed entity id (e.g. sensor.family_mission_all_tasks)
+        # instead of one derived from the translated name.
+        self.entity_id = f"sensor.{unique_id}"
         self._data = hass.data[DOMAIN]["data"]
 
     async def async_added_to_hass(self):

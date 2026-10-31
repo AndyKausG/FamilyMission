@@ -26,6 +26,7 @@ class FamilyMissionResetMonthButton(ButtonEntity):
     def __init__(self, hass: HomeAssistant):
         self.hass = hass
         self._attr_unique_id = f"{DOMAIN}_button_reset_month"
+        self.entity_id = f"button.{DOMAIN}_reset_month"
         self._attr_icon = "mdi:calendar-refresh"
 
     async def async_press(self) -> None:
@@ -42,6 +43,7 @@ class FamilyMissionFactoryResetButton(ButtonEntity):
     def __init__(self, hass: HomeAssistant):
         self.hass = hass
         self._attr_unique_id = f"{DOMAIN}_button_factory_reset"
+        self.entity_id = f"button.{DOMAIN}_factory_reset"
         self._attr_icon = "mdi:delete-alert"
 
     async def async_press(self) -> None:
