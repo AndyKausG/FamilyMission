@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.0] - 2026-11-01
+
+### Added
+- **Rocket launch:** when the family goal is reached, the kids tablet shows a shared full-screen countdown ("Alle zur Rakete!", length `rocket_countdown`, default 60 s) with a call sound every 10 seconds, huge numbers in the last 10 seconds, a "Jetzt starten!" button, a liftoff with flames, smoke, stars, fireworks and fanfare, and a finishing picture. Once per period; the adults get a push. Afterwards the family bar reads "🚀 gestartet!". Calmer variant with `prefers-reduced-motion`.
+- Websocket `family_mission/rocket_countdown` and `family_mission/rocket_launched`, events `family_mission_rocket_ready`, `family_mission_rocket_countdown` and `family_mission_rocket_launched`; `get_data` returns `rocket`.
+- **Night mode:** the tablet sleeps from `night_sleep` until the wake-up time of the following day (`night_wake_weekday` Mon-Fri, `night_wake_weekend` Sat+Sun) with a dark sleep screen, a clock on tap and a "Guten Morgen" banner for 30 minutes after waking up; an open kid session runs out normally first. No reminders for kid tasks at night.
+- **Redeem push:** adults get a push with the actions "Einlösen" / "Ablehnen" when a kid requests a reward (`reward_push`, default on).
+- Settings card section "Tablet" (night mode, bedtime, wake-up times, rocket countdown); parents guide (in-app help and `docs/`) with a new chapter in German, French and English; example automation "announce the rocket countdown on a speaker".
+
 ## [2.0.1] - 2026-11-01
 
 - **Parents hub:** new optional card options `tasks_card:` and `settings_card:` pass their options (e.g. `sort_by`, `filter_by`, `items_per_page`, `show_advanced`) to the task list and settings embedded under "More". The example dashboard no longer shows them twice.

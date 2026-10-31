@@ -15,9 +15,10 @@ How to make FamilyMission work well at home
 7. [Praising](#praise)
 8. [Monthly goals, family rocket, ring above 100 %](#goals)
 9. [We parents: parent tasks and the parents hub](#parents)
-10. [Phasing out](#fade)
-11. [Frequent questions / problems](#faq)
-12. [About FamilyMission](#about)
+10. [Rocket launch, night mode and redeem push](#tablet)
+11. [Phasing out](#fade)
+12. [Frequent questions / problems](#faq)
+13. [About FamilyMission](#about)
 
 <a id="basics"></a>
 
@@ -152,9 +153,27 @@ The adults' housework is work too, and often invisible. **We parents** makes it 
 > 💡 Start small: five to eight tasks are enough. Leave out whatever does not fit. There are no required fields.
 
 
+<a id="tablet"></a>
+
+## 10. 🌙 Rocket launch, night mode and redeem push
+
+Three features for the wall tablet that give the day and the reward a clear frame: the family goal is **celebrated together**, the day **comes to an end**, and the kids' wishes **reach you right away**.
+
+- **Rocket launch:** when the family reaches its goal, the tablet shows “All aboard the rocket!” with the reward and a countdown (default 60 seconds, adjustable from 15 to 180). Everybody gathers, everybody sees it, then the rocket lifts off. It is deliberately a shared moment, not a silent points account.
+- **Once per goal:** the launch happens once per monthly goal. Even if points are taken back later, a reached goal stays reached. You get a push message (“Family goal reached! Reward: … plan it together now”) so the reward does not get lost in everyday life.
+- **Sequence:** a call sound rings every 10 seconds, the last 10 seconds count down with big numbers, and “Launch now!” shortens it. Then come the liftoff, fireworks and a finishing picture. Several tablets finish cleanly, and the family bar then reads “🚀 launched!”. If a device prefers reduced motion, a calmer variant is shown.
+- **Speaker:** at the start the event `family_mission_rocket_countdown` fires. A speaker can announce the countdown with it (example in `examples/kids/automationen.yaml`).
+- **Night mode:** at bedtime (default 20:30) the tablet shows a dark sleep screen with stars and “Good night”, without tasks, sounds or bright areas. The day is clearly over, and there is no pressure to catch up in the evening. A tap shows the clock and the wake-up time for 5 seconds.
+- **Times:** it sleeps until the wake-up time of the following day: Mon to Fri 06:00, Sat and Sun 08:00 (so the night to Saturday ends at 08:00, the night to Monday at 06:00). A kid session still open at bedtime runs out normally and is never cut off mid-input. In the morning a “Good morning ☀️” banner greets everyone for 30 minutes.
+- **Quiet nights:** no reminders for kid tasks are sent during the night. If the family goal was reached at night, the rocket launches after waking up. Everything can be adjusted or switched off in the **Tablet** section of the settings; an own device (`mode: mine`) is never affected.
+- **Redeem push:** when a kid wants to redeem something in the shop, all adults get a push message (“🎁 Clara wants to redeem”) with the buttons **Redeem** and **Decline**, straight from the lock screen. Once it is handled (wherever), no further message arrives. Can be switched off with `reward_push`.
+
+> 💡 Plan the reward the same evening: a cinema night that is actually in the calendar works far better than “sometime”.
+
+
 <a id="fade"></a>
 
-## 10. 🌿 Phasing out
+## 11. 🌿 Phasing out
 
 The aim is **habit, not collecting points**. When a routine has run stably for 4 weeks, lead it step by step away from the reward:
 
@@ -168,7 +187,7 @@ Pass the attention that frees up to a new habit, but only one at a time (see ram
 
 <a id="faq"></a>
 
-## 11. ❓ Frequent questions / problems
+## 12. ❓ Frequent questions / problems
 
 - **My child ticks everything off without doing it.** Turn on approval or spot checks for those tasks and take a quick look. Talk about it honestly. Use “Cheated” only for deliberate cheating, calmly and with a conversation. Visible steps (for example “bed made”) make checking easier.
 - **Arguments about the bonus.** Whoever taps “Take it” has priority for a few minutes. You can allow “Together” for tasks, give a spontaneous bonus to one specific kid, or set a minimum age.
@@ -179,7 +198,7 @@ Pass the attention that frees up to a new habit, but only one at a time (see ram
 
 <a id="about"></a>
 
-## 12. ℹ️ About FamilyMission
+## 13. ℹ️ About FamilyMission
 
 FamilyMission is based on **TaskOrganizer** by Patrick von Wiegen (MIT license) and continued by AndyKausG as a project of its own: https://github.com/AndyKausG/FamilyMission
 

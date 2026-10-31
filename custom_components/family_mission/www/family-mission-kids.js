@@ -86,7 +86,10 @@ const I18N_KIDS = {
     err_not_enough_points: "You do not have enough stars for this yet.", err_unknown_reward: "This reward does not exist any more.",
     err_reward_inactive: "This reward is not available right now.",
     mine_no_person: "Your Home Assistant user is not linked to a person yet. Ask an admin to link it in Settings > People.",
-    mode_mine_lbl: "My tasks (own device, no PIN)"
+    mode_mine_lbl: "My tasks (own device, no PIN)",
+    rk_title: "All aboard the rocket! 🚀", rk_seconds: "seconds", rk_go: "Launch now!", rk_done: "We did it, family! 🎉",
+    rk_tap: "Tap to continue", rk_launched: "🚀 launched! {reward}", rk_launched_plain: "🚀 launched!",
+    night_good: "Good night, {names} 💤", night_wake: "Wake up at {time}", morning: "Good morning ☀️"
   },
   de: {
     title: "Familien-Aufgaben", loading: "Lade...",
@@ -155,7 +158,10 @@ const I18N_KIDS = {
     err_not_enough_points: "Dafür reichen deine Sterne noch nicht.", err_unknown_reward: "Diese Belohnung gibt es nicht mehr.",
     err_reward_inactive: "Diese Belohnung ist gerade nicht verfügbar.",
     mine_no_person: "Dein Benutzer ist noch keiner Person zugeordnet. Ein Administrator kann das unter Einstellungen > Personen einrichten.",
-    mode_mine_lbl: "Meine Aufgaben (eigenes Gerät, ohne PIN)"
+    mode_mine_lbl: "Meine Aufgaben (eigenes Gerät, ohne PIN)",
+    rk_title: "Alle zur Rakete! 🚀", rk_seconds: "Sekunden", rk_go: "Jetzt starten!", rk_done: "Geschafft, Familie! 🎉",
+    rk_tap: "Antippen zum Weitermachen", rk_launched: "🚀 gestartet! {reward}", rk_launched_plain: "🚀 gestartet!",
+    night_good: "Gute Nacht, {names} 💤", night_wake: "Aufstehen um {time}", morning: "Guten Morgen ☀️"
   }
 };
 
@@ -181,6 +187,66 @@ function fmtKids(value) {
   const n = Math.round((parseFloat(value) || 0) * 10) / 10;
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
+
+/** Parses "HH:MM" into minutes since midnight; returns the fallback for anything else. */
+function kidsParseHHMM(value, fallbackMin) {
+  const m = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(String(value || '').trim());
+  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : fallbackMin;
+}
+
+/** Minutes since midnight as "HH:MM". */
+function kidsFmtHHMM(min) {
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Pure night-mode logic (no DOM, no globals), so it can be tested with a fake clock.
+ * The tablet sleeps from `sleep` until the wake-up time of the FOLLOWING day: that
+ * day's weekday decides (Mon-Fri weekday time, Sat+Sun weekend time), so Fri night
+ * wakes at the weekend time and Sun night at the weekday time. Local time.
+ * @param {Date} now - The current (local) time.
+ * @param {object} opts - { enabled, sleep, wakeWeekday, wakeWeekend } ("HH:MM" strings).
+ * @returns {{sleeping: boolean, morning: boolean, wakeAt: string}} - wakeAt is the next wake-up time.
+ */
+function kidsNightState(now, opts) {
+  const o = opts || {};
+  const sleepMin = kidsParseHHMM(o.sleep, 20 * 60 + 30);
+  const wdMin = kidsParseHHMM(o.wakeWeekday, 6 * 60);
+  const weMin = kidsParseHHMM(o.wakeWeekend, 8 * 60);
+  const wakeOf = (day) => ((day === 0 || day === 6) ? weMin : wdMin);
+  const today = now.getDay();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const res = { sleeping: false, morning: false, wakeAt: kidsFmtHHMM(wakeOf(today)) };
+  // A bedtime at or before a wake-up time makes no sense: never sleep around the clock
+  if (o.enabled === false || sleepMin <= Math.max(wdMin, weMin)) return res;
+  if (mins >= sleepMin) {
+    res.sleeping = true;
+    res.wakeAt = kidsFmtHHMM(wakeOf((today + 1) % 7));
+  } else if (mins < wakeOf(today)) {
+    res.sleeping = true;
+  } else if (mins < wakeOf(today) + 30) {
+    res.morning = true;       // good-morning banner for 30 minutes after waking up
+  }
+  return res;
+}
+
+/** Inline SVG rocket (nose up) used by the rocket launch overlay; no emoji font needed. */
+const KIDS_ROCKET_SVG = `
+<svg class="rk-svg" viewBox="0 0 120 270" aria-hidden="true">
+  <g class="rk-flame">
+    <path d="M42 200 Q60 292 78 200 Z" fill="#ff7a00"/>
+    <path d="M49 200 Q60 262 71 200 Z" fill="#ffc400"/>
+    <path d="M55 200 Q60 236 65 200 Z" fill="#fff3b0"/>
+  </g>
+  <path d="M28 150 L6 205 L32 192 Z" fill="#e53935"/>
+  <path d="M92 150 L114 205 L88 192 Z" fill="#e53935"/>
+  <path d="M60 8 C92 52 96 120 90 200 L30 200 C24 120 28 52 60 8 Z" fill="#f4f5f8" stroke="#c5c9d4" stroke-width="2"/>
+  <path d="M60 8 C73 26 82 44 86 66 L34 66 C38 44 47 26 60 8 Z" fill="#e53935"/>
+  <rect x="30" y="150" width="60" height="9" fill="#e53935"/>
+  <circle cx="60" cy="108" r="17" fill="#1e88e5" stroke="#9aa5b1" stroke-width="5"/>
+  <circle cx="54" cy="102" r="4.5" fill="#bbdefb"/>
+  <rect x="40" y="198" width="40" height="12" rx="3" fill="#6b7782"/>
+</svg>`;
 
 const KIDS_RING_RADIUS = 52;
 const KIDS_RING_CIRCUMFERENCE = 2 * Math.PI * KIDS_RING_RADIUS;
@@ -233,6 +299,13 @@ class FamilyMissionKids extends HTMLElement {
     this._minuteKey = Math.floor(Date.now() / 60000);
     this._myRole = null;          // admin | manager | parent | null (viewing Home Assistant user)
     this._sheet = null;           // open confirm / postpone dialog of a parent action
+    this.rocket = null;           // family rocket { period, reached_at, launched_at } from get_data
+    this._rocketRun = null;       // running launch overlay state
+    this._rocketDoneFor = null;   // rocket period launched on this tablet (until get_data catches up)
+    this._asleep = false;         // night mode: sleep screen shown
+    this._peekUntil = 0;          // tap on the sleep screen shows the clock until then
+    this._morningOn = false;      // good-morning banner shown
+    this._morningHidden = false;  // banner tapped away
 
     this.shadowRoot.innerHTML = `<style>${this._styles()}</style><div id="app"></div><div id="fx"></div>`;
     this.shadowRoot.addEventListener('click', (ev) => this._onClick(ev));
@@ -392,6 +465,14 @@ class FamilyMissionKids extends HTMLElement {
     }
     clearTimeout(this._toastTimer);
     clearTimeout(this._celebrationTimer);
+    if (this._rocketRun) {          // a launch interrupted by navigation: start over on the next connect
+      const run = this._rocketRun;
+      clearInterval(run.timer);
+      run.timers.forEach(clearTimeout);
+      if (run.raf) cancelAnimationFrame(run.raf);
+      if (run.layer) run.layer.remove();
+      this._rocketRun = null;
+    }
     this._stopBirthday();
     if (this._rafId) cancelAnimationFrame(this._rafId);
     this._rafId = null;
@@ -442,8 +523,10 @@ class FamilyMissionKids extends HTMLElement {
       this.wallet = data.wallet || {};
       this.redemptions = data.redemptions || {};
       this.praise = Array.isArray(data.praise) ? data.praise : [];
+      this.rocket = data.rocket || null;
       this._fetched = true;
       this._render();
+      this._syncRocket();
     }).catch((err) => console.error("FamilyMission Kids: could not load data", err));
   }
 
@@ -1035,6 +1118,13 @@ class FamilyMissionKids extends HTMLElement {
 
   /** 1 second ticker: clock, idle timeout and PIN lock countdown. */
   _tick() {
+    // Night mode first: a sleeping tablet does nothing else (low CPU, no idle handling)
+    const wasAsleep = this._asleep;
+    if (this._fetched && !this._isMine()) {
+      if (this._syncNight()) return;
+      if (wasAsleep) this._render();
+    }
+    this._syncRocket();
     const clock = this.shadowRoot.getElementById('clock');
     if (clock) clock.textContent = new Date().toLocaleTimeString((this._hass && this._hass.language) || [], { hour: '2-digit', minute: '2-digit' });
 
@@ -1082,6 +1172,10 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'close-bonus') this._closeBonus(el.dataset.task);
     else if (action === 'claim') this._claim(el.dataset.task);
     else if (action === 'complete') this._complete(el.dataset.task);
+    else if (action === 'sleep-tap') { this._peekUntil = Date.now() + 5000; this._syncNight(); }
+    else if (action === 'morning-close') { this._morningHidden = true; this._syncMorning(false); }
+    else if (action === 'rocket-skip') { if (this._rocketRun && this._rocketRun.phase === 'count') this._rocketLaunch(); }
+    else if (action === 'rocket-close') { if (this._rocketRun && this._rocketRun.phase === 'done') this._rocketFinish(); }
     else if (action === 'bday-close') this._closeBirthday();
     else if (action === 'praise-close') this._closePraise();
     else if (action === 'pa-skip') this._openConfirm('skip', el.dataset.task);
@@ -1898,6 +1992,434 @@ class FamilyMissionKids extends HTMLElement {
   }
 
   // ---------------------------------------------------------------------------
+  // Night mode (the tablet sleeps) - family mode only
+  // ---------------------------------------------------------------------------
+
+  /** Pure night state for a time (see kidsNightState); exposed for tests. */
+  static nightState(now, opts) { return kidsNightState(now, opts); }
+
+  _nightState() {
+    const s = this.settings || {};
+    if (this._isMine() || !this._fetched) return { sleeping: false, morning: false, wakeAt: '' };
+    return kidsNightState(new Date(), {
+      enabled: s.night_mode !== false,
+      sleep: s.night_sleep,
+      wakeWeekday: s.night_wake_weekday,
+      wakeWeekend: s.night_wake_weekend
+    });
+  }
+
+  /** Names for the sleep screen: "Clara & David", "A, B & C". */
+  _kidNames() {
+    const names = this._kids().map(k => k.name).filter(Boolean);
+    if (names.length <= 1) return names.join('');
+    return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+  }
+
+  /**
+   * Keeps the sleep screen and the good-morning banner in line with the clock.
+   * An open kid session (or PIN entry), a running celebration, a birthday overlay
+   * and a rocket launch are never cut off: bedtime waits until they have ended.
+   * @returns {boolean} - True while the tablet sleeps.
+   */
+  _syncNight() {
+    const st = this._nightState();
+    let sleeping = st.sleeping;
+    if (sleeping && !this._asleep &&
+        (this._view !== 'home' || this._celebrating || this._rocketRun || this._bdayKid || this._praiseId)) sleeping = false;
+    if (sleeping) {
+      if (!this._asleep) this._showSleep();
+      this._updateSleep(st);
+    } else if (this._asleep) {
+      this._asleep = false;
+      this._removeSleep();
+    }
+    this._syncMorning(st.morning && !sleeping && !this._rocketRun);
+    return this._asleep;
+  }
+
+  _showSleep() {
+    const fx = this.shadowRoot.getElementById('fx');
+    const app = this.shadowRoot.getElementById('app');
+    if (!fx) return;
+    this._asleep = true;
+    this._peekUntil = 0;
+    this._removeSleep();
+    this._removePraiseLayer();
+    this._removeBirthdayLayer();
+    this._syncMorning(false);
+    if (app) app.innerHTML = '';     // nothing to keep alive: no tasks, no PIN pad
+    // a fixed star pattern (no randomness: stable between wake-ups), a few of them twinkle slowly
+    let stars = '';
+    for (let i = 0; i < 46; i++) {
+      const x = (i * 37 + (i * i) % 29) % 100, y = (i * 53 + (i * i * 7) % 31) % 78;
+      const size = 2 + (i % 3);
+      stars += `<i class="sleep-star" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;animation-delay:-${(i * 1.7) % 9}s;animation-duration:${8 + (i % 5) * 2}s"></i>`;
+    }
+    const layer = document.createElement('div');
+    layer.className = 'sleep-layer';
+    layer.dataset.action = 'sleep-tap';
+    layer.innerHTML = `${stars}<div class="sleep-moon"></div>
+      <div class="sleep-text">${escKids(this.localize('night_good', { names: this._kidNames() }))}</div>
+      <div class="sleep-clock" id="sleep-clock"></div>
+      <div class="sleep-wake" id="sleep-wake"></div>`;
+    fx.appendChild(layer);
+  }
+
+  _removeSleep() {
+    const layer = this.shadowRoot.querySelector('.sleep-layer');
+    if (layer) layer.remove();
+  }
+
+  /** Clock, wake-up note and the 5 second "peek" after a tap. */
+  _updateSleep(st) {
+    const layer = this.shadowRoot.querySelector('.sleep-layer');
+    if (!layer) return;
+    const peek = Date.now() < (this._peekUntil || 0);
+    layer.classList.toggle('peek', peek);
+    const text = new Date().toLocaleTimeString((this._hass && this._hass.language) || [], { hour: '2-digit', minute: '2-digit' });
+    const clock = layer.querySelector('#sleep-clock');
+    if (clock && clock.textContent !== text) clock.textContent = text;
+    const wake = layer.querySelector('#sleep-wake');
+    const note = this.localize('night_wake', { time: st.wakeAt });
+    if (wake && wake.textContent !== note) wake.textContent = note;
+  }
+
+  _syncMorning(show) {
+    show = show && !this._morningHidden;
+    if (!show) {
+      if (this._morningOn) {
+        this._morningOn = false;
+        const el = this.shadowRoot.querySelector('.morning-banner');
+        if (el) el.remove();
+      }
+      if (!this._nightState().morning) this._morningHidden = false;   // re-arm for the next morning
+      return;
+    }
+    if (this._morningOn) return;
+    const fx = this.shadowRoot.getElementById('fx');
+    if (!fx) return;
+    this._morningOn = true;
+    const el = document.createElement('div');
+    el.className = 'morning-banner';
+    el.dataset.action = 'morning-close';
+    el.textContent = this.localize('morning');
+    fx.appendChild(el);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Rocket launch (family goal reached) - family mode only
+  // ---------------------------------------------------------------------------
+
+  _callWS(type) {
+    if (!this._hass) return;
+    try {
+      const p = this._hass.callWS({ type });
+      if (p && p.catch) p.catch((err) => console.warn('FamilyMission Kids:', type, err));
+    } catch (err) { /* offline: the other tablets or the next start catch up */ }
+  }
+
+  _reducedMotion() {
+    try { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (err) { return false; }
+  }
+
+  /** Starts the overlay when a not yet launched rocket exists and the tablet is awake and idle. */
+  _syncRocket() {
+    const r = this.rocket;
+    if (this._rocketRun || !this._fetched || this._isMine() || this._asleep || this._celebrating) return;
+    if (!r || r.launched_at || this._rocketDoneFor === (r.period || r.reached_at)) return;
+    if (this._nightState().sleeping) return;      // reached at night: wait for the morning
+    this._startRocket();
+  }
+
+  _rocketSeconds() {
+    const n = parseInt((this.settings || {}).rocket_countdown);
+    return Math.max(15, Math.min(180, isNaN(n) ? 60 : n));
+  }
+
+  _startRocket() {
+    const fx = this.shadowRoot.getElementById('fx');
+    if (!fx) return;
+    const r = this.rocket;
+    const goal = (this.settings || {}).family_goal || {};
+    const reward = String(r.reward || goal.reward || '');
+    const duration = this._rocketSeconds();
+    const calm = this._reducedMotion();
+    this._removeBirthdayLayer();
+    this._removePraiseLayer();
+    this._rocketRun = {
+      key: r.period || r.reached_at, phase: 'count', calm, reward, duration,
+      t0: Date.now(), deadline: Date.now() + duration * 1000, lastRemaining: null,
+      launchT0: 0, doneT0: 0, parts: [], stars: [], timers: [], raf: 0, lastFw: 0, smoke: 0
+    };
+    const run = this._rocketRun;
+    const layer = document.createElement('div');
+    layer.className = 'rk-layer rk-count' + (calm ? ' calm' : '');
+    layer.setAttribute('role', 'dialog');
+    layer.innerHTML = `
+      <div class="rk-night"></div>
+      <canvas class="rk-canvas"></canvas>
+      <div class="rk-scene">
+        <div class="rk-text">
+          <div class="rk-title">${escKids(this.localize('rk_title'))}</div>
+          ${reward ? `<div class="rk-reward">🎁 ${escKids(reward)}</div>` : ''}
+          <div class="rk-count-box"><div class="rk-num" id="rk-num"></div><div class="rk-unit" id="rk-unit"></div></div>
+          <button class="btn rk-go" data-action="rocket-skip">${escKids(this.localize('rk_go'))}</button>
+        </div>
+        <div class="rk-stage">
+          <div class="rk-rocket" id="rk-rocket">${KIDS_ROCKET_SVG}</div>
+          <div class="rk-pad"></div>
+        </div>
+      </div>
+      <div class="rk-bar"><i id="rk-bar"></i></div>
+      <div class="rk-finale">
+        <div class="rk-done-title">${escKids(this.localize('rk_done'))}</div>
+        ${reward ? `<div class="rk-done-reward">🎁 ${escKids(reward)}</div>` : ''}
+        <div class="rk-tap">${escKids(this.localize('rk_tap'))}</div>
+      </div>`;
+    fx.appendChild(layer);
+    run.layer = layer;
+    this._syncMorning(false);
+    this._rocketStars(layer.querySelector('canvas'));
+    this._callWS('family_mission/rocket_countdown');   // once: announces the countdown (speaker automations)
+    this._rocketTick();
+    run.timer = setInterval(() => this._rocketTick(), 200);
+  }
+
+  _rocketStars(canvas) {
+    const run = this._rocketRun;
+    const w = canvas.width = canvas.clientWidth || 1280;
+    const h = canvas.height = canvas.clientHeight || 800;
+    run.w = w; run.h = h;
+    run.stars = [];
+    for (let i = 0; i < 140; i++) {
+      run.stars.push({ x: ((i * 7919) % 1000) / 1000 * w, y: ((i * 104729) % 1000) / 1000 * h * 0.85, r: 0.8 + (i % 4) * 0.45, ph: (i % 17) / 17 * 6.28 });
+    }
+    this._rocketDraw(0);
+  }
+
+  /** 5 times a second: countdown numbers, sounds and phase changes (rAF only draws). */
+  _rocketTick() {
+    const run = this._rocketRun;
+    if (!run) return;
+    const now = Date.now();
+    if (run.phase === 'count') {
+      const remaining = Math.ceil((run.deadline - now) / 1000);
+      if (remaining <= 0) { this._rocketLaunch(); return; }
+      if (remaining === run.lastRemaining) return;
+      run.lastRemaining = remaining;
+      const elapsed = run.duration - remaining;
+      const final = remaining <= 10;
+      run.layer.classList.toggle('rk-final', final);
+      const num = run.layer.querySelector('#rk-num');
+      const unit = run.layer.querySelector('#rk-unit');
+      if (num) {
+        num.textContent = remaining >= 60 ? `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : String(remaining);
+        num.classList.remove('pop');
+        void num.offsetWidth;         // restart the pop animation
+        num.classList.add('pop');
+      }
+      if (unit) unit.textContent = remaining >= 60 ? '' : this.localize('rk_seconds');
+      const bar = run.layer.querySelector('#rk-bar');
+      if (bar) bar.style.width = `${Math.max(0, Math.min(100, (elapsed / run.duration) * 100))}%`;
+      if (final) this._rocketSound('tick', remaining);
+      else if (elapsed % 10 === 0) this._rocketSound('call');
+    } else if (run.phase === 'launch') {
+      if (now - run.launchT0 >= 8000) this._rocketDone();
+    } else if (run.phase === 'done') {
+      if (now - run.doneT0 >= 6000) this._rocketFinish();
+    }
+  }
+
+  _rocketLaunch() {
+    const run = this._rocketRun;
+    if (!run || run.phase !== 'count') return;
+    run.phase = 'launch';
+    run.launchT0 = Date.now();
+    run.layer.classList.remove('rk-count', 'rk-final');
+    run.layer.classList.add('rk-launch');
+    const el = run.layer.querySelector('#rk-rocket');
+    const rect = el.getBoundingClientRect();
+    run.rocketBox = { dist: rect.bottom + 60, cx: rect.left + rect.width / 2, base: rect.top + rect.height * 0.74, h: rect.height };
+    this._rocketSound('rumble');
+    run.timers.push(setTimeout(() => this._rocketSound('fanfare'), 4200));
+    this._rocketFrame();
+  }
+
+  _rocketDone() {
+    const run = this._rocketRun;
+    if (!run || run.phase !== 'launch') return;
+    run.phase = 'done';
+    run.doneT0 = Date.now();
+    run.layer.classList.remove('rk-launch');
+    run.layer.classList.add('rk-done');
+    run.layer.dataset.action = 'rocket-close';     // a tap may close it early, only from here on
+    if (!run.calm) for (let i = 0; i < 90; i++) this._rocketConfetti();
+  }
+
+  _rocketConfetti() {
+    const run = this._rocketRun;
+    const colors = ['#ff5252', '#ffd740', '#69f0ae', '#40c4ff', '#e040fb', '#ff9100'];
+    run.parts.push({ kind: 'conf', x: Math.random() * run.w, y: -20 - Math.random() * run.h * 0.6, vx: (Math.random() - 0.5) * 1.2,
+      vy: 1.4 + Math.random() * 2.4, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.2, c: colors[Math.floor(Math.random() * colors.length)], life: 1 });
+  }
+
+  _rocketBurst(x, y) {
+    const run = this._rocketRun;
+    const colors = ['#ff5252', '#ffd740', '#69f0ae', '#40c4ff', '#e040fb', '#ff9100'];
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    for (let i = 0; i < 36; i++) {
+      const a = (i / 36) * Math.PI * 2, sp = 2 + Math.random() * 3.2;
+      run.parts.push({ kind: 'fw', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, c, life: 1 });
+    }
+  }
+
+  /** rAF loop of the launch and finale phases: sky, rocket, smoke, fireworks, confetti. */
+  _rocketFrame() {
+    const run = this._rocketRun;
+    if (!run || run.phase === 'count') return;
+    this._rocketDraw(Date.now());
+    run.raf = requestAnimationFrame(() => this._rocketFrame());
+  }
+
+  _rocketDraw(now) {
+    const run = this._rocketRun;
+    const canvas = run.layer.querySelector('canvas');
+    if (!canvas || !canvas.isConnected) return;
+    const ctx = canvas.getContext('2d');
+    const w = run.w, h = run.h;
+    ctx.clearRect(0, 0, w, h);
+    const t = run.launchT0 ? (now - run.launchT0) / 1000 : 0;     // seconds since liftoff command
+    const night = run.phase === 'count' ? 0 : Math.min(1, t / 1.5);
+    const twinkle = run.calm ? 0 : 1;
+    // stars (faint at dusk, bright at night)
+    ctx.fillStyle = '#fff';
+    for (const s of run.stars) {
+      const a = (0.25 + 0.75 * night) * (0.65 + 0.35 * Math.sin(s.ph + (twinkle ? now / 600 : 0)));
+      ctx.globalAlpha = Math.max(0, a);
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    if (run.phase === 'count') return;
+
+    const el = run.layer.querySelector('#rk-rocket');
+    const box = run.rocketBox;
+    const layerRect = run.layer.getBoundingClientRect();
+    if (run.phase === 'launch' && el && box) {
+      // rocket path: wait, shake, then accelerate off the top of the screen
+      const u = Math.max(0, Math.min(1, (t - 1.6) / (run.calm ? 5.6 : 4.2)));
+      const y = -box.dist * (run.calm ? u * u * (3 - 2 * u) : Math.pow(u, 2.2));
+      const shake = run.calm ? 0 : (t < 4 ? Math.sin(now / 24) * (t < 1.6 ? 2 + t * 2 : 3) : 0);
+      el.style.transform = `translate(${shake}px, ${y}px)`;
+      el.style.opacity = run.calm ? String(Math.max(0, 1 - u * 0.9)) : '1';
+      const baseX = box.cx - layerRect.left, baseY = box.base - layerRect.top + y;
+      if (!run.calm && baseY < h + 80) {
+        for (let i = 0; i < 3; i++) {
+          run.parts.push({ kind: 'smoke', x: baseX + (Math.random() - 0.5) * 36, y: baseY + 24 + Math.random() * 10,
+            vx: (Math.random() - 0.5) * (t < 3 ? 5 : 1.6), vy: 0.8 + Math.random() * 1.6, r: 14 + Math.random() * 14, life: 1 });
+        }
+        if (Math.random() < 0.5) run.parts.push({ kind: 'spark', x: baseX, y: baseY + 20, vx: (Math.random() - 0.5) * 3, vy: 2 + Math.random() * 3, life: 1 });
+      }
+      if (!run.calm && t > 3 && now - run.lastFw > 450) {
+        run.lastFw = now;
+        this._rocketBurst(w * (0.12 + Math.random() * 0.76), h * (0.12 + Math.random() * 0.45));
+      }
+    }
+    if (run.phase === 'done' && !run.calm && run.parts.filter(p => p.kind === 'conf').length < 70 && Math.random() < 0.6) this._rocketConfetti();
+    if (run.phase === 'done' && el) el.style.opacity = '0';
+
+    const next = [];
+    for (const p of run.parts) {
+      if (p.kind === 'smoke') {
+        p.x += p.vx; p.y += p.vy; p.vx *= 0.97; p.r += 0.7; p.life -= 0.012;
+        if (p.life <= 0) continue;
+        ctx.globalAlpha = p.life * 0.3; ctx.fillStyle = '#c4c9d2';
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.2832); ctx.fill();
+      } else if (p.kind === 'spark') {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.life -= 0.03;
+        if (p.life <= 0) continue;
+        ctx.globalAlpha = p.life; ctx.fillStyle = '#ffb300';
+        ctx.fillRect(p.x, p.y, 3, 3);
+      } else if (p.kind === 'fw') {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.07; p.vx *= 0.985; p.life -= 0.014;
+        if (p.life <= 0) continue;
+        ctx.globalAlpha = p.life; ctx.fillStyle = p.c;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2.6, 0, 6.2832); ctx.fill();
+      } else {
+        p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        if (p.y > h + 30) continue;
+        ctx.save(); ctx.globalAlpha = 1; ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+        ctx.fillRect(-5, -3, 10, 6); ctx.restore();
+      }
+      next.push(p);
+    }
+    ctx.globalAlpha = 1;
+    run.parts = next;
+  }
+
+  /** Closes the overlay: tells the backend the rocket has launched (first tablet wins, all calls are idempotent). */
+  _rocketFinish() {
+    const run = this._rocketRun;
+    if (!run) return;
+    clearInterval(run.timer);
+    run.timers.forEach(clearTimeout);
+    if (run.raf) cancelAnimationFrame(run.raf);
+    if (run.layer) run.layer.remove();
+    this._rocketRun = null;
+    this._rocketDoneFor = run.key;
+    this.rocket = { ...(this.rocket || {}), launched_at: new Date().toISOString() };
+    this._callWS('family_mission/rocket_launched');
+    this._lastActivity = Date.now();
+    if (!this._syncNight()) this._render();
+  }
+
+  /** Sounds of the launch (WebAudio, only with config.sound). */
+  _rocketSound(kind, n) {
+    if (this._config.sound === false) return;
+    try {
+      this._ensureAudio();
+      const ctx = this._audio;
+      if (!ctx) return;
+      const t0 = ctx.currentTime + 0.02;
+      const tone = (freq, start, len, type, vol, slideTo) => {
+        const osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, start);
+        if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, start + len);
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(vol, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + len);
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.start(start); osc.stop(start + len + 0.05);
+      };
+      if (kind === 'call') {            // "Alle zur Rakete!" - a two-tone ship horn every 10 seconds
+        tone(392, t0, 0.35, 'triangle', 0.3);
+        tone(523.25, t0 + 0.4, 0.6, 'triangle', 0.3);
+      } else if (kind === 'tick') {
+        tone(n <= 3 ? 1046.5 : 784, t0, 0.12, 'square', 0.12);
+      } else if (kind === 'rumble') {
+        const len = this._rocketRun && this._rocketRun.calm ? 2 : 4.5;
+        const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * len), ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource(), filt = ctx.createBiquadFilter(), gain = ctx.createGain();
+        src.buffer = buf;
+        filt.type = 'lowpass';
+        filt.frequency.setValueAtTime(180, t0);
+        filt.frequency.linearRampToValueAtTime(700, t0 + len * 0.6);
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.exponentialRampToValueAtTime(0.35, t0 + 1.2);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+        src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+        src.start(t0);
+      } else if (kind === 'fanfare') {
+        [[392, 0, 0.14], [392, 0.16, 0.14], [392, 0.32, 0.14], [523.25, 0.48, 0.5], [659.25, 1.0, 0.18], [783.99, 1.2, 0.18], [1046.5, 1.4, 0.9]]
+          .forEach(([f, at, len]) => { tone(f, t0 + at, len, 'sawtooth', 0.12); tone(f / 2, t0 + at, len, 'triangle', 0.14); });
+      }
+    } catch (err) { /* sound is optional */ }
+  }
+
+  // ---------------------------------------------------------------------------
   // Rendering
   // ---------------------------------------------------------------------------
 
@@ -1905,6 +2427,7 @@ class FamilyMissionKids extends HTMLElement {
     if (!this._hass) return;
     const app = this.shadowRoot.getElementById('app');
     if (!app) return;
+    if (this._fetched && !this._isMine() && this._syncNight()) return;   // asleep: nothing to draw
 
     // Keep scroll positions across re-renders (data refresh events)
     const scrolls = Array.from(app.querySelectorAll('.col-scroll, .board-list')).map(e => [e.scrollTop, e.scrollLeft]);
@@ -2051,8 +2574,10 @@ class FamilyMissionKids extends HTMLElement {
       ? this.familyPoints : kids.reduce((sum, k) => sum + k.points, 0);
     const pct = Math.min(100, Math.round((total / target) * 100));
     const reached = total >= target;
+    const launched = reached && !!(this.rocket && this.rocket.launched_at);
+    const launchedText = goal.reward ? this.localize('rk_launched', { reward: goal.reward }) : this.localize('rk_launched_plain');
     return `
-      <section class="family ${reached ? 'reached' : ''}">
+      <section class="family ${reached ? 'reached' : ''} ${launched ? 'launched' : ''}">
         <div class="fam-label">
           <div class="fam-title">🚀 ${escKids(this.localize('family_rocket'))}</div>
           ${goal.reward ? `<div class="fam-reward">🎁 ${escKids(this.localize('reward'))}: <b>${escKids(goal.reward)}</b></div>` : ''}
@@ -2061,7 +2586,7 @@ class FamilyMissionKids extends HTMLElement {
           <div class="fam-fill" style="width:${pct}%"></div>
           <div class="fam-rocket" style="left:${pct}%">🚀</div>
         </div>
-        <div class="fam-num">${reached ? '🎉 ' + escKids(this.localize('goal_reached')) : `⭐ ${fmtKids(total)} <small>/ ${fmtKids(target)}</small>`}</div>
+        <div class="fam-num">${launched ? escKids(launchedText) : reached ? '🎉 ' + escKids(this.localize('goal_reached')) : `⭐ ${fmtKids(total)} <small>/ ${fmtKids(target)}</small>`}</div>
       </section>`;
   }
 
@@ -2803,7 +3328,82 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .bday-age { font-size: 24px; }
       :host([narrow]) #fx .toast { font-size: 17px; padding: 12px 20px; bottom: 16px; }
 
+
+      /* ---------- night mode: dark, quiet, nothing bright ---------- */
+      #fx .sleep-layer { position: fixed; inset: 0; z-index: 200; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; padding: 24px;
+        background: radial-gradient(ellipse at 70% 18%, #0a0f24 0%, #03050c 72%); color: #5c6684; cursor: default; }
+      .sleep-star { position: absolute; border-radius: 50%; background: #7d86a8; opacity: 0.4; animation: sleep-twinkle 10s ease-in-out infinite; }
+      @keyframes sleep-twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.55; } }
+      .sleep-moon { position: absolute; top: 9%; right: 12%; width: 76px; height: 76px; border-radius: 50%; box-shadow: -16px 8px 0 0 #8c8566; opacity: 0.7; }
+      .sleep-text { position: relative; font-size: 42px; font-weight: 700; letter-spacing: 0.3px; filter: brightness(0.75) saturate(0.7); }
+      .sleep-clock { position: relative; font-size: 40px; font-weight: 700; color: #3b445f; transition: font-size 0.4s, color 0.4s; }
+      .sleep-wake { position: relative; font-size: 34px; font-weight: 600; color: #7c86a6; opacity: 0; transition: opacity 0.4s; }
+      #fx .sleep-layer.peek .sleep-clock { font-size: min(24vw, 250px); color: #8791b3; line-height: 1; }
+      #fx .sleep-layer.peek .sleep-wake { opacity: 1; }
+      :host([narrow]) .sleep-text { font-size: 28px; }
+      :host([narrow]) .sleep-moon { width: 52px; height: 52px; box-shadow: -11px 6px 0 0 #8c8566; }
+      #fx .morning-banner { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 80; max-width: 92vw; padding: 14px 40px; border-radius: 40px; font-size: 32px; font-weight: 800; text-align: center; color: #5d3a00;
+        background: linear-gradient(90deg, #ffe082, #ffcc80); box-shadow: 0 6px 18px rgba(0,0,0,0.25); cursor: pointer; animation: kids-morning 0.6s ease-out; }
+      @keyframes kids-morning { from { transform: translate(-50%, -80px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+      :host([narrow]) #fx .morning-banner { font-size: 22px; padding: 10px 24px; }
+
+      /* ---------- rocket launch overlay ---------- */
+      #fx .rk-layer { position: fixed; inset: 0; z-index: 150; overflow: hidden; color: #fff; user-select: none;
+        background: linear-gradient(180deg, #14234f 0%, #2d3f86 48%, #e8854a 100%); }
+      .rk-night { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 100%, #1a2a66 0%, #070b22 75%); opacity: 0; transition: opacity 1.5s ease-in; }
+      .rk-launch .rk-night, .rk-done .rk-night { opacity: 1; }
+      .rk-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+      .rk-scene { position: absolute; inset: 0; display: grid; grid-template-columns: 1.15fr 1fr; align-items: center; padding: 24px 5vw 36px; gap: 2vw; transition: opacity 0.6s; }
+      .rk-launch .rk-scene .rk-text, .rk-done .rk-scene .rk-text { opacity: 0; pointer-events: none; transition: opacity 0.6s; }
+      .rk-text { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; text-shadow: 0 3px 12px rgba(0,0,0,0.45); }
+      .rk-title { font-size: clamp(30px, 4.4vw, 58px); font-weight: 900; line-height: 1.1; }
+      .rk-reward { font-size: clamp(26px, 4vw, 52px); font-weight: 800; color: #ffe082; background: rgba(0,0,0,0.25); border-radius: 36px; padding: 6px 30px; max-width: 100%; overflow-wrap: anywhere; }
+      .rk-count-box { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+      .rk-num { font-size: clamp(64px, 12vw, 150px); font-weight: 900; font-variant-numeric: tabular-nums; color: #fff; }
+      .rk-num.pop { animation: rk-pop 0.5s ease-out; }
+      @keyframes rk-pop { 0% { transform: scale(1.25); } 100% { transform: scale(1); } }
+      .rk-unit { font-size: clamp(20px, 2.6vw, 34px); font-weight: 700; opacity: 0.85; min-height: 1em; }
+      .rk-final .rk-title { font-size: clamp(26px, 3.4vw, 46px); }
+      .rk-final .rk-reward { font-size: clamp(20px, 2.6vw, 34px); }
+      .rk-final .rk-num { font-size: clamp(150px, 30vw, 380px); color: #ffeb3b; text-shadow: 0 6px 30px rgba(255,120,0,0.75), 0 0 6px rgba(0,0,0,0.5); }
+      .rk-final .rk-unit { font-size: clamp(22px, 3vw, 40px); }
+      .rk-go { font-size: clamp(26px, 3vw, 40px); font-weight: 900; padding: 16px 44px; border-radius: 44px; background: linear-gradient(180deg, #ff7043, #e53935); color: #fff; box-shadow: 0 6px 0 #9a1f1c, 0 10px 24px rgba(0,0,0,0.4); }
+      .rk-go:active { transform: translateY(3px); box-shadow: 0 3px 0 #9a1f1c; }
+      .rk-stage { position: relative; align-self: end; justify-self: center; display: flex; flex-direction: column; align-items: center; height: min(86vh, 640px); justify-content: flex-end; }
+      .rk-rocket { position: relative; width: clamp(110px, 15vw, 190px); will-change: transform; transform-origin: 50% 90%; animation: rk-wobble 0.35s ease-in-out infinite alternate; z-index: 2; }
+      .rk-svg { display: block; width: 100%; height: auto; overflow: visible; }
+      .rk-flame { opacity: 0; transform-origin: 60px 200px; }
+      .rk-launch .rk-rocket, .rk-done .rk-rocket { animation: none; }
+      .rk-launch .rk-flame { opacity: 1; animation: rk-flicker 0.12s ease-in-out infinite alternate; }
+      @keyframes rk-wobble { from { transform: rotate(-1.4deg); } to { transform: rotate(1.4deg); } }
+      @keyframes rk-flicker { from { transform: scaleY(0.88) scaleX(0.95); } to { transform: scaleY(1.18) scaleX(1.05); } }
+      .rk-pad { width: clamp(180px, 26vw, 330px); height: 26px; margin-top: -10px; border-radius: 6px; background: linear-gradient(#78838d, #3d464e); box-shadow: 0 14px 0 #2b3238, 0 -2px 0 #9aa5ae inset; z-index: 1; position: relative; }
+      .rk-launch .rk-pad { opacity: 0.9; }
+      .rk-done .rk-pad { opacity: 0; transition: opacity 0.6s; }
+      .rk-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 10px; background: rgba(0,0,0,0.3); }
+      .rk-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffca28, #ff7043); transition: width 1s linear; }
+      .rk-launch .rk-bar, .rk-done .rk-bar { opacity: 0; }
+      .rk-finale { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; text-align: center; padding: 24px; opacity: 0; pointer-events: none; transition: opacity 0.9s; text-shadow: 0 3px 14px rgba(0,0,0,0.5); }
+      .rk-done .rk-finale { opacity: 1; }
+      .rk-done-title { font-size: clamp(38px, 7vw, 92px); font-weight: 900; line-height: 1.1; }
+      .rk-done-reward { font-size: clamp(30px, 5vw, 66px); font-weight: 800; color: #ffe082; overflow-wrap: anywhere; max-width: 100%; }
+      .rk-tap { font-size: clamp(16px, 1.8vw, 24px); font-weight: 600; opacity: 0.7; }
+      .rk-layer.calm .rk-rocket { animation: none; }
+      .rk-layer.calm .rk-night { transition-duration: 3s; }
+      @media (max-width: 760px) {
+        .rk-scene { grid-template-columns: 1fr; grid-template-rows: auto 1fr; align-items: start; padding-top: 14px; }
+        .rk-stage { height: 100%; }
+        .rk-rocket { width: 84px; }
+        .rk-num { font-size: 72px; }
+        .rk-final .rk-num { font-size: 130px; }
+      }
+
+      .family.launched { border-color: #2E7D32; }
+      .family.launched .fam-num { font-size: 24px; min-width: 0; max-width: 42%; line-height: 1.15; overflow-wrap: anywhere; }
+      .family.launched .fam-rocket { transform: translateX(-50%) rotate(45deg); }
+
       @media (prefers-reduced-motion: reduce) {
+        .sleep-star, .rk-num.pop, .rk-flame, .rk-rocket, #fx .morning-banner { animation: none; }
         .dots.shake, .celebrate-text, .col.has-more::after, .balloon, .bday-card, .praise-card, .praise-sticker, .praise-tag { animation: none; }
         .balloon { display: none; }
         .tile, .btn, .key, .back, .sub { transition: none; }

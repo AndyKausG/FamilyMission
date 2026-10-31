@@ -38,6 +38,11 @@ from .const import (
     EVENT_KID_BIRTHDAY,
     EVENT_TASK_REMINDER,
     EVENT_REWARD_REQUESTED,
+    EVENT_ROCKET_READY,
+    EVENT_ROCKET_COUNTDOWN,
+    EVENT_ROCKET_LAUNCHED,
+    WS_TYPE_ROCKET_COUNTDOWN,
+    WS_TYPE_ROCKET_LAUNCHED,
     EVENT_REWARD_RESOLVED,
     EVENT_PRAISE,
     EVENT_HANDOVER_REQUESTED,
@@ -123,6 +128,11 @@ from .const import (
 )
 from . import kids_catalog, parents_catalog
 from .kids import (
+    DEFAULT_NIGHT_SLEEP,
+    DEFAULT_NIGHT_WAKE_WEEKDAY,
+    DEFAULT_NIGHT_WAKE_WEEKEND,
+    is_night_time,
+    rocket_countdown_seconds,
     ERR_NOT_ELIGIBLE,
     ERR_STEPS_OPEN,
     ERR_TOGETHER_NOT_ALLOWED,
@@ -353,6 +363,9 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
     response_data.setdefault("redemptions", {})
     response_data.setdefault("praise", [])
     response_data["family_points"] = _family_points(hass)
+    rocket = data.get("rocket")
+    # A record of an earlier period no longer counts
+    response_data["rocket"] = rocket if isinstance(rocket, dict) and rocket.get("period") == data.get("current_month") else None
     response_data["my_role"] = _role(hass, connection.user)
     response_data["ha_users"] = _parent_candidates(hass, entry.options)
     adults = _adults(hass)
@@ -433,6 +446,44 @@ def _advance_task(data: dict, task_id: str) -> dict | None:
     return undo
 
 
+def _rocket_check(hass: HomeAssistant, data: dict) -> dict | None:
+    """Mark the family goal as reached (once per period). Does not save; the caller does.
+
+    Undoing points later never takes it back. A record of an older period
+    stays until it is overwritten but no longer counts. Returns the new
+    record, ``None`` if nothing changed.
+    """
+    entries = hass.config_entries.async_entries(DOMAIN)
+    goal = (entries[0].options.get("family_goal") or {}) if entries else {}
+    try:
+        target = float(goal.get("points") or 0)
+    except (TypeError, ValueError):
+        return None
+    period = data.get("current_month") or dt_util.now().strftime("%Y-%m")
+    rocket = data.get("rocket")
+    if target <= 0 or (isinstance(rocket, dict) and rocket.get("period") == period):
+        return None
+    if _family_points(hass) < target:
+        return None
+    data["rocket"] = {"period": period, "reached_at": dt_util.utcnow().isoformat(), "launched_at": None}
+    reward = str(goal.get("reward") or "")
+    hass.bus.async_fire(EVENT_ROCKET_READY, {"reward": reward, "points": target, "period": period})
+    hass.async_create_task(_async_rocket_push(hass, reward))
+    return data["rocket"]
+
+
+async def _async_rocket_push(hass: HomeAssistant, reward: str) -> None:
+    """Tell every adult that the family goal is reached."""
+    de = _lang(hass) == "de"
+    title = "🚀 Familienziel erreicht!" if de else "🚀 Family goal reached!"
+    text = (
+        f"Belohnung: {reward} – jetzt gemeinsam einplanen." if de
+        else f"Reward: {reward} – plan it together now."
+    )
+    for adult in _adults(hass):
+        await _async_push_adult(hass, adult["id"], title, text, tag=f"{DOMAIN}_rocket")
+
+
 def _award_task_points(
     hass: HomeAssistant,
     data: dict,
@@ -478,6 +529,7 @@ def _award_task_points(
         "points_per_user": points_per_user,
         "total_points": total_points
     })
+    _rocket_check(hass, data)
     return completion_id
 
 
@@ -801,6 +853,22 @@ def _sanitize_parent_settings(incoming: dict) -> None:
         }
 
 
+def _sanitize_tablet_settings(incoming: dict) -> None:
+    """Validate the 2.1 settings (night mode, rocket countdown, reward push); bad values fall back to the default."""
+    for key in ("night_mode", "reward_push"):
+        if key in incoming and not isinstance(incoming[key], bool):
+            incoming[key] = True
+    for key, default in (
+        ("night_sleep", DEFAULT_NIGHT_SLEEP),
+        ("night_wake_weekday", DEFAULT_NIGHT_WAKE_WEEKDAY),
+        ("night_wake_weekend", DEFAULT_NIGHT_WAKE_WEEKEND),
+    ):
+        if key in incoming:
+            incoming[key] = parents_catalog.valid_clock(incoming[key], default)
+    if "rocket_countdown" in incoming:
+        incoming["rocket_countdown"] = rocket_countdown_seconds(incoming["rocket_countdown"])
+
+
 @websocket_api.websocket_command({
     vol.Required("type"): WS_TYPE_UPDATE_SETTINGS,
     vol.Required("settings"): dict,
@@ -825,6 +893,7 @@ async def ws_update_settings(hass: HomeAssistant, connection: websocket_api.Acti
     for key in _PROTECTED_SETTING_KEYS:
         incoming.pop(key, None)
     _sanitize_parent_settings(incoming)
+    _sanitize_tablet_settings(incoming)
     new_options.update(incoming)
     
     hass.config_entries.async_update_entry(entry, options=new_options)
@@ -921,7 +990,7 @@ async def ws_edit_history_item(hass: HomeAssistant, connection: websocket_api.Ac
         
         entry["user_id"] = new_user_id
         entry["points"] = new_points
-        
+        _rocket_check(hass, data)
         
         await hass.data[DOMAIN]["store"].async_save(data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -2323,6 +2392,23 @@ async def ws_kid_redeem(hass: HomeAssistant, connection: websocket_api.ActiveCon
     connection.send_result(msg["id"], await _async_redeem(hass, msg["kid_id"], msg["reward_id"], settings, kids))
 
 
+async def _async_push_redemption(hass: HomeAssistant, record: dict) -> None:
+    """Push a new redemption request to every adult with approve / reject buttons (setting ``reward_push``)."""
+    if _get_entry(hass).options.get("reward_push", True) is False:
+        return
+    de = _lang(hass) == "de"
+    kid = _participant_name(hass, record["kid_id"])
+    title = f"🎁 {kid} möchte einlösen" if de else f"🎁 {kid} wants to redeem"
+    text = f"{record['name']} ({record['cost']} ⭐)"
+    rid = record["id"]
+    actions = [
+        {"action": f"{ACTION_REWARD_APPROVE}{rid}", "title": "Einlösen" if de else "Redeem"},
+        {"action": f"{ACTION_REWARD_REJECT}{rid}", "title": "Ablehnen" if de else "Reject"},
+    ]
+    for adult in _adults(hass):
+        await _async_push_adult(hass, adult["id"], title, text, actions, tag=f"{DOMAIN}_reward_{rid}")
+
+
 async def _async_redeem(hass: HomeAssistant, kid_id: str, reward_id: str, settings: dict, kids: dict) -> dict:
     """Deduct a reward from the wallet and park it for the parents (shared by kid_redeem / my_redeem)."""
     reward = find_reward(settings.get("rewards"), reward_id)
@@ -2364,6 +2450,7 @@ async def _async_redeem(hass: HomeAssistant, kid_id: str, reward_id: str, settin
     })
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
+    await _async_push_redemption(hass, record)
     return {
         "success": True, "redemption_id": redemption_id, "name": record["name"], "emoji": record["emoji"],
         "cost": cost, "balance": data["wallet"].get(kid_id, 0),
@@ -2614,8 +2701,15 @@ async def _async_check_reminders(hass: HomeAssistant) -> int:
     now = dt_util.now()
     today = now.date().isoformat()
     clock = now.strftime("%H:%M")
-    overdue_days = _get_entry(hass).options.get("overdue_days", 5)
+    options = _get_entry(hass).options
+    overdue_days = options.get("overdue_days", 5)
+    # Night time: kids' reminders stay silent (marked as reminded, not postponed)
+    night = options.get("night_mode", True) is not False and is_night_time(
+        now,
+        options.get("night_sleep"), options.get("night_wake_weekday"), options.get("night_wake_weekend"),
+    )
     due = []
+    muted = False
     for task_id, task in data["tasks"].items():
         at = normalize_time(task.get("reminder_at")) if isinstance(task, dict) and not task.get("parent_task") else None
         if not at or clock < at or task.get("reminded_on") == today:
@@ -2623,8 +2717,13 @@ async def _async_check_reminders(hass: HomeAssistant) -> int:
         if not is_open(task, now, overdue_days) or is_expired(task, now) or window_state(task, now) == WINDOW_TOO_LATE:
             continue
         task["reminded_on"] = today
+        if night:
+            muted = True
+            continue
         due.append((task_id, task))
     if not due:
+        if muted:
+            await hass.data[DOMAIN]["store"].async_save(data)
         return 0
     de = _lang(hass) == "de"
     for task_id, task in due:
@@ -3956,6 +4055,46 @@ async def _async_check_weekly_summary(hass: HomeAssistant) -> bool:
     return True
 
 
+@websocket_api.websocket_command({vol.Required("type"): WS_TYPE_ROCKET_COUNTDOWN})
+@websocket_api.async_response
+async def ws_rocket_countdown(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """The rocket countdown starts on a tablet (any logged-in session): remember it once, fire the event."""
+    data = hass.data[DOMAIN]["data"]
+    rocket = data.get("rocket")
+    if not isinstance(rocket, dict) or rocket.get("period") != data.get("current_month"):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    if not rocket.get("countdown_started_at"):
+        rocket["countdown_started_at"] = dt_util.utcnow().isoformat()
+        await hass.data[DOMAIN]["store"].async_save(data)
+    options = _get_entry(hass).options
+    hass.bus.async_fire(EVENT_ROCKET_COUNTDOWN, {
+        "seconds": rocket_countdown_seconds(options.get("rocket_countdown", 60)),
+        "reward": str((options.get("family_goal") or {}).get("reward") or ""),
+    })
+    connection.send_result(msg["id"], {"success": True})
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_TYPE_ROCKET_LAUNCHED})
+@websocket_api.async_response
+async def ws_rocket_launched(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """The rocket has started (any logged-in session). Idempotent: only the first call stores and fires."""
+    data = hass.data[DOMAIN]["data"]
+    rocket = data.get("rocket")
+    if not isinstance(rocket, dict):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    if not rocket.get("launched_at"):
+        rocket["launched_at"] = dt_util.utcnow().isoformat()
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_ROCKET_LAUNCHED, {
+            "reward": str((_get_entry(hass).options.get("family_goal") or {}).get("reward") or ""),
+            "period": rocket.get("period"),
+        })
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    connection.send_result(msg["id"], {"success": True})
+
+
 @websocket_api.websocket_command({vol.Required("type"): WS_TYPE_WEEKLY_SUMMARY})
 @websocket_api.async_response
 async def ws_weekly_summary(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -4345,6 +4484,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "points_per_user": points_per_user,
             "total_points": total_points
         })
+        _rocket_check(hass, data)
         
         await store.async_save(data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -4756,6 +4896,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_handover_ask)
     websocket_api.async_register_command(hass, ws_handover_answer)
     websocket_api.async_register_command(hass, ws_weekly_summary)
+    websocket_api.async_register_command(hass, ws_rocket_countdown)
+    websocket_api.async_register_command(hass, ws_rocket_launched)
     
     # Register static path for frontend cards
     frontend_path = hass.config.path(f"custom_components/{DOMAIN}/www")

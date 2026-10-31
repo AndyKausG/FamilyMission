@@ -75,7 +75,12 @@ claim_minutes: "Bonus reservation (minutes)",
     pe_label: "Wording for the band (optional)", pe_label_ph: "Mom and Dad",
     pe_summary: "Sunday summary", pe_summary_d: "A neutral weekly note to each adult: hours per person and what is still open.", pe_time: "Time",
     pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. No other parent task sends reminders.",
-    pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found."
+    pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.",
+    tb_title: "Tablet", tb_desc: "Night mode and rocket launch for the wall tablet. Everything has a sensible default.",
+    tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
+    tb_night: "Night mode (tablet sleeps)", tb_night_d: "At bedtime the tablet shows a dark sleep screen with stars. Tapping shows the clock for 5 seconds. An open kid session runs out normally first. No reminders are sent at night.",
+    tb_sleep: "Bedtime", tb_wake_wd: "Wake up Mon-Fri", tb_wake_we: "Wake up Sat + Sun",
+    tb_rocket: "Rocket countdown (seconds)", tb_rocket_d: "How long the family counts down before the rocket launches (15-180, default 60)."
   },
   de: { 
     title: "Einstellungen", colors: "Farben (Erledigt, Fällig, Überfällig)", c_done: "Erledigt", c_due: "Fällig", c_overdue: "Überfällig", 
@@ -148,7 +153,12 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     pe_label: "Wortlaut für das Band (optional)", pe_label_ph: "Mama und Papa",
     pe_summary: "Sonntags-Zusammenfassung", pe_summary_d: "Eine neutrale Wochen-Notiz an jeden Erwachsenen: Stunden pro Person und was noch offen ist.", pe_time: "Uhrzeit",
     pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nie.",
-    pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden."
+    pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.",
+    tb_title: "Tablet", tb_desc: "Nachtmodus und Raketenstart für das Wand-Tablet. Alles hat einen sinnvollen Standard.",
+    tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
+    tb_night: "Nachtmodus (Tablet schläft)", tb_night_d: "Zur Schlafenszeit zeigt das Tablet einen dunklen Schlafbildschirm mit Sternen. Antippen zeigt 5 Sekunden die Uhr. Eine offene Kind-Sitzung läuft vorher normal aus. Nachts werden keine Erinnerungen gesendet.",
+    tb_sleep: "Schlafenszeit", tb_wake_wd: "Aufstehen Mo-Fr", tb_wake_we: "Aufstehen Sa + So",
+    tb_rocket: "Raketen-Countdown (Sekunden)", tb_rocket_d: "So lange zählt die Familie herunter, bevor die Rakete startet (15-180, Standard 60)."
   }
 };
 
@@ -281,6 +291,7 @@ class FamilyMissionSettings extends HTMLElement {
     this._parentsDraft = null;
     this._trigOpen = false;
     this._peOpen = false;
+    this._tbOpen = false;
     this._adults = [];
     this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '' };
     this._wizard = null;
@@ -738,6 +749,7 @@ class FamilyMissionSettings extends HTMLElement {
     else if (id === 'goals-toggle') { this._goalsOpen = !this._goalsOpen; this._render(); }
     else if (id === 'kids-toggle') { this._kidsOpen = !this._kidsOpen; this._render(); }
     else if (id === 'pe-toggle') { this._peOpen = !this._peOpen; this._render(); }
+    else if (id === 'tb-toggle') { this._tbOpen = !this._tbOpen; this._render(); }
     else if (id === 'trig-toggle') { this._trigOpen = !this._trigOpen; this._render(); }
     else if (id === 'btn-wizard-open') this._openWizard();
     else if (id === 'btn-help-open') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
@@ -1566,6 +1578,74 @@ class FamilyMissionSettings extends HTMLElement {
   }
 
   /**
+   * Renders the "Tablet" section: night mode (bedtime, wake-up times) and the
+   * rocket countdown length. Saved with the normal save button.
+   * @returns {string} - The HTML.
+   */
+  _renderTabletSection() {
+    const st = this.settings || {};
+    const valid = (v, def) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(v || '') ? v : def);
+    // 15 minute steps; a stored value that is not on the grid stays selectable
+    const timeSelect = (id, value) => {
+      const opts = [];
+      for (let m = 0; m < 1440; m += 15) {
+        opts.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+      }
+      if (!opts.includes(value)) { opts.push(value); opts.sort(); }
+      return `<select class="form-select" id="${id}" style="height: 36px; font-size: 14px;">${opts.map(o => `<option value="${o}" ${o === value ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+    };
+    const countdown = Math.max(15, Math.min(180, parseInt(st.rocket_countdown) || 60));
+    return `
+        <div class="section-card">
+          <div class="section-header" id="tb-toggle">
+            <div class="section-title">
+              <ha-icon icon="${this._tbOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
+              <span>${this.localize('tb_title')}</span>
+            </div>
+          </div>
+          <div class="section-content ${this._tbOpen ? 'open' : ''}" id="tb-content">
+            <p class="kids-note">${this.localize('tb_desc')}</p>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="tb-night" ${st.night_mode !== false ? 'checked' : ''}> ${this.localize('tb_night')}</label>
+              <p class="kids-note">${this.localize('tb_night_d')}</p>
+              <div class="kid-fields">
+                <label class="kid-field">${this.localize('tb_sleep')}${timeSelect('tb-sleep', valid(st.night_sleep, '20:30'))}</label>
+                <label class="kid-field">${this.localize('tb_wake_wd')}${timeSelect('tb-wake-wd', valid(st.night_wake_weekday, '06:00'))}</label>
+                <label class="kid-field">${this.localize('tb_wake_we')}${timeSelect('tb-wake-we', valid(st.night_wake_weekend, '08:00'))}</label>
+              </div>
+            </div>
+            <div class="family-box">
+              <label class="kid-field">${this.localize('tb_rocket')}
+                <input type="number" id="tb-rocket" min="15" max="180" step="5" value="${countdown}"></label>
+              <p class="kids-note">${this.localize('tb_rocket_d')}</p>
+            </div>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="tb-reward-push" ${st.reward_push !== false ? 'checked' : ''}> ${this.localize('tb_reward_push')}</label>
+            </div>
+          </div>
+        </div>`;
+  }
+
+  /** Keeps the "Tablet" inputs in this.settings (saved with the normal save button). */
+  _bindTabletInputs() {
+    const root = this.shadowRoot;
+    const box = root.getElementById('tb-content');
+    if (!box) return;
+    const sync = () => {
+      const val = (id) => root.getElementById(id);
+      this.settings.night_mode = !!val('tb-night').checked;
+      this.settings.reward_push = !!val('tb-reward-push').checked;
+      this.settings.night_sleep = val('tb-sleep').value;
+      this.settings.night_wake_weekday = val('tb-wake-wd').value;
+      this.settings.night_wake_weekend = val('tb-wake-we').value;
+      const n = parseInt(val('tb-rocket').value);
+      this.settings.rocket_countdown = Math.max(15, Math.min(180, isNaN(n) ? 60 : n));
+    };
+    box.addEventListener('input', sync);
+    box.addEventListener('change', sync);
+  }
+
+  /**
    * Wires the picker and the task select of the triggers section.
    */
   _bindTriggerInputs() {
@@ -1874,6 +1954,8 @@ class FamilyMissionSettings extends HTMLElement {
 
         ${this._renderParentsCentralSection()}
 
+        ${this._renderTabletSection()}
+
         ${showAdvanced ? `
           <div class="section-card">
             <div class="section-header" id="adv-toggle">
@@ -2068,6 +2150,7 @@ class FamilyMissionSettings extends HTMLElement {
     this._bindKidInputs();
     this._bindTriggerInputs();
     this._bindParentsCentralInputs();
+    this._bindTabletInputs();
 
     if (this._templateModalOpen) {
       const iconPicker = this.shadowRoot.getElementById('tmpl-icon');
