@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.1.1] - 2026-11-01
+
+- **Fix:** On phones with a notch the close button of the full-screen help was hidden under the status bar, so the help could not be closed. The help, the quick-start wizard and the parents hub sheets now keep clear of the status bar / home indicator (safe area), and the help has an additional "Close" button at the end.
+
 ## [2.1.0] - 2026-11-01
 
 ### Added
