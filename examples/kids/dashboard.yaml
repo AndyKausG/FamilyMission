@@ -48,30 +48,24 @@ views:
     sections:
       - type: grid
         cards:
-          - type: heading
-            heading: Wir Eltern, Freigaben & Bonus
-          # Eltern-Zentrale: Heute / Kinder / Mehr (inkl. Eltern-Aufgaben "Wir Eltern")
+          # Eltern-Zentrale: Heute / Kinder / Mehr (inkl. Eltern-Aufgaben "Wir Eltern").
+          # Aufgabenliste und Einstellungen stecken unter "Mehr"; ihre Optionen hier setzen.
           - type: custom:family-mission-parents
             title: Eltern
-          - type: heading
-            heading: Aufgaben
-          - type: custom:family-mission-card
-            title: Aufgaben
-            sort_by: due_date
-            filter_by: "!paused"
-            items_per_page: 10
-            show_search: true
-            show_add: true
-            show_edit: true
-            show_delete: true
-          - type: custom:family-mission-protocol
-            title: Protokoll
+            tasks_card:
+              sort_by: due_date
+              filter_by: "!paused"
+              items_per_page: 10
+              show_search: true
+              show_add: true
+              show_edit: true
+              show_delete: true
+            settings_card:
+              show_advanced: false
       - type: grid
         cards:
           - type: heading
-            heading: Auswertung
+            heading: Protokoll & Auswertung
+          - type: custom:family-mission-protocol
+            title: Protokoll
           - type: custom:family-mission-stats
-          - type: heading
-            heading: Einstellungen
-          - type: custom:family-mission-settings
-            show_advanced: false
