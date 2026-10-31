@@ -128,6 +128,20 @@ const HELP_CONTENT = {
         ],
         { tip: "Startet klein: fünf bis acht Aufgaben genügen. Was nicht passt, lasst ihr einfach weg. Es gibt keine Pflichtfelder." }
       ] },
+      { id: "tablet", icon: "🌙", title: "Raketenstart, Nachtmodus und Einlöse-Push", blocks: [
+        "Drei Funktionen für das Wand-Tablet, die den Tag und die Belohnung klar rahmen: Das Familienziel wird **gemeinsam gefeiert**, der Tag **hört irgendwann auf**, und Wünsche der Kinder erreichen euch **sofort**.",
+        [
+          "**Raketenstart:** Erreicht die Familie ihr Ziel, erscheint auf dem Tablet „Alle zur Rakete!“ mit der Belohnung und einem Countdown (Standard 60 Sekunden, einstellbar von 15 bis 180). Alle kommen zusammen, alle sehen es, dann hebt die Rakete ab. Das ist bewusst ein gemeinsamer Moment, kein stilles Punktekonto.",
+          "**Einmal pro Ziel:** Der Start läuft pro Monatsziel einmal. Auch wenn später Punkte zurückgenommen werden, gilt ein erreichtes Ziel als erreicht. Ihr bekommt dazu eine Push-Nachricht („Familienziel erreicht! Belohnung: … jetzt gemeinsam einplanen“), damit die Belohnung nicht im Alltag untergeht.",
+          "**Ablauf:** Alle 10 Sekunden ertönt ein Ruf-Ton, in den letzten 10 Sekunden zählen große Zahlen herunter, mit „Jetzt starten!“ kürzt ihr ab. Danach folgen Start, Feuerwerk und das Abschlussbild. Mehrere Tablets laufen sauber zu Ende, danach steht in der Familienleiste „🚀 gestartet!“. Wer Bewegung scheut, bekommt eine ruhigere Variante (Einstellung „Bewegung reduzieren“ des Geräts).",
+          "**Lautsprecher:** Zu Beginn feuert das Ereignis `family_mission_rocket_countdown`. Damit kann ein Lautsprecher den Countdown ansagen (Beispiel in `examples/kids/automationen.yaml`).",
+          "**Nachtmodus:** Zur Schlafenszeit (Standard 20:30) zeigt das Tablet einen dunklen Schlafbildschirm mit Sternen und „Gute Nacht“, ohne Aufgaben, Töne und helle Flächen. Der Tag ist damit klar zu Ende, und es gibt keinen Druck, abends noch etwas nachzuholen. Wer das Tablet antippt, sieht 5 Sekunden die Uhr und die Aufstehzeit.",
+          "**Zeiten:** Geschlafen wird bis zur Aufstehzeit des Folgetags: Mo bis Fr 06:00, Sa und So 08:00 (also weckt die Nacht auf Samstag um 08:00, die Nacht auf Montag um 06:00). Eine Kinder-Sitzung, die bei Schlafenszeit noch offen ist, läuft normal aus und wird nie mitten in der Eingabe abgebrochen. Morgens begrüßt ein „Guten Morgen ☀️“-Banner 30 Minuten lang.",
+          "**Nachts ruhig:** In der Nachtzeit werden keine Erinnerungen für Kinder-Aufgaben gesendet. Wurde das Familienziel nachts erreicht, startet die Rakete nach dem Aufwachen. Alles ist im Bereich **Tablet** der Einstellungen anpassbar oder abschaltbar; das Gerät `mode: mine` ist nie betroffen.",
+          "**Einlöse-Push:** Möchte ein Kind im Shop etwas einlösen, bekommen alle Erwachsenen eine Push-Nachricht („🎁 Clara möchte einlösen“) mit den Knöpfen **Einlösen** und **Ablehnen**, direkt vom Sperrbildschirm aus. Ist es erledigt (egal wo), kommt keine weitere Nachricht. Abschaltbar mit `reward_push`."
+        ],
+        { tip: "Plant die Belohnung noch am selben Abend: Ein Kino-Abend, der konkret im Kalender steht, wirkt viel stärker als „irgendwann mal“." }
+      ] },
       { id: "fade", icon: "🌿", title: "Ausschleichen", blocks: [
         "Ziel ist **Gewohnheit, nicht Punkte-Sammeln**. Wenn eine Routine 4 Wochen stabil läuft, führt ihr sie schrittweise von der Belohnung weg:",
         [
@@ -271,6 +285,20 @@ const HELP_CONTENT = {
         ],
         { tip: "Commencez petit : cinq à huit tâches suffisent. Laissez de côté ce qui ne convient pas. Il n'y a aucun champ obligatoire." }
       ] },
+      { id: "tablet", icon: "🌙", title: "Décollage de la fusée, mode nuit et notification d'échange", blocks: [
+        "Trois fonctions pour la tablette murale qui donnent un cadre clair à la journée et à la récompense : l'objectif familial est **fêté ensemble**, la journée **a une fin**, et les souhaits des enfants **vous parviennent tout de suite**.",
+        [
+          "**Décollage de la fusée :** quand la famille atteint son objectif, la tablette affiche « Tous à la fusée ! » avec la récompense et un compte à rebours (60 secondes par défaut, réglable de 15 à 180). Tout le monde se réunit, tout le monde voit, puis la fusée décolle. C'est volontairement un moment partagé, pas un compte de points silencieux.",
+          "**Une fois par objectif :** le décollage a lieu une fois par objectif mensuel. Même si des points sont retirés plus tard, un objectif atteint reste atteint. Vous recevez une notification (« Objectif familial atteint ! Récompense : … à planifier ensemble ») pour que la récompense ne se perde pas dans le quotidien.",
+          "**Déroulement :** un signal retentit toutes les 10 secondes, les 10 dernières secondes se comptent en grands chiffres, et « Démarrer maintenant ! » raccourcit l'attente. Suivent le décollage, le feu d'artifice et l'image finale. Plusieurs tablettes terminent proprement, puis la barre familiale indique « 🚀 décollée ! ». Si l'appareil préfère moins d'animations, une variante plus calme est affichée.",
+          "**Haut-parleur :** au début, l'événement `family_mission_rocket_countdown` se déclenche. Un haut-parleur peut ainsi annoncer le compte à rebours (exemple dans `examples/kids/automationen.yaml`).",
+          "**Mode nuit :** à l'heure du coucher (20:30 par défaut), la tablette affiche un écran de sommeil sombre avec des étoiles et « Bonne nuit », sans tâches, sons ni surfaces claires. La journée est clairement terminée, et il n'y a aucune pression pour rattraper le soir. Un toucher affiche l'heure et l'heure du lever pendant 5 secondes.",
+          "**Horaires :** la tablette dort jusqu'à l'heure du lever du lendemain : du lundi au vendredi 06:00, samedi et dimanche 08:00 (la nuit vers samedi se termine donc à 08:00, la nuit vers lundi à 06:00). Une session d'enfant encore ouverte au coucher se termine normalement et n'est jamais interrompue en pleine saisie. Le matin, un bandeau « Bonjour ☀️ » accueille la famille pendant 30 minutes.",
+          "**Nuits calmes :** aucun rappel pour les tâches des enfants n'est envoyé pendant la nuit. Si l'objectif familial est atteint la nuit, la fusée décolle après le réveil. Tout se règle ou se désactive dans la section **Tablette** des réglages ; un appareil personnel (`mode: mine`) n'est jamais concerné.",
+          "**Notification d'échange :** quand un enfant veut échanger quelque chose dans la boutique, tous les adultes reçoivent une notification (« 🎁 Clara souhaite échanger ») avec les boutons **Échanger** et **Refuser**, directement depuis l'écran verrouillé. Une fois traité (où que ce soit), plus aucun message n'arrive. Désactivable avec `reward_push`."
+        ],
+        { tip: "Planifiez la récompense le soir même : une soirée cinéma réellement inscrite au calendrier agit bien mieux qu'un « un jour »." }
+      ] },
       { id: "fade", icon: "🌿", title: "Réduire progressivement", blocks: [
         "Le but est l'**habitude, pas la collecte de points**. Quand une routine tient depuis 4 semaines, éloignez-la peu à peu de la récompense :",
         [
@@ -413,6 +441,20 @@ const HELP_CONTENT = {
           "**Own device:** with `mode: mine` your own parent tasks (no points, with duration) appear on your own phone and can be ticked off there."
         ],
         { tip: "Start small: five to eight tasks are enough. Leave out whatever does not fit. There are no required fields." }
+      ] },
+      { id: "tablet", icon: "🌙", title: "Rocket launch, night mode and redeem push", blocks: [
+        "Three features for the wall tablet that give the day and the reward a clear frame: the family goal is **celebrated together**, the day **comes to an end**, and the kids' wishes **reach you right away**.",
+        [
+          "**Rocket launch:** when the family reaches its goal, the tablet shows “All aboard the rocket!” with the reward and a countdown (default 60 seconds, adjustable from 15 to 180). Everybody gathers, everybody sees it, then the rocket lifts off. It is deliberately a shared moment, not a silent points account.",
+          "**Once per goal:** the launch happens once per monthly goal. Even if points are taken back later, a reached goal stays reached. You get a push message (“Family goal reached! Reward: … plan it together now”) so the reward does not get lost in everyday life.",
+          "**Sequence:** a call sound rings every 10 seconds, the last 10 seconds count down with big numbers, and “Launch now!” shortens it. Then come the liftoff, fireworks and a finishing picture. Several tablets finish cleanly, and the family bar then reads “🚀 launched!”. If a device prefers reduced motion, a calmer variant is shown.",
+          "**Speaker:** at the start the event `family_mission_rocket_countdown` fires. A speaker can announce the countdown with it (example in `examples/kids/automationen.yaml`).",
+          "**Night mode:** at bedtime (default 20:30) the tablet shows a dark sleep screen with stars and “Good night”, without tasks, sounds or bright areas. The day is clearly over, and there is no pressure to catch up in the evening. A tap shows the clock and the wake-up time for 5 seconds.",
+          "**Times:** it sleeps until the wake-up time of the following day: Mon to Fri 06:00, Sat and Sun 08:00 (so the night to Saturday ends at 08:00, the night to Monday at 06:00). A kid session still open at bedtime runs out normally and is never cut off mid-input. In the morning a “Good morning ☀️” banner greets everyone for 30 minutes.",
+          "**Quiet nights:** no reminders for kid tasks are sent during the night. If the family goal was reached at night, the rocket launches after waking up. Everything can be adjusted or switched off in the **Tablet** section of the settings; an own device (`mode: mine`) is never affected.",
+          "**Redeem push:** when a kid wants to redeem something in the shop, all adults get a push message (“🎁 Clara wants to redeem”) with the buttons **Redeem** and **Decline**, straight from the lock screen. Once it is handled (wherever), no further message arrives. Can be switched off with `reward_push`."
+        ],
+        { tip: "Plan the reward the same evening: a cinema night that is actually in the calendar works far better than “sometime”." }
       ] },
       { id: "fade", icon: "🌿", title: "Phasing out", blocks: [
         "The aim is **habit, not collecting points**. When a routine has run stably for 4 weeks, lead it step by step away from the reward:",

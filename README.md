@@ -19,6 +19,7 @@ Suggestions for improvement and bug reports are welcome: [issues](https://github
 * **Own-device view** (`mode: mine`): kids and adults see their own tasks on their own phone, without tiles and PIN. See [My tasks](#my-tasks-own-device-mode-mine).
 * **Monthly goals, family rocket, reports and history protocol** with editable entries.
 * **We parents (new in 2.0)**: the adults' household and planning work as quiet, point-free parent tasks (me / you / take turns, "Can you?" hand-over by push, 🧠 planning reminder, Sunday summary) plus a role-model band on the kids tablet. See [We parents](#we-parents-parent-tasks).
+* **Rocket launch and night mode (new in 2.1)**: reaching the family goal triggers a shared "All aboard the rocket!" countdown with liftoff on the wall tablet (once per goal, push to the adults); at night the tablet sleeps with stars and a clock on tap, and greets the family in the morning. See [Rocket launch and night mode](#rocket-launch-and-night-mode).
 * **Bonus triggers**: a bonus task opens by itself when a device state changes (e.g. the dishwasher is done).
 * **In-app help in German, French and English** (the parents guide, searchable, offline). Also available as Markdown: [Deutsch](docs/parents-guide.de.md) · [English](docs/parents-guide.en.md) · [Français](docs/parents-guide.fr.md).
 
@@ -377,7 +378,9 @@ Kids can spend their points on rewards chosen by the parents.
 * **Parents card:** section "Einlösungen" with "✅ Einlösen" (`redemption_resolve`, `approve: true`, marks it done) and "↩️ Ablehnen" (refunds the wallet, history type `refund`). The wallet balance is shown next to the monthly points. Redeem/refund history entries (`redeem`, `refund`) never change the monthly points.
 * **Events:** `family_mission_reward_requested` (`redemption_id`, `kid_id`, `kid_name`, `reward_id`, `name`, `emoji`, `cost`) and `family_mission_reward_resolved` (same plus `result`: `approved` | `rejected`).
 
-Actionable notification (`FM_RAPPROVE_<id>` / `FM_RREJECT_<id>`, idempotent like the approval actions):
+* **Push to the adults (2.1):** on every request FamilyMission itself pushes all adults who have a push target (same resolution as for the parent tasks: `parent_notify`, otherwise the Companion app): title "🎁 <kid> möchte einlösen", text "<reward> (<cost> ⭐)" and the actions `FM_RAPPROVE_<id>` ("Einlösen") / `FM_RREJECT_<id>` ("Ablehnen"). Once the request is handled, anywhere, no further push follows. Switch it off with the setting `reward_push` (`true` by default).
+
+For additional announcements (the built-in push is enough for most families), an actionable notification of your own (`FM_RAPPROVE_<id>` / `FM_RREJECT_<id>`, idempotent like the approval actions):
 
 ```yaml
 alias: Ask parents about a reward
@@ -491,6 +494,43 @@ New in 2.0. The household and planning work of the adults, set up once and then 
 | `parent_notify` | `{}` | Optional push target per adult (`{user_id: "notify.xyz"}`). Without an entry FamilyMission uses the `mobile_app` notify service of that user's device, if it exists. Send errors are only logged. |
 
 All of them are in the settings card, section **Wir Eltern**; none is required.
+
+### Rocket launch and night mode
+
+Both features only concern the wall tablet (`family-mission-kids` in family mode); the own-device view (`mode: mine`) is never affected.
+
+#### Rocket launch (family goal reached)
+* As soon as the approved task points of the family reach the family goal (`family_goal.points`), the backend remembers it once per period (`rocket` in `get_data`: `period`, `reached_at`, `launched_at`), fires `family_mission_rocket_ready` and pushes all adults: "🚀 Familienziel erreicht! Belohnung: <reward> – jetzt gemeinsam einplanen." Taking points back later does not undo it; the next period (monthly reset) can launch again.
+* The kids tablet then shows a full-screen overlay: "Alle zur Rakete! 🚀", the reward, a countdown of `rocket_countdown` seconds (default 60), a call sound every 10 seconds (only with `sound: true`), huge numbers with a tick in the last 10 seconds and a button "Jetzt starten!" that skips the rest. Then the rocket lifts off with flames, smoke, stars, fireworks and a fanfare (about 8 s), followed by "Geschafft, Familie! 🎉 <reward>" for about 6 s. A tap after the launch closes it early. With `prefers-reduced-motion` a calmer variant (no shaking, smoke or fireworks) is used.
+* The overlay starts on the first tablet that loads the data (even over a finished kid session) and calls `family_mission/rocket_countdown` once. Whoever finishes first calls `family_mission/rocket_launched`; other tablets play to the end. Afterwards the family bar shows "🚀 gestartet! <reward>" instead of "Ziel erreicht!".
+* A goal reached at night waits for the morning (see night mode).
+
+#### Night mode
+* From `night_sleep` the tablet shows a dark sleep screen ("Gute Nacht, Clara & David 💤", stars, moon, a dim clock): no tasks, no PIN pad, no sounds, no confetti, slow CSS animation only. A tap shows a big clock and "Aufstehen um 06:00" for 5 seconds.
+* It sleeps until the wake-up time of the **following** day: `night_wake_weekday` for Mon-Fri, `night_wake_weekend` for Sat+Sun (so Friday night wakes at the weekend time, Sunday night at the weekday time). Browser local time.
+* A kid session that is still open at bedtime runs out normally (idle `timeout`) and is never cut off in the middle of an input; then the tablet sleeps. After waking up a "Guten Morgen ☀️" banner stays for 30 minutes (tap to dismiss).
+* The backend sends no reminders (`reminder_at`) for kid tasks during the night.
+* The time logic is the small pure function `kidsNightState(now, options)` in `family-mission-kids.js` (also `customElements.get('family-mission-kids').nightState`), so it can be tested with a fake clock.
+
+#### Settings (`update_settings`)
+| Key | Default | Meaning |
+| :--- | :--- | :--- |
+| `night_mode` | `true` | Night mode on or off. |
+| `night_sleep` | `"20:30"` | Bedtime (`HH:MM`). |
+| `night_wake_weekday` | `"06:00"` | Wake-up time Mon-Fri. |
+| `night_wake_weekend` | `"08:00"` | Wake-up time Sat+Sun. |
+| `rocket_countdown` | `60` | Length of the rocket countdown in seconds (15-180). |
+| `reward_push` | `true` | Push to the adults when a kid requests a redemption (see [Reward shop](#reward-shop)). |
+
+The first five are in the settings card, section **Tablet**; invalid values fall back to the default.
+
+#### Websocket commands
+| Command | Description |
+| :--- | :--- |
+| `family_mission/rocket_countdown` | Any logged-in session (also a tablet user). Remembers `countdown_started_at` once and fires `family_mission_rocket_countdown`. |
+| `family_mission/rocket_launched` | Any logged-in session. Sets `launched_at` (idempotent) and fires `family_mission_rocket_launched`. |
+
+For a speaker announcement of the countdown see [`examples/kids/automationen.yaml`](examples/kids/automationen.yaml).
 
 ### Praise
 Social recognition without points. On the parents card every kid has a **❤️ Loben** button: a sheet with sticker chips (❤️ ⭐ 🌟 👏 🏆 💪 🦸 🎉 😊 🙌), message chips ("Danke fürs Helfen!", "Das hast du super gemacht!", "Ich bin stolz auf dich!", "Toll, wie du drangeblieben bist!") and a free text (max 120 characters). The websocket command `family_mission/send_praise` (`kid_id`, `sticker`, optional `message`; admin, manager or parent) stores the praise in `data["praise"]` (the last 50 per kid; `id`, `kid_id`, `from_name`, `message`, `sticker`, `timestamp`, `seen`), where `from_name` is the name of the person linked to the sending user (else the user name), adds a history entry of type `praise` with 0 points (protocol card: ❤️ and the message; statistics and goals ignore it) and fires `family_mission_praise`.
@@ -697,6 +737,24 @@ Fired when an adult asks the partner to take over a parent task ("Kannst du?"). 
 
 ### family_mission_weekly_summary
 Fired together with the Sunday summary push. The event data are the same as the websocket command `family_mission/weekly_summary` returns: the hours per adult over the last 7 local days and the parent tasks that were carried over.
+
+### family_mission_rocket_ready
+Fired once per period when the family goal is reached (together with the push to the adults).
+
+#### Event Data:
+- **reward**: The reward text of the family goal.
+- **points**: The goal in points.
+- **period**: The period (month) the goal was reached in.
+
+### family_mission_rocket_countdown
+Fired when the rocket countdown starts on a tablet (`family_mission/rocket_countdown`). Use it for a speaker announcement.
+
+#### Event Data:
+- **seconds**: The length of the countdown in seconds.
+- **reward**: The reward text.
+
+### family_mission_rocket_launched
+Fired when a tablet reports the finished launch (`family_mission/rocket_launched`, idempotent).
 
 ### family_mission_task_created
 This event is fired whenever a new task is created. It is useful for notifying family members about new tasks or triggering other automations.

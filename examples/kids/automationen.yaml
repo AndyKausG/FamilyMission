@@ -71,3 +71,19 @@
       data:
         title: "Erledigt: {{ trigger.event.data.task_name }}"
         message: "{{ trigger.event.data.total_points }} Punkte vergeben"
+
+# --- Raketen-Countdown ueber Lautsprecher ansagen (FamilyMission 2.1) ---
+# Das Event kommt einmal, wenn der Countdown auf einem Tablet startet.
+- alias: "FamilyMission: Raketen-Countdown ansagen"
+  triggers:
+    - trigger: event
+      event_type: family_mission_rocket_countdown
+  actions:
+    - action: tts.speak
+      target:
+        entity_id: tts.home_assistant_cloud                # anpassen (TTS-Dienst)
+      data:
+        media_player_entity_id: media_player.wohnzimmer    # anpassen
+        message: >-
+          Alle zur Rakete! In {{ trigger.event.data.seconds }} Sekunden startet sie.
+          Belohnung: {{ trigger.event.data.reward }}

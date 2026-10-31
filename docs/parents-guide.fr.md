@@ -15,9 +15,10 @@ Comment faire fonctionner FamilyMission à la maison
 7. [Féliciter](#praise)
 8. [Objectifs mensuels, fusée de la famille, anneau au-delà de 100 %](#goals)
 9. [Nous les parents : tâches des parents et centrale des parents](#parents)
-10. [Réduire progressivement](#fade)
-11. [Questions fréquentes / problèmes](#faq)
-12. [À propos de FamilyMission](#about)
+10. [Décollage de la fusée, mode nuit et notification d'échange](#tablet)
+11. [Réduire progressivement](#fade)
+12. [Questions fréquentes / problèmes](#faq)
+13. [À propos de FamilyMission](#about)
 
 <a id="basics"></a>
 
@@ -152,9 +153,27 @@ Le travail domestique des adultes est aussi un travail, souvent invisible. **Nou
 > 💡 Commencez petit : cinq à huit tâches suffisent. Laissez de côté ce qui ne convient pas. Il n'y a aucun champ obligatoire.
 
 
+<a id="tablet"></a>
+
+## 10. 🌙 Décollage de la fusée, mode nuit et notification d'échange
+
+Trois fonctions pour la tablette murale qui donnent un cadre clair à la journée et à la récompense : l'objectif familial est **fêté ensemble**, la journée **a une fin**, et les souhaits des enfants **vous parviennent tout de suite**.
+
+- **Décollage de la fusée :** quand la famille atteint son objectif, la tablette affiche « Tous à la fusée ! » avec la récompense et un compte à rebours (60 secondes par défaut, réglable de 15 à 180). Tout le monde se réunit, tout le monde voit, puis la fusée décolle. C'est volontairement un moment partagé, pas un compte de points silencieux.
+- **Une fois par objectif :** le décollage a lieu une fois par objectif mensuel. Même si des points sont retirés plus tard, un objectif atteint reste atteint. Vous recevez une notification (« Objectif familial atteint ! Récompense : … à planifier ensemble ») pour que la récompense ne se perde pas dans le quotidien.
+- **Déroulement :** un signal retentit toutes les 10 secondes, les 10 dernières secondes se comptent en grands chiffres, et « Démarrer maintenant ! » raccourcit l'attente. Suivent le décollage, le feu d'artifice et l'image finale. Plusieurs tablettes terminent proprement, puis la barre familiale indique « 🚀 décollée ! ». Si l'appareil préfère moins d'animations, une variante plus calme est affichée.
+- **Haut-parleur :** au début, l'événement `family_mission_rocket_countdown` se déclenche. Un haut-parleur peut ainsi annoncer le compte à rebours (exemple dans `examples/kids/automationen.yaml`).
+- **Mode nuit :** à l'heure du coucher (20:30 par défaut), la tablette affiche un écran de sommeil sombre avec des étoiles et « Bonne nuit », sans tâches, sons ni surfaces claires. La journée est clairement terminée, et il n'y a aucune pression pour rattraper le soir. Un toucher affiche l'heure et l'heure du lever pendant 5 secondes.
+- **Horaires :** la tablette dort jusqu'à l'heure du lever du lendemain : du lundi au vendredi 06:00, samedi et dimanche 08:00 (la nuit vers samedi se termine donc à 08:00, la nuit vers lundi à 06:00). Une session d'enfant encore ouverte au coucher se termine normalement et n'est jamais interrompue en pleine saisie. Le matin, un bandeau « Bonjour ☀️ » accueille la famille pendant 30 minutes.
+- **Nuits calmes :** aucun rappel pour les tâches des enfants n'est envoyé pendant la nuit. Si l'objectif familial est atteint la nuit, la fusée décolle après le réveil. Tout se règle ou se désactive dans la section **Tablette** des réglages ; un appareil personnel (`mode: mine`) n'est jamais concerné.
+- **Notification d'échange :** quand un enfant veut échanger quelque chose dans la boutique, tous les adultes reçoivent une notification (« 🎁 Clara souhaite échanger ») avec les boutons **Échanger** et **Refuser**, directement depuis l'écran verrouillé. Une fois traité (où que ce soit), plus aucun message n'arrive. Désactivable avec `reward_push`.
+
+> 💡 Planifiez la récompense le soir même : une soirée cinéma réellement inscrite au calendrier agit bien mieux qu'un « un jour ».
+
+
 <a id="fade"></a>
 
-## 10. 🌿 Réduire progressivement
+## 11. 🌿 Réduire progressivement
 
 Le but est l'**habitude, pas la collecte de points**. Quand une routine tient depuis 4 semaines, éloignez-la peu à peu de la récompense :
 
@@ -168,7 +187,7 @@ Reportez l'attention libérée sur une nouvelle habitude, mais une seule à la f
 
 <a id="faq"></a>
 
-## 11. ❓ Questions fréquentes / problèmes
+## 12. ❓ Questions fréquentes / problèmes
 
 - **Mon enfant coche tout sans rien faire.** Activez la validation ou les contrôles par sondage pour ces tâches et jetez un coup d'œil. Parlez-en honnêtement. « Triché » seulement en cas de triche délibérée, calmement et avec une discussion. Des étapes visibles (par exemple « lit fait ») aident à contrôler.
 - **Dispute à propos du bonus.** Celui qui touche « Prendre » a la priorité quelques minutes. Vous pouvez autoriser « Ensemble » pour des tâches, donner un bonus spontané à un enfant précis ou fixer un âge minimum.
@@ -179,7 +198,7 @@ Reportez l'attention libérée sur une nouvelle habitude, mais une seule à la f
 
 <a id="about"></a>
 
-## 12. ℹ️ À propos de FamilyMission
+## 13. ℹ️ À propos de FamilyMission
 
 FamilyMission est basé sur **TaskOrganizer** de Patrick von Wiegen (licence MIT) et poursuivi par AndyKausG comme projet indépendant : https://github.com/AndyKausG/FamilyMission
 

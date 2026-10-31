@@ -32,6 +32,9 @@ EVENT_PRAISE = "family_mission_praise"
 EVENT_HANDOVER_REQUESTED = "family_mission_handover_requested"
 EVENT_HANDOVER_RESOLVED = "family_mission_handover_resolved"
 EVENT_WEEKLY_SUMMARY = "family_mission_weekly_summary"
+EVENT_ROCKET_READY = "family_mission_rocket_ready"
+EVENT_ROCKET_COUNTDOWN = "family_mission_rocket_countdown"
+EVENT_ROCKET_LAUNCHED = "family_mission_rocket_launched"
 
 # Event fired by the Home Assistant companion app when a notification action is tapped
 EVENT_MOBILE_APP_ACTION = "mobile_app_notification_action"
@@ -98,6 +101,8 @@ WS_TYPE_PARENT_TASK_DONE = "family_mission/parent_task_done"
 WS_TYPE_HANDOVER_ASK = "family_mission/handover_ask"
 WS_TYPE_HANDOVER_ANSWER = "family_mission/handover_answer"
 WS_TYPE_WEEKLY_SUMMARY = "family_mission/weekly_summary"
+WS_TYPE_ROCKET_COUNTDOWN = "family_mission/rocket_countdown"
+WS_TYPE_ROCKET_LAUNCHED = "family_mission/rocket_launched"
 
 # Service Names
 SERVICE_RESET_MONTHLY_POINTS = "reset_monthly_points"

@@ -15,9 +15,10 @@ Wie FamilyMission bei euch zu Hause gut funktioniert
 7. [Loben](#praise)
 8. [Monatsziele, Familien-Rakete, Ring über 100 %](#goals)
 9. [Wir Eltern: Eltern-Aufgaben und Eltern-Zentrale](#parents)
-10. [Ausschleichen](#fade)
-11. [Häufige Fragen / Probleme](#faq)
-12. [Über FamilyMission](#about)
+10. [Raketenstart, Nachtmodus und Einlöse-Push](#tablet)
+11. [Ausschleichen](#fade)
+12. [Häufige Fragen / Probleme](#faq)
+13. [Über FamilyMission](#about)
 
 <a id="basics"></a>
 
@@ -152,9 +153,27 @@ Auch der Haushalt der Erwachsenen ist Arbeit, oft unsichtbare. **Wir Eltern** ma
 > 💡 Startet klein: fünf bis acht Aufgaben genügen. Was nicht passt, lasst ihr einfach weg. Es gibt keine Pflichtfelder.
 
 
+<a id="tablet"></a>
+
+## 10. 🌙 Raketenstart, Nachtmodus und Einlöse-Push
+
+Drei Funktionen für das Wand-Tablet, die den Tag und die Belohnung klar rahmen: Das Familienziel wird **gemeinsam gefeiert**, der Tag **hört irgendwann auf**, und Wünsche der Kinder erreichen euch **sofort**.
+
+- **Raketenstart:** Erreicht die Familie ihr Ziel, erscheint auf dem Tablet „Alle zur Rakete!“ mit der Belohnung und einem Countdown (Standard 60 Sekunden, einstellbar von 15 bis 180). Alle kommen zusammen, alle sehen es, dann hebt die Rakete ab. Das ist bewusst ein gemeinsamer Moment, kein stilles Punktekonto.
+- **Einmal pro Ziel:** Der Start läuft pro Monatsziel einmal. Auch wenn später Punkte zurückgenommen werden, gilt ein erreichtes Ziel als erreicht. Ihr bekommt dazu eine Push-Nachricht („Familienziel erreicht! Belohnung: … jetzt gemeinsam einplanen“), damit die Belohnung nicht im Alltag untergeht.
+- **Ablauf:** Alle 10 Sekunden ertönt ein Ruf-Ton, in den letzten 10 Sekunden zählen große Zahlen herunter, mit „Jetzt starten!“ kürzt ihr ab. Danach folgen Start, Feuerwerk und das Abschlussbild. Mehrere Tablets laufen sauber zu Ende, danach steht in der Familienleiste „🚀 gestartet!“. Wer Bewegung scheut, bekommt eine ruhigere Variante (Einstellung „Bewegung reduzieren“ des Geräts).
+- **Lautsprecher:** Zu Beginn feuert das Ereignis `family_mission_rocket_countdown`. Damit kann ein Lautsprecher den Countdown ansagen (Beispiel in `examples/kids/automationen.yaml`).
+- **Nachtmodus:** Zur Schlafenszeit (Standard 20:30) zeigt das Tablet einen dunklen Schlafbildschirm mit Sternen und „Gute Nacht“, ohne Aufgaben, Töne und helle Flächen. Der Tag ist damit klar zu Ende, und es gibt keinen Druck, abends noch etwas nachzuholen. Wer das Tablet antippt, sieht 5 Sekunden die Uhr und die Aufstehzeit.
+- **Zeiten:** Geschlafen wird bis zur Aufstehzeit des Folgetags: Mo bis Fr 06:00, Sa und So 08:00 (also weckt die Nacht auf Samstag um 08:00, die Nacht auf Montag um 06:00). Eine Kinder-Sitzung, die bei Schlafenszeit noch offen ist, läuft normal aus und wird nie mitten in der Eingabe abgebrochen. Morgens begrüßt ein „Guten Morgen ☀️“-Banner 30 Minuten lang.
+- **Nachts ruhig:** In der Nachtzeit werden keine Erinnerungen für Kinder-Aufgaben gesendet. Wurde das Familienziel nachts erreicht, startet die Rakete nach dem Aufwachen. Alles ist im Bereich **Tablet** der Einstellungen anpassbar oder abschaltbar; das Gerät `mode: mine` ist nie betroffen.
+- **Einlöse-Push:** Möchte ein Kind im Shop etwas einlösen, bekommen alle Erwachsenen eine Push-Nachricht („🎁 Clara möchte einlösen“) mit den Knöpfen **Einlösen** und **Ablehnen**, direkt vom Sperrbildschirm aus. Ist es erledigt (egal wo), kommt keine weitere Nachricht. Abschaltbar mit `reward_push`.
+
+> 💡 Plant die Belohnung noch am selben Abend: Ein Kino-Abend, der konkret im Kalender steht, wirkt viel stärker als „irgendwann mal“.
+
+
 <a id="fade"></a>
 
-## 10. 🌿 Ausschleichen
+## 11. 🌿 Ausschleichen
 
 Ziel ist **Gewohnheit, nicht Punkte-Sammeln**. Wenn eine Routine 4 Wochen stabil läuft, führt ihr sie schrittweise von der Belohnung weg:
 
@@ -168,7 +187,7 @@ Gebt die frei gewordene Aufmerksamkeit an eine neue Gewohnheit weiter, aber imme
 
 <a id="faq"></a>
 
-## 11. ❓ Häufige Fragen / Probleme
+## 12. ❓ Häufige Fragen / Probleme
 
 - **Mein Kind hakt alles ab, ohne es zu tun.** Schaltet für diese Aufgaben die Freigabe oder Stichproben ein und schaut kurz hin. Sprecht ehrlich darüber. Nur bei bewusstem Schummeln gibt es „Geschummelt“, ruhig und mit Gespräch. Sichtbare Schritte (zum Beispiel „Bett gemacht“) helfen beim Prüfen.
 - **Streit um den Bonus.** Wer „Übernehmen“ tippt, hat ein paar Minuten Vorrang. Ihr könnt Aufgaben mit „Zusammen“ erlauben, einen Spontan-Bonus gezielt einem Kind geben oder ein Mindestalter setzen.
@@ -179,7 +198,7 @@ Gebt die frei gewordene Aufmerksamkeit an eine neue Gewohnheit weiter, aber imme
 
 <a id="about"></a>
 
-## 12. ℹ️ Über FamilyMission
+## 13. ℹ️ Über FamilyMission
 
 FamilyMission basiert auf **TaskOrganizer** von Patrick von Wiegen (MIT-Lizenz) und wird von AndyKausG als eigenes Projekt weitergeführt: https://github.com/AndyKausG/FamilyMission
 

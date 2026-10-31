@@ -213,6 +213,59 @@ def _minutes_of_day(value: str) -> int:
     return int(value[:2]) * 60 + int(value[3:5])
 
 
+# ---------------------------------------------------------------------------
+# Night mode (the tablet sleeps, reminders for kids' tasks stay silent)
+# ---------------------------------------------------------------------------
+
+DEFAULT_NIGHT_SLEEP = "20:30"
+DEFAULT_NIGHT_WAKE_WEEKDAY = "06:00"
+DEFAULT_NIGHT_WAKE_WEEKEND = "08:00"
+ROCKET_COUNTDOWN_MIN = 15
+ROCKET_COUNTDOWN_MAX = 180
+ROCKET_COUNTDOWN_DEFAULT = 60
+
+
+def rocket_countdown_seconds(value: Any) -> int:
+    """Countdown length in seconds: clamped to 15-180, 60 for anything that is not a number."""
+    if isinstance(value, bool):
+        return ROCKET_COUNTDOWN_DEFAULT
+    try:
+        seconds = int(round(float(value)))
+    except (TypeError, ValueError, OverflowError):
+        return ROCKET_COUNTDOWN_DEFAULT
+    return max(ROCKET_COUNTDOWN_MIN, min(ROCKET_COUNTDOWN_MAX, seconds))
+
+
+def night_wake_time(day: date, wake_weekday: str, wake_weekend: str) -> str:
+    """Wake-up time (``"HH:MM"``) of ``day``: Monday-Friday use the weekday time, Saturday / Sunday the weekend time."""
+    return wake_weekend if day.weekday() >= 5 else wake_weekday
+
+
+def is_night_time(
+    now: datetime,
+    sleep: str = DEFAULT_NIGHT_SLEEP,
+    wake_weekday: str = DEFAULT_NIGHT_WAKE_WEEKDAY,
+    wake_weekend: str = DEFAULT_NIGHT_WAKE_WEEKEND,
+) -> bool:
+    """True while the tablet sleeps: from ``sleep`` until the wake time of the FOLLOWING day.
+
+    The wake time follows the weekday of the morning it ends (Friday night
+    sleeps until the Saturday time, Sunday night until the Monday time).
+    ``now`` is a local datetime; unusable times fall back to the defaults.
+    """
+    sleep = normalize_time(sleep) or DEFAULT_NIGHT_SLEEP
+    wake_weekday = normalize_time(wake_weekday) or DEFAULT_NIGHT_WAKE_WEEKDAY
+    wake_weekend = normalize_time(wake_weekend) or DEFAULT_NIGHT_WAKE_WEEKEND
+    minute = now.hour * 60 + now.minute
+    sleep_min = _minutes_of_day(sleep)
+    wake_today = _minutes_of_day(night_wake_time(now.date(), wake_weekday, wake_weekend))
+    if sleep_min > wake_today:
+        # Normal night across midnight: evening part or morning part.
+        return minute >= sleep_min or minute < wake_today
+    # Degenerate setting (sleep not after wake, e.g. 05:00 -> 06:00): a same-day sleep window.
+    return sleep_min <= minute < wake_today
+
+
 def window_state(task: dict, now: datetime) -> str:
     """Whether ``now`` (local time) is inside the task's time window.
 
