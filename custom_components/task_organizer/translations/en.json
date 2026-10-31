@@ -1,0 +1,186 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "TaskOrganizer Setup",
+        "description": "Do you want to set up the TaskOrganizer integration?"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only a single instance of TaskOrganizer is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "TaskOrganizer Settings",
+        "data": {
+          "overdue_days": "Days until overdue",
+          "color_done": "Color: Done (Hex Code)",
+          "point_goals": "Monthly Point Goals",
+          "color_due": "Color: Due (Hex Code)",
+          "color_overdue": "Color: Overdue (Hex Code)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "all_tasks": { "name": "All Tasks" },
+      "due_tasks": { "name": "Due Tasks" },
+      "overdue_tasks": { "name": "Overdue Tasks" },
+      "due_and_overdue_tasks": { "name": "Due and Overdue Tasks" },
+      "settings": { "name": "TaskOrganizer: Settings" },
+      "protocol": { "name": "TaskOrganizer: Protocol" },
+      "points": { "name": "Points" },
+      "leaderboard": { "name": "Roommate of the Month" }, 
+      "entry_saved": { "name": "Entry saved!" },
+      "entry_deleted": { "name": "Entry deleted!" },
+      "success": { "name": "Settings successfully saved!" },
+      "templates": { "name": "Templates" }
+    },
+    "button": {
+      "reset_month": { "name": "Finish Month" },
+      "factory_reset": { "name": "Factory Reset" }
+    }
+  },
+  "services": {
+    "reset_monthly_points": {
+      "name": "Reset monthly points",
+      "description": "Manually resets all roommates' points to 0 and archives the month."
+    },
+    "factory_reset": {
+      "name": "Factory reset",
+      "description": "Deletes all tasks, history, and points."
+    },
+    "complete_task_by_name": {
+      "name": "Complete task",
+      "description": "Marks a task as completed by its exact name.",
+      "fields": {
+        "task_name": { "name": "Task Name", "description": "The exact name of the task." },
+        "user_id": { "name": "User (Optional)", "description": "The HA user ID or entity." }
+      }
+    },
+    "add_task": {
+      "name": "Add task",
+      "description": "Creates a new recurring or one-time task. Can be created from scratch or based on a template.",
+      "fields": {
+        "template": { "name": "Template (Optional)", "description": "The name of a template to use. Fills other fields if not provided." },
+        "name": { "name": "Name (Optional with template)", "description": "What should the task be named?" },
+        "description": { "name": "Description (Optional)", "description": "Additional information." },
+        "area": { "name": "Area (Optional)", "description": "In which room/area does the task occur?" },
+        "interval": { "name": "Interval (Days, Optional)", "description": "How often should the task be done? 0 for one-time tasks. If not set, the value from the template or default (7) is used." },
+        "complexity": { "name": "Points (1-10, Optional)", "description": "How many points is the task worth?" },
+        "icon": { "name": "Icon (Optional)", "description": "An mdi icon, e.g., mdi:broom" },
+        "category": { "name": "Category (Optional)", "description": "Kids mode category: basis (assigned duty), bonus (open for all kids) or auftrag (one-time assignment). Default: basis." },
+        "min_age": { "name": "Minimum age (Optional)", "description": "Minimum age in years a kid needs to do this task (0 = no restriction)." },
+        "requires_approval": { "name": "Requires parent approval (Optional)", "description": "Kids mode - a completion by a kid only counts after a parent approved it." },
+        "requires_routine": { "name": "Bonus only after duties (Optional)", "description": "Kids mode - this bonus task is locked while the kid has due duties (inside their time window) open. Ignored for spontaneous bonus tasks." },
+        "allow_together": { "name": "Allow doing it together (Optional)", "description": "Kids mode - a kid may do this task together with other kids. Default - on for bonus and commission tasks, off for duties." },
+        "available_from": { "name": "Available from (Optional)", "description": "Kids mode - a kid can only complete the task from this local time on (HH:MM). Empty = no limit." },
+        "available_until": { "name": "Available until (Optional)", "description": "Kids mode - a kid can only complete the task until this local time (HH:MM). Empty = no limit." },
+        "assignees": { "name": "Assignees (Optional)", "description": "Comma-separated user IDs or person entities." },
+        "override_overdue_days": { "name": "Days until overdue (Optional)", "description": "Overrides the global setting for the number of days after which this task is considered overdue." },
+        "subtasks": { "name": "Subtasks (Optional)", "description": "A list of subtasks." }
+      }
+    },
+    "set_task_due_by_name": {
+      "name": "Set task due immediately",
+      "description": "Sets a task as due immediately by its exact name.",
+      "fields": {
+        "task_name": { "name": "Task Name", "description": "The exact name of the task." }
+      }
+    },
+    "pause_task_by_name": {
+      "name": "Pause task",
+      "description": "Pauses a task by its exact name until a specific date.",
+      "fields": {
+        "task_name": { "name": "Task Name", "description": "The exact name of the task." },
+        "pause_until": { "name": "Pause until", "description": "The date until which the task should be paused (e.g., '2024-12-31')." }
+      }
+    },
+    "remove_task_by_name": {
+      "name": "Remove task",
+      "description": "Removes a task by its exact name.",
+      "fields": {
+        "task_name": { "name": "Task Name", "description": "The exact name of the task to be removed." }
+      }
+    },
+    "edit_task_by_name": {
+      "name": "Edit task",
+      "description": "Edits an existing task by its exact name.",
+      "fields": {
+        "task_name": { "name": "Task Name", "description": "The exact name of the task to be edited." },
+        "new_name": { "name": "New Name (Optional)", "description": "The new name for the task." },
+        "description": { "name": "Description (Optional)", "description": "Additional information." },
+        "area": { "name": "Area (Optional)", "description": "In which room/area does the task occur?" },
+        "interval": { "name": "Interval (Days, Optional)", "description": "How often should the task be done?" },
+        "complexity": { "name": "Points (1-10, Optional)", "description": "How many points is the task worth?" },
+        "icon": { "name": "Icon (Optional)", "description": "An mdi icon, e.g., mdi:broom" },
+        "category": { "name": "Category (Optional)", "description": "Kids mode category: basis (assigned duty), bonus (open for all kids) or auftrag (one-time assignment). Default: basis." },
+        "min_age": { "name": "Minimum age (Optional)", "description": "Minimum age in years a kid needs to do this task (0 = no restriction)." },
+        "requires_approval": { "name": "Requires parent approval (Optional)", "description": "Kids mode - a completion by a kid only counts after a parent approved it." },
+        "requires_routine": { "name": "Bonus only after duties (Optional)", "description": "Kids mode - this bonus task is locked while the kid has due duties (inside their time window) open. Ignored for spontaneous bonus tasks." },
+        "allow_together": { "name": "Allow doing it together (Optional)", "description": "Kids mode - a kid may do this task together with other kids. Default - on for bonus and commission tasks, off for duties." },
+        "available_from": { "name": "Available from (Optional)", "description": "Kids mode - a kid can only complete the task from this local time on (HH:MM). Empty = no limit." },
+        "available_until": { "name": "Available until (Optional)", "description": "Kids mode - a kid can only complete the task until this local time (HH:MM). Empty = no limit." },
+        "assignees": { "name": "Assignees (Optional)", "description": "Comma-separated user IDs or person entities." },
+        "override_overdue_days": { "name": "Days until overdue (Optional)", "description": "Overrides the global setting." },
+        "subtasks": { "name": "Subtasks (Optional)", "description": "The updated list of subtasks." }
+      }
+    },
+    "add_template": {
+      "name": "Create template",
+      "description": "Creates a new template.",
+      "fields": {
+        "name": { "name": "Name", "description": "What should the template be named?" },
+        "description": { "name": "Description (Optional)", "description": "Additional information." },
+        "area": { "name": "Area (Optional)", "description": "In which room/area does the task occur?" },
+        "interval": { "name": "Interval (Days, Optional)", "description": "How often should the task be done?" },
+        "complexity": { "name": "Points (1-10, Optional)", "description": "How many points is the task worth?" },
+        "icon": { "name": "Icon (Optional)", "description": "An mdi icon, e.g., mdi:broom" },
+        "category": { "name": "Category (Optional)", "description": "Kids mode category: basis (assigned duty), bonus (open for all kids) or auftrag (one-time assignment). Default: basis." },
+        "min_age": { "name": "Minimum age (Optional)", "description": "Minimum age in years a kid needs to do this task (0 = no restriction)." },
+        "requires_approval": { "name": "Requires parent approval (Optional)", "description": "Kids mode - a completion by a kid only counts after a parent approved it." },
+        "requires_routine": { "name": "Bonus only after duties (Optional)", "description": "Kids mode - this bonus task is locked while the kid has due duties (inside their time window) open. Ignored for spontaneous bonus tasks." },
+        "allow_together": { "name": "Allow doing it together (Optional)", "description": "Kids mode - a kid may do this task together with other kids. Default - on for bonus and commission tasks, off for duties." },
+        "available_from": { "name": "Available from (Optional)", "description": "Kids mode - a kid can only complete the task from this local time on (HH:MM). Empty = no limit." },
+        "available_until": { "name": "Available until (Optional)", "description": "Kids mode - a kid can only complete the task until this local time (HH:MM). Empty = no limit." },
+        "assignees": { "name": "Assignees (Optional)", "description": "Comma-separated user IDs or person entities." },
+        "subtasks": { "name": "Subtasks (Optional)", "description": "Subtasks for this template." }
+      }
+    },
+    "remove_template_by_name": {
+      "name": "Remove template",
+      "description": "Removes a template by its exact name.",
+      "fields": {
+        "template_name": { "name": "Template Name", "description": "The exact name of the template to be removed." }
+      }
+    },
+    "edit_template_by_name": {
+      "name": "Edit template",
+      "description": "Edits an existing template by its exact name.",
+      "fields": {
+        "template_name": { "name": "Template Name", "description": "The exact name of the template to be edited." },
+        "new_name": { "name": "New Name (Optional)", "description": "The new name for the template." },
+        "category": { "name": "Category (Optional)", "description": "Kids mode category: basis (assigned duty), bonus (open for all kids) or auftrag (one-time assignment). Default: basis." },
+        "min_age": { "name": "Minimum age (Optional)", "description": "Minimum age in years a kid needs to do this task (0 = no restriction)." },
+        "requires_approval": { "name": "Requires parent approval (Optional)", "description": "Kids mode - a completion by a kid only counts after a parent approved it." },
+        "requires_routine": { "name": "Bonus only after duties (Optional)", "description": "Kids mode - this bonus task is locked while the kid has due duties (inside their time window) open. Ignored for spontaneous bonus tasks." },
+        "allow_together": { "name": "Allow doing it together (Optional)", "description": "Kids mode - a kid may do this task together with other kids. Default - on for bonus and commission tasks, off for duties." },
+        "available_from": { "name": "Available from (Optional)", "description": "Kids mode - a kid can only complete the task from this local time on (HH:MM). Empty = no limit." },
+        "available_until": { "name": "Available until (Optional)", "description": "Kids mode - a kid can only complete the task until this local time (HH:MM). Empty = no limit." },
+        "subtasks": { "name": "Subtasks (Optional)", "description": "The updated list of subtasks." }
+      }
+    },
+    "adjust_points": {
+      "name": "Adjust points",
+      "description": "Gives a kid bonus points or deducts points (e.g. as a consequence) and records it in the history with a reason. Admin only. A kid never drops below 0 points.",
+      "fields": {
+        "kid_id": { "name": "Kid", "description": "The kid's person entity (or participant ID)." },
+        "points": { "name": "Points", "description": "Positive for a bonus, negative for a deduction (1 to 50, either way)." },
+        "reason": { "name": "Reason", "description": "Why? Shown in the protocol (max. 80 characters)." }
+      }
+    }
+  }
+}

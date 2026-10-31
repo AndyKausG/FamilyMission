@@ -1,0 +1,245 @@
+# TaskOrganizer - Startvorlagen fuer Kinder (6-12 Jahre)
+#
+# Einspielen: Einstellungen -> Automationen & Szenen -> Skripte -> Neues Skript
+#             -> YAML bearbeiten -> Inhalt einfuegen -> Speichern -> Ausfuehren.
+# Das Skript legt nur VORLAGEN an (keine Aufgaben). Mehrfaches Ausfuehren
+# erzeugt Duplikate.
+#
+# Alternative ohne Skript: examples/kids/vorlagen.json ueber die Settings-Karte
+# (Import & Export -> Aufgaben importieren) einspielen. Feste IDs: erneuter
+# Import aktualisiert statt zu duplizieren.
+#
+# Punkteskala (complexity = Punkte):
+#   1  Mini        < 2 min
+#   2  Klein       ~ 5 min
+#   3-4 Mittel     10-15 min
+#   5-6 Gross      20-30 min
+#   8-10 Projekt   > 45 min
+#
+# Kategorien (Praefix in der Beschreibung):
+#   [Basis]   taeglich/woechentlich, fest einem Kind zugewiesen
+#   [Bonus]   offen fuer alle, wird per Automation "geoeffnet"
+#             (interval 365 = nach Erledigung unsichtbar bis zum naechsten Trigger)
+#   [Auftrag] Sonderauftrag der Eltern, einmalig (beim Anlegen interval 0 setzen)
+#
+# "ab X" = empfohlenes Mindestalter. Beides steht zusaetzlich als eigene Felder
+# `category` (basis | bonus | auftrag) und `min_age` in jeder Vorlage und wird
+# vom Kindermodus (Karte task-organizer-kids) ausgewertet.
+
+alias: "TaskOrganizer: Kinder-Vorlagen anlegen"
+mode: single
+icon: mdi:clipboard-list
+sequence:
+  - repeat:
+      for_each:
+        # ---------------- Basis: taeglich ----------------
+        - name: "Morgen-Mission"
+          description: "[Basis] ab 6 - Anziehen, Bett, Schlafanzug weg"
+          complexity: 2
+          interval: 1
+          icon: mdi:weather-sunny
+          category: basis
+          min_age: 6
+          subtasks:
+            - { title: "Anziehen", done: false }
+            - { title: "Bett machen", done: false }
+            - { title: "Schlafanzug unters Kissen", done: false }
+        - name: "Schulranzen packen"
+          description: "[Basis] ab 6 - Stundenplan checken, Trinkflasche"
+          complexity: 1
+          interval: 1
+          icon: mdi:bag-personal
+          category: basis
+          min_age: 6
+        - name: "Tisch decken"
+          description: "[Basis] ab 6"
+          complexity: 2
+          interval: 1
+          icon: mdi:silverware-fork-knife
+          category: basis
+          min_age: 6
+          subtasks:
+            - { title: "Teller", done: false }
+            - { title: "Besteck", done: false }
+            - { title: "Glaeser", done: false }
+        - name: "Tisch abraeumen"
+          description: "[Basis] ab 6 - Geschirr in die Kueche, Tisch abwischen"
+          complexity: 2
+          interval: 1
+          icon: mdi:table-chair
+          category: basis
+          min_age: 6
+        - name: "Schmutzwaesche in den Korb"
+          description: "[Basis] ab 6"
+          complexity: 1
+          interval: 1
+          icon: mdi:tshirt-crew
+          category: basis
+          min_age: 6
+        - name: "Schuhe & Jacke aufraeumen"
+          description: "[Basis] ab 6"
+          complexity: 1
+          interval: 1
+          icon: mdi:shoe-sneaker
+          category: basis
+          min_age: 6
+        - name: "Zimmer-Blitz (10 Minuten)"
+          description: "[Basis] ab 6 - Timer stellen, los!"
+          complexity: 3
+          interval: 1
+          icon: mdi:timer-outline
+          category: basis
+          min_age: 6
+          subtasks:
+            - { title: "Boden frei", done: false }
+            - { title: "Spielzeug in die Kisten", done: false }
+            - { title: "Schreibtisch frei", done: false }
+
+        # ---------------- Basis: woechentlich ----------------
+        - name: "Zimmer gruendlich"
+          description: "[Basis] ab 6 - Staubsaugen ab 8"
+          complexity: 6
+          interval: 7
+          icon: mdi:bed-king
+          category: basis
+          min_age: 6
+          subtasks:
+            - { title: "Boden frei", done: false }
+            - { title: "Regal ordnen", done: false }
+            - { title: "Muell raus", done: false }
+            - { title: "Staubsaugen", done: false }
+        - name: "Eigene Waesche einraeumen"
+          description: "[Basis] ab 6"
+          complexity: 3
+          interval: 7
+          icon: mdi:wardrobe
+          category: basis
+          min_age: 6
+        - name: "Pflanzen giessen"
+          description: "[Basis] ab 6"
+          complexity: 2
+          interval: 7
+          icon: mdi:watering-can
+          category: basis
+          min_age: 6
+        - name: "Bettwaesche abziehen"
+          description: "[Basis] ab 8"
+          complexity: 3
+          interval: 14
+          icon: mdi:bed-empty
+          category: basis
+          min_age: 8
+
+        # ---------------- Bonus: per Automation geoeffnet ----------------
+        - name: "Spuelmaschine ausraeumen"
+          description: "[Bonus] ab 6 (Besteck/Plastik), komplett ab 9 - Teamarbeit erlaubt, Punkte teilen"
+          complexity: 4
+          interval: 365
+          icon: mdi:dishwasher
+          category: bonus
+          min_age: 6
+          subtasks:
+            - { title: "Besteck", done: false }
+            - { title: "Unterkorb", done: false }
+            - { title: "Oberkorb", done: false }
+        - name: "Spuelmaschine einraeumen"
+          description: "[Bonus] ab 8"
+          complexity: 3
+          interval: 365
+          icon: mdi:dishwasher-alert
+          category: bonus
+          min_age: 8
+        - name: "Waesche aus dem Trockner + falten"
+          description: "[Bonus] ab 8"
+          complexity: 4
+          interval: 365
+          icon: mdi:tumble-dryer
+          category: bonus
+          min_age: 8
+        - name: "Waesche aufhaengen"
+          description: "[Bonus] ab 9"
+          complexity: 4
+          interval: 365
+          icon: mdi:hanger
+          category: bonus
+          min_age: 9
+        - name: "Muell rausbringen"
+          description: "[Bonus] ab 8 - Restmuell/Bio/Gelber Sack/Papier"
+          complexity: 2
+          interval: 365
+          icon: mdi:trash-can
+          category: bonus
+          min_age: 8
+        - name: "Einkaeufe auspacken"
+          description: "[Bonus] ab 6 - Kuehlschrank zuerst"
+          complexity: 2
+          interval: 365
+          icon: mdi:cart
+          category: bonus
+          min_age: 6
+        - name: "Weg frei fuer den Saugroboter"
+          description: "[Bonus] ab 6 - Boden in Wohnzimmer/Kueche freiraeumen"
+          complexity: 2
+          interval: 365
+          icon: mdi:robot-vacuum
+          category: bonus
+          min_age: 6
+        - name: "Leergut wegbringen"
+          description: "[Bonus] ab 10"
+          complexity: 3
+          interval: 365
+          icon: mdi:bottle-soda-classic
+          category: bonus
+          min_age: 10
+
+        # ---------------- Sonderauftraege (einmalig) ----------------
+        - name: "Beim Kochen helfen"
+          description: "[Auftrag] ab 8 - Schneiden ab 10"
+          complexity: 5
+          interval: 0
+          icon: mdi:chef-hat
+          category: auftrag
+          min_age: 8
+          subtasks:
+            - { title: "Gemuese waschen", done: false }
+            - { title: "Zutaten bereitstellen", done: false }
+            - { title: "Mitkochen", done: false }
+        - name: "Waschbecken im Bad putzen"
+          description: "[Auftrag] ab 10"
+          complexity: 4
+          interval: 0
+          icon: mdi:faucet
+          category: auftrag
+          min_age: 10
+        - name: "Auto aussaugen"
+          description: "[Auftrag] ab 8 - zusammen mit Mama/Papa"
+          complexity: 6
+          interval: 0
+          icon: mdi:car-side
+          category: auftrag
+          min_age: 8
+        - name: "Garten: 20 Minuten Unkraut"
+          description: "[Auftrag] ab 8"
+          complexity: 5
+          interval: 0
+          icon: mdi:flower
+          category: auftrag
+          min_age: 8
+        - name: "Fenster putzen"
+          description: "[Auftrag] ab 10"
+          complexity: 6
+          interval: 0
+          icon: mdi:window-closed-variant
+          category: auftrag
+          min_age: 10
+      sequence:
+        - action: task_organizer.add_template
+          data:
+            name: "{{ repeat.item.name }}"
+            description: "{{ repeat.item.description }}"
+            complexity: "{{ repeat.item.complexity }}"
+            interval: "{{ repeat.item.interval }}"
+            icon: "{{ repeat.item.icon }}"
+            category: "{{ repeat.item.category }}"
+            min_age: "{{ repeat.item.min_age }}"
+            subtasks: "{{ repeat.item.subtasks | default([]) }}"

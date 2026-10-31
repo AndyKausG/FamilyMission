@@ -1,0 +1,73 @@
+# TaskOrganizer - Beispiel-Automationen fuer Bonus-Aufgaben
+#
+# Voraussetzung: Die Bonus-Aufgaben existieren einmalig als Aufgabe
+# (aus Vorlage anlegen, interval 365, KEINE Zuweisung = offen fuer alle).
+# Die Automation setzt sie nur auf "faellig".
+# Entity-IDs und Zustaende an die eigene Installation anpassen.
+
+# --- Spuelmaschine fertig -> Ausraeumen wird faellig ---
+- alias: "TaskOrganizer: Spuelmaschine fertig"
+  triggers:
+    - trigger: state
+      entity_id: sensor.geschirrspueler_programmstatus   # anpassen
+      to: "finished"                                     # anpassen
+  actions:
+    - action: task_organizer.set_task_due_by_name
+      data:
+        task_name: "Spuelmaschine ausraeumen"
+    - action: tts.speak                                  # Ansage am Fire Tablet (Fully Kiosk Media Player)
+      target:
+        entity_id: tts.google_translate_de_de            # anpassen
+      data:
+        media_player_entity_id: media_player.fire_tablet # anpassen
+        message: "Neuer Bonus-Auftrag! Die Spuelmaschine wartet. Vier Punkte zu holen!"
+
+# --- Trockner fertig ---
+- alias: "TaskOrganizer: Trockner fertig"
+  triggers:
+    - trigger: state
+      entity_id: sensor.trockner_programmstatus          # anpassen
+      to: "finished"                                     # anpassen
+  actions:
+    - action: task_organizer.set_task_due_by_name
+      data:
+        task_name: "Waesche aus dem Trockner + falten"
+
+# --- Muellabfuhr morgen (z.B. Waste Collection Schedule) ---
+- alias: "TaskOrganizer: Muell rausbringen"
+  triggers:
+    - trigger: time
+      at: "17:00:00"
+  conditions:
+    - condition: state
+      entity_id: sensor.muellabfuhr_naechste             # anpassen
+      attribute: daysTo
+      state: 1
+  actions:
+    - action: task_organizer.set_task_due_by_name
+      data:
+        task_name: "Muell rausbringen"
+
+# --- Saugroboter: 30 min vor geplantem Start Weg freiraeumen ---
+- alias: "TaskOrganizer: Weg frei fuer Saugroboter"
+  triggers:
+    - trigger: time
+      at: "14:30:00"                                     # Roboter startet 15:00
+  conditions:
+    - condition: time
+      weekday: [mon, wed, fri]
+  actions:
+    - action: task_organizer.set_task_due_by_name
+      data:
+        task_name: "Weg frei fuer den Saugroboter"
+
+# --- Eltern informieren, wenn eine Aufgabe erledigt wurde ---
+- alias: "TaskOrganizer: Info an Eltern"
+  triggers:
+    - trigger: event
+      event_type: task_organizer_task_completed
+  actions:
+    - action: notify.mobile_app_eltern_handy             # anpassen
+      data:
+        title: "Erledigt: {{ trigger.event.data.task_name }}"
+        message: "{{ trigger.event.data.total_points }} Punkte vergeben"

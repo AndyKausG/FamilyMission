@@ -1,0 +1,561 @@
+reset_monthly_points:
+  name: Reset monthly points
+  description: Manually resets all roommate points to 0 and archives the month.
+  
+complete_task_by_name:
+  name: Complete task
+  description: Marks a task as completed by its exact name.
+  fields:
+    task_name:
+      name: Task name
+      description: The exact name of the task (e.g., "Take out the trash").
+      required: true
+      example: "Take out the trash"
+      selector:
+        text:
+    user_id:
+      name: User (Optional)
+      description: The HA User-ID or a person.name entity. If left empty, the executing user gets the points.
+      required: false
+      selector:
+        text:
+
+add_task:
+  name: Add task
+  description: Creates a new recurring or one-time task. Can be created from scratch or based on a template.
+  fields:
+    template:
+      name: Template (Optional)
+      description: The name of a template to use. Fills in other fields if they are not provided.
+      required: false
+      selector:
+        text:
+    name:
+      name: Name (Optional if template is used)
+      description: What should the task be called?
+      required: false
+      selector:
+        text:
+    description:
+      name: Description (Optional)
+      description: Additional info.
+      required: false
+      selector:
+        text:
+    area:
+      name: Area (Optional)
+      description: Which area does the task belong to?
+      required: false
+      selector:
+        area:
+    interval:
+      name: Interval (Days, Optional)
+      description: How often does it need to be done? 0 for one-time tasks. If not set, taken from template or defaults to 7.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 365
+    complexity:
+      name: Points (1-10, Optional)
+      description: How many points is it worth?
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10
+    icon:
+      name: Icon (Optional)
+      description: An mdi-icon, e.g. mdi:broom
+      required: false
+      selector:
+        icon:
+    category:
+      name: Category (Optional)
+      description: "Kids mode category: basis (assigned duty), bonus (open for all kids, first come first served) or auftrag (one-time assignment). Default basis."
+      required: false
+      selector:
+        select:
+          options:
+            - basis
+            - bonus
+            - auftrag
+    min_age:
+      name: Minimum age (Optional)
+      description: Minimum age in years a kid needs to do this task (0 = no restriction).
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 18
+    requires_approval:
+      name: Requires parent approval (Optional)
+      description: Kids mode - a completion by a kid only counts after a parent approved it.
+      required: false
+      selector:
+        boolean:
+    requires_routine:
+      name: Bonus only after duties (Optional)
+      description: Kids mode - this bonus task is locked while the kid has due duties (inside their time window) open. Ignored for spontaneous bonus tasks.
+      required: false
+      selector:
+        boolean:
+    allow_together:
+      name: Allow doing it together (Optional)
+      description: Kids mode - a kid may do this task together with other kids. Default - on for bonus and commission tasks, off for duties.
+      required: false
+      selector:
+        boolean:
+    available_from:
+      name: Available from (Optional)
+      description: Kids mode - a kid can only complete the task from this local time on (HH:MM). Empty = no limit.
+      required: false
+      selector:
+        time:
+    available_until:
+      name: Available until (Optional)
+      description: Kids mode - a kid can only complete the task until this local time (HH:MM). Empty = no limit.
+      required: false
+      selector:
+        time:
+    assignees:
+      name: Assignees (Optional)
+      description: Who is responsible? (Comma separated user IDs or person.name entities).
+      required: false
+      selector:
+        text:
+    override_overdue_days:
+      name: Overdue after (Days, Optional)
+      description: Overrides the global setting for the number of days after which this task is considered overdue.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 9999
+    subtasks:
+      name: Subtasks (Optional)
+      description: A list of subtasks (objects with 'title' and 'done' keys).
+      required: false
+      selector:
+        object:
+
+set_task_due_by_name:
+  name: Set task due
+  description: Marks a task as due immediately by its exact name.
+  fields:
+    task_name:
+      name: Task name
+      description: The exact name of the task (e.g., "Take out the trash").
+      required: true
+      example: "Take out the trash"
+      selector:
+        text:
+
+pause_task_by_name:
+  name: Pause task
+  description: Pauses a task until a specific date by its exact name.
+  fields:
+    task_name:
+      name: Task name
+      description: The exact name of the task (e.g., "Take out the trash").
+      required: true
+      example: "Take out the trash"
+      selector:
+        text:
+    pause_until:
+      name: Pause until
+      description: The date until which the task should be paused (e.g., "2024-12-31").
+      required: true
+      selector:
+        date:
+
+remove_task_by_name:
+  name: Remove task
+  description: Removes a task by its exact name.
+  fields:
+    task_name:
+      name: Task name
+      description: The exact name of the task to remove.
+      required: true
+      example: "Take out the trash"
+      selector:
+        text:
+
+edit_task_by_name:
+  name: Edit task
+  description: Edits an existing task by its exact name.
+  fields:
+    task_name:
+      name: Task name
+      description: The exact name of the task to edit.
+      required: true
+      example: "Take out the trash"
+      selector:
+        text:
+    new_name:
+      name: New Name (Optional)
+      description: The new name for the task.
+      required: false
+      selector:
+        text:
+    description:
+      name: Description (Optional)
+      description: Additional info.
+      required: false
+      selector:
+        text:
+    area:
+      name: Area (Optional)
+      description: Which area does the task belong to?
+      required: false
+      selector:
+        area:
+    interval:
+      name: Interval (Days, Optional)
+      description: How often does it need to be done?
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 365
+    complexity:
+      name: Points (1-10, Optional)
+      description: How many points is it worth?
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10
+    icon:
+      name: Icon (Optional)
+      description: An mdi-icon, e.g. mdi:broom
+      required: false
+      selector:
+        icon:
+    category:
+      name: Category (Optional)
+      description: "Kids mode category: basis (assigned duty), bonus (open for all kids, first come first served) or auftrag (one-time assignment). Default basis."
+      required: false
+      selector:
+        select:
+          options:
+            - basis
+            - bonus
+            - auftrag
+    min_age:
+      name: Minimum age (Optional)
+      description: Minimum age in years a kid needs to do this task (0 = no restriction).
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 18
+    requires_approval:
+      name: Requires parent approval (Optional)
+      description: Kids mode - a completion by a kid only counts after a parent approved it.
+      required: false
+      selector:
+        boolean:
+    requires_routine:
+      name: Bonus only after duties (Optional)
+      description: Kids mode - this bonus task is locked while the kid has due duties (inside their time window) open. Ignored for spontaneous bonus tasks.
+      required: false
+      selector:
+        boolean:
+    allow_together:
+      name: Allow doing it together (Optional)
+      description: Kids mode - a kid may do this task together with other kids. Default - on for bonus and commission tasks, off for duties.
+      required: false
+      selector:
+        boolean:
+    available_from:
+      name: Available from (Optional)
+      description: Kids mode - a kid can only complete the task from this local time on (HH:MM). Empty = no limit.
+      required: false
+      selector:
+        time:
+    available_until:
+      name: Available until (Optional)
+      description: Kids mode - a kid can only complete the task until this local time (HH:MM). Empty = no limit.
+      required: false
+      selector:
+        time:
+    assignees:
+      name: Assignees (Optional)
+      description: Who is responsible? (Comma separated user IDs or person.name entities).
+      required: false
+      selector:
+        text:
+    override_overdue_days:
+      name: Overdue after (Days, Optional)
+      description: Overrides the global setting.
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 9999
+    subtasks:
+      name: Subtasks (Optional)
+      description: A list of subtasks.
+      required: false
+      selector:
+        object:
+
+add_template:
+  name: Add template
+  description: Creates a new template.
+  fields:
+    name:
+      name: Name
+      description: What should the template be called?
+      required: true
+      selector:
+        text:
+    description:
+      name: Description (Optional)
+      description: Additional info.
+      required: false
+      selector:
+        text:
+    area:
+      name: Area (Optional)
+      description: Which area does the task belong to?
+      required: false
+      selector:
+        area:
+    interval:
+      name: Interval (Days, Optional)
+      description: How often does it need to be done?
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 365
+    complexity:
+      name: Points (1-10, Optional)
+      description: How many points is it worth?
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10
+    icon:
+      name: Icon (Optional)
+      description: An mdi-icon, e.g. mdi:broom
+      required: false
+      selector:
+        icon:
+    category:
+      name: Category (Optional)
+      description: "Kids mode category: basis (assigned duty), bonus (open for all kids, first come first served) or auftrag (one-time assignment). Default basis."
+      required: false
+      selector:
+        select:
+          options:
+            - basis
+            - bonus
+            - auftrag
+    min_age:
+      name: Minimum age (Optional)
+      description: Minimum age in years a kid needs to do this task (0 = no restriction).
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 18
+    requires_approval:
+      name: Requires parent approval (Optional)
+      description: Kids mode - a completion by a kid only counts after a parent approved it.
+      required: false
+      selector:
+        boolean:
+    requires_routine:
+      name: Bonus only after duties (Optional)
+      description: Kids mode - this bonus task is locked while the kid has due duties (inside their time window) open. Ignored for spontaneous bonus tasks.
+      required: false
+      selector:
+        boolean:
+    allow_together:
+      name: Allow doing it together (Optional)
+      description: Kids mode - a kid may do this task together with other kids. Default - on for bonus and commission tasks, off for duties.
+      required: false
+      selector:
+        boolean:
+    available_from:
+      name: Available from (Optional)
+      description: Kids mode - a kid can only complete the task from this local time on (HH:MM). Empty = no limit.
+      required: false
+      selector:
+        time:
+    available_until:
+      name: Available until (Optional)
+      description: Kids mode - a kid can only complete the task until this local time (HH:MM). Empty = no limit.
+      required: false
+      selector:
+        time:
+    assignees:
+      name: Assignees (Optional)
+      description: Who is responsible? (Comma separated user IDs or person.name entities).
+      required: false
+      selector:
+        text:
+    subtasks:
+      name: Subtasks (Optional)
+      description: A list of subtasks for this template.
+      required: false
+      selector:
+        object:
+
+remove_template_by_name:
+  name: Remove template
+  description: Removes a template by its exact name.
+  fields:
+    template_name:
+      name: Template name
+      description: The exact name of the template to remove.
+      required: true
+      example: "Cleaning"
+      selector:
+        text:
+
+edit_template_by_name:
+  name: Edit template
+  description: Edits an existing template by its exact name.
+  fields:
+    template_name:
+      name: Template name
+      description: The exact name of the template to edit.
+      required: true
+      example: "Cleaning"
+      selector:
+        text:
+    new_name:
+      name: New Name (Optional)
+      description: The new name for the template.
+      required: false
+      selector:
+        text:
+    subtasks:
+      name: Subtasks (Optional)
+      description: The new list of subtasks.
+      required: false
+      selector:
+        object:
+    description:
+      name: Description (Optional)
+      description: Additional info.
+      required: false
+      selector:
+        text:
+    area:
+      name: Area (Optional)
+      description: Which area does the task belong to?
+      required: false
+      selector:
+        area:
+    interval:
+      name: Interval (Days, Optional)
+      description: How often does it need to be done?
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 365
+    complexity:
+      name: Points (1-10, Optional)
+      description: How many points is it worth?
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10
+    icon:
+      name: Icon (Optional)
+      description: An mdi-icon, e.g. mdi:broom
+      required: false
+      selector:
+        icon:
+    category:
+      name: Category (Optional)
+      description: "Kids mode category: basis (assigned duty), bonus (open for all kids, first come first served) or auftrag (one-time assignment). Default basis."
+      required: false
+      selector:
+        select:
+          options:
+            - basis
+            - bonus
+            - auftrag
+    min_age:
+      name: Minimum age (Optional)
+      description: Minimum age in years a kid needs to do this task (0 = no restriction).
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 18
+    requires_approval:
+      name: Requires parent approval (Optional)
+      description: Kids mode - a completion by a kid only counts after a parent approved it.
+      required: false
+      selector:
+        boolean:
+    requires_routine:
+      name: Bonus only after duties (Optional)
+      description: Kids mode - this bonus task is locked while the kid has due duties (inside their time window) open. Ignored for spontaneous bonus tasks.
+      required: false
+      selector:
+        boolean:
+    allow_together:
+      name: Allow doing it together (Optional)
+      description: Kids mode - a kid may do this task together with other kids. Default - on for bonus and commission tasks, off for duties.
+      required: false
+      selector:
+        boolean:
+    available_from:
+      name: Available from (Optional)
+      description: Kids mode - a kid can only complete the task from this local time on (HH:MM). Empty = no limit.
+      required: false
+      selector:
+        time:
+    available_until:
+      name: Available until (Optional)
+      description: Kids mode - a kid can only complete the task until this local time (HH:MM). Empty = no limit.
+      required: false
+      selector:
+        time:
+    assignees:
+      name: Assignees (Optional)
+      description: Who is responsible? (Comma separated user IDs or person.name entities).
+      required: false
+      selector:
+        text:
+
+adjust_points:
+  name: Adjust points
+  description: Gives a kid bonus points or deducts points (e.g. as a consequence) and records it in the history with a reason. Admin only. A kid never drops below 0 points.
+  fields:
+    kid_id:
+      name: Kid
+      description: The kid's person entity (or participant ID).
+      required: true
+      example: person.anna
+      selector:
+        entity:
+          domain: person
+    points:
+      name: Points
+      description: Positive for a bonus, negative for a deduction (1 to 50, either way).
+      required: true
+      example: 5
+      selector:
+        number:
+          min: -50
+          max: 50
+          mode: box
+    reason:
+      name: Reason
+      description: Why? Shown in the protocol (max. 80 characters).
+      required: true
+      example: Helped without being asked
+      selector:
+        text:

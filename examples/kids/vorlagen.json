@@ -1,0 +1,398 @@
+{
+  "templates": {
+    "342c5d8d-1d75-59f1-b050-57de37ab2914": {
+      "id": "342c5d8d-1d75-59f1-b050-57de37ab2914",
+      "name": "Morgen-Mission",
+      "description": "[Basis] ab 6 - Anziehen, Bett, Schlafanzug weg",
+      "area": "",
+      "complexity": 2,
+      "icon": "mdi:weather-sunny",
+      "interval": 1,
+      "assignees": [],
+      "subtasks": [
+        {
+          "title": "Anziehen",
+          "done": false
+        },
+        {
+          "title": "Bett machen",
+          "done": false
+        },
+        {
+          "title": "Schlafanzug unters Kissen",
+          "done": false
+        }
+      ],
+      "category": "basis",
+      "min_age": 6
+    },
+    "52b3a0e4-4d38-571e-8ad1-64b1d3736650": {
+      "id": "52b3a0e4-4d38-571e-8ad1-64b1d3736650",
+      "name": "Schulranzen packen",
+      "description": "[Basis] ab 6 - Stundenplan checken, Trinkflasche",
+      "area": "",
+      "complexity": 1,
+      "icon": "mdi:bag-personal",
+      "interval": 1,
+      "assignees": [],
+      "subtasks": [],
+      "category": "basis",
+      "min_age": 6
+    },
+    "56b0778a-329a-57eb-ac39-5a77a2a1bba8": {
+      "id": "56b0778a-329a-57eb-ac39-5a77a2a1bba8",
+      "name": "Tisch decken",
+      "description": "[Basis] ab 6",
+      "area": "",
+      "complexity": 2,
+      "icon": "mdi:silverware-fork-knife",
+      "interval": 1,
+      "assignees": [],
+      "subtasks": [
+        {
+          "title": "Teller",
+          "done": false
+        },
+        {
+          "title": "Besteck",
+          "done": false
+        },
+        {
+          "title": "Glaeser",
+          "done": false
+        }
+      ],
+      "category": "basis",
+      "min_age": 6
+    },
+    "be35d8ea-53a9-5de2-a3e3-aff3add186ed": {
+      "id": "be35d8ea-53a9-5de2-a3e3-aff3add186ed",
+      "name": "Tisch abraeumen",
+      "description": "[Basis] ab 6 - Geschirr in die Kueche, Tisch abwischen",
+      "area": "",
+      "complexity": 2,
+      "icon": "mdi:table-chair",
+      "interval": 1,
+      "assignees": [],
+      "subtasks": [],
+      "category": "basis",
+      "min_age": 6
+    },
+    "03bd1753-b297-5b8b-8d4c-07b6170495a0": {
+      "id": "03bd1753-b297-5b8b-8d4c-07b6170495a0",
+      "name": "Schmutzwaesche in den Korb",
+      "description": "[Basis] ab 6",
+      "area": "",
+      "complexity": 1,
+      "icon": "mdi:tshirt-crew",
+      "interval": 1,
+      "assignees": [],
+      "subtasks": [],
+      "category": "basis",
+      "min_age": 6
+    },
+    "32047e0c-9f22-541d-b533-73f369a0266f": {
+      "id": "32047e0c-9f22-541d-b533-73f369a0266f",
+      "name": "Schuhe & Jacke aufraeumen",
+      "description": "[Basis] ab 6",
+      "area": "",
+      "complexity": 1,
+      "icon": "mdi:shoe-sneaker",
+      "interval": 1,
+      "assignees": [],
+      "subtasks": [],
+      "category": "basis",
+      "min_age": 6
+    },
+    "e42495f8-3a54-548c-a8a5-1ed7a8e3cba6": {
+      "id": "e42495f8-3a54-548c-a8a5-1ed7a8e3cba6",
+      "name": "Zimmer-Blitz (10 Minuten)",
+      "description": "[Basis] ab 6 - Timer stellen, los!",
+      "area": "",
+      "complexity": 3,
+      "icon": "mdi:timer-outline",
+      "interval": 1,
+      "assignees": [],
+      "subtasks": [
+        {
+          "title": "Boden frei",
+          "done": false
+        },
+        {
+          "title": "Spielzeug in die Kisten",
+          "done": false
+        },
+        {
+          "title": "Schreibtisch frei",
+          "done": false
+        }
+      ],
+      "category": "basis",
+      "min_age": 6
+    },
+    "3a3857e5-2fcb-5bb2-b7a5-6187126e8c63": {
+      "id": "3a3857e5-2fcb-5bb2-b7a5-6187126e8c63",
+      "name": "Zimmer gruendlich",
+      "description": "[Basis] ab 6 - Staubsaugen ab 8",
+      "area": "",
+      "complexity": 6,
+      "icon": "mdi:bed-king",
+      "interval": 7,
+      "assignees": [],
+      "subtasks": [
+        {
+          "title": "Boden frei",
+          "done": false
+        },
+        {
+          "title": "Regal ordnen",
+          "done": false
+        },
+        {
+          "title": "Muell raus",
+          "done": false
+        },
+        {
+          "title": "Staubsaugen",
+          "done": false
+        }
+      ],
+      "category": "basis",
+      "min_age": 6
+    },
+    "065e3f4b-0e03-57d2-9e65-8d37f5009a44": {
+      "id": "065e3f4b-0e03-57d2-9e65-8d37f5009a44",
+      "name": "Eigene Waesche einraeumen",
+      "description": "[Basis] ab 6",
+      "area": "",
+      "complexity": 3,
+      "icon": "mdi:wardrobe",
+      "interval": 7,
+      "assignees": [],
+      "subtasks": [],
+      "category": "basis",
+      "min_age": 6
+    },
+    "68ad54a6-2805-52cb-9a0e-8fc8f4bf9de2": {
+      "id": "68ad54a6-2805-52cb-9a0e-8fc8f4bf9de2",
+      "name": "Pflanzen giessen",
+      "description": "[Basis] ab 6",
+      "area": "",
+      "complexity": 2,
+      "icon": "mdi:watering-can",
+      "interval": 7,
+      "assignees": [],
+      "subtasks": [],
+      "category": "basis",
+      "min_age": 6
+    },
+    "6d860a9d-b175-5a97-aefc-674630d57c9d": {
+      "id": "6d860a9d-b175-5a97-aefc-674630d57c9d",
+      "name": "Bettwaesche abziehen",
+      "description": "[Basis] ab 8",
+      "area": "",
+      "complexity": 3,
+      "icon": "mdi:bed-empty",
+      "interval": 14,
+      "assignees": [],
+      "subtasks": [],
+      "category": "basis",
+      "min_age": 8
+    },
+    "5fbb650c-69fd-5adb-b3bb-b6506182a361": {
+      "id": "5fbb650c-69fd-5adb-b3bb-b6506182a361",
+      "name": "Spuelmaschine ausraeumen",
+      "description": "[Bonus] ab 6 (Besteck/Plastik), komplett ab 9 - Teamarbeit erlaubt, Punkte teilen",
+      "area": "",
+      "complexity": 4,
+      "icon": "mdi:dishwasher",
+      "interval": 365,
+      "assignees": [],
+      "subtasks": [
+        {
+          "title": "Besteck",
+          "done": false
+        },
+        {
+          "title": "Unterkorb",
+          "done": false
+        },
+        {
+          "title": "Oberkorb",
+          "done": false
+        }
+      ],
+      "category": "bonus",
+      "min_age": 6
+    },
+    "ca45553e-1dfc-5ca5-91d1-639542f11a1e": {
+      "id": "ca45553e-1dfc-5ca5-91d1-639542f11a1e",
+      "name": "Spuelmaschine einraeumen",
+      "description": "[Bonus] ab 8",
+      "area": "",
+      "complexity": 3,
+      "icon": "mdi:dishwasher-alert",
+      "interval": 365,
+      "assignees": [],
+      "subtasks": [],
+      "category": "bonus",
+      "min_age": 8
+    },
+    "f070f956-eb73-5bf6-aa1b-96c76202025d": {
+      "id": "f070f956-eb73-5bf6-aa1b-96c76202025d",
+      "name": "Waesche aus dem Trockner + falten",
+      "description": "[Bonus] ab 8",
+      "area": "",
+      "complexity": 4,
+      "icon": "mdi:tumble-dryer",
+      "interval": 365,
+      "assignees": [],
+      "subtasks": [],
+      "category": "bonus",
+      "min_age": 8
+    },
+    "122e7fe0-d842-5fef-b702-9e45296efb53": {
+      "id": "122e7fe0-d842-5fef-b702-9e45296efb53",
+      "name": "Waesche aufhaengen",
+      "description": "[Bonus] ab 9",
+      "area": "",
+      "complexity": 4,
+      "icon": "mdi:hanger",
+      "interval": 365,
+      "assignees": [],
+      "subtasks": [],
+      "category": "bonus",
+      "min_age": 9
+    },
+    "571968f6-4d82-5711-8fb4-95b4060831d6": {
+      "id": "571968f6-4d82-5711-8fb4-95b4060831d6",
+      "name": "Muell rausbringen",
+      "description": "[Bonus] ab 8 - Restmuell/Bio/Gelber Sack/Papier",
+      "area": "",
+      "complexity": 2,
+      "icon": "mdi:trash-can",
+      "interval": 365,
+      "assignees": [],
+      "subtasks": [],
+      "category": "bonus",
+      "min_age": 8
+    },
+    "1677b1d5-c9ac-5072-a472-d0dbe6f24b74": {
+      "id": "1677b1d5-c9ac-5072-a472-d0dbe6f24b74",
+      "name": "Einkaeufe auspacken",
+      "description": "[Bonus] ab 6 - Kuehlschrank zuerst",
+      "area": "",
+      "complexity": 2,
+      "icon": "mdi:cart",
+      "interval": 365,
+      "assignees": [],
+      "subtasks": [],
+      "category": "bonus",
+      "min_age": 6
+    },
+    "5f976e74-466f-5031-8ea9-ded4eb4f6f04": {
+      "id": "5f976e74-466f-5031-8ea9-ded4eb4f6f04",
+      "name": "Weg frei fuer den Saugroboter",
+      "description": "[Bonus] ab 6 - Boden in Wohnzimmer/Kueche freiraeumen",
+      "area": "",
+      "complexity": 2,
+      "icon": "mdi:robot-vacuum",
+      "interval": 365,
+      "assignees": [],
+      "subtasks": [],
+      "category": "bonus",
+      "min_age": 6
+    },
+    "64743dc9-ccd9-53ad-9dfa-d4eb2b8d9840": {
+      "id": "64743dc9-ccd9-53ad-9dfa-d4eb2b8d9840",
+      "name": "Leergut wegbringen",
+      "description": "[Bonus] ab 10",
+      "area": "",
+      "complexity": 3,
+      "icon": "mdi:bottle-soda-classic",
+      "interval": 365,
+      "assignees": [],
+      "subtasks": [],
+      "category": "bonus",
+      "min_age": 10
+    },
+    "7457a0de-cd8f-5cd6-a1d3-a198aa34122d": {
+      "id": "7457a0de-cd8f-5cd6-a1d3-a198aa34122d",
+      "name": "Beim Kochen helfen",
+      "description": "[Auftrag] ab 8 - Schneiden ab 10",
+      "area": "",
+      "complexity": 5,
+      "icon": "mdi:chef-hat",
+      "interval": 0,
+      "assignees": [],
+      "subtasks": [
+        {
+          "title": "Gemuese waschen",
+          "done": false
+        },
+        {
+          "title": "Zutaten bereitstellen",
+          "done": false
+        },
+        {
+          "title": "Mitkochen",
+          "done": false
+        }
+      ],
+      "category": "auftrag",
+      "min_age": 8
+    },
+    "d2389ad6-4a8d-57cc-99c8-47d72164792d": {
+      "id": "d2389ad6-4a8d-57cc-99c8-47d72164792d",
+      "name": "Waschbecken im Bad putzen",
+      "description": "[Auftrag] ab 10",
+      "area": "",
+      "complexity": 4,
+      "icon": "mdi:faucet",
+      "interval": 0,
+      "assignees": [],
+      "subtasks": [],
+      "category": "auftrag",
+      "min_age": 10
+    },
+    "f4bbddfb-ab2e-58d4-b3f4-4fee9d195c43": {
+      "id": "f4bbddfb-ab2e-58d4-b3f4-4fee9d195c43",
+      "name": "Auto aussaugen",
+      "description": "[Auftrag] ab 8 - zusammen mit Mama/Papa",
+      "area": "",
+      "complexity": 6,
+      "icon": "mdi:car-side",
+      "interval": 0,
+      "assignees": [],
+      "subtasks": [],
+      "category": "auftrag",
+      "min_age": 8
+    },
+    "9760a70a-9931-5864-b76b-99e5aca730ff": {
+      "id": "9760a70a-9931-5864-b76b-99e5aca730ff",
+      "name": "Garten: 20 Minuten Unkraut",
+      "description": "[Auftrag] ab 8",
+      "area": "",
+      "complexity": 5,
+      "icon": "mdi:flower",
+      "interval": 0,
+      "assignees": [],
+      "subtasks": [],
+      "category": "auftrag",
+      "min_age": 8
+    },
+    "01824a0e-ac13-571a-99d2-76c33c1b46f7": {
+      "id": "01824a0e-ac13-571a-99d2-76c33c1b46f7",
+      "name": "Fenster putzen",
+      "description": "[Auftrag] ab 10",
+      "area": "",
+      "complexity": 6,
+      "icon": "mdi:window-closed-variant",
+      "interval": 0,
+      "assignees": [],
+      "subtasks": [],
+      "category": "auftrag",
+      "min_age": 10
+    }
+  }
+}

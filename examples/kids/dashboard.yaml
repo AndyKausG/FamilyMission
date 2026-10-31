@@ -1,0 +1,79 @@
+# TaskOrganizer - Beispiel-Dashboard fuer den Kindermodus
+#
+# Zwei Ansichten:
+#   1. "Kinder"  - Vollbild-Panel fuer das Fire-HD-Tablet (Fully Kiosk, Querformat 1280x800).
+#                  Das Tablet ist dauerhaft als EIN HA-Benutzer "Tablet" angemeldet (kein Admin!).
+#                  Die Kinder sind person-Entitaeten OHNE eigenen HA-Benutzer.
+#   2. "Eltern"  - normale Ansicht (Sections) fuer die Handys der Eltern (Admin-Benutzer).
+#
+# Einspielen: Einstellungen -> Dashboards -> Dashboard hinzufuegen -> oben rechts
+#             "Raw-Konfigurationseditor" -> Inhalt einfuegen.
+#
+# Hinweise:
+#   * Der Benutzer "Tablet" in den Benutzer-Einstellungen so einrichten, dass dieses
+#     Dashboard als Standard-Dashboard geladen wird (Profil -> Dashboard-Voreinstellung).
+#   * Die Ansicht "Eltern" per `visible` auf die Admin-Benutzer beschraenken
+#     (user-IDs unter Einstellungen -> Personen -> Benutzer anzeigen), damit die
+#     Kinder sie nicht oeffnen. Kinder-PINs und Profile kann nur ein Admin aendern.
+#   * Kinder, Avatar, Farbe, Geburtsjahr, PIN, Monatsziele und Familienziel:
+#     Einstellungen-Karte -> Bereich "Kinder / Kids".
+
+title: Familie
+views:
+  # ------------------------------------------------------------------
+  # Tablet: Vollbild-Panel mit der Kinder-Karte
+  # ------------------------------------------------------------------
+  - title: Kinder
+    path: kinder
+    icon: mdi:human-child
+    type: panel
+    cards:
+      - type: custom:task-organizer-kids
+        title: Familien-Aufgaben
+        timeout: 90               # Sekunden Inaktivitaet bis zurueck zum Startbildschirm
+        sound: true               # kurze Jubel-Toene (WebAudio, keine Dateien)
+        show_family_goal: true    # Familien-Rakete
+        show_bonus_board: true    # Bonus-Brett
+
+  # ------------------------------------------------------------------
+  # Eltern: Verwaltung auf dem Handy
+  # ------------------------------------------------------------------
+  - title: Eltern
+    path: eltern
+    icon: mdi:account-supervisor
+    type: sections
+    max_columns: 2
+    # visible:                    # nur fuer Admin-Benutzer sichtbar machen (IDs anpassen)
+    #   - user: 0123456789abcdef0123456789abcdef
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Freigaben & Bonus
+          - type: custom:task-organizer-parents
+            title: Eltern
+          - type: heading
+            heading: Aufgaben
+          - type: custom:task-organizer-card
+            title: Aufgaben
+            sort_by: due_date
+            filter_by: "!paused"
+            items_per_page: 10
+            show_search: true
+            show_add: true
+            show_edit: true
+            show_delete: true
+          - type: custom:task-organizer-protocol
+            title: Protokoll
+      - type: grid
+        cards:
+          - type: heading
+            heading: Punkte & Auswertung
+          - type: custom:task-organizer-leaderboard
+            title: Familien-Rangliste
+            show_history: true
+          - type: custom:task-organizer-stats
+          - type: heading
+            heading: Einstellungen
+          - type: custom:task-organizer-settings
+            show_advanced: false
