@@ -131,6 +131,11 @@ const HELP_CONTENT = {
           "**Geschwister unterschiedlich alt.** Aufgaben haben ein Mindestalter, jedes Kind hat ein eigenes Ziel. Haltet den Aufwand pro Minute vergleichbar, nicht die Zahl der Aufgaben. Ältere können Jüngeren mit „Zusammen“ helfen.",
           "**Tablet zeigt eine alte Version.** Das ist der Browser-Cache. Seite neu laden (im Fully Kiosk Browser: Cache leeren und neu laden), in der Companion-App den Frontend-Cache leeren. Nach einem Update von FamilyMission erscheint die neue Version nach einem Neustart von Home Assistant und einem Neuladen."
         ]
+      ] },
+      { id: "about", icon: "ℹ️", title: "Über FamilyMission", blocks: [
+        "FamilyMission basiert auf **TaskOrganizer** von Patrick von Wiegen (MIT-Lizenz) und wird von AndyKausG als eigenes Projekt weitergeführt: https://github.com/AndyKausG/FamilyMission",
+        "Ursprungsprojekt: https://github.com/patrickvonwiegen/TaskOrganizer",
+        { tip: "Wer von TaskOrganizer kommt: FamilyMission übernimmt die Daten beim ersten Start automatisch (Kopie, TaskOrganizer bleibt unverändert). Details stehen in der README." }
       ] }
     ]
   },
@@ -253,6 +258,11 @@ const HELP_CONTENT = {
           "**Frères et sœurs d'âges différents.** Les tâches ont un âge minimum, chaque enfant a son propre objectif. Gardez l'effort par minute comparable, pas le nombre de tâches. Les plus grands peuvent aider les plus petits avec « Ensemble ».",
           "**La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de FamilyMission, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement."
         ]
+      ] },
+      { id: "about", icon: "ℹ️", title: "À propos de FamilyMission", blocks: [
+        "FamilyMission est basé sur **TaskOrganizer** de Patrick von Wiegen (licence MIT) et poursuivi par AndyKausG comme projet indépendant : https://github.com/AndyKausG/FamilyMission",
+        "Projet d'origine : https://github.com/patrickvonwiegen/TaskOrganizer",
+        { tip: "Si vous venez de TaskOrganizer : FamilyMission reprend automatiquement les données au premier démarrage (copie, TaskOrganizer reste inchangé). Détails dans le README." }
       ] }
     ]
   },
@@ -375,6 +385,11 @@ const HELP_CONTENT = {
           "**Siblings of different ages.** Tasks have a minimum age, every child has their own goal. Keep the effort per minute comparable, not the number of tasks. Older kids can help younger ones with “Together”.",
           "**Tablet shows an old version.** That is the browser cache. Reload the page (in Fully Kiosk Browser: clear the cache and reload), in the companion app clear the frontend cache. After a FamilyMission update, the new version appears after a Home Assistant restart and a reload."
         ]
+      ] },
+      { id: "about", icon: "ℹ️", title: "About FamilyMission", blocks: [
+        "FamilyMission is based on **TaskOrganizer** by Patrick von Wiegen (MIT license) and continued by AndyKausG as a project of its own: https://github.com/AndyKausG/FamilyMission",
+        "Original project: https://github.com/patrickvonwiegen/TaskOrganizer",
+        { tip: "Coming from TaskOrganizer? FamilyMission takes over your data automatically on first start (a copy, TaskOrganizer stays untouched). Details are in the README." }
       ] }
     ]
   }

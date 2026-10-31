@@ -16,6 +16,7 @@ Comment faire fonctionner FamilyMission à la maison
 8. [Objectifs mensuels, fusée de la famille, anneau au-delà de 100 %](#goals)
 9. [Réduire progressivement](#fade)
 10. [Questions fréquentes / problèmes](#faq)
+11. [À propos de FamilyMission](#about)
 
 <a id="basics"></a>
 
@@ -154,3 +155,13 @@ Reportez l'attention libérée sur une nouvelle habitude, mais une seule à la f
 - **Maladie / vacances.** Mettez des tâches en pause dans l'éditeur de tâches (pause jusqu'à une date) ou utilisez « Suspendre aujourd'hui » pour des jours isolés. Le jour d'anniversaire, les obligations sont automatiquement suspendues. Pour de longues pauses, adaptez l'objectif mensuel.
 - **Frères et sœurs d'âges différents.** Les tâches ont un âge minimum, chaque enfant a son propre objectif. Gardez l'effort par minute comparable, pas le nombre de tâches. Les plus grands peuvent aider les plus petits avec « Ensemble ».
 - **La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de FamilyMission, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement.
+
+<a id="about"></a>
+
+## 11. ℹ️ À propos de FamilyMission
+
+FamilyMission est basé sur **TaskOrganizer** de Patrick von Wiegen (licence MIT) et poursuivi par AndyKausG comme projet indépendant : https://github.com/AndyKausG/FamilyMission
+
+Projet d'origine : https://github.com/patrickvonwiegen/TaskOrganizer
+
+> 💡 Si vous venez de TaskOrganizer : FamilyMission reprend automatiquement les données au premier démarrage (copie, TaskOrganizer reste inchangé). Détails dans le README.

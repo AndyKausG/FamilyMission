@@ -16,6 +16,7 @@ How to make FamilyMission work well at home
 8. [Monthly goals, family rocket, ring above 100 %](#goals)
 9. [Phasing out](#fade)
 10. [Frequent questions / problems](#faq)
+11. [About FamilyMission](#about)
 
 <a id="basics"></a>
 
@@ -154,3 +155,13 @@ Pass the attention that frees up to a new habit, but only one at a time (see ram
 - **Illness / holidays.** Pause tasks in the task editor (pause until a date) or use “Skip today” for single days. On the birthday, duties are automatically off. For long breaks, adjust the monthly goal.
 - **Siblings of different ages.** Tasks have a minimum age, every child has their own goal. Keep the effort per minute comparable, not the number of tasks. Older kids can help younger ones with “Together”.
 - **Tablet shows an old version.** That is the browser cache. Reload the page (in Fully Kiosk Browser: clear the cache and reload), in the companion app clear the frontend cache. After a FamilyMission update, the new version appears after a Home Assistant restart and a reload.
+
+<a id="about"></a>
+
+## 11. ℹ️ About FamilyMission
+
+FamilyMission is based on **TaskOrganizer** by Patrick von Wiegen (MIT license) and continued by AndyKausG as a project of its own: https://github.com/AndyKausG/FamilyMission
+
+Original project: https://github.com/patrickvonwiegen/TaskOrganizer
+
+> 💡 Coming from TaskOrganizer? FamilyMission takes over your data automatically on first start (a copy, TaskOrganizer stays untouched). Details are in the README.
