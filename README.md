@@ -17,7 +17,8 @@ Suggestions for improvement and bug reports are welcome: [issues](https://github
 * **Time windows**: duties are only available at the right time of day; missed duties expire at midnight. See [Time windows](#time-windows).
 * **Reminders**: per task a time of day; an event and an optional `notify.*` call for open tasks. See [Task reminders](#task-reminders).
 * **Own-device view** (`mode: mine`): kids and adults see their own tasks on their own phone, without tiles and PIN. See [My tasks](#my-tasks-own-device-mode-mine).
-* **Monthly goals, family rocket, leaderboard, reports and history protocol** with editable entries.
+* **Monthly goals, family rocket, reports and history protocol** with editable entries.
+* **We parents (new in 2.0)**: the adults' household and planning work as quiet, point-free parent tasks (me / you / take turns, "Can you?" hand-over by push, 🧠 planning reminder, Sunday summary) plus a role-model band on the kids tablet. See [We parents](#we-parents-parent-tasks).
 * **Bonus triggers**: a bonus task opens by itself when a device state changes (e.g. the dishwasher is done).
 * **In-app help in German, French and English** (the parents guide, searchable, offline). Also available as Markdown: [Deutsch](docs/parents-guide.de.md) · [English](docs/parents-guide.en.md) · [Français](docs/parents-guide.fr.md).
 
@@ -71,7 +72,7 @@ data:
 
 | Where | TaskOrganizer (old) | FamilyMission (new) |
 | :--- | :--- | :--- |
-| Dashboard cards | `custom:task-organizer-card`, `-leaderboard`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help` | `custom:family-mission-card`, `-leaderboard`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help` |
+| Dashboard cards | `custom:task-organizer-card`, `-leaderboard`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help` | `custom:family-mission-card`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help` (there is no leaderboard card, see [Changelog](CHANGELOG.md)) |
 | Services | `task_organizer.<service>` | `family_mission.<service>` |
 | Events | `task_organizer_<event>` (e.g. `task_organizer_task_completed`) | `family_mission_<event>` |
 | Push action prefixes | `TO_APPROVE_`, `TO_NOTDONE_`, `TO_CHEAT_`, `TO_RAPPROVE_`, `TO_RREJECT_` | `FM_APPROVE_`, `FM_NOTDONE_`, `FM_CHEAT_`, `FM_RAPPROVE_`, `FM_RREJECT_` |
@@ -81,7 +82,7 @@ data:
 Entity ids of the new sensors differ from the old ones, so update dashboards and automations that reference them.
 
 ## Dashboard Cards
-The integration ships these cards for the Lovelace dashboard (`custom:family-mission-card`, `-leaderboard`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help`). A complete example dashboard with a kids view and a parents view is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
+The integration ships these cards for the Lovelace dashboard (`custom:family-mission-card`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help`). A complete example dashboard with a kids view and a parents view is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 
 ### 1. Household Tasks (`family-mission-card`)
 The main card for viewing and completing tasks.
@@ -124,17 +125,7 @@ show_add: true           # Shows the add task button (Default true)
 - `filter_by: "onetime, !done"` (All pending one-time tasks)
 - `filter_by: "room:kitchen, overdue"` (All overdue tasks in the kitchen)
 
-### 2. Roommate of the Month (family-mission-leaderboard)
-Displays the winner's podium and an optional history of previous months.
-
-
-**YAML Configuration:**
-```yaml
-type: custom:family-mission-leaderboard
-show_history: true      # Displays the table of previous winners (default: true)
-```
-
-### 3. Household Log (family-mission-protocol)
+### 2. Household Log (family-mission-protocol)
 A list of recently completed tasks with the option to correct or delete entries.
 
 
@@ -146,7 +137,7 @@ filter_by: all      # Options: all (Default all)
 items_per_page: 10  # Number of displayed items
 ```
 
-### 4. Reports (family-mission-stats)
+### 3. Reports (family-mission-stats)
 Provides advanced reporting with different views like "Completed Tasks" and "Goal Setting", including monthly point charts and progress tracking.
 
 
@@ -158,7 +149,7 @@ report_type: overview  # Options: overview, burndown
 show_user_select: true # Allows selecting a specific user
 ```
 
-### 5. Settings (family-mission-settings)
+### 4. Settings (family-mission-settings)
 Allows customization of colors, data export, and factory resets.
 
 
@@ -168,7 +159,7 @@ type: custom:family-mission-settings
 show_advanced: false    # Unlocks the reset and factory reset area (Default: false)
 ```
 
-### 6. Kids (family-mission-kids)
+### 5. Kids (family-mission-kids)
 A big, colourful, touch-friendly card for a tablet in landscape mode (designed for 1280x800). See [Kids mode](#kids-mode) for the concept and the setup.
 
 **YAML Configuration:**
@@ -186,8 +177,8 @@ On a phone (card width below 700 px, measured on the card itself, not on the scr
 
 Use it in a dashboard view of type `panel` (full screen). A complete example with a parents view is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 
-### 7. Parents (family-mission-parents)
-Approvals, bonus points and deductions for the parents, designed for phones. See [Parent approval](#parent-approval).
+### 6. Parents (family-mission-parents)
+Approvals, bonus points and deductions for the parents and the **parents hub** "We parents" (three tabs), designed for phones. See [Parent approval](#parent-approval) and [We parents](#we-parents-parent-tasks).
 
 ## Kids mode
 Kids mode turns FamilyMission into a motivating family system for kids (designed for ages 6-12): immediate visual rewards, personal progress instead of ranking siblings, one cooperative family goal and optional "first duties, then bonus".
@@ -195,13 +186,13 @@ Kids mode turns FamilyMission into a motivating family system for kids (designed
 **Typical setup:** one wall tablet (e.g. an Android tablet with Fully Kiosk Browser) that is permanently logged in as a single Home Assistant user (e.g. "Tablet", not an admin) and shows the kids card. The parents use their own admin users on their phones.
 
 ### Parents guide (in-app help)
-A practical guide for parents (basic idea, 10-minute setup, ramp-up weeks, daily routine, approvals, choosing rewards, praising, goals, phasing out, FAQ) in German, French and English:
+A practical guide for parents (basic idea, 10-minute setup, ramp-up weeks, daily routine, approvals, choosing rewards, praising, goals, We parents, phasing out, FAQ) in German, French and English:
 
 * In Home Assistant: the **❓ Hilfe** buttons of the parents card, the Kids section of the settings card and the quick-start wizard open it as a full-screen overlay at the matching chapter (table of contents, collapsible chapters, search, works offline; language from your Home Assistant profile, fallback English). It can also be placed as a card: `type: custom:family-mission-help` (optional `anchor: ramp` to open a chapter).
 * As documents: [Deutsch](docs/parents-guide.de.md) · [Français](docs/parents-guide.fr.md) · [English](docs/parents-guide.en.md).
 
 ### Kids do not need a Home Assistant user
-Kids are `person` entities. The *participant ID* used for points, history and assignees is the `user_id` attribute of the person if there is one, otherwise the entity id (e.g. `person.anna`). Existing data that is keyed by user id keeps working unchanged. All cards (task list, leaderboard, protocol, reports, settings) and the services (`assignees`, `complete_task_by_name`) understand both kinds of IDs.
+Kids are `person` entities. The *participant ID* used for points, history and assignees is the `user_id` attribute of the person if there is one, otherwise the entity id (e.g. `person.anna`). Existing data that is keyed by user id keeps working unchanged. All cards (task list, protocol, reports, settings) and the services (`assignees`, `complete_task_by_name`) understand both kinds of IDs.
 
 ### Setup
 1. Create a `person` entity per kid (no user account required).
@@ -336,7 +327,7 @@ action:
 * A task (or template) can have **"Requires parent approval"** (`requires_approval`). Per kid, a **spot-check rate** (0-100 %, settings card) additionally sends random completions to the parents. After cheating, the kid is in **strict mode** until `strict_until`: every task needs approval.
 * When such a task is completed on the kids card, the kid sees a soft celebration ("Mama or Papa will take a look"), the task advances like a normal completion (it cannot be completed twice) but **no points are awarded yet**. The completion is stored as a pending entry (`pending` in `get_data`) and the event `family_mission_approval_requested` (`pending_id`, `task_name`, `kid_id`, `kid_name`, `points`) is fired.
 * Parents decide in the **parents card** or via push notification:
-  * **Approve:** the points, the history entry and the events (`family_mission_task_completed`, leaderboard) are exactly those of a normal completion, dated at the approval time (a pending entry survives the monthly reset and counts for the month it is approved in).
+  * **Approve:** the points, the history entry and the event (`family_mission_task_completed`) is exactly those of a normal completion, dated at the approval time (a pending entry survives the monthly reset and counts for the month it is approved in).
   * **Not done:** no points, the task is due again, no penalty.
   * **Cheated:** no points, a deduction of `round(task points x cheat_penalty_factor)` (default 1.0, 0-2) with the reason "Cheated: <task>", and strict mode for `cheat_strict_days` days (default 7, 0 = off).
 * Approving twice (card and push) is harmless: the second attempt finds nothing to do. Event `family_mission_approval_resolved` (`pending_id`, `result`, ...) is fired afterwards, e.g. to clear a notification.
@@ -451,6 +442,43 @@ type: custom:family-mission-parents
 title: Parents
 ```
 
+### We parents (parent tasks)
+New in 2.0. The household and planning work of the adults, set up once and then just ticked off. **No points, no ranking, no red.** Parent tasks live in the normal task list (`parent_task: true`, `category: basis`, `complexity: 0`, `generated_by: parents`) and never count for points, wallet, family goal or monthly goal; a completion writes a history entry of type `parent` with `points: 0` and `minutes`.
+
+* **Set up:** the last-but-one step of the [quick-start wizard](#kids-mode-quick-start-wizard) (optional) or the parents card. A catalog of 28 templates in four groups (daily, weekly, monthly/rare, kids and family) with a small preselection.
+* **Who:** per task *me*, *you* (the partner) or *take turns*. Responsibility switches to the other adult after each completion (relative to the responsible person, nobody keeps score). With more than two adults the picker asks once who "I" and "partner" are.
+* **Quiet carry-over:** what is left at midnight silently moves to today (`carried_since` is set). No history entry, no push, no red display.
+* **🧠 Planning tasks** (`planning: true`, e.g. meal plan, shopping list, calendar check) get one reminder the evening before they are due ("Morgen dran: Essensplan (ca. 20 Min.)"), by default at 18:00. Nothing else reminds.
+* **"Kannst du?":** the responsible adult asks the partner to take a task. The partner gets a push with the actions `FM_TAKE_<task_id>` ("Mach ich") and `FM_DECLINE_<task_id>` ("Geht nicht"), handled by FamilyMission itself like the approval actions. Accepting applies to this one completion only; declining sends a short note to the asker.
+* **Sunday summary:** on Sunday at 19:00 every adult with a push target gets a neutral note ("Diese Woche: Anna 6,5 Std. · Ben 4 Std. Liegengeblieben: Bäder, Fenster.").
+* **Role-model band:** the kids tablet (family mode, not `mode: mine`) shows a quiet line "👪 Auch Mama und Papa haben heute N Missionen" with progress dots and no points whenever parent tasks are due or were done today. Parent tasks never appear in kid lists or on the bonus board.
+* **Own device:** with `mode: mine` an adult sees their own parent tasks (no points, "~N Min.", 🧠 badge); ticking uses the normal `my_complete_task`, which the backend redirects to `parent_task_done`.
+
+#### Websocket commands
+| Command | Payload / result |
+| :--- | :--- |
+| `family_mission/parents_catalog` | Returns `items` (template catalog), `adults` (`id`, `name`, `push`), `me`, `partner` and `existing` (`parent_key` -> `task_id`, `mode`). |
+| `family_mission/parents_apply` | `items` (`[{key, mode}]`, mode `me` / `you` / `alternate`), optional `me`, `partner`. Creates the tasks; an existing `parent_key` only gets its mode updated (no duplicates). Without a partner `you` / `alternate` become `me`. Returns `{success, created, updated}`. |
+| `family_mission/parent_task_set` | `task_id`, optional `mode`, `planning`, `minutes` (1-600), `me`. |
+| `family_mission/parent_task_add` | A parent task without template: `name`, optional `minutes`, `planning`, `interval` (0-365, default 7; 0 = one time), `mode`, `me`. |
+| `family_mission/parent_task_done` | `task_id`. Every adult / parent role may tick every parent task. The next due date is today + `interval`; with `interval: 0` the task is removed (undo restores it). Returns `{success, history_id}`; `undo_completion` works as usual. |
+| `family_mission/handover_ask` | `task_id`, optional `to` (default: the partner of the responsible adult). Sends the push and fires `family_mission_handover_requested`. |
+| `family_mission/handover_answer` | `task_id`, `accept`. Only the asked adult (or an admin). |
+| `family_mission/weekly_summary` | The data of the Sunday summary (hours per adult over the last 7 days, carried-over tasks). |
+
+`get_data` additionally returns `adults` (`id`, `name`, `push`), `me` and `partner`.
+
+#### Settings (`update_settings`)
+| Key | Default | Meaning |
+| :--- | :--- | :--- |
+| `role_model_band` | `true` | Show the role-model band on the kids tablet. |
+| `role_model_label` | empty | Wording ("Mama und Papa" / "Mom and Dad" when empty). |
+| `weekly_summary` / `weekly_summary_time` | `true` / `"19:00"` | Sunday summary on or off and its time. |
+| `planning_reminders` / `planning_reminder_time` | `true` / `"18:00"` | Evening-before reminder for 🧠 planning tasks and its time. |
+| `parent_notify` | `{}` | Optional push target per adult (`{user_id: "notify.xyz"}`). Without an entry FamilyMission uses the `mobile_app` notify service of that user's device, if it exists. Send errors are only logged. |
+
+All of them are in the settings card, section **Wir Eltern**; none is required.
+
 ### Praise
 Social recognition without points. On the parents card every kid has a **❤️ Loben** button: a sheet with sticker chips (❤️ ⭐ 🌟 👏 🏆 💪 🦸 🎉 😊 🙌), message chips ("Danke fürs Helfen!", "Das hast du super gemacht!", "Ich bin stolz auf dich!", "Toll, wie du drangeblieben bist!") and a free text (max 120 characters). The websocket command `family_mission/send_praise` (`kid_id`, `sticker`, optional `message`; admin, manager or parent) stores the praise in `data["praise"]` (the last 50 per kid; `id`, `kid_id`, `from_name`, `message`, `sticker`, `timestamp`, `seen`), where `from_name` is the name of the person linked to the sending user (else the user name), adds a history entry of type `praise` with 0 points (protocol card: ❤️ and the message; statistics and goals ignore it) and fires `family_mission_praise`.
 
@@ -516,7 +544,6 @@ The integration provides the following sensors:
 | `sensor.family_mission_overdue_tasks` | Displays the number of overdue tasks. |
 | `sensor.family_mission_due_and_overdue_tasks` | Displays the combined number of due and overdue tasks. |
 | `sensor.family_mission_points` | Shows the current point standings for all users. Perfect for custom visualizations. |
-| `sensor.family_mission_leaderboard` | Displays the name of the roommate currently in the lead. |
 | `sensor.family_mission_templates` | Displays the number of available templates. The full template list (including subtasks) is available as JSON in the attributes. |
 | `sensor.family_mission_settings` | Provides the current configuration (colors, overdue thresholds, kid profiles without PIN hashes). |
 
@@ -646,40 +673,20 @@ action:
       message: "Thank you for taking out the trash!"
 ```
 
-### family_mission_leaderboard_changed
-This event is triggered whenever the ranking order within the Top 3 roommates changes. This can happen when a task is completed, points are manually edited, or the month is reset.
+### family_mission_handover_requested
+Fired when an adult asks the partner to take over a parent task ("Kannst du?"). The push with the actions `FM_TAKE_<task_id>` / `FM_DECLINE_<task_id>` is sent by FamilyMission itself; use the event for additional announcements.
 
 #### Event Data:
+- **task_id**: The ID of the parent task.
+- **task_name**: The name of the task.
+- **from**: The participant ID of the asking adult.
+- **to**: The participant ID of the asked adult.
 
-- **old_leaderboard**: A list of the top 3 users before the change.
-
-- **new_leaderboard**: A list of the top 3 users after the change.
-
-Each list entry contains user_id, name (friendly name), and points.
-
-#### Example Automation:
-Celebrate when a roommate takes the lead!
-
-```yml
-alias: "FamilyMission: New Leader Notification"
-trigger:
-  - platform: event
-    event_type: "family_mission_leaderboard_changed"
-condition:
-  # Only trigger if the person in 1st place (index 0) has changed
-  - condition: template
-    value_template: "{{ trigger.event.data.old_leaderboard[0].user_id != trigger.event.data.new_leaderboard[0].user_id }}"
-action:
-  - service: notify.mobile_app_your_phone
-    data:
-      title: "New Ranking Leader!"
-      message: >
-        {{ trigger.event.data.new_leaderboard[0].name }} just took the lead 
-        with {{ trigger.event.data.new_leaderboard[0].points }} points!
-```
+### family_mission_weekly_summary
+Fired together with the Sunday summary push. The event data are the same as the websocket command `family_mission/weekly_summary` returns: the hours per adult over the last 7 local days and the parent tasks that were carried over.
 
 ### family_mission_task_created
-This event is fired whenever a new task is created. It is useful for notifying roommates about new tasks or triggering other automations.
+This event is fired whenever a new task is created. It is useful for notifying family members about new tasks or triggering other automations.
 
 #### Event Data:
 - **id**: The unique ID of the newly created task.

@@ -36,7 +36,7 @@ const HELP_CONTENT = {
         [
           "**Kinderprofile + PIN:** Einstellungen-Karte, Bereich Kinder: Person als Kind aktivieren, Avatar und Farbe wählen, Geburtsjahr (oder Geburtstag) und eine 4-stellige Geheimzahl eintragen. Die PIN verhindert, dass Geschwister füreinander abhaken.",
           "**Eltern-Rolle:** Im selben Bereich legt ihr fest, wer freigeben, loben und Punkte vergeben darf. So bleibt das Wand-Tablet für Kinder harmlos.",
-          "**Schnellstart:** Der Button 🚀 Kindermodus-Schnellstart schlägt altersgerechte Aufgaben, Punkte und Ziele vor und legt alles mit einem Klick an. Fünf Schritte, auch am Handy.",
+          "**Schnellstart:** Der Button 🚀 Kindermodus-Schnellstart schlägt altersgerechte Aufgaben, Punkte und Ziele vor und legt alles mit einem Klick an. Sechs Schritte (der Schritt „Wir Eltern“ ist optional), auch am Handy.",
           "**Tablet-Dashboard (Kiosk):** Die Kinder-Karte als Vollbild auf einem Wand-Tablet (zum Beispiel mit Fully Kiosk Browser, Querformat). Die Kinder tippen ihre Kachel, geben die PIN ein und sehen ihre Missionen.",
           "**Eigene Geräte (`mode: mine`):** Mit `mode: mine` zeigt die Karte direkt die Aufgaben der angemeldeten Person, ohne Kachel und PIN. Ideal für das Handy oder Tablet eines älteren Kindes.",
           "**Bonus-Auslöser:** Ein Bonus kann sich von selbst öffnen, etwa wenn die Spülmaschine fertig ist (Einstellungen-Karte, Bereich Bonus-Auslöser). Das Tablet kann ihn per Sprachausgabe ansagen.",
@@ -112,6 +112,22 @@ const HELP_CONTENT = {
         ],
         { tip: "Setzt das Ziel so, dass ein Kind mit normalem Einsatz etwa 75 % des Maximums erreicht. So bleibt es erreichbar, ohne dass jeder Tag perfekt sein muss." }
       ] },
+      { id: "parents", icon: "👪", title: "Wir Eltern: Eltern-Aufgaben und Eltern-Zentrale", blocks: [
+        "Auch der Haushalt der Erwachsenen ist Arbeit, oft unsichtbare. **Wir Eltern** macht sie sichtbar und verteilt sie fair: ohne Punkte, ohne Rangliste, ohne Vorwürfe. Einmal einrichten, danach nur abhaken.",
+        [
+          "**Eltern-Zentrale:** Die Eltern-Karte hat drei Reiter: **Heute** (Freigaben und eure Eltern-Aufgaben), **Kinder** und **Mehr** (Einstellungen, Sonntags-Zusammenfassung, Verlauf).",
+          "**Einrichten:** Der Schnellstart hat den optionalen Schritt **Wir Eltern**. Dort wählt ihr aus einer Vorlagen-Liste, etwa Abendessen, Essensplan, Einkauf, Bäder, Finanzen oder Vorsorge. Eine kleine Auswahl ist schon vorangekreuzt.",
+          "**Ich / Du / Abwechselnd:** Pro Aufgabe legt ihr fest, wer zuständig ist. Bei „Abwechselnd“ geht die Zuständigkeit nach jeder Erledigung an den anderen, ohne dass jemand Buch führen muss.",
+          "**Ohne Punkte:** Eltern-Aufgaben haben weder Punkte noch Guthaben noch Ziele. Es zählt nur: erledigt oder nicht.",
+          "**Leises Weiterrutschen:** Was heute liegen bleibt, rutscht still auf morgen. Kein Rot, kein „überfällig“, keine Erinnerung, kein Vorwurf.",
+          "**🧠 Planung:** Essensplan, Einkaufsliste oder Terminabgleich sind Denkarbeit (Mental Load). Nur für solche Aufgaben gibt es am Vorabend eine sanfte Erinnerung („Morgen dran: Essensplan, ca. 20 Min.“). Die Uhrzeit stellt ihr in den Einstellungen ein, Bereich Wir Eltern.",
+          "**Kannst du?:** Passt es heute nicht, fragt ihr mit einem Tipp den Partner. Er bekommt eine Nachricht mit „Mach ich“ oder „Geht nicht“. Übernimmt er, gilt das nur für dieses eine Mal.",
+          "**Sonntags-Zusammenfassung:** Am Sonntagabend kommt eine neutrale Notiz: wie viele Stunden jede Person in der Woche geschafft hat und was liegen geblieben ist. Sie bewertet nichts, sie erleichtert nur das Gespräch. In den Einstellungen abschaltbar.",
+          "**Vorbild-Band:** Auf dem Kinder-Tablet steht eine ruhige Zeile wie „Auch Mama und Papa haben heute 3 Missionen“, dazu Fortschrittspunkte ohne Punktezahl. Die Kinder sehen, dass alle mithelfen. Das Band und sein Wortlaut sind einstellbar.",
+          "**Eigenes Gerät:** Mit `mode: mine` erscheinen eure eigenen Eltern-Aufgaben (ohne Punkte, mit Dauer) auf dem eigenen Handy und lassen sich dort abhaken."
+        ],
+        { tip: "Startet klein: fünf bis acht Aufgaben genügen. Was nicht passt, lasst ihr einfach weg. Es gibt keine Pflichtfelder." }
+      ] },
       { id: "fade", icon: "🌿", title: "Ausschleichen", blocks: [
         "Ziel ist **Gewohnheit, nicht Punkte-Sammeln**. Wenn eine Routine 4 Wochen stabil läuft, führt ihr sie schrittweise von der Belohnung weg:",
         [
@@ -163,7 +179,7 @@ const HELP_CONTENT = {
         [
           "**Profils d'enfants + code PIN :** carte Réglages, section Enfants : activer la personne comme enfant, choisir l'avatar et la couleur, saisir l'année de naissance (ou la date d'anniversaire) et un code secret à 4 chiffres. Le PIN évite qu'un frère ou une sœur coche à la place d'un autre.",
           "**Rôle parent :** dans la même section, vous définissez qui peut valider, féliciter et attribuer des points. La tablette murale reste ainsi sans danger pour les enfants.",
-          "**Démarrage rapide :** le bouton 🚀 Démarrage rapide du mode enfants propose des tâches, des points et des objectifs adaptés à l'âge et crée tout en un clic. Cinq étapes, aussi sur téléphone.",
+          "**Démarrage rapide :** le bouton 🚀 Démarrage rapide du mode enfants propose des tâches, des points et des objectifs adaptés à l'âge et crée tout en un clic. Six étapes (l'étape « Nous les parents » est facultative), aussi sur téléphone.",
           "**Tableau de bord tablette (kiosque) :** la carte Enfants en plein écran sur une tablette murale (par exemple avec Fully Kiosk Browser, en mode paysage). Les enfants touchent leur vignette, saisissent leur PIN et voient leurs missions.",
           "**Appareils personnels (`mode: mine`) :** avec `mode: mine`, la carte affiche directement les tâches de la personne connectée, sans vignette ni PIN. Idéal pour le téléphone ou la tablette d'un enfant plus grand.",
           "**Déclencheurs de bonus :** un bonus peut s'ouvrir tout seul, par exemple quand le lave-vaisselle a terminé (carte Réglages, section Déclencheurs de bonus). La tablette peut l'annoncer à voix haute.",
@@ -239,6 +255,22 @@ const HELP_CONTENT = {
         ],
         { tip: "Fixez l'objectif pour qu'un enfant atteigne environ 75 % du maximum avec un effort normal. Il reste atteignable sans que chaque jour doive être parfait." }
       ] },
+      { id: "parents", icon: "👪", title: "Nous les parents : tâches des parents et centrale des parents", blocks: [
+        "Le travail domestique des adultes est aussi un travail, souvent invisible. **Nous les parents** le rend visible et le répartit équitablement : sans points, sans classement, sans reproches. À configurer une fois, ensuite il suffit de cocher.",
+        [
+          "**Centrale des parents :** la carte des parents a trois onglets : **Aujourd'hui** (validations et vos tâches de parents), **Enfants** et **Plus** (réglages, résumé du dimanche, historique).",
+          "**Configurer :** le démarrage rapide propose l'étape facultative **Nous les parents**. Vous choisissez dans une liste de modèles, par exemple dîner, plan des repas, courses, salles de bain, finances ou visites médicales. Une petite sélection est déjà cochée.",
+          "**Moi / Toi / Chacun son tour :** pour chaque tâche, vous décidez qui en est responsable. Avec « Chacun son tour », la tâche passe à l'autre après chaque réalisation, sans que personne ne tienne les comptes.",
+          "**Sans points :** les tâches des parents n'ont ni points, ni solde, ni objectifs. Seul compte : fait ou pas fait.",
+          "**Report discret :** ce qui reste aujourd'hui glisse tranquillement à demain. Pas de rouge, pas de « en retard », pas de rappel, pas de reproche.",
+          "**🧠 Planification :** plan des repas, liste de courses ou synchronisation des rendez-vous sont un travail de réflexion (charge mentale). Seules ces tâches reçoivent un rappel discret la veille au soir (« Demain : plan des repas, env. 20 min. »). L'heure se règle dans les réglages, section Nous les parents.",
+          "**Tu peux ?** Si cela ne convient pas aujourd'hui, demandez à votre partenaire d'un geste. Il reçoit un message avec « Je m'en occupe » ou « Impossible ». S'il accepte, cela ne vaut que pour cette fois.",
+          "**Résumé du dimanche :** le dimanche soir arrive une note neutre : combien d'heures chaque personne a faites cette semaine et ce qui est resté en suspens. Elle ne juge rien, elle facilite seulement la discussion. Désactivable dans les réglages.",
+          "**Bandeau modèle :** la tablette des enfants affiche une ligne discrète comme « Maman et Papa ont aussi 3 missions aujourd'hui », avec des points de progression sans score. Les enfants voient que tout le monde participe. Le bandeau et son texte sont réglables.",
+          "**Appareil personnel :** avec `mode: mine`, vos propres tâches de parents (sans points, avec la durée) apparaissent sur votre téléphone et s'y cochent."
+        ],
+        { tip: "Commencez petit : cinq à huit tâches suffisent. Laissez de côté ce qui ne convient pas. Il n'y a aucun champ obligatoire." }
+      ] },
       { id: "fade", icon: "🌿", title: "Réduire progressivement", blocks: [
         "Le but est l'**habitude, pas la collecte de points**. Quand une routine tient depuis 4 semaines, éloignez-la peu à peu de la récompense :",
         [
@@ -290,7 +322,7 @@ const HELP_CONTENT = {
         [
           "**Kid profiles + PIN:** settings card, Kids section: enable the person as a kid, pick an avatar and colour, enter the birth year (or birthday) and a 4-digit secret number. The PIN stops siblings from ticking things off for each other.",
           "**Parent role:** in the same section you decide who may approve, praise and give points. That keeps the wall tablet harmless for kids.",
-          "**Quick start:** the 🚀 Kids mode quick start button proposes age-appropriate tasks, points and goals and creates everything with one click. Five steps, also on a phone.",
+          "**Quick start:** the 🚀 Kids mode quick start button proposes age-appropriate tasks, points and goals and creates everything with one click. Six steps (the “We parents” step is optional), also on a phone.",
           "**Tablet dashboard (kiosk):** the kids card in full screen on a wall tablet (for example with Fully Kiosk Browser, landscape). Kids tap their tile, enter the PIN and see their missions.",
           "**Own devices (`mode: mine`):** with `mode: mine` the card shows the tasks of the logged-in person right away, without tiles and PIN. Ideal for the phone or tablet of an older child.",
           "**Bonus triggers:** a bonus can open by itself, for example when the dishwasher has finished (settings card, Bonus triggers section). The tablet can announce it by voice.",
@@ -365,6 +397,22 @@ const HELP_CONTENT = {
           "**Month change:** at the start of the month the monthly points are reset and the month is archived. The **shop balance is kept**."
         ],
         { tip: "Set the goal so that a child with normal effort reaches about 75 % of the maximum. That keeps it reachable without every day having to be perfect." }
+      ] },
+      { id: "parents", icon: "👪", title: "We parents: parent tasks and the parents hub", blocks: [
+        "The adults' housework is work too, and often invisible. **We parents** makes it visible and shares it fairly: no points, no ranking, no blame. Set it up once, then just tick it off.",
+        [
+          "**Parents hub:** the parents card has three tabs: **Today** (approvals and your parent tasks), **Kids** and **More** (settings, Sunday summary, history).",
+          "**Setting up:** the quick start has an optional **We parents** step. Pick from a list of templates such as dinner, meal plan, shopping, bathrooms, finances or check-ups. A small selection is already ticked.",
+          "**Me / You / Take turns:** for each task you decide who is responsible. With “Take turns” the task passes to the other person after every completion, without anyone keeping score.",
+          "**No points:** parent tasks have no points, no balance and no goals. All that counts is done or not done.",
+          "**Quiet carry-over:** whatever is left today quietly moves to tomorrow. No red, no “overdue”, no reminder, no blame.",
+          "**🧠 Planning:** meal plan, shopping list or calendar check are thinking work (mental load). Only these get a gentle reminder the evening before (“Tomorrow: meal plan, about 20 min.”). Set the time in the settings, section We parents.",
+          "**Can you?:** if today does not work, ask your partner with one tap. They receive a message with “I'll do it” or “Can't”. If they take it, that applies to this one time only.",
+          "**Sunday summary:** on Sunday evening a neutral note arrives: how many hours each person did this week and what was left over. It judges nothing, it only makes talking easier. It can be switched off in the settings.",
+          "**Role-model band:** the kids tablet shows a quiet line such as “Mom and Dad also have 3 missions today”, with progress dots and no points. Kids see that everybody pitches in. The band and its wording are configurable.",
+          "**Own device:** with `mode: mine` your own parent tasks (no points, with duration) appear on your own phone and can be ticked off there."
+        ],
+        { tip: "Start small: five to eight tasks are enough. Leave out whatever does not fit. There are no required fields." }
       ] },
       { id: "fade", icon: "🌿", title: "Phasing out", blocks: [
         "The aim is **habit, not collecting points**. When a routine has run stably for 4 weeks, lead it step by step away from the reward:",

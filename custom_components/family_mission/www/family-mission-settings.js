@@ -69,7 +69,13 @@ claim_minutes: "Bonus reservation (minutes)",
     wizard_missing: "The wizard could not be loaded. Reload the page (Ctrl+F5) and try again.",
     triggers_title: "Bonus triggers", triggers_desc: "Open a bonus task automatically when an entity changes to a state, e.g. when the dishwasher is finished. Fires the event family_mission_bonus_opened.",
     trig_task: "Bonus task", trig_pick_task: "— choose a bonus task —", trig_add: "Add trigger", trig_remove: "Remove trigger", trig_none: "No triggers yet.", trig_no_bonus: "No bonus task yet. Create a task without assignee and category \"Bonus\" (or let the quick start create them).",
-    trig_when: "when {entity} becomes \"{state}\"", trig_error: "Could not save the triggers: "
+    trig_when: "when {entity} becomes \"{state}\"", trig_error: "Could not save the triggers: ",
+    pe_title: "We parents", pe_desc: "Optional. Everything here has a sensible default; nothing is required.",
+    pe_band: "Show role-model band on the tablet", pe_band_d: "Quiet line on the kids tablet: \"Mom and Dad also have N missions today\" (no points, no names).",
+    pe_label: "Wording for the band (optional)", pe_label_ph: "Mom and Dad",
+    pe_summary: "Sunday summary", pe_summary_d: "A neutral weekly note to each adult: hours per person and what is still open.", pe_time: "Time",
+    pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. No other parent task sends reminders.",
+    pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found."
   },
   de: { 
     title: "Einstellungen", colors: "Farben (Erledigt, Fällig, Überfällig)", c_done: "Erledigt", c_due: "Fällig", c_overdue: "Überfällig", 
@@ -136,7 +142,13 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     wizard_missing: "Der Assistent konnte nicht geladen werden. Seite neu laden (Strg+F5) und erneut versuchen.",
     triggers_title: "Bonus-Auslöser / Bonus triggers", triggers_desc: "Öffnet eine Bonus-Aufgabe automatisch, wenn eine Entität einen Zustand annimmt, z.B. wenn die Spülmaschine fertig ist. Löst das Ereignis family_mission_bonus_opened aus.",
     trig_task: "Bonus-Aufgabe", trig_pick_task: "— Bonus-Aufgabe wählen —", trig_add: "Auslöser hinzufügen", trig_remove: "Auslöser entfernen", trig_none: "Noch keine Auslöser.", trig_no_bonus: "Noch keine Bonus-Aufgabe vorhanden. Lege eine Aufgabe ohne Bearbeiter mit Kategorie „Bonus“ an (oder lass sie vom Schnellstart anlegen).",
-    trig_when: "wenn {entity} auf \"{state}\" wechselt", trig_error: "Auslöser konnten nicht gespeichert werden: "
+    trig_when: "wenn {entity} auf \"{state}\" wechselt", trig_error: "Auslöser konnten nicht gespeichert werden: ",
+    pe_title: "Wir Eltern", pe_desc: "Optional. Alles hat einen sinnvollen Standard, nichts ist Pflicht.",
+    pe_band: "Vorbild-Band auf dem Tablet zeigen", pe_band_d: "Ruhige Zeile auf dem Kinder-Tablet: \"Auch Mama und Papa haben heute N Missionen\" (ohne Punkte, ohne Namen).",
+    pe_label: "Wortlaut für das Band (optional)", pe_label_ph: "Mama und Papa",
+    pe_summary: "Sonntags-Zusammenfassung", pe_summary_d: "Eine neutrale Wochen-Notiz an jeden Erwachsenen: Stunden pro Person und was noch offen ist.", pe_time: "Uhrzeit",
+    pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nie.",
+    pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden."
   }
 };
 
@@ -268,6 +280,8 @@ class FamilyMissionSettings extends HTMLElement {
     this._haUsers = [];
     this._parentsDraft = null;
     this._trigOpen = false;
+    this._peOpen = false;
+    this._adults = [];
     this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '' };
     this._wizard = null;
     this._unsubEvents = null;
@@ -467,6 +481,7 @@ class FamilyMissionSettings extends HTMLElement {
       this.current_period_start = data.current_period_start;
       this._myRole = data.my_role || null;
       this._haUsers = Array.isArray(data.ha_users) ? data.ha_users : [];
+      this._adults = Array.isArray(data.adults) ? data.adults : [];
       this._settingsLoaded = true;
       this._render(); 
     }); 
@@ -722,6 +737,7 @@ class FamilyMissionSettings extends HTMLElement {
     else if (id === 'adv-toggle') { this._advancedOpen = !this._advancedOpen; this._render(); }
     else if (id === 'goals-toggle') { this._goalsOpen = !this._goalsOpen; this._render(); }
     else if (id === 'kids-toggle') { this._kidsOpen = !this._kidsOpen; this._render(); }
+    else if (id === 'pe-toggle') { this._peOpen = !this._peOpen; this._render(); }
     else if (id === 'trig-toggle') { this._trigOpen = !this._trigOpen; this._render(); }
     else if (id === 'btn-wizard-open') this._openWizard();
     else if (id === 'btn-help-open') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
@@ -1149,7 +1165,7 @@ class FamilyMissionSettings extends HTMLElement {
         .kid-head .kid-avatar-preview { font-size: 24px; margin-right: 8px; }
         .kid-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
         .kid-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary-text-color); }
-        .kid-field input[type="text"], .kid-field input[type="password"], .kid-field input[type="number"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; text-align: left; }
+        .kid-field input[type="text"], .kid-field input[type="password"], .kid-field input[type="number"], .kid-field input[type="time"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; text-align: left; }
         .kid-field input[type="color"] { width: 100%; height: 36px; }
         .kid-slider { gap: 6px; }
         .kid-slider input[type="range"] { width: 100%; accent-color: var(--primary-color); }
@@ -1465,6 +1481,90 @@ class FamilyMissionSettings extends HTMLElement {
         </div>`;
   }
 
+  /** Notify services (notify.xyz) offered as push targets; the current value is always included. */
+  _notifyTargets(current) {
+    const svc = (this._hass && this._hass.services && this._hass.services.notify) || {};
+    const list = Object.keys(svc).filter(n => n !== 'send_message').map(n => `notify.${n}`);
+    if (current && !list.includes(current)) list.push(current);
+    return list.sort();
+  }
+
+  /**
+   * Renders the "We parents" section: role-model band, Sunday summary,
+   * planning reminder and the optional push target per adult.
+   * @returns {string} - The HTML.
+   */
+  _renderParentsCentralSection() {
+    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const st = this.settings || {};
+    const notify = st.parent_notify || {};
+    const time = (v, def) => (/^\d{2}:\d{2}$/.test(v || '') ? v : def);
+    const adults = (this._adults || []).map(a => `
+      <label class="kid-field">${esc(a.name)}
+        <select class="form-select pe-push" data-uid="${esc(a.id)}" style="height: 36px; font-size: 14px;">
+          <option value="">${this.localize('pe_auto')}</option>
+          ${this._notifyTargets(notify[a.id]).map(n => `<option value="${esc(n)}" ${notify[a.id] === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}
+        </select>
+      </label>`).join('');
+    return `
+        <div class="section-card">
+          <div class="section-header" id="pe-toggle">
+            <div class="section-title">
+              <ha-icon icon="${this._peOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
+              <span>${this.localize('pe_title')}</span>
+            </div>
+          </div>
+          <div class="section-content ${this._peOpen ? 'open' : ''}" id="pe-content">
+            <p class="kids-note">${this.localize('pe_desc')}</p>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-band" ${st.role_model_band !== false ? 'checked' : ''}> ${this.localize('pe_band')}</label>
+              <p class="kids-note">${this.localize('pe_band_d')}</p>
+              <label class="kid-field">${this.localize('pe_label')}
+                <input type="text" id="pe-label" maxlength="40" placeholder="${esc(this.localize('pe_label_ph'))}" value="${esc(st.role_model_label || '')}"></label>
+            </div>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-summary" ${st.weekly_summary !== false ? 'checked' : ''}> ${this.localize('pe_summary')}</label>
+              <p class="kids-note">${this.localize('pe_summary_d')}</p>
+              <label class="kid-field">${this.localize('pe_time')}
+                <input type="time" id="pe-summary-time" value="${time(st.weekly_summary_time, '19:00')}"></label>
+            </div>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-reminder" ${st.planning_reminders !== false ? 'checked' : ''}> ${this.localize('pe_reminder')}</label>
+              <p class="kids-note">${this.localize('pe_reminder_d')}</p>
+              <label class="kid-field">${this.localize('pe_time')}
+                <input type="time" id="pe-reminder-time" value="${time(st.planning_reminder_time, '18:00')}"></label>
+            </div>
+            <div class="family-box">
+              <h4>${this.localize('pe_push')}</h4>
+              <p class="kids-note">${this.localize('pe_push_d')}</p>
+              ${adults || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
+            </div>
+          </div>
+        </div>`;
+  }
+
+  /** Keeps the "We parents" inputs in this.settings (saved with the normal save button). */
+  _bindParentsCentralInputs() {
+    const root = this.shadowRoot;
+    const box = root.getElementById('pe-content');
+    if (!box) return;
+    const sync = () => {
+      const val = (id) => root.getElementById(id);
+      const time = (id, def) => (/^\d{2}:\d{2}$/.test(val(id).value) ? val(id).value : def);
+      this.settings.role_model_band = !!val('pe-band').checked;
+      this.settings.role_model_label = val('pe-label').value.trim();
+      this.settings.weekly_summary = !!val('pe-summary').checked;
+      this.settings.weekly_summary_time = time('pe-summary-time', '19:00');
+      this.settings.planning_reminders = !!val('pe-reminder').checked;
+      this.settings.planning_reminder_time = time('pe-reminder-time', '18:00');
+      const notify = {};
+      root.querySelectorAll('.pe-push').forEach(el => { if (el.value) notify[el.dataset.uid] = el.value; });
+      this.settings.parent_notify = notify;
+    };
+    box.addEventListener('input', sync);
+    box.addEventListener('change', sync);
+  }
+
   /**
    * Wires the picker and the task select of the triggers section.
    */
@@ -1772,6 +1872,8 @@ class FamilyMissionSettings extends HTMLElement {
 
         ${this._renderTriggersSection()}
 
+        ${this._renderParentsCentralSection()}
+
         ${showAdvanced ? `
           <div class="section-card">
             <div class="section-header" id="adv-toggle">
@@ -1965,6 +2067,7 @@ class FamilyMissionSettings extends HTMLElement {
 
     this._bindKidInputs();
     this._bindTriggerInputs();
+    this._bindParentsCentralInputs();
 
     if (this._templateModalOpen) {
       const iconPicker = this.shadowRoot.getElementById('tmpl-icon');

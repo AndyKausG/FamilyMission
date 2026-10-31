@@ -12,7 +12,7 @@
 const I18N_WIZARD = {
   en: {
     title: "Kids mode quick start", help: "Help", close: "Close", back: "Back", next: "Next", create: "Create setup", done: "Done",
-    step_kids: "Kids", step_home: "Household", step_tasks: "Tasks", step_goals: "Goals", step_summary: "Summary",
+    step_kids: "Kids", step_home: "Household", step_tasks: "Tasks", step_goals: "Goals", step_parents: "We parents", step_summary: "Summary",
     step_of: "Step {n} of {m}", loading: "Loading…", error: "Something went wrong: ",
     kids_intro: "Which persons are kids? Birth year, avatar and color are used for age-appropriate tasks and on the kids card.",
     kid_on: "Is a kid", birthday: "Birthday", birth_year: "Birth year (if birthday unknown)", age_years: "{age} years", avatar: "Avatar", color: "Color",
@@ -48,11 +48,14 @@ const I18N_WIZARD = {
     next_steps: "Next steps", ns_pin: "Set a PIN for every kid: Settings card, section \"Kids\".",
     ns_tablet: "Put the kids card on the tablet dashboard (see the README, \"Kids mode\").",
     ns_check: "Look through the first week and adjust points or tasks in the task card.",
-    sel_kids: "Kids", sel_home: "Household"
+    sel_kids: "Kids", sel_home: "Household",
+    parents_intro: "Optional: the chores and mental load of the grown-ups, set up once. Parent tasks carry no points. Anything left undone quietly moves to tomorrow, with no red marks and no reminders. Only 🧠 planning tasks get a gentle heads-up the evening before.",
+    n_parents: "{n} parent tasks", ok_parents: "{n} parent tasks were set up.", ok_parents_err: "Parent tasks could not be saved: ",
+    ns_parents: "Open the parents card to see \"We parents\" and adjust who does what."
   },
   de: {
     title: "Kindermodus-Schnellstart", help: "Hilfe", close: "Schließen", back: "Zurück", next: "Weiter", create: "Anlegen", done: "Fertig",
-    step_kids: "Kinder", step_home: "Haushalt", step_tasks: "Aufgaben", step_goals: "Ziele", step_summary: "Zusammenfassung",
+    step_kids: "Kinder", step_home: "Haushalt", step_tasks: "Aufgaben", step_goals: "Ziele", step_parents: "Wir Eltern", step_summary: "Zusammenfassung",
     step_of: "Schritt {n} von {m}", loading: "Lade…", error: "Es ist ein Fehler aufgetreten: ",
     kids_intro: "Welche Personen sind Kinder? Geburtsjahr, Avatar und Farbe bestimmen die altersgerechten Aufgaben und die Kinder-Karte.",
     kid_on: "Ist ein Kind", birthday: "Geburtstag", birth_year: "Geburtsjahr (falls Geburtstag unbekannt)", age_years: "{age} Jahre", avatar: "Avatar", color: "Farbe",
@@ -88,7 +91,27 @@ const I18N_WIZARD = {
     next_steps: "Nächste Schritte", ns_pin: "PIN für jedes Kind setzen: Einstellungen-Karte, Bereich \"Kinder\".",
     ns_tablet: "Die Kinder-Karte auf das Tablet-Dashboard legen (siehe README, \"Kids mode\").",
     ns_check: "Die erste Woche beobachten und Punkte oder Aufgaben in der Aufgaben-Karte anpassen.",
-    sel_kids: "Kinder", sel_home: "Haushalt"
+    sel_kids: "Kinder", sel_home: "Haushalt",
+    parents_intro: "Optional: Haushalt und Planungsarbeit der Erwachsenen, einmal eingerichtet. Eltern-Aufgaben haben keine Punkte. Was liegen bleibt, rutscht leise auf morgen, ohne Rot und ohne Erinnerung. Nur 🧠 Planungs-Aufgaben bekommen am Vorabend einen sanften Hinweis.",
+    n_parents: "{n} Eltern-Aufgaben", ok_parents: "{n} Eltern-Aufgaben wurden eingerichtet.", ok_parents_err: "Eltern-Aufgaben konnten nicht gespeichert werden: ",
+    ns_parents: "In der Eltern-Karte seht ihr \"Wir Eltern\" und könnt die Verteilung anpassen."
+  }
+};
+
+const I18N_PARENTS = {
+  en: {
+    loading: "Loading…", error: "Something went wrong: ", already: "set up",
+    me_label: "I am", partner_label: "Partner", me: "Me", you: "You", alternate: "Take turns", min: "~{n} min",
+    planning: "Planning (mental load)",
+    g_daily: "Every day", g_weekly: "Every week", g_monthly: "Monthly and rarely", g_kids: "Kids and family",
+    none: "No templates available."
+  },
+  de: {
+    loading: "Lade…", error: "Es ist ein Fehler aufgetreten: ", already: "eingerichtet",
+    me_label: "Ich bin", partner_label: "Partner", me: "Ich", you: "Du", alternate: "Abwechselnd", min: "~{n} Min.",
+    planning: "Planung (Mental Load)",
+    g_daily: "Jeden Tag", g_weekly: "Jede Woche", g_monthly: "Monatlich und selten", g_kids: "Kinder und Familie",
+    none: "Keine Vorlagen verfügbar."
   }
 };
 
@@ -334,6 +357,171 @@ class FamilyMissionTriggerPicker extends HTMLElement {
 }
 
 /**
+ * <family-mission-parents-picker>: choose the parent task templates ("We parents").
+ * Property: hass. Methods: async apply() -> parents_apply result, selectedCount().
+ * Event: fm-parents-applied (detail = result), fm-parents-changed (selection changed).
+ * Defined here so the parents card can load it via import() of this file.
+ */
+class FamilyMissionParentsPicker extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+    this._hass = null;
+    this._data = null;      // catalog response
+    this._sel = {};         // key -> mode
+    this._me = null;
+    this._partner = null;
+    this._loading = false;
+    this._error = '';
+  }
+
+  set hass(hass) {
+    const first = !this._hass;
+    this._hass = hass;
+    if (first) this._load();
+  }
+
+  get hass() { return this._hass; }
+
+  connectedCallback() { if (this._hass) { if (!this._data && !this._loading) this._load(); else this._render(); } }
+
+  _t(key, vars) {
+    const dict = I18N_PARENTS[wzLang(this._hass)] || I18N_PARENTS.en;
+    const text = dict[key] !== undefined ? dict[key] : (I18N_PARENTS.en[key] !== undefined ? I18N_PARENTS.en[key] : key);
+    return wzFormat(text, vars);
+  }
+
+  async _load() {
+    if (!this._hass) return;
+    this._loading = true;
+    this._error = '';
+    this._render();
+    try {
+      const d = await this._hass.callWS({ type: 'family_mission/parents_catalog' });
+      this._data = d;
+      this._me = d.me || (d.adults && d.adults[0] && d.adults[0].id) || null;
+      this._partner = d.partner || this._otherAdult(this._me);
+      this._sel = {};
+      const existing = d.existing || {};
+      (d.items || []).forEach(it => {
+        if (existing[it.key]) this._sel[it.key] = existing[it.key].mode || 'me';
+        else if (it.preselected) this._sel[it.key] = this._defaultMode();
+      });
+    } catch (err) {
+      this._error = (err && err.message) || String(err);
+    }
+    this._loading = false;
+    this._render();
+    this._changed();
+  }
+
+  _adults() { return (this._data && this._data.adults) || []; }
+
+  _otherAdult(me) {
+    const others = this._adults().filter(a => a.id !== me);
+    return others.length === 1 ? others[0].id : (others[0] ? others[0].id : null);
+  }
+
+  _hasPartner() { return !!this._partner && this._partner !== this._me; }
+
+  _defaultMode() { return this._hasPartner() ? 'alternate' : 'me'; }
+
+  _changed() { this.dispatchEvent(new CustomEvent('fm-parents-changed', { detail: { count: this.selectedCount() }, bubbles: true, composed: true })); }
+
+  /** Number of checked templates (includes already existing ones). */
+  selectedCount() { return Object.keys(this._sel).length; }
+
+  /** Creates / updates the chosen parent tasks in the backend. */
+  async apply() {
+    const items = Object.keys(this._sel).map(key => {
+      let mode = this._sel[key];
+      if (!this._hasPartner() && mode !== 'me') mode = 'me';
+      return { key, mode };
+    });
+    if (!items.length || !this._hass) return { success: true, created: 0, updated: 0 };
+    const msg = { type: 'family_mission/parents_apply', items };
+    if (this._me) msg.me = this._me;
+    if (this._hasPartner()) msg.partner = this._partner;
+    const res = await this._hass.callWS(msg);
+    this.dispatchEvent(new CustomEvent('fm-parents-applied', { detail: res, bubbles: true, composed: true }));
+    return res;
+  }
+
+  _name(it) { return wzLang(this._hass) === 'de' ? (it.name_de || it.name_en || it.key) : (it.name_en || it.name_de || it.key); }
+
+  _styles() {
+    return `<style>
+      :host { display: block; }
+      * { box-sizing: border-box; }
+      .muted { color: var(--secondary-text-color, #727272); font-size: 13px; }
+      .who { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+      .who label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary-text-color, #727272); flex: 1 1 140px; min-width: 0; }
+      .who select { height: 40px; padding: 4px 10px; border: 1px solid var(--divider-color, #ccc); border-radius: 8px; background: var(--primary-background-color, #fff); color: var(--primary-text-color, #212121); font-size: 15px; font-family: inherit; width: 100%; }
+      h4 { margin: 14px 0 4px; font-size: 14px; font-weight: 600; color: var(--primary-text-color, #212121); }
+      .it { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 0; border-top: 1px solid var(--divider-color, #eee); }
+      h4 + .it { border-top: none; }
+      .it .main { display: flex; align-items: center; gap: 10px; flex: 1 1 200px; min-width: 0; cursor: pointer; }
+      .it input[type=checkbox] { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--primary-color, #03a9f4); }
+      .it .nm { font-size: 14px; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+      .it .mi { font-size: 12px; color: var(--secondary-text-color, #727272); white-space: nowrap; }
+      .brain { font-size: 15px; }
+      .seg { display: inline-flex; border: 1px solid var(--divider-color, #ccc); border-radius: 8px; overflow: hidden; flex: none; }
+      .seg button { border: none; background: transparent; color: var(--primary-text-color, #212121); padding: 0 12px; height: 34px; font-size: 13px; font-family: inherit; cursor: pointer; border-left: 1px solid var(--divider-color, #ccc); }
+      .seg button:first-child { border-left: none; }
+      .seg button.on { background: var(--primary-color, #03a9f4); color: #fff; }
+      .ex { font-size: 11px; color: var(--success-color, #4caf50); }
+      .err { background: color-mix(in srgb, var(--error-color, #f44336) 14%, transparent); border: 1px solid var(--error-color, #f44336); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+      @media (max-width: 600px) { .seg { width: 100%; } .seg button { flex: 1; padding: 0 6px; } }
+    </style>`;
+  }
+
+  _render() {
+    const root = this.shadowRoot;
+    if (this._loading && !this._data) { root.innerHTML = `${this._styles()}<p class="muted">${wzEsc(this._t('loading'))}</p>`; return; }
+    if (this._error) { root.innerHTML = `${this._styles()}<div class="err">${wzEsc(this._t('error'))}${wzEsc(this._error)}</div>`; return; }
+    const d = this._data;
+    if (!d) { root.innerHTML = this._styles(); return; }
+    const adults = this._adults();
+    const existing = d.existing || {};
+    const hasPartner = this._hasPartner();
+    const who = (adults.length > 2 || (!d.me && adults.length > 0)) ? `
+      <div class="who">
+        <label>${wzEsc(this._t('me_label'))}<select data-act="me">${adults.map(a => `<option value="${wzEsc(a.id)}" ${a.id === this._me ? 'selected' : ''}>${wzEsc(a.name)}</option>`).join('')}</select></label>
+        <label>${wzEsc(this._t('partner_label'))}<select data-act="partner">${adults.filter(a => a.id !== this._me).map(a => `<option value="${wzEsc(a.id)}" ${a.id === this._partner ? 'selected' : ''}>${wzEsc(a.name)}</option>`).join('')}</select></label>
+      </div>` : '';
+    const groups = ['daily', 'weekly', 'monthly', 'kids'];
+    const body = groups.map(g => {
+      const list = (d.items || []).filter(it => it.group === g);
+      if (!list.length) return '';
+      const rows = list.map(it => {
+        const on = this._sel[it.key] !== undefined;
+        const mode = this._sel[it.key];
+        const seg = on && hasPartner ? `<span class="seg" role="group">${['me', 'you', 'alternate'].map(m => `<button type="button" class="${mode === m ? 'on' : ''}" data-act="mode" data-k="${wzEsc(it.key)}" data-v="${m}" aria-pressed="${mode === m}">${wzEsc(this._t(m))}</button>`).join('')}</span>` : '';
+        return `<div class="it"><label class="main"><input type="checkbox" data-act="pick" data-k="${wzEsc(it.key)}" ${on ? 'checked' : ''}>
+          <span class="nm">${wzEsc(this._name(it))}${it.planning ? ` <span class="brain" title="${wzEsc(this._t('planning'))}">🧠</span>` : ''}${existing[it.key] ? ` <span class="ex">✓ ${wzEsc(this._t('already'))}</span>` : ''}</span>
+          <span class="mi">${wzEsc(this._t('min', { n: it.minutes }))}</span></label>${seg}</div>`;
+      }).join('');
+      return `<h4>${wzEsc(this._t('g_' + g))}</h4>${rows}`;
+    }).join('');
+    root.innerHTML = `${this._styles()}${who}${body || `<p class="muted">${wzEsc(this._t('none'))}</p>`}`;
+    root.querySelectorAll('[data-act]').forEach(el => {
+      const act = el.dataset.act;
+      if (act === 'pick') el.addEventListener('change', () => {
+        if (el.checked) this._sel[el.dataset.k] = this._defaultMode(); else delete this._sel[el.dataset.k];
+        this._render(); this._changed();
+      });
+      else if (act === 'mode') el.addEventListener('click', () => { this._sel[el.dataset.k] = el.dataset.v; this._render(); });
+      else if (act === 'me') el.addEventListener('change', () => {
+        this._me = el.value;
+        if (this._partner === this._me) this._partner = this._otherAdult(this._me);
+        this._render();
+      });
+      else if (act === 'partner') el.addEventListener('change', () => { this._partner = el.value; this._render(); });
+    });
+  }
+}
+
+/**
  * The quick-start wizard dialog.
  */
 class FamilyMissionWizard extends HTMLElement {
@@ -368,6 +556,7 @@ class FamilyMissionWizard extends HTMLElement {
     this._lang = wzLang(hass);
     this._step = 0;
     this._s = null;
+    this._picker = null;
     this._error = '';
     this._loading = true;
     this._render();
@@ -630,7 +819,15 @@ class FamilyMissionWizard extends HTMLElement {
         reschedule: !!(s.replace && s.reschedule),
         device_triggers
       });
-      this._step = 5;
+      s.parentsResult = null;
+      if (this._parentsCount() > 0) {
+        try {
+          s.parentsResult = await this._picker.apply();
+        } catch (perr) {
+          s.parentsError = (perr && perr.message) || String(perr);
+        }
+      }
+      this._step = 6;
     } catch (err) {
       s.error = (err && err.message) || String(err);
     }
@@ -645,13 +842,13 @@ class FamilyMissionWizard extends HTMLElement {
   _canNext() {
     if (!this._s) return false;
     if (this._step === 0) return this._kidsValid();
-    if (this._step >= 2 && this._step <= 4) return !!this._s.preview && !this._s.previewBusy;
+    if (this._step === 2 || this._step === 3 || this._step === 5) return !!this._s.preview && !this._s.previewBusy;
     return true;
   }
 
   _go(step) {
     this._step = step;
-    if (step >= 2 && step <= 4 && this._s) this._refreshPreview();
+    if ((step === 2 || step === 3 || step === 5) && this._s) this._refreshPreview();
     this._render();
     const body = this.shadowRoot.querySelector('.body');
     if (body) body.scrollTop = 0;
@@ -659,7 +856,7 @@ class FamilyMissionWizard extends HTMLElement {
 
   close() {
     if (this._refreshTimer) clearTimeout(this._refreshTimer);
-    this.dispatchEvent(new CustomEvent('wizard-closed', { detail: { done: this._step === 5 } }));
+    this.dispatchEvent(new CustomEvent('wizard-closed', { detail: { done: this._step === 6 } }));
     this.remove();
   }
 
@@ -771,16 +968,17 @@ class FamilyMissionWizard extends HTMLElement {
   }
 
   _render() {
-    const stepNames = ['step_kids', 'step_home', 'step_tasks', 'step_goals', 'step_summary'];
-    const step = Math.min(this._step, 4);
-    const finished = this._step === 5;
+    const stepNames = ['step_kids', 'step_home', 'step_tasks', 'step_goals', 'step_parents', 'step_summary'];
+    const total = stepNames.length;
+    const step = Math.min(this._step, total - 1);
+    const finished = this._step === 6;
     this.shadowRoot.innerHTML = `${this._styles()}
       <div class="overlay"><div class="wz" role="dialog" aria-modal="true" aria-label="${wzEsc(this._t('title'))}">
         <div class="head"><h2>🚀 ${wzEsc(this._t('title'))}</h2>${window.FamilyMissionHelp ? `<button class="help" data-act="help">❓ ${wzEsc(this._t('help'))}</button>` : ''}<button class="x" data-act="close" aria-label="${wzEsc(this._t('close'))}">✕</button></div>
         ${finished ? '' : `
         <div class="steps">${stepNames.map((n, i) => `<div class="pill ${i === step ? 'active' : i < step ? 'done' : ''}"><b>${i < step ? '✓' : i + 1}</b>${wzEsc(this._t(n))}</div>`).join('')}</div>
-        <div class="stepline">${wzEsc(this._t('step_of', { n: step + 1, m: 5 }))} · ${wzEsc(this._t(stepNames[step]))}</div>
-        <div class="bar"><i style="width:${(step + 1) * 20}%"></i></div>`}
+        <div class="stepline">${wzEsc(this._t('step_of', { n: step + 1, m: total }))} · ${wzEsc(this._t(stepNames[step]))}</div>
+        <div class="bar"><i style="width:${Math.round((step + 1) / total * 100)}%"></i></div>`}
         <div class="body"></div>
         <div class="foot"></div>
       </div></div>`;
@@ -804,9 +1002,11 @@ class FamilyMissionWizard extends HTMLElement {
     else if (this._step === 1) html = this._htmlHome();
     else if (this._step === 2) html = this._htmlTasks();
     else if (this._step === 3) html = this._htmlGoals();
-    else if (this._step === 4) html = this._htmlSummary();
+    else if (this._step === 4) html = this._htmlParents();
+    else if (this._step === 5) html = this._htmlSummary();
     else html = this._htmlSuccess();
     body.innerHTML = html;
+    this._mountParents();
     body.scrollTop = scroll;
     this._bindPickers();
     wzBdayBind(this.shadowRoot);
@@ -818,10 +1018,10 @@ class FamilyMissionWizard extends HTMLElement {
     const foot = this.shadowRoot.querySelector('.foot');
     if (!foot) return;
     const s = this._s;
-    if (this._step === 5) {
+    if (this._step === 6) {
       foot.innerHTML = `<span></span><button class="btn primary" data-act="close">${wzEsc(this._t('done'))}</button>`;
     } else {
-      const last = this._step === 4;
+      const last = this._step === 5;
       foot.innerHTML = `
         <button class="btn secondary" data-act="back" ${this._step === 0 ? 'disabled' : ''}>${wzEsc(this._t('back'))}</button>
         <button class="btn primary" data-act="${last ? 'apply' : 'next'}" ${this._canNext() && !(s && s.applying) ? '' : 'disabled'}>${wzEsc(last ? this._t('create') : this._t('next'))}${s && s.applying ? ' …' : ''}</button>`;
@@ -1032,6 +1232,24 @@ class FamilyMissionWizard extends HTMLElement {
       </div>`;
   }
 
+  /** Placeholder for the persistent parents picker (keeps its state across re-renders). */
+  _htmlParents() {
+    return `<p class="muted">${wzEsc(this._t('parents_intro'))}</p><div id="parents-host"></div>`;
+  }
+
+  _parentsCount() { return this._picker ? this._picker.selectedCount() : 0; }
+
+  _mountParents() {
+    const host = this.shadowRoot.getElementById('parents-host');
+    if (!host) return;
+    if (!this._picker) {
+      this._picker = document.createElement('family-mission-parents-picker');
+      this._picker.addEventListener('fm-parents-changed', () => this._renderFoot());
+    }
+    this._picker.hass = this._hass;
+    host.appendChild(this._picker);
+  }
+
   _htmlSummary() {
     const s = this._s;
     const p = s.preview;
@@ -1047,6 +1265,7 @@ class FamilyMissionWizard extends HTMLElement {
         <div class="big"><b>${p.counts.bonus}</b>${wzEsc(this._t('n_bonus', { n: '' }).trim())}</div>
         <div class="big"><b>${p.counts.templates}</b>${wzEsc(this._t('n_templates', { n: '' }).trim())}</div>
         ${triggers ? `<div class="big"><b>${triggers}</b>${wzEsc(this._t('n_triggers', { n: '' }).trim())}</div>` : ''}
+        ${this._parentsCount() ? `<div class="big"><b>${this._parentsCount()}</b>${wzEsc(this._t('n_parents', { n: '' }).trim())}</div>` : ''}
       </div>
       <div class="card" style="border-left-color:var(--primary-color,#03a9f4)">
         ${p.kids.map(k => `<div class="row"><span class="avatar">${wzEsc(k.avatar || '🙂')}</span><div class="grow">${wzEsc(this._t('kid_goal_line', { name: k.name, g: this._effectiveGoal(k) }))}${p.prorated && this._effectiveGoal(k) > 0 ? ` <span class="muted">(${wzEsc(this._t('full_goal_from', { d: this._fmtDayMonth(p.full_goals_from), g: this._fullGoal(k) }))})</span>` : ''}</div></div>`).join('')}
@@ -1069,8 +1288,10 @@ class FamilyMissionWizard extends HTMLElement {
       ${r.deleted ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_deleted', { n: r.deleted }))}</p>` : ''}
       ${r.updated ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_updated', { n: r.updated }))}</p>` : ''}
       ${r.skipped ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_skipped', { n: r.skipped }))}</p>` : ''}
+      ${this._s.parentsResult ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_parents', { n: (this._s.parentsResult.created || 0) + (this._s.parentsResult.updated || 0) || this._parentsCount() }))}</p>` : ''}
+      ${this._s.parentsError ? `<div class="err">${wzEsc(this._t('ok_parents_err'))}${wzEsc(this._s.parentsError)}</div>` : ''}
       <div class="card" style="border-left-color:var(--success-color,#4caf50)"><h3>${wzEsc(this._t('next_steps'))}</h3>
-        <ol><li>${wzEsc(this._t('ns_pin'))}</li><li>${wzEsc(this._t('ns_tablet'))}</li><li>${wzEsc(this._t('ns_check'))}</li></ol></div>`;
+        <ol><li>${wzEsc(this._t('ns_pin'))}</li><li>${wzEsc(this._t('ns_tablet'))}</li><li>${wzEsc(this._t('ns_check'))}</li>${this._s.parentsResult ? `<li>${wzEsc(this._t('ns_parents'))}</li>` : ''}</ol></div>`;
   }
 
   // ---------------------------------------------------------------------
@@ -1080,7 +1301,7 @@ class FamilyMissionWizard extends HTMLElement {
   _onClick(ev) {
     const el = ev.composedPath().find(e => e.dataset && e.dataset.act);
     if (!el) {
-      if (ev.target && ev.target.classList && ev.target.classList.contains('overlay') && this._step === 5) this.close();
+      if (ev.target && ev.target.classList && ev.target.classList.contains('overlay') && this._step === 6) this.close();
       return;
     }
     const act = el.dataset.act;
@@ -1202,4 +1423,5 @@ class FamilyMissionWizard extends HTMLElement {
 }
 
 if (!customElements.get('family-mission-trigger-picker')) customElements.define('family-mission-trigger-picker', FamilyMissionTriggerPicker);
+if (!customElements.get('family-mission-parents-picker')) customElements.define('family-mission-parents-picker', FamilyMissionParentsPicker);
 if (!customElements.get('family-mission-wizard')) customElements.define('family-mission-wizard', FamilyMissionWizard);

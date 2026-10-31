@@ -14,9 +14,10 @@ Wie FamilyMission bei euch zu Hause gut funktioniert
 6. [Belohnungen richtig wählen](#rewards)
 7. [Loben](#praise)
 8. [Monatsziele, Familien-Rakete, Ring über 100 %](#goals)
-9. [Ausschleichen](#fade)
-10. [Häufige Fragen / Probleme](#faq)
-11. [Über FamilyMission](#about)
+9. [Wir Eltern: Eltern-Aufgaben und Eltern-Zentrale](#parents)
+10. [Ausschleichen](#fade)
+11. [Häufige Fragen / Probleme](#faq)
+12. [Über FamilyMission](#about)
 
 <a id="basics"></a>
 
@@ -38,7 +39,7 @@ Die Wirkung hängt vor allem an euch Eltern: **konsequent** (Regeln gelten jeden
 
 - **Kinderprofile + PIN:** Einstellungen-Karte, Bereich Kinder: Person als Kind aktivieren, Avatar und Farbe wählen, Geburtsjahr (oder Geburtstag) und eine 4-stellige Geheimzahl eintragen. Die PIN verhindert, dass Geschwister füreinander abhaken.
 - **Eltern-Rolle:** Im selben Bereich legt ihr fest, wer freigeben, loben und Punkte vergeben darf. So bleibt das Wand-Tablet für Kinder harmlos.
-- **Schnellstart:** Der Button 🚀 Kindermodus-Schnellstart schlägt altersgerechte Aufgaben, Punkte und Ziele vor und legt alles mit einem Klick an. Fünf Schritte, auch am Handy.
+- **Schnellstart:** Der Button 🚀 Kindermodus-Schnellstart schlägt altersgerechte Aufgaben, Punkte und Ziele vor und legt alles mit einem Klick an. Sechs Schritte (der Schritt „Wir Eltern“ ist optional), auch am Handy.
 - **Tablet-Dashboard (Kiosk):** Die Kinder-Karte als Vollbild auf einem Wand-Tablet (zum Beispiel mit Fully Kiosk Browser, Querformat). Die Kinder tippen ihre Kachel, geben die PIN ein und sehen ihre Missionen.
 - **Eigene Geräte (`mode: mine`):** Mit `mode: mine` zeigt die Karte direkt die Aufgaben der angemeldeten Person, ohne Kachel und PIN. Ideal für das Handy oder Tablet eines älteren Kindes.
 - **Bonus-Auslöser:** Ein Bonus kann sich von selbst öffnen, etwa wenn die Spülmaschine fertig ist (Einstellungen-Karte, Bereich Bonus-Auslöser). Das Tablet kann ihn per Sprachausgabe ansagen.
@@ -131,9 +132,29 @@ Der Button **❤️ Loben** ergänzt das persönliche Wort, er ersetzt es nicht.
 
 > 💡 Setzt das Ziel so, dass ein Kind mit normalem Einsatz etwa 75 % des Maximums erreicht. So bleibt es erreichbar, ohne dass jeder Tag perfekt sein muss.
 
+<a id="parents"></a>
+
+## 9. 👪 Wir Eltern: Eltern-Aufgaben und Eltern-Zentrale
+
+Auch der Haushalt der Erwachsenen ist Arbeit, oft unsichtbare. **Wir Eltern** macht sie sichtbar und verteilt sie fair: ohne Punkte, ohne Rangliste, ohne Vorwürfe. Einmal einrichten, danach nur abhaken.
+
+- **Eltern-Zentrale:** Die Eltern-Karte hat drei Reiter: **Heute** (Freigaben und eure Eltern-Aufgaben), **Kinder** und **Mehr** (Einstellungen, Sonntags-Zusammenfassung, Verlauf).
+- **Einrichten:** Der Schnellstart hat den optionalen Schritt **Wir Eltern**. Dort wählt ihr aus einer Vorlagen-Liste, etwa Abendessen, Essensplan, Einkauf, Bäder, Finanzen oder Vorsorge. Eine kleine Auswahl ist schon vorangekreuzt.
+- **Ich / Du / Abwechselnd:** Pro Aufgabe legt ihr fest, wer zuständig ist. Bei „Abwechselnd“ geht die Zuständigkeit nach jeder Erledigung an den anderen, ohne dass jemand Buch führen muss.
+- **Ohne Punkte:** Eltern-Aufgaben haben weder Punkte noch Guthaben noch Ziele. Es zählt nur: erledigt oder nicht.
+- **Leises Weiterrutschen:** Was heute liegen bleibt, rutscht still auf morgen. Kein Rot, kein „überfällig“, keine Erinnerung, kein Vorwurf.
+- **🧠 Planung:** Essensplan, Einkaufsliste oder Terminabgleich sind Denkarbeit (Mental Load). Nur für solche Aufgaben gibt es am Vorabend eine sanfte Erinnerung („Morgen dran: Essensplan, ca. 20 Min.“). Die Uhrzeit stellt ihr in den Einstellungen ein, Bereich Wir Eltern.
+- **Kannst du?:** Passt es heute nicht, fragt ihr mit einem Tipp den Partner. Er bekommt eine Nachricht mit „Mach ich“ oder „Geht nicht“. Übernimmt er, gilt das nur für dieses eine Mal.
+- **Sonntags-Zusammenfassung:** Am Sonntagabend kommt eine neutrale Notiz: wie viele Stunden jede Person in der Woche geschafft hat und was liegen geblieben ist. Sie bewertet nichts, sie erleichtert nur das Gespräch. In den Einstellungen abschaltbar.
+- **Vorbild-Band:** Auf dem Kinder-Tablet steht eine ruhige Zeile wie „Auch Mama und Papa haben heute 3 Missionen“, dazu Fortschrittspunkte ohne Punktezahl. Die Kinder sehen, dass alle mithelfen. Das Band und sein Wortlaut sind einstellbar.
+- **Eigenes Gerät:** Mit `mode: mine` erscheinen eure eigenen Eltern-Aufgaben (ohne Punkte, mit Dauer) auf dem eigenen Handy und lassen sich dort abhaken.
+
+> 💡 Startet klein: fünf bis acht Aufgaben genügen. Was nicht passt, lasst ihr einfach weg. Es gibt keine Pflichtfelder.
+
+
 <a id="fade"></a>
 
-## 9. 🌿 Ausschleichen
+## 10. 🌿 Ausschleichen
 
 Ziel ist **Gewohnheit, nicht Punkte-Sammeln**. Wenn eine Routine 4 Wochen stabil läuft, führt ihr sie schrittweise von der Belohnung weg:
 
@@ -147,7 +168,7 @@ Gebt die frei gewordene Aufmerksamkeit an eine neue Gewohnheit weiter, aber imme
 
 <a id="faq"></a>
 
-## 10. ❓ Häufige Fragen / Probleme
+## 11. ❓ Häufige Fragen / Probleme
 
 - **Mein Kind hakt alles ab, ohne es zu tun.** Schaltet für diese Aufgaben die Freigabe oder Stichproben ein und schaut kurz hin. Sprecht ehrlich darüber. Nur bei bewusstem Schummeln gibt es „Geschummelt“, ruhig und mit Gespräch. Sichtbare Schritte (zum Beispiel „Bett gemacht“) helfen beim Prüfen.
 - **Streit um den Bonus.** Wer „Übernehmen“ tippt, hat ein paar Minuten Vorrang. Ihr könnt Aufgaben mit „Zusammen“ erlauben, einen Spontan-Bonus gezielt einem Kind geben oder ein Mindestalter setzen.
@@ -158,7 +179,7 @@ Gebt die frei gewordene Aufmerksamkeit an eine neue Gewohnheit weiter, aber imme
 
 <a id="about"></a>
 
-## 11. ℹ️ Über FamilyMission
+## 12. ℹ️ Über FamilyMission
 
 FamilyMission basiert auf **TaskOrganizer** von Patrick von Wiegen (MIT-Lizenz) und wird von AndyKausG als eigenes Projekt weitergeführt: https://github.com/AndyKausG/FamilyMission
 
