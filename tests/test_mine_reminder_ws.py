@@ -241,3 +241,26 @@ async def test_adult_cannot_take_kids_open_bonus(hass, hass_ws_client, env):
     anna = await hass_ws_client(hass, env["anna"][1])
     res = (await _call(anna, "family_mission/my_complete_task", task_id=bonus))["result"]
     assert res["success"] is True
+
+
+async def test_adult_closes_open_bonus_without_points(hass, hass_ws_client, env):
+    admin = await hass_ws_client(hass)
+    await _setup_kid(admin, env)
+    bonus = await _task(admin, category="bonus", interval=0, complexity=4)
+    sam_id = env["sam"][0].id
+    sam = await hass_ws_client(hass, env["sam"][1])
+    res = (await _call(sam, "family_mission/my_close_bonus", task_id=bonus))["result"]
+    assert res == {"success": True}
+    assert bonus not in _data(hass)["tasks"]                       # one-time bonus gone
+    assert _data(hass)["points"].get(sam_id, 0) == 0
+    entry = _data(hass)["history"][0]
+    assert entry["user_id"] == sam_id and entry["points"] == 0
+    # kids use my_complete_task, not this command
+    anna = await hass_ws_client(hass, env["anna"][1])
+    other = await _task(admin, category="bonus", interval=365)
+    res = (await _call(anna, "family_mission/my_close_bonus", task_id=other))["result"]
+    assert res["error"] == "not_eligible"
+    # duties are not closed this way
+    duty = await _task(admin, assignees=[sam_id])
+    res = (await _call(sam, "family_mission/my_close_bonus", task_id=duty))["result"]
+    assert res["error"] == "not_eligible"

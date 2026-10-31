@@ -26,6 +26,8 @@ const I18N_KIDS = {
     back: "Back", my_tasks: "My tasks", bonus: "Bonus", bonus_board: "Bonus board",
     no_bonus_board: "No bonus right now. Check again later!",
     no_bonus: "No bonus right now. Check again later!",
+    adult_bonus_title: "Open bonus tasks", adult_bonus_hint: "Done it yourself? Takes it off the bonus board (no points).",
+    adult_bonus_done: "✅ I did it", adult_bonus_thanks: "Thanks! Taken off the bonus board.",
     no_tasks: "All done! You are awesome!",
     tasks_open_one: "1 task open", tasks_open: "{n} tasks open", all_done_badge: "All done!",
     family_rocket: "Family rocket", reward: "Reward", points_unit: "pts", goal_reached: "Goal reached!",
@@ -91,6 +93,8 @@ const I18N_KIDS = {
     back: "Zurück", my_tasks: "Meine Aufgaben", bonus: "Bonus", bonus_board: "Bonus-Brett",
     no_bonus_board: "Gerade gibt es keinen Bonus. Schau später nochmal!",
     no_bonus: "Gerade gibt es keinen Bonus. Schau später nochmal!",
+    adult_bonus_title: "Offene Bonus-Aufgaben", adult_bonus_hint: "Selbst erledigt? Nimmt die Aufgabe vom Bonus-Brett (ohne Punkte).",
+    adult_bonus_done: "✅ Hab ich erledigt", adult_bonus_thanks: "Danke! Vom Bonus-Brett genommen.",
     no_tasks: "Alles erledigt! Du bist spitze!",
     tasks_open_one: "1 Aufgabe offen", tasks_open: "{n} Aufgaben offen", all_done_badge: "Alles geschafft!",
     family_rocket: "Familien-Rakete", reward: "Belohnung", points_unit: "Pkt.", goal_reached: "Ziel erreicht!",
@@ -1037,6 +1041,7 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'pin-cancel' && this._helperMode()) this._helperCancel();
     else if (action === 'pin-cancel' || action === 'back') this._goHome();
     else if (action === 'toggle-sub') this._toggleSubtask(el.dataset.task, parseInt(el.dataset.idx));
+    else if (action === 'close-bonus') this._closeBonus(el.dataset.task);
     else if (action === 'claim') this._claim(el.dataset.task);
     else if (action === 'complete') this._complete(el.dataset.task);
     else if (action === 'bday-close') this._closeBirthday();
@@ -1504,6 +1509,22 @@ class FamilyMissionKids extends HTMLElement {
     const key = `err_${code}`;
     const text = this.localize(key);
     return text === key ? this.localize('err_generic') : text;
+  }
+
+  /** Adult on the own device did an open bonus task: close it without points. */
+  async _closeBonus(taskId) {
+    if (this._busy) return;
+    this._busy = true;
+    this._render();
+    try {
+      const res = await this._hass.callWS({ type: 'family_mission/my_close_bonus', task_id: taskId });
+      if (res && res.success) this._showToast(this.localize('adult_bonus_thanks'));
+      else this._handleActionError(res || {});
+    } catch (err) {
+      this._showToast(this.localize('err_generic'));
+    }
+    this._busy = false;
+    this._fetchData();
   }
 
   _showToast(message) {
@@ -2090,13 +2111,31 @@ class FamilyMissionKids extends HTMLElement {
             <h2>📋 ${escKids(this.localize('my_tasks'))} <span class="count">${duties.length}</span></h2>
             <div class="col-scroll">${dutyHtml}</div>
           </section>
-          ${adult ? '' : `<section class="col col-bonus">
+          ${adult ? this._renderAdultBonus() : `<section class="col col-bonus">
             <h2>🎁 ${escKids(this.localize('bonus'))} <span class="count">${bonus.length}</span></h2>
             <div class="col-scroll">${bonusHtml}</div>
           </section>`}
         </div>`}
         ${this._helperMode() ? this._renderPin() : (this._sheet && this._sheet.type === 'together' ? this._renderTogether() : this._renderSheet())}
       </div>`;
+  }
+
+  /** Open bonus tasks for an adult on the own device: "I did it" closes them without points. */
+  _renderAdultBonus() {
+    const list = this._allBonus();
+    if (!list.length) return '';
+    const items = list.map(t => `
+      <article class="task bonus cat-bonus">
+        <div class="t-top">
+          <div class="t-icon"><ha-icon icon="${escKids(t.icon || 'mdi:star')}"></ha-icon></div>
+          <div class="t-main"><div class="t-name">${escKids(t.name)}</div></div>
+          <div class="t-action"><button class="btn btn-done" data-action="close-bonus" data-task="${escKids(t.id)}" ${this._busy ? 'disabled' : ''}>${escKids(this.localize('adult_bonus_done'))}</button></div>
+        </div>
+      </article>`).join('');
+    return `<section class="col col-bonus">
+      <h2>🎁 ${escKids(this.localize('adult_bonus_title'))} <span class="count">${list.length}</span></h2>
+      <div class="col-scroll"><div class="t-note">${escKids(this.localize('adult_bonus_hint'))}</div>${items}</div>
+    </section>`;
   }
 
   /** Small muted lines for duties that are replaced today ("Today: thorough room clean instead of room blitz"). */

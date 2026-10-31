@@ -85,6 +85,7 @@ from .const import (
     WS_TYPE_MY_CLAIM_TASK,
     WS_TYPE_KID_TOGGLE_STEP,
     WS_TYPE_MY_TOGGLE_STEP,
+    WS_TYPE_MY_CLOSE_BONUS,
     WS_TYPE_MY_REDEEM,
     WS_TYPE_MY_SET_GOAL,
     WS_TYPE_SET_REWARDS,
@@ -168,6 +169,8 @@ from .kids import (
     merge_imported_kids,
     migrate_task_like,
     normalize_category,
+    claim_active,
+    ERR_CLAIMED,
     normalize_min_age,
     normalize_time,
     is_expired,
@@ -2469,6 +2472,41 @@ async def ws_my_complete_task(hass: HomeAssistant, connection: websocket_api.Act
 
 
 @websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_MY_CLOSE_BONUS,
+    vol.Required("task_id"): str,
+})
+@websocket_api.async_response
+async def ws_my_close_bonus(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """An adult did an open bonus task himself/herself: close it without points.
+
+    Only for users with a linked person and without kid profile (kids use
+    ``my_complete_task``). The task leaves the bonus board like a completion
+    (one-time tasks are removed) and gets a 0-point history entry for the
+    adult, so it can be undone from the history.
+    """
+    pid = _my_participant(hass, connection)
+    settings = _get_entry(hass).options
+    kids = settings.get("kids") or {}
+    if pid is None or pid in kids:
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_ELIGIBLE})
+        return
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(msg["task_id"])
+    if task is None:
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    now = dt_util.now()
+    if normalize_category(task.get("category")) != "bonus" or not is_open(task, now, settings.get("overdue_days", 5)):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_ELIGIBLE})
+        return
+    if claim_active(task, now) and task.get("claimed_by") != pid:
+        connection.send_result(msg["id"], {"success": False, "error": ERR_CLAIMED})
+        return
+    ok = await _async_complete_task_internal(hass, msg["task_id"], [pid], {pid: 0})
+    connection.send_result(msg["id"], {"success": bool(ok)} if ok else {"success": False, "error": ERR_NOT_FOUND})
+
+
+@websocket_api.websocket_command({
     vol.Required("type"): WS_TYPE_MY_TOGGLE_STEP,
     vol.Required("task_id"): str,
     vol.Required("index"): vol.All(int, vol.Range(min=0, max=99)),
@@ -3932,6 +3970,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_kid_claim_task)
     websocket_api.async_register_command(hass, ws_kid_toggle_step)
     websocket_api.async_register_command(hass, ws_my_toggle_step)
+    websocket_api.async_register_command(hass, ws_my_close_bonus)
     websocket_api.async_register_command(hass, ws_wizard_catalog)
     websocket_api.async_register_command(hass, ws_wizard_preview)
     websocket_api.async_register_command(hass, ws_wizard_apply)
