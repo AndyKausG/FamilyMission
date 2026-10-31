@@ -2000,7 +2000,9 @@ class FamilyMissionKids extends HTMLElement {
 
   _nightState() {
     const s = this.settings || {};
-    if (this._isMine() || !this._fetched) return { sleeping: false, morning: false, wakeAt: '' };
+    // Only the shared tablet user sleeps: parents (admin / manager / parent role) keep the
+    // normal view on their own devices, e.g. to approve something in the evening.
+    if (this._isMine() || !this._fetched || this._isParent()) return { sleeping: false, morning: false, wakeAt: '' };
     return kidsNightState(new Date(), {
       enabled: s.night_mode !== false,
       sleep: s.night_sleep,
