@@ -7,12 +7,12 @@ import pytest
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.task_organizer import (
+from custom_components.family_mission import (
     _async_check_monthly_reset,
     _async_expire_missed,
     _async_remove_expired_adhoc,
 )
-from custom_components.task_organizer.const import DOMAIN
+from custom_components.family_mission.const import DOMAIN
 
 ANNA, BEN, CLARA, DAVID = "person.anna", "person.ben", "person.clara", "person.david"
 SAM_ID = "u-sam"
@@ -53,7 +53,7 @@ _call.n = 9000
 
 
 async def _make_kid(ws, pid=ANNA, pin="1234", birth_year=2016):
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id=pid, avatar="🦊",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id=pid, avatar="🦊",
                       color="#ff8800", pin=pin, birth_year=birth_year)
     assert res["success"], res
 
@@ -61,7 +61,7 @@ async def _make_kid(ws, pid=ANNA, pin="1234", birth_year=2016):
 async def _add_task(ws, **kw):
     payload = {"name": "Task", "interval": 1, "complexity": 4, "icon": "mdi:broom", "category": "basis"}
     payload.update(kw)
-    res = await _call(ws, "task_organizer/add_task", **payload)
+    res = await _call(ws, "family_mission/add_task", **payload)
     assert res["success"], res
     return res["result"]["task_id"]
 
@@ -77,7 +77,7 @@ def _collect(hass, event):
 
 
 async def _kid_do(ws, type_, task_id, kid=ANNA, pin="1234"):
-    return (await _call(ws, f"task_organizer/{type_}", task_id=task_id, kid_id=kid, pin=pin))["result"]
+    return (await _call(ws, f"family_mission/{type_}", task_id=task_id, kid_id=kid, pin=pin))["result"]
 
 
 # ---------------------------------------------------------------------------
@@ -89,13 +89,13 @@ async def test_window_fields_roundtrip_and_validation(hass, hass_ws_client, setu
     tid = await _add_task(ws, available_from="17:00", available_until="21:00")
     task = _data(hass)["tasks"][tid]
     assert task["available_from"] == "17:00" and task["available_until"] == "21:00"
-    assert (await _call(ws, "task_organizer/edit_task", task_id=tid, available_until=""))["success"]
+    assert (await _call(ws, "family_mission/edit_task", task_id=tid, available_until=""))["success"]
     assert _data(hass)["tasks"][tid]["available_until"] is None
-    bad = await _call(ws, "task_organizer/add_task", name="x", interval=1, complexity=1, icon="mdi:x",
+    bad = await _call(ws, "family_mission/add_task", name="x", interval=1, complexity=1, icon="mdi:x",
                       available_from="25:99")
     assert bad["success"] is False
     # templates and the service
-    res = await _call(ws, "task_organizer/add_template", name="Vorlage", complexity=2, icon="mdi:x",
+    res = await _call(ws, "family_mission/add_template", name="Vorlage", complexity=2, icon="mdi:x",
                       available_from="05:00", available_until="10:00")
     template = _data(hass)["templates"][res["result"]["template_id"]]
     assert template["available_from"] == "05:00" and template["available_until"] == "10:00"
@@ -130,7 +130,7 @@ async def test_kid_complete_and_claim_respect_window(hass, hass_ws_client, setup
     res = await _kid_do(ws, "kid_complete_task", late)
     assert res == {"success": False, "error": "too_late", "available_until": "10:00"}
     # the parents' complete_task is never restricted
-    assert (await _call(ws, "task_organizer/complete_task", task_id=late, completed_by=[ANNA]))["success"]
+    assert (await _call(ws, "family_mission/complete_task", task_id=late, completed_by=[ANNA]))["success"]
 
 
 async def test_locked_basis_task_does_not_block_bonus(hass, hass_ws_client, setup, freezer):
@@ -160,14 +160,14 @@ async def test_undo_restores_points_and_due_date(hass, hass_ws_client, setup, fr
     subs = [{"title": "a", "done": True}, {"title": "b", "done": True}]
     tid = await _add_task(ws, interval=3, complexity=5, subtasks=subs)
     before = _data(hass)["tasks"][tid]["due_date"]
-    assert (await _call(ws, "task_organizer/complete_task", task_id=tid, completed_by=[ANNA]))["success"]
+    assert (await _call(ws, "family_mission/complete_task", task_id=tid, completed_by=[ANNA]))["success"]
     data = _data(hass)
     assert data["points"][ANNA] == 5.0 and data["tasks"][tid]["due_date"] != before
     entry = data["history"][0]
     assert entry["completion_id"] and entry["previous_due_date"] == before and entry["subtasks"] == subs
-    changed = _collect(hass, "task_organizer_updated")
+    changed = _collect(hass, "family_mission_updated")
 
-    res = await _call(ws, "task_organizer/undo_completion", history_id=entry["id"])
+    res = await _call(ws, "family_mission/undo_completion", history_id=entry["id"])
     assert res["result"]["success"] is True and res["result"]["removed"] == 1
     assert data["points"][ANNA] == 0 and data["history"] == []
     assert data["tasks"][tid]["due_date"] == before
@@ -175,7 +175,7 @@ async def test_undo_restores_points_and_due_date(hass, hass_ws_client, setup, fr
     await hass.async_block_till_done()
     assert changed
     # idempotent
-    res = await _call(ws, "task_organizer/undo_completion", history_id=entry["id"])
+    res = await _call(ws, "family_mission/undo_completion", history_id=entry["id"])
     assert res["result"] == {"success": False, "error": "not_found"}
     assert data["points"][ANNA] == 0
 
@@ -184,14 +184,14 @@ async def test_undo_clamps_points_and_handles_old_entries(hass, hass_ws_client, 
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
     tid = await _add_task(ws, complexity=4)
-    await _call(ws, "task_organizer/complete_task", task_id=tid, completed_by=[ANNA])
+    await _call(ws, "family_mission/complete_task", task_id=tid, completed_by=[ANNA])
     data = _data(hass)
     entry = data["history"][0]
     # simulate an entry of an older version: no completion_id / undo info
     for key in ("completion_id", "previous_due_date", "previous_paused_until", "subtasks"):
         entry.pop(key, None)
     data["points"][ANNA] = 1.0                          # points were spent / corrected meanwhile
-    res = await _call(ws, "task_organizer/undo_completion", history_id=entry["id"])
+    res = await _call(ws, "family_mission/undo_completion", history_id=entry["id"])
     assert res["result"]["success"] is True
     assert data["points"][ANNA] == 0                    # clamped at 0
     due = dt_util.parse_datetime(data["tasks"][tid]["due_date"])
@@ -203,12 +203,12 @@ async def test_undo_recreates_one_time_task(hass, hass_ws_client, setup, freezer
     freezer.move_to(NOON)
     tid = await _add_task(ws, interval=0, complexity=3, name="Einmalig",
                           subtasks=[{"title": "x", "done": True}])
-    await _call(ws, "task_organizer/complete_task", task_id=tid, completed_by=[ANNA])
+    await _call(ws, "family_mission/complete_task", task_id=tid, completed_by=[ANNA])
     data = _data(hass)
     assert tid not in data["tasks"]
     entry = data["history"][0]
     assert entry["task_snapshot"]["name"] == "Einmalig"
-    res = await _call(ws, "task_organizer/undo_completion", history_id=entry["id"])
+    res = await _call(ws, "family_mission/undo_completion", history_id=entry["id"])
     assert res["result"]["success"] is True
     task = data["tasks"][tid]
     assert task["name"] == "Einmalig" and task["interval"] == 0 and task["id"] == tid
@@ -220,10 +220,10 @@ async def test_undo_multi_participant_and_leaderboard_event(hass, hass_ws_client
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
     tid = await _add_task(ws, complexity=6)
-    await _call(ws, "task_organizer/complete_task", task_id=tid, completed_by=[ANNA, SAM_ID])
+    await _call(ws, "family_mission/complete_task", task_id=tid, completed_by=[ANNA, SAM_ID])
     data = _data(hass)
     assert data["points"] == {ANNA: 3.0, SAM_ID: 3.0} and len(data["history"]) == 2
-    res = await _call(ws, "task_organizer/undo_completion", history_id=data["history"][1]["id"])
+    res = await _call(ws, "family_mission/undo_completion", history_id=data["history"][1]["id"])
     assert res["result"]["removed"] == 2
     assert data["points"] == {ANNA: 0, SAM_ID: 0} and data["history"] == []
 
@@ -233,15 +233,15 @@ async def test_undo_fires_leaderboard_event_when_order_changes(hass, hass_ws_cli
     freezer.move_to(NOON)
     _data(hass)["points"][ANNA] = 3.0
     tid = await _add_task(ws, complexity=5)
-    await _call(ws, "task_organizer/complete_task", task_id=tid, completed_by=[SAM_ID])   # Ben leads now
-    leaderboard = _collect(hass, "task_organizer_leaderboard_changed")
-    await _call(ws, "task_organizer/undo_completion", history_id=_data(hass)["history"][0]["id"])
+    await _call(ws, "family_mission/complete_task", task_id=tid, completed_by=[SAM_ID])   # Ben leads now
+    leaderboard = _collect(hass, "family_mission_leaderboard_changed")
+    await _call(ws, "family_mission/undo_completion", history_id=_data(hass)["history"][0]["id"])
     await hass.async_block_till_done()
     assert leaderboard and leaderboard[0]["new_leaderboard"][0]["user_id"] == ANNA
 
 
 async def test_undo_is_admin_only(hass, hass_ws_client, hass_read_only_access_token, setup):
-    from custom_components.task_organizer import _async_complete_task_internal
+    from custom_components.family_mission import _async_complete_task_internal
 
     data = _data(hass)
     data["tasks"]["t1"] = {"id": "t1", "name": "T", "interval": 1, "complexity": 4, "category": "basis",
@@ -249,16 +249,16 @@ async def test_undo_is_admin_only(hass, hass_ws_client, hass_read_only_access_to
     await _async_complete_task_internal(hass, "t1", [ANNA])
     entry_id = data["history"][0]["id"]
     reader = await hass_ws_client(hass, hass_read_only_access_token)
-    res = await _call(reader, "task_organizer/undo_completion", history_id=entry_id)
+    res = await _call(reader, "family_mission/undo_completion", history_id=entry_id)
     assert res["error"]["code"] == "unauthorized"
     assert data["points"][ANNA] == 4.0 and len(data["history"]) == 1
 
 
 async def test_undo_ignores_non_task_entries(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
-    await _call(ws, "task_organizer/adjust_points", kid_id=ANNA, points=2, reason="super")
+    await _call(ws, "family_mission/adjust_points", kid_id=ANNA, points=2, reason="super")
     bonus_id = _data(hass)["history"][0]["id"]
-    res = await _call(ws, "task_organizer/undo_completion", history_id=bonus_id)
+    res = await _call(ws, "family_mission/undo_completion", history_id=bonus_id)
     assert res["result"]["error"] == "not_found" and _data(hass)["points"][ANNA] == 2
 
 
@@ -276,12 +276,12 @@ BASE_WIZARD = {
 async def test_wizard_stores_full_goals_and_resets_next_month(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    preview = (await _call(ws, "task_organizer/wizard_preview", **BASE_WIZARD))["result"]
+    preview = (await _call(ws, "family_mission/wizard_preview", **BASE_WIZARD))["result"]
     assert preview["prorated"] is True and preview["full_goals_from"] == "2026-11-01"
     kid = preview["kids"][0]
     assert kid["goal_full"] > kid["goal"]
 
-    res = await _call(ws, "task_organizer/wizard_apply", **BASE_WIZARD)
+    res = await _call(ws, "family_mission/wizard_apply", **BASE_WIZARD)
     assert res["success"], res
     opts = setup.options
     assert opts["point_goals"][ANNA] == kid["goal"]
@@ -305,12 +305,12 @@ async def test_wizard_stores_full_goals_and_resets_next_month(hass, hass_ws_clie
 async def test_wizard_edited_goal_is_scaled_up_and_manual_edit_overwrites(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    res = await _call(ws, "task_organizer/wizard_apply", goals={ANNA: 40}, **BASE_WIZARD)
+    res = await _call(ws, "family_mission/wizard_apply", goals={ANNA: 40}, **BASE_WIZARD)
     assert res["success"], res
     assert setup.options["point_goals"][ANNA] == 40
     assert setup.options["point_goals_full"][ANNA] >= 40
     # a manual edit in the settings card overwrites goal and full goal
-    res = await _call(ws, "task_organizer/update_settings", settings={
+    res = await _call(ws, "family_mission/update_settings", settings={
         "point_goals": {ANNA: 99}, "point_goals_full": {ANNA: 99}})
     assert res["success"]
     freezer.move_to(datetime(2026, 11, 1, 12, 0, tzinfo=timezone.utc))
@@ -321,7 +321,7 @@ async def test_wizard_edited_goal_is_scaled_up_and_manual_edit_overwrites(hass, 
 async def test_unprorated_start_has_no_marker(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    res = await _call(ws, "task_organizer/wizard_apply", **{**BASE_WIZARD, "start_date": "2026-11-01"})
+    res = await _call(ws, "family_mission/wizard_apply", **{**BASE_WIZARD, "start_date": "2026-11-01"})
     assert res["success"], res
     assert not setup.options.get("point_goals_full")
     assert "point_goals_prorated_month" not in setup.options
@@ -334,10 +334,10 @@ async def test_unprorated_start_has_no_marker(hass, hass_ws_client, setup, freez
 async def test_adhoc_bonus_creates_task_and_events(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    created = _collect(hass, "task_organizer_task_created")
-    opened = _collect(hass, "task_organizer_bonus_opened")
+    created = _collect(hass, "family_mission_task_created")
+    opened = _collect(hass, "family_mission_bonus_opened")
     expires = (NOON + timedelta(hours=3)).isoformat()
-    res = await _call(ws, "task_organizer/add_adhoc_bonus", name="  Brot holen ", icon="mdi:bread-slice",
+    res = await _call(ws, "family_mission/add_adhoc_bonus", name="  Brot holen ", icon="mdi:bread-slice",
                       points=3, minutes=10, expires_at=expires)
     assert res["success"], res
     task = _data(hass)["tasks"][res["result"]["task_id"]]
@@ -356,7 +356,7 @@ async def test_adhoc_bonus_validation_and_admin_only(hass, hass_ws_client, hass_
     ok = {"name": "Einkauf", "icon": "mdi:cart", "points": 2}
 
     async def code(**kw):
-        res = await _call(ws, "task_organizer/add_adhoc_bonus", **{**ok, **kw})
+        res = await _call(ws, "family_mission/add_adhoc_bonus", **{**ok, **kw})
         return None if res["success"] else res["error"]["code"]
 
     assert await code(name="   ") == "invalid_name"
@@ -375,7 +375,7 @@ async def test_adhoc_bonus_validation_and_admin_only(hass, hass_ws_client, hass_
 
 async def test_adhoc_bonus_is_admin_only(hass, hass_ws_client, hass_read_only_access_token, setup):
     reader = await hass_ws_client(hass, hass_read_only_access_token)
-    res = await _call(reader, "task_organizer/add_adhoc_bonus", name="Einkauf", icon="mdi:cart", points=2)
+    res = await _call(reader, "family_mission/add_adhoc_bonus", name="Einkauf", icon="mdi:cart", points=2)
     assert res["error"]["code"] == "unauthorized"
     assert _data(hass)["tasks"] == {}
 
@@ -385,13 +385,13 @@ async def test_adhoc_bonus_assignee_restriction(hass, hass_ws_client, setup, fre
     freezer.move_to(NOON)
     await _make_kid(ws, ANNA)
     await _make_kid(ws, BEN, pin="4321")
-    res = await _call(ws, "task_organizer/add_adhoc_bonus", name="Hund", icon="mdi:dog", points=4, kid_id=BEN)
+    res = await _call(ws, "family_mission/add_adhoc_bonus", name="Hund", icon="mdi:dog", points=4, kid_id=BEN)
     tid = res["result"]["task_id"]
     assert _data(hass)["tasks"][tid]["assignees"] == [BEN]
     assert (await _kid_do(ws, "kid_claim_task", tid, kid=ANNA))["error"] == "not_eligible"
     assert (await _kid_do(ws, "kid_claim_task", tid, kid=BEN, pin="4321"))["success"] is True
     # a person with a user account is resolved to the user id
-    res = await _call(ws, "task_organizer/add_adhoc_bonus", name="Sam", icon="mdi:star", points=1, kid_id="person.sam")
+    res = await _call(ws, "family_mission/add_adhoc_bonus", name="Sam", icon="mdi:star", points=1, kid_id="person.sam")
     assert _data(hass)["tasks"][res["result"]["task_id"]]["assignees"] == [SAM_ID]
 
 
@@ -400,10 +400,10 @@ async def test_adhoc_bonus_expires_without_points_or_history(hass, hass_ws_clien
     freezer.move_to(NOON)
     await _make_kid(ws)
     expires = (NOON + timedelta(minutes=30)).isoformat()
-    res = await _call(ws, "task_organizer/add_adhoc_bonus", name="Einkauf", icon="mdi:cart", points=2,
+    res = await _call(ws, "family_mission/add_adhoc_bonus", name="Einkauf", icon="mdi:cart", points=2,
                       expires_at=expires)
     tid = res["result"]["task_id"]
-    keep = await _call(ws, "task_organizer/add_adhoc_bonus", name="Ohne Ablauf", icon="mdi:star", points=2)
+    keep = await _call(ws, "family_mission/add_adhoc_bonus", name="Ohne Ablauf", icon="mdi:star", points=2)
     assert await _async_remove_expired_adhoc(hass) == 0
     freezer.move_to(NOON + timedelta(minutes=31))
     # expired but not yet removed: a kid can no longer take it
@@ -434,7 +434,7 @@ def _by_key(hass):
 async def test_wizard_rerun_updates_in_place(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    assert (await _call(ws, "task_organizer/wizard_apply", **WIZ))["success"]
+    assert (await _call(ws, "family_mission/wizard_apply", **WIZ))["success"]
     tasks = _by_key(hass)
     deep = tasks["room_deep:person.anna"]
     morning = tasks["morning:person.anna"]
@@ -445,7 +445,7 @@ async def test_wizard_rerun_updates_in_place(hass, hass_ws_client, setup, freeze
     morning["claimed_until"] = (NOON + timedelta(hours=1)).isoformat()
     deep["paused_until"] = "2026-11-03"
 
-    res = await _call(ws, "task_organizer/wizard_apply", points={"morning:person.anna": 5},
+    res = await _call(ws, "family_mission/wizard_apply", points={"morning:person.anna": 5},
                       replace_existing=True, **WIZ)
     assert res["result"]["updated"] > 0 and res["result"]["created"] == 0 and res["result"]["deleted"] == 0
     after = _by_key(hass)
@@ -463,11 +463,11 @@ async def test_wizard_rerun_updates_in_place(hass, hass_ws_client, setup, freeze
 async def test_wizard_rerun_deletes_unselected_and_restaggers_rotation(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    assert (await _call(ws, "task_organizer/wizard_apply", **WIZ))["success"]
+    assert (await _call(ws, "family_mission/wizard_apply", **WIZ))["success"]
     assert "table_set:person.clara" in _by_key(hass)
     excluded = ["room_deep:person.anna"]
     two = {**WIZ, "kids": WIZ["kids"][:2]}
-    res = await _call(ws, "task_organizer/wizard_apply", replace_existing=True, excluded=excluded, **two)
+    res = await _call(ws, "family_mission/wizard_apply", replace_existing=True, excluded=excluded, **two)
     assert res["result"]["deleted"] > 0
     tasks = _by_key(hass)
     assert "room_deep:person.anna" not in tasks and "table_set:person.clara" not in tasks
@@ -479,7 +479,7 @@ async def test_wizard_rerun_deletes_unselected_and_restaggers_rotation(hass, has
     assert {local(anna), local(ben)} == {tomorrow, tomorrow + timedelta(days=1)}
     # rotations that did not change keep their turn
     clara_added = {**WIZ}
-    res = await _call(ws, "task_organizer/wizard_apply", replace_existing=True, **clara_added)
+    res = await _call(ws, "family_mission/wizard_apply", replace_existing=True, **clara_added)
     assert res["success"]
     assert local(_by_key(hass)["table_set:person.anna"]) == tomorrow
 
@@ -491,7 +491,7 @@ async def test_wizard_rerun_deletes_unselected_and_restaggers_rotation(hass, has
 async def test_household_day_for_weekly_tasks(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    preview = (await _call(ws, "task_organizer/wizard_preview",
+    preview = (await _call(ws, "family_mission/wizard_preview",
                            **{**WIZ, "features": ["school", "washer"]}))["result"]       # 2026-10-29 = Thursday
     assert preview["household_day"] == 5 and preview["household_date"] == "2026-10-31"
     due = {t["wizard_key"]: t["due_date"] for k in preview["kids"] for t in k["tasks"]}
@@ -504,12 +504,12 @@ async def test_household_day_for_weekly_tasks(hass, hass_ws_client, setup, freez
     # weekly rotation starts on the household day, one week apart
     assert {due["plants:person.anna"], due["plants:person.ben"]} >= {"2026-10-31", "2026-11-07"}
 
-    sunday = (await _call(ws, "task_organizer/wizard_preview", household_day=6, **WIZ))["result"]
+    sunday = (await _call(ws, "family_mission/wizard_preview", household_day=6, **WIZ))["result"]
     assert sunday["household_date"] == "2026-11-01"
-    same_day = (await _call(ws, "task_organizer/wizard_preview", **{**WIZ, "start_date": "2026-10-31"}))["result"]
+    same_day = (await _call(ws, "family_mission/wizard_preview", **{**WIZ, "start_date": "2026-10-31"}))["result"]
     assert same_day["household_date"] == "2026-10-31"                       # on the day itself
 
-    res = await _call(ws, "task_organizer/wizard_apply", household_day=6, **WIZ)
+    res = await _call(ws, "family_mission/wizard_apply", household_day=6, **WIZ)
     assert res["success"]
     assert setup.options["wizard"]["household_day"] == 6
     local = dt_util.as_local(dt_util.parse_datetime(_by_key(hass)["room_deep:person.anna"]["due_date"])).date()
@@ -580,7 +580,7 @@ async def test_missed_weekly_grace_and_rotation_and_setting(hass, hass_ws_client
 
     # disabled in the settings
     prime(5)
-    await _call(ws, "task_organizer/update_settings", settings={"expire_missed": False})
+    await _call(ws, "family_mission/update_settings", settings={"expire_missed": False})
     assert await _async_expire_missed(hass) == 0
 
 
@@ -624,7 +624,7 @@ def _local_day(task):
 async def test_wizard_tasks_carry_catalog_windows_and_replaced_by(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    assert (await _call(ws, "task_organizer/wizard_apply", **WIZ))["success"]
+    assert (await _call(ws, "family_mission/wizard_apply", **WIZ))["success"]
     tasks = _by_key(hass)
     assert (tasks["room_blitz:person.anna"]["available_from"], tasks["room_blitz:person.anna"]["available_until"]) \
         == ("14:00", "19:30")
@@ -635,7 +635,7 @@ async def test_wizard_tasks_carry_catalog_windows_and_replaced_by(hass, hass_ws_
     old = tasks["room_blitz:person.anna"]
     old.update({"available_from": None, "available_until": None})
     old.pop("replaced_by_key")
-    assert (await _call(ws, "task_organizer/wizard_apply", replace_existing=True, **WIZ))["success"]
+    assert (await _call(ws, "family_mission/wizard_apply", replace_existing=True, **WIZ))["success"]
     assert old["available_from"] == "14:00" and old["replaced_by_key"] == "room_deep"
 
 
@@ -677,21 +677,21 @@ async def test_replaced_blitz_not_eligible_and_skipped_on_completion(hass, hass_
     for tid in (blitz, deep):
         _data(hass)["tasks"][tid]["due_date"] = _local_start(today)
 
-    res = await _call(ws, "task_organizer/kid_complete_task", task_id=blitz, kid_id=ANNA, pin="1234")
+    res = await _call(ws, "family_mission/kid_complete_task", task_id=blitz, kid_id=ANNA, pin="1234")
     assert res["result"] == {"success": False, "error": "not_eligible"}
 
-    res = await _call(ws, "task_organizer/kid_complete_task", task_id=deep, kid_id=ANNA, pin="1234")
+    res = await _call(ws, "family_mission/kid_complete_task", task_id=deep, kid_id=ANNA, pin="1234")
     assert res["result"]["success"]
     assert _local_day(_data(hass)["tasks"][blitz]) == today + timedelta(days=1)    # skipped for today
     assert _data(hass)["points"][ANNA] == 4                                # only the deep clean pays
     assert [h["task_id"] for h in _data(hass)["history"]] == [deep]        # no missed / blitz entry
     # next day the blitz is a normal duty again
-    res = await _call(ws, "task_organizer/kid_complete_task", task_id=blitz, kid_id=ANNA, pin="1234")
+    res = await _call(ws, "family_mission/kid_complete_task", task_id=blitz, kid_id=ANNA, pin="1234")
     assert res["result"]["error"] == "not_eligible"                        # not due yet today either
 
 
 async def test_old_wizard_tasks_get_replaced_by_key_on_load(hass, setup):
-    from custom_components.task_organizer import _migrate_replaced_by
+    from custom_components.family_mission import _migrate_replaced_by
     old = {"generated_by": "wizard", "wizard_key": "room_blitz_small:person.david"}
     _migrate_replaced_by(old)
     assert old["replaced_by_key"] == "room_deep"
@@ -704,7 +704,7 @@ async def test_wizard_reschedule_redistributes_dates_and_keeps_history(hass, has
     ws = await hass_ws_client(hass)
     WIZW = {**WIZ, "features": ["school", "washer"]}
     freezer.move_to(NOON)                                                  # Thursday 11:00 local
-    assert (await _call(ws, "task_organizer/wizard_apply", **WIZW))["success"]
+    assert (await _call(ws, "family_mission/wizard_apply", **WIZW))["success"]
     tasks = _by_key(hass)
     friday_old = _local_start(dt_util.now().date() - timedelta(days=6))
     for key in ("room_deep:person.anna", "morning:person.anna", "room_blitz:person.anna"):
@@ -716,14 +716,14 @@ async def test_wizard_reschedule_redistributes_dates_and_keeps_history(hass, has
     ids = {k: t["id"] for k, t in tasks.items()}
 
     # without the option the old dates stay
-    assert (await _call(ws, "task_organizer/wizard_apply", replace_existing=True, **WIZW))["success"]
+    assert (await _call(ws, "family_mission/wizard_apply", replace_existing=True, **WIZW))["success"]
     assert tasks["room_deep:person.anna"]["due_date"] == friday_old
 
     # reschedule only applies together with the in-place update
-    assert (await _call(ws, "task_organizer/wizard_apply", reschedule=True, **WIZW))["success"]
+    assert (await _call(ws, "family_mission/wizard_apply", reschedule=True, **WIZW))["success"]
     assert tasks["room_deep:person.anna"]["due_date"] == friday_old
 
-    res = await _call(ws, "task_organizer/wizard_apply", replace_existing=True, reschedule=True, **WIZW)
+    res = await _call(ws, "family_mission/wizard_apply", replace_existing=True, reschedule=True, **WIZW)
     assert res["success"] and res["result"]["created"] == 0
     after = _by_key(hass)
     assert {k: t["id"] for k, t in after.items()} == ids
@@ -741,7 +741,7 @@ async def test_wizard_reschedule_redistributes_dates_and_keeps_history(hass, has
 async def test_new_daily_task_after_window_starts_tomorrow(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
-    assert (await _call(ws, "task_organizer/wizard_apply", **WIZ))["success"]
+    assert (await _call(ws, "family_mission/wizard_apply", **WIZ))["success"]
     tasks = _by_key(hass)
     assert _local_day(tasks["morning:person.anna"]) == dt_util.now().date() + timedelta(days=1)
     assert _local_day(tasks["evening:person.anna"]) == dt_util.now().date()
@@ -756,7 +756,7 @@ async def test_parent_skip_today_advances_without_points(hass, hass_ws_client, s
     freezer.move_to(NOON)
     await _make_kid(ws)
     tid = await _add_task(ws, assignees=[ANNA], interval=2)
-    res = await _call(ws, "task_organizer/parent_task_action", task_id=tid, action="skip_today")
+    res = await _call(ws, "family_mission/parent_task_action", task_id=tid, action="skip_today")
     assert res["success"] and res["result"]["success"] is True
     task = _data(hass)["tasks"][tid]
     assert dt_util.parse_datetime(task["due_date"]) == NOON + timedelta(days=2)
@@ -771,30 +771,30 @@ async def test_parent_skip_today_keeps_one_time_task(hass, hass_ws_client, setup
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
     tid = await _add_task(ws, interval=0)
-    assert (await _call(ws, "task_organizer/parent_task_action", task_id=tid, action="skip_today"))["success"]
+    assert (await _call(ws, "family_mission/parent_task_action", task_id=tid, action="skip_today"))["success"]
     task = _data(hass)["tasks"][tid]                       # not deleted, hidden for today
     assert task["paused_until"]
     assert _data(hass)["history"][0]["type"] == "skipped"
 
 
 async def test_parent_postpone(hass, hass_ws_client, setup, freezer):
-    from custom_components.task_organizer.kids import task_status
+    from custom_components.family_mission.kids import task_status
 
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
     tid = await _add_task(ws, assignees=[ANNA])
-    res = await _call(ws, "task_organizer/parent_task_action", task_id=tid, action="postpone")
+    res = await _call(ws, "family_mission/parent_task_action", task_id=tid, action="postpone")
     assert res["success"]
     task = _data(hass)["tasks"][tid]
     assert task_status(task, dt_util.now()) == "paused"
     assert task_status(task, dt_util.now() + timedelta(days=1)) == "due"       # back tomorrow
-    res = await _call(ws, "task_organizer/parent_task_action", task_id=tid, action="postpone", until="2026-11-02")
+    res = await _call(ws, "family_mission/parent_task_action", task_id=tid, action="postpone", until="2026-11-02")
     assert res["success"]
     assert task_status(task, dt_util.now() + timedelta(days=3)) == "paused"    # 2 Nov, local
     assert task_status(task, dt_util.now() + timedelta(days=4)) == "due"
     assert _data(hass)["history"] == []
     for bad in ("2026-10-29", "garbage"):
-        res = await _call(ws, "task_organizer/parent_task_action", task_id=tid, action="postpone", until=bad)
+        res = await _call(ws, "family_mission/parent_task_action", task_id=tid, action="postpone", until=bad)
         assert res["error"]["code"] == "invalid_date"
 
 
@@ -804,26 +804,26 @@ async def test_parent_complete_for_ignores_pin_window_steps(hass, hass_ws_client
     await _make_kid(ws)
     tid = await _add_task(ws, assignees=[ANNA], available_from="17:00", requires_approval=True,
                           subtasks=[{"name": "Step", "done": False}])
-    seen = _collect(hass, "task_organizer_task_completed")
-    res = await _call(ws, "task_organizer/parent_complete_for", task_id=tid, kid_id=ANNA)
+    seen = _collect(hass, "family_mission_task_completed")
+    res = await _call(ws, "family_mission/parent_complete_for", task_id=tid, kid_id=ANNA)
     assert res["success"] and res["result"]["points"] == 4
     await hass.async_block_till_done()
     assert _data(hass)["points"][ANNA] == 4
     assert _data(hass)["history"][0]["type"] == "task" and _data(hass)["history"][0]["completion_id"]
     assert seen and seen[0]["completed_by"] == [ANNA]
     # a completion made this way can be undone
-    res = await _call(ws, "task_organizer/undo_completion", history_id=_data(hass)["history"][0]["id"])
+    res = await _call(ws, "family_mission/undo_completion", history_id=_data(hass)["history"][0]["id"])
     assert res["success"] and _data(hass)["points"][ANNA] == 0
 
 
 async def test_parent_actions_unknown_task_or_kid(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     for action in ("skip_today", "postpone"):
-        res = await _call(ws, "task_organizer/parent_task_action", task_id="nope", action=action)
+        res = await _call(ws, "family_mission/parent_task_action", task_id="nope", action=action)
         assert res["result"] == {"success": False, "error": "not_found"}
-    res = await _call(ws, "task_organizer/parent_complete_for", task_id="nope", kid_id=ANNA)
+    res = await _call(ws, "family_mission/parent_complete_for", task_id="nope", kid_id=ANNA)
     assert res["result"] == {"success": False, "error": "not_found"}
     tid = await _add_task(ws)
-    res = await _call(ws, "task_organizer/parent_complete_for", task_id=tid, kid_id="person.nobody")
+    res = await _call(ws, "family_mission/parent_complete_for", task_id=tid, kid_id="person.nobody")
     assert res["result"] == {"success": False, "error": "unknown_kid"}
     assert tid in _data(hass)["tasks"]

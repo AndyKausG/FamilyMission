@@ -1,4 +1,4 @@
-"""Config flow for TaskOrganizer."""
+"""Config flow for FamilyMission."""
 
 from typing import Any
 import voluptuous as vol
@@ -16,21 +16,21 @@ from .const import (
 )
 
 
-class TaskOrganizerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for the TaskOrganizer integration."""
+class FamilyMissionConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for the FamilyMission integration."""
     
     VERSION = 1
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """
         Handle the initial step of the setup process.
-        Only one single instance of TaskOrganizer is allowed.
+        Only one single instance of FamilyMission is allowed.
         """
         if self._async_current_entries():
             return self.async_abort(reason="single_instance_allowed")
 
         if user_input is not None:
-            return self.async_create_entry(title="TaskOrganizer", data=user_input)
+            return self.async_create_entry(title="FamilyMission", data=user_input)
 
         return self.async_show_form(
             step_id="user", 
@@ -42,11 +42,11 @@ class TaskOrganizerConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     @callback
     def async_get_options_flow(config_entry: config_entries.ConfigEntry) -> config_entries.OptionsFlow:
         """Create the options flow."""
-        return TaskOrganizerOptionsFlowHandler()
+        return FamilyMissionOptionsFlowHandler()
 
 
-class TaskOrganizerOptionsFlowHandler(config_entries.OptionsFlow):
-    """Handle options flow for TaskOrganizer."""
+class FamilyMissionOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options flow for FamilyMission."""
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Manage the options."""

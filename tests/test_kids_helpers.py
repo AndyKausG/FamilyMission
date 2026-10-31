@@ -7,8 +7,8 @@ from types import SimpleNamespace
 
 import pytest
 
-_PATH = Path(__file__).resolve().parents[1] / "custom_components" / "task_organizer" / "kids.py"
-_spec = importlib.util.spec_from_file_location("task_organizer_kids", _PATH)
+_PATH = Path(__file__).resolve().parents[1] / "custom_components" / "family_mission" / "kids.py"
+_spec = importlib.util.spec_from_file_location("family_mission_kids", _PATH)
 kids = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(kids)
 

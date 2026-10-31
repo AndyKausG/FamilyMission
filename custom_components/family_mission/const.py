@@ -1,0 +1,101 @@
+"""Konstanten für die FamilyMission Integration."""
+
+# Domain of the integration
+DOMAIN = "family_mission"
+
+# Configuration keys
+CONF_NAME = "name"
+
+# Storage Constants
+STORAGE_KEY = f"{DOMAIN}.storage"
+STORAGE_VERSION = 1
+
+# Default colors for the frontend
+DEFAULT_COLOR_DONE = "#4CAF50"     # Green
+DEFAULT_COLOR_DUE = "#FFC107"      # Yellow/Orange
+DEFAULT_COLOR_OVERDUE = "#F44336"  # Red
+DEFAULT_OVERDUE_DAYS = 5
+
+# Event names
+EVENT_TASK_UPDATED = "family_mission_updated"
+EVENT_LEADERBOARD_CHANGED = "family_mission_leaderboard_changed"
+EVENT_TASK_COMPLETED = "family_mission_task_completed"
+EVENT_TASK_CREATED = "family_mission_task_created"
+EVENT_RESET = "family_mission_reset"
+EVENT_BONUS_OPENED = "family_mission_bonus_opened"
+EVENT_APPROVAL_REQUESTED = "family_mission_approval_requested"
+EVENT_APPROVAL_RESOLVED = "family_mission_approval_resolved"
+EVENT_KID_BIRTHDAY = "family_mission_kid_birthday"
+EVENT_TASK_REMINDER = "family_mission_task_reminder"
+EVENT_REWARD_REQUESTED = "family_mission_reward_requested"
+EVENT_REWARD_RESOLVED = "family_mission_reward_resolved"
+EVENT_PRAISE = "family_mission_praise"
+
+# Event fired by the Home Assistant companion app when a notification action is tapped
+EVENT_MOBILE_APP_ACTION = "mobile_app_notification_action"
+ACTION_APPROVE = "FM_APPROVE_"
+ACTION_NOT_DONE = "FM_NOTDONE_"
+ACTION_CHEAT = "FM_CHEAT_"
+ACTION_REWARD_APPROVE = "FM_RAPPROVE_"
+ACTION_REWARD_REJECT = "FM_RREJECT_"
+
+# WebSocket Command Types
+WS_TYPE_GET_DATA = "family_mission/get_data"
+WS_TYPE_COMPLETE_TASK = "family_mission/complete_task"
+WS_TYPE_ADD_TASK = "family_mission/add_task"
+WS_TYPE_EDIT_TASK = "family_mission/edit_task"
+WS_TYPE_DELETE_TASK = "family_mission/delete_task"
+WS_TYPE_PAUSE_TASK = "family_mission/pause_task"
+WS_TYPE_UPDATE_POINTS = "family_mission/update_points"
+WS_TYPE_FACTORY_RESET = "family_mission/factory_reset"
+WS_TYPE_UPDATE_SETTINGS = "family_mission/update_settings"
+WS_TYPE_DELETE_HISTORY_ITEM = "family_mission/delete_history_item"
+WS_TYPE_EDIT_HISTORY_ITEM = "family_mission/edit_history_item"
+WS_TYPE_IMPORT_TASKS = "family_mission/import_tasks"
+WS_TYPE_ADD_TEMPLATE = "family_mission/add_template"
+WS_TYPE_EDIT_TEMPLATE = "family_mission/edit_template"
+WS_TYPE_DELETE_TEMPLATE = "family_mission/delete_template"
+WS_TYPE_SET_KID_PROFILE = "family_mission/set_kid_profile"
+WS_TYPE_DELETE_KID_PROFILE = "family_mission/delete_kid_profile"
+WS_TYPE_KID_VERIFY_PIN = "family_mission/kid_verify_pin"
+WS_TYPE_KID_COMPLETE_TASK = "family_mission/kid_complete_task"
+WS_TYPE_KID_CLAIM_TASK = "family_mission/kid_claim_task"
+WS_TYPE_WIZARD_CATALOG = "family_mission/wizard_catalog"
+WS_TYPE_WIZARD_PREVIEW = "family_mission/wizard_preview"
+WS_TYPE_WIZARD_APPLY = "family_mission/wizard_apply"
+WS_TYPE_SET_BONUS_TRIGGERS = "family_mission/set_bonus_triggers"
+WS_TYPE_APPROVE = "family_mission/approve"
+WS_TYPE_REJECT = "family_mission/reject"
+WS_TYPE_ADJUST_POINTS = "family_mission/adjust_points"
+WS_TYPE_UNDO_COMPLETION = "family_mission/undo_completion"
+WS_TYPE_ADD_ADHOC_BONUS = "family_mission/add_adhoc_bonus"
+WS_TYPE_SET_PARENTS = "family_mission/set_parents"
+WS_TYPE_PARENT_TASK_ACTION = "family_mission/parent_task_action"
+WS_TYPE_PARENT_COMPLETE_FOR = "family_mission/parent_complete_for"
+WS_TYPE_MY_COMPLETE_TASK = "family_mission/my_complete_task"
+WS_TYPE_MY_CLAIM_TASK = "family_mission/my_claim_task"
+WS_TYPE_KID_TOGGLE_STEP = "family_mission/kid_toggle_step"
+WS_TYPE_MY_TOGGLE_STEP = "family_mission/my_toggle_step"
+WS_TYPE_MY_REDEEM = "family_mission/my_redeem"
+WS_TYPE_MY_SET_GOAL = "family_mission/my_set_goal"
+WS_TYPE_SET_REWARDS = "family_mission/set_rewards"
+WS_TYPE_KID_REDEEM = "family_mission/kid_redeem"
+WS_TYPE_KID_SET_GOAL = "family_mission/kid_set_goal"
+WS_TYPE_REDEMPTION_RESOLVE = "family_mission/redemption_resolve"
+WS_TYPE_SEND_PRAISE = "family_mission/send_praise"
+WS_TYPE_KID_PRAISE_SEEN = "family_mission/kid_praise_seen"
+WS_TYPE_MY_PRAISE_SEEN = "family_mission/my_praise_seen"
+
+# Service Names
+SERVICE_RESET_MONTHLY_POINTS = "reset_monthly_points"
+SERVICE_COMPLETE_TASK_BY_NAME = "complete_task_by_name"
+SERVICE_ADD_TASK = "add_task"
+SERVICE_FACTORY_RESET = "factory_reset"
+SERVICE_SET_TASK_DUE_BY_NAME = "set_task_due_by_name"
+SERVICE_PAUSE_TASK_BY_NAME = "pause_task_by_name"
+SERVICE_REMOVE_TASK_BY_NAME = "remove_task_by_name"
+SERVICE_EDIT_TASK_BY_NAME = "edit_task_by_name"
+SERVICE_ADD_TEMPLATE = "add_template"
+SERVICE_REMOVE_TEMPLATE_BY_NAME = "remove_template_by_name"
+SERVICE_EDIT_TEMPLATE_BY_NAME = "edit_template_by_name"
+SERVICE_ADJUST_POINTS = "adjust_points"

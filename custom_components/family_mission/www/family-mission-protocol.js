@@ -42,15 +42,15 @@ function escProtocol(value) {
  */
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "task-organizer-protocol",
-  name: "Task Organizer: Protocol",
+  type: "family-mission-protocol",
+  name: "FamilyMission Protocol",
   description: "A dedicated log for managing and editing completed tasks.",
   preview: true,
 });
 
-class TaskOrganizerProtocol extends HTMLElement {
+class FamilyMissionProtocol extends HTMLElement {
   /**
-   * Initializes the TaskOrganizerProtocol element.
+   * Initializes the FamilyMissionProtocol element.
    */
   constructor() {
     super(); 
@@ -69,13 +69,13 @@ class TaskOrganizerProtocol extends HTMLElement {
     return (I18N_PROTOCOL[lang] || I18N_PROTOCOL['en'])[key] || key;
   }
 
-  localize(key) { return TaskOrganizerProtocol._localize(this._hass, key); }
+  localize(key) { return FamilyMissionProtocol._localize(this._hass, key); }
 
   static getStubConfig(hass) { 
-    return { type: "custom:task-organizer-protocol", title: this._localize(hass, 'title'), items_per_page: 10, filter_by: "all" }; 
+    return { type: "custom:family-mission-protocol", title: this._localize(hass, 'title'), items_per_page: 10, filter_by: "all" }; 
   }
 
-  static getConfigElement() { return document.createElement("task-organizer-protocol-editor"); }
+  static getConfigElement() { return document.createElement("family-mission-protocol-editor"); }
 
   setConfig(config) { this.config = config; if (this._hass) this.render(); }
 
@@ -94,7 +94,7 @@ class TaskOrganizerProtocol extends HTMLElement {
 
   async _subscribeToUpdates() { 
     if (!this._hass) return;
-    this._unsubEvents = this._hass.connection.subscribeEvents(() => this._fetchData(), "task_organizer_updated"); 
+    this._unsubEvents = this._hass.connection.subscribeEvents(() => this._fetchData(), "family_mission_updated"); 
   }
 
   set hass(hass) {
@@ -127,13 +127,13 @@ class TaskOrganizerProtocol extends HTMLElement {
     for (const entityId in this._hass.states) { 
       if (entityId.startsWith('person.')) { 
         const state = this._hass.states[entityId]; 
-        this.users[TaskOrganizerProtocol.participantId(entityId, state)] = state.attributes.friendly_name || entityId; 
+        this.users[FamilyMissionProtocol.participantId(entityId, state)] = state.attributes.friendly_name || entityId; 
       } 
     } 
   }
 
   _fetchData() { 
-    this._hass.callWS({ type: 'task_organizer/get_data' }).then((data) => { 
+    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => { 
       this.history = data.history || [];
       this._myRole = data.my_role || null;
       this.render(); 
@@ -171,7 +171,7 @@ class TaskOrganizerProtocol extends HTMLElement {
     const points = parseFloat(this.shadowRoot.getElementById('edit-points').value); 
     const userSelect = this.shadowRoot.getElementById('edit-user-select');
     const userId = userSelect ? userSelect.value : null;
-    this._hass.callWS({ type: 'task_organizer/edit_history_item', entry_id: this.editingEntryId, points: points, user_id: userId }).then(() => { this._closeModal(); this._fetchData(); }); 
+    this._hass.callWS({ type: 'family_mission/edit_history_item', entry_id: this.editingEntryId, points: points, user_id: userId }).then(() => { this._closeModal(); this._fetchData(); }); 
   }
 
   /** Admins, managers and parents may undo (the backend checks the role). */
@@ -182,13 +182,13 @@ class TaskOrganizerProtocol extends HTMLElement {
   /** Undo a task completion: points back, task open again, no penalty. */
   _undoEntry(entryId) {
     if (confirm(this.localize('confirm_undo'))) {
-      this._hass.callWS({ type: 'task_organizer/undo_completion', history_id: entryId }).then(() => this._fetchData());
+      this._hass.callWS({ type: 'family_mission/undo_completion', history_id: entryId }).then(() => this._fetchData());
     }
   }
 
   _deleteEntry(entryId) { 
     if (confirm(this.localize('confirm_delete'))) { 
-      this._hass.callWS({ type: 'task_organizer/delete_history_item', entry_id: entryId }).then(() => this._fetchData());
+      this._hass.callWS({ type: 'family_mission/delete_history_item', entry_id: entryId }).then(() => this._fetchData());
     } 
   }
 
@@ -284,10 +284,10 @@ class TaskOrganizerProtocol extends HTMLElement {
   }
 }
 
-class TaskOrganizerProtocolEditor extends HTMLElement {
+class FamilyMissionProtocolEditor extends HTMLElement {
   setConfig(config) { this._config = config; this._render(); }
   set hass(hass) { this._hass = hass; this._render(); }
-  localize(key) { return TaskOrganizerProtocol._localize(this._hass, key); }
+  localize(key) { return FamilyMissionProtocol._localize(this._hass, key); }
   _render() {
     if (!this._config || !this._hass) return;
     if (this._rendered) { this._updateUI(); return; }
@@ -319,5 +319,5 @@ class TaskOrganizerProtocolEditor extends HTMLElement {
   }
 }
 
-customElements.define('task-organizer-protocol-editor', TaskOrganizerProtocolEditor);
-customElements.define('task-organizer-protocol', TaskOrganizerProtocol);
+customElements.define('family-mission-protocol-editor', FamilyMissionProtocolEditor);
+customElements.define('family-mission-protocol', FamilyMissionProtocol);

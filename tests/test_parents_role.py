@@ -4,7 +4,7 @@ import pytest
 from homeassistant.auth.const import GROUP_ID_USER
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.task_organizer.const import DOMAIN
+from custom_components.family_mission.const import DOMAIN
 
 ANNA = "person.anna"
 WIZARD = {
@@ -98,7 +98,7 @@ COMMANDS = {
 async def test_role_matrix(hass, hass_ws_client, hass_access_token, setup, users, who, command):
     ws = await _ws_for(hass, hass_ws_client, who, users, hass_access_token)
     payload, allowed = COMMANDS[command]
-    res = await _call(ws, f"task_organizer/{command}", **payload)
+    res = await _call(ws, f"family_mission/{command}", **payload)
     if who in allowed:
         # Passed the permission check (business errors like "unknown" are fine)
         assert res.get("error", {}).get("code") != "unauthorized", res
@@ -110,7 +110,7 @@ async def test_role_matrix(hass, hass_ws_client, hass_access_token, setup, users
 async def test_wizard_preview_apply_roles(hass, hass_ws_client, users, setup, who):
     ws = await hass_ws_client(hass, users[who][1])
     for type_ in ("wizard_preview", "wizard_apply"):
-        res = await _call(ws, f"task_organizer/{type_}", **WIZARD)
+        res = await _call(ws, f"family_mission/{type_}", **WIZARD)
         if who == "manager":
             assert res.get("error", {}).get("code") != "unauthorized", res
         else:
@@ -120,7 +120,7 @@ async def test_wizard_preview_apply_roles(hass, hass_ws_client, users, setup, wh
 async def test_set_parents_stores_and_manage_implies_parent(hass, hass_ws_client, hass_access_token, setup, users):
     ws = await hass_ws_client(hass, hass_access_token)
     sam, alex = users["parent"][0].id, users["manager"][0].id
-    res = await _call(ws, "task_organizer/set_parents", parents=[sam], parents_manage=[alex, alex])
+    res = await _call(ws, "family_mission/set_parents", parents=[sam], parents_manage=[alex, alex])
     assert res["success"] and res["result"]["parents_manage"] == [alex]
     assert res["result"]["parents"] == [sam, alex]
     assert setup.options["parents"] == [sam, alex] and setup.options["parents_manage"] == [alex]
@@ -129,16 +129,16 @@ async def test_set_parents_stores_and_manage_implies_parent(hass, hass_ws_client
 async def test_set_parents_rejects_unknown_inactive_system(hass, hass_ws_client, hass_access_token, setup, users):
     ws = await hass_ws_client(hass, hass_access_token)
     before = dict(setup.options)
-    res = await _call(ws, "task_organizer/set_parents", parents=["does-not-exist"], parents_manage=[])
+    res = await _call(ws, "family_mission/set_parents", parents=["does-not-exist"], parents_manage=[])
     assert res["error"]["code"] == "invalid_user"
 
     inactive = await hass.auth.async_create_user("Old", group_ids=[GROUP_ID_USER])
     await hass.auth.async_update_user(inactive, is_active=False)
-    res = await _call(ws, "task_organizer/set_parents", parents=[inactive.id], parents_manage=[])
+    res = await _call(ws, "family_mission/set_parents", parents=[inactive.id], parents_manage=[])
     assert res["error"]["code"] == "invalid_user"
 
     system = await hass.auth.async_create_system_user("Integration")
-    res = await _call(ws, "task_organizer/set_parents", parents=[], parents_manage=[system.id])
+    res = await _call(ws, "family_mission/set_parents", parents=[], parents_manage=[system.id])
     assert res["error"]["code"] == "invalid_user"
     assert dict(setup.options) == before
 
@@ -147,7 +147,7 @@ async def test_update_settings_cannot_set_parents(hass, hass_ws_client, hass_acc
     other = users["other"][0].id
     for token in (hass_access_token, users["parent"][1], users["manager"][1], users["other"][1]):
         ws = await hass_ws_client(hass, token)
-        res = await _call(ws, "task_organizer/update_settings",
+        res = await _call(ws, "family_mission/update_settings",
                           settings={"parents": [other], "parents_manage": [other], "overdue_days": 7})
         assert res["success"]
     assert other not in setup.options["parents"] and other not in setup.options["parents_manage"]
@@ -157,7 +157,7 @@ async def test_update_settings_cannot_set_parents(hass, hass_ws_client, hass_acc
 async def test_import_cannot_set_parents(hass, hass_ws_client, setup, users):
     other = users["other"][0].id
     ws = await hass_ws_client(hass, users["parent"][1])
-    res = await _call(ws, "task_organizer/import_tasks", settings={"parents_manage": [other], "parents": [other]})
+    res = await _call(ws, "family_mission/import_tasks", settings={"parents_manage": [other], "parents": [other]})
     assert res["success"]
     assert other not in setup.options["parents"] and other not in setup.options["parents_manage"]
 
@@ -165,9 +165,9 @@ async def test_import_cannot_set_parents(hass, hass_ws_client, setup, users):
 async def test_parent_cannot_promote_itself(hass, hass_ws_client, setup, users):
     sam = users["parent"][0].id
     ws = await hass_ws_client(hass, users["parent"][1])
-    res = await _call(ws, "task_organizer/set_parents", parents=[sam], parents_manage=[sam])
+    res = await _call(ws, "family_mission/set_parents", parents=[sam], parents_manage=[sam])
     assert res["error"]["code"] == "unauthorized"
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🦊",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊",
                       color="#ff8800", pin="1234")
     assert res["error"]["code"] == "unauthorized"
     assert "kids" not in setup.options
@@ -178,14 +178,14 @@ async def test_parent_cannot_promote_itself(hass, hass_ws_client, setup, users):
                                           ("parent", "parent"), ("other", None)])
 async def test_get_data_my_role(hass, hass_ws_client, hass_access_token, setup, users, who, expected):
     ws = await _ws_for(hass, hass_ws_client, who, users, hass_access_token)
-    res = await _call(ws, "task_organizer/get_data")
+    res = await _call(ws, "family_mission/get_data")
     assert res["result"]["my_role"] == expected
     assert res["result"]["ha_users"] == [{"user_id": users["manager"][0].id, "name": "Alex"}]
     assert res["result"]["settings"]["parents_manage"] == [users["manager"][0].id]
 
 
 async def test_deactivated_parent_loses_role(hass, hass_ws_client, setup, users):
-    from custom_components.task_organizer import _role
+    from custom_components.family_mission import _role
 
     sam = users["parent"][0]
     assert _role(hass, sam) == "parent"
@@ -197,9 +197,9 @@ async def test_deactivated_parent_loses_role(hass, hass_ws_client, setup, users)
 async def test_parent_can_approve_and_undo(hass, hass_ws_client, setup, users):
     """A parent without admin rights really executes the daily actions."""
     ws = await hass_ws_client(hass, users["parent"][1])
-    res = await _call(ws, "task_organizer/adjust_points", kid_id=ANNA, points=5, reason="Helped")
+    res = await _call(ws, "family_mission/adjust_points", kid_id=ANNA, points=5, reason="Helped")
     assert res["success"] and res["result"]["total"] == 5
-    res = await _call(ws, "task_organizer/add_adhoc_bonus", name="Carry bags", icon="mdi:cart", points=2)
+    res = await _call(ws, "family_mission/add_adhoc_bonus", name="Carry bags", icon="mdi:cart", points=2)
     assert res["success"]
 
 
@@ -227,12 +227,12 @@ CLASSIC = {
 @pytest.mark.parametrize("command", sorted(CLASSIC))
 async def test_classic_commands_gated_in_kids_mode(hass, hass_ws_client, hass_access_token, setup, users, who, command):
     admin_ws = await hass_ws_client(hass, hass_access_token)
-    res = await _call(admin_ws, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🦊", color="#ff8800")
+    res = await _call(admin_ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊", color="#ff8800")
     assert res["success"], res
     await hass.async_block_till_done()
     payload, allowed = CLASSIC[command]
     ws = await _ws_for(hass, hass_ws_client, who, users, hass_access_token)
-    res = await _call(ws, f"task_organizer/{command}", **payload)
+    res = await _call(ws, f"family_mission/{command}", **payload)
     if who in allowed:
         assert not (res.get("error") or {}).get("code") == "unauthorized", res
     else:
@@ -242,26 +242,26 @@ async def test_classic_commands_gated_in_kids_mode(hass, hass_ws_client, hass_ac
 async def test_classic_commands_open_without_kids_mode(hass, hass_ws_client, setup, users):
     """Without kid profiles the original behaviour stays: any user may manage tasks."""
     ws = await _ws_for(hass, hass_ws_client, "other", users, None)
-    res = await _call(ws, "task_organizer/add_task", name="X", interval=1, complexity=1, icon="mdi:broom")
+    res = await _call(ws, "family_mission/add_task", name="X", interval=1, complexity=1, icon="mdi:broom")
     assert res["success"], res
 
 
 async def test_tablet_user_ticks_steps_via_kid_command(hass, hass_ws_client, hass_access_token, setup, users):
     """Regression: the kids card must not use edit_task (role-gated) to tick steps."""
     admin = await hass_ws_client(hass, hass_access_token)
-    res = await _call(admin, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🦊", color="#ff8800", pin="1234")
+    res = await _call(admin, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊", color="#ff8800", pin="1234")
     assert res["success"], res
-    res = await _call(admin, "task_organizer/add_task", name="Mission", interval=1, complexity=2, icon="mdi:broom",
+    res = await _call(admin, "family_mission/add_task", name="Mission", interval=1, complexity=2, icon="mdi:broom",
                       assignees=[ANNA], subtasks=[{"title": "a", "done": False}, {"title": "b", "done": False}])
     tid = res["result"]["task_id"]
     await hass.async_block_till_done()
     tablet = await _ws_for(hass, hass_ws_client, "other", users, hass_access_token)
-    res = await _call(tablet, "task_organizer/edit_task", task_id=tid, subtasks=[{"title": "a", "done": True}])
+    res = await _call(tablet, "family_mission/edit_task", task_id=tid, subtasks=[{"title": "a", "done": True}])
     assert res["error"]["code"] == "unauthorized"
-    res = await _call(tablet, "task_organizer/kid_toggle_step", task_id=tid, kid_id=ANNA, pin="1234", index=1, done=True)
+    res = await _call(tablet, "family_mission/kid_toggle_step", task_id=tid, kid_id=ANNA, pin="1234", index=1, done=True)
     assert res["result"] == {"success": True}
     assert hass.data[DOMAIN]["data"]["tasks"][tid]["subtasks"][1]["done"] is True
-    res = await _call(tablet, "task_organizer/kid_toggle_step", task_id=tid, kid_id=ANNA, pin="0000", index=0, done=True)
+    res = await _call(tablet, "family_mission/kid_toggle_step", task_id=tid, kid_id=ANNA, pin="0000", index=0, done=True)
     assert res["result"]["error"] == "wrong_pin"
-    res = await _call(tablet, "task_organizer/kid_toggle_step", task_id=tid, kid_id=ANNA, pin="1234", index=9, done=True)
+    res = await _call(tablet, "family_mission/kid_toggle_step", task_id=tid, kid_id=ANNA, pin="1234", index=9, done=True)
     assert res["result"]["error"] == "not_found"

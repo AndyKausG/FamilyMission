@@ -1,4 +1,4 @@
-"""Task catalog and proposal engine for the TaskOrganizer kids quick-start wizard.
+"""Task catalog and proposal engine for the FamilyMission kids quick-start wizard.
 
 This module intentionally has NO dependency on Home Assistant so that it can be
 unit-tested standalone. It contains

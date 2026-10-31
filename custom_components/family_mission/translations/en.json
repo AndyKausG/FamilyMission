@@ -2,18 +2,18 @@
   "config": {
     "step": {
       "user": {
-        "title": "TaskOrganizer Setup",
-        "description": "Do you want to set up the TaskOrganizer integration?"
+        "title": "FamilyMission Setup",
+        "description": "Do you want to set up the FamilyMission integration?"
       }
     },
     "abort": {
-      "single_instance_allowed": "Only a single instance of TaskOrganizer is allowed."
+      "single_instance_allowed": "Only a single instance of FamilyMission is allowed."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "TaskOrganizer Settings",
+        "title": "FamilyMission Settings",
         "data": {
           "overdue_days": "Days until overdue",
           "color_done": "Color: Done (Hex Code)",
@@ -30,8 +30,8 @@
       "due_tasks": { "name": "Due Tasks" },
       "overdue_tasks": { "name": "Overdue Tasks" },
       "due_and_overdue_tasks": { "name": "Due and Overdue Tasks" },
-      "settings": { "name": "TaskOrganizer: Settings" },
-      "protocol": { "name": "TaskOrganizer: Protocol" },
+      "settings": { "name": "FamilyMission: Settings" },
+      "protocol": { "name": "FamilyMission: Protocol" },
       "points": { "name": "Points" },
       "leaderboard": { "name": "Roommate of the Month" }, 
       "entry_saved": { "name": "Entry saved!" },

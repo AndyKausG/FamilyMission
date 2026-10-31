@@ -1,4 +1,4 @@
-# TaskOrganizer - Startvorlagen fuer Kinder (6-12 Jahre)
+# FamilyMission - Startvorlagen fuer Kinder (6-12 Jahre)
 #
 # Einspielen: Einstellungen -> Automationen & Szenen -> Skripte -> Neues Skript
 #             -> YAML bearbeiten -> Inhalt einfuegen -> Speichern -> Ausfuehren.
@@ -24,9 +24,9 @@
 #
 # "ab X" = empfohlenes Mindestalter. Beides steht zusaetzlich als eigene Felder
 # `category` (basis | bonus | auftrag) und `min_age` in jeder Vorlage und wird
-# vom Kindermodus (Karte task-organizer-kids) ausgewertet.
+# vom Kindermodus (Karte family-mission-kids) ausgewertet.
 
-alias: "TaskOrganizer: Kinder-Vorlagen anlegen"
+alias: "FamilyMission: Kinder-Vorlagen anlegen"
 mode: single
 icon: mdi:clipboard-list
 sequence:
@@ -233,7 +233,7 @@ sequence:
           category: auftrag
           min_age: 10
       sequence:
-        - action: task_organizer.add_template
+        - action: family_mission.add_template
           data:
             name: "{{ repeat.item.name }}"
             description: "{{ repeat.item.description }}"

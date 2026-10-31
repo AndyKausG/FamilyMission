@@ -2,18 +2,18 @@
   "config": {
     "step": {
       "user": {
-        "title": "TaskOrganizer Einrichtung",
-        "description": "Möchtest du die TaskOrganizer Integration einrichten?"
+        "title": "FamilyMission Einrichtung",
+        "description": "Möchtest du die FamilyMission Integration einrichten?"
       }
     },
     "abort": {
-      "single_instance_allowed": "Es ist nur eine einzige Instanz des TaskOrganizers erlaubt."
+      "single_instance_allowed": "Es ist nur eine einzige Instanz von FamilyMission erlaubt."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "TaskOrganizer Einstellungen",
+        "title": "FamilyMission Einstellungen",
         "data": {
           "overdue_days": "Tage bis überfällig",
           "color_done": "Farbe: Erledigt (Hex-Code)",
@@ -30,8 +30,8 @@
       "due_tasks": { "name": "Fällige Aufgaben" },
       "overdue_tasks": { "name": "Überfällige Aufgaben" },
       "due_and_overdue_tasks": { "name": "Fällige und überfällige Aufgaben" },
-      "settings": { "name": "TaskOrganizer: Einstellungen" },
-      "protocol": { "name": "TaskOrganizer: Protokoll" },
+      "settings": { "name": "FamilyMission: Einstellungen" },
+      "protocol": { "name": "FamilyMission: Protokoll" },
       "points": { "name": "Punktestand" },
       "leaderboard": { "name": "Mitbewohner des Monats" }, 
       "entry_saved": { "name": "Eintrag gespeichert!" },

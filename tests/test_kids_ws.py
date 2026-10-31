@@ -8,8 +8,8 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.task_organizer.const import DOMAIN
-from custom_components.task_organizer.kids import PinLimiter
+from custom_components.family_mission.const import DOMAIN
+from custom_components.family_mission.kids import PinLimiter
 
 ANNA = "person.anna"          # no HA user
 BEN = "person.ben"            # has HA user "user-ben"
@@ -52,7 +52,7 @@ _call.n = 1
 
 
 async def _make_kid(ws, pid, pin="1234", birth_year=2016, **kw):
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id=pid, avatar="🦊",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id=pid, avatar="🦊",
                       color="#ff8800", birth_year=birth_year, pin=pin, **kw)
     assert res["success"], res
     return res
@@ -61,7 +61,7 @@ async def _make_kid(ws, pid, pin="1234", birth_year=2016, **kw):
 async def _add_task(ws, **kw):
     payload = {"name": "Task", "interval": 1, "complexity": 4, "icon": "mdi:broom", "category": "basis"}
     payload.update(kw)
-    res = await _call(ws, "task_organizer/add_task", **payload)
+    res = await _call(ws, "family_mission/add_task", **payload)
     assert res["success"], res
     return res["result"]["task_id"]
 
@@ -70,7 +70,7 @@ async def test_get_data_never_leaks_hashes(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     await _make_kid(ws, ANNA, pin="1234")
     await hass.async_block_till_done()
-    res = await _call(ws, "task_organizer/get_data")
+    res = await _call(ws, "family_mission/get_data")
     kids = res["result"]["settings"]["kids"]
     assert kids[ANNA]["has_pin"] is True
     assert "pin_hash" not in str(res["result"]) and "pin_salt" not in str(res["result"])
@@ -78,7 +78,7 @@ async def test_get_data_never_leaks_hashes(hass, hass_ws_client, setup):
     stored = setup.options["kids"][ANNA]
     assert stored["pin_hash"] and stored["pin_salt"] and "1234" not in str(stored)
     # settings sensor attributes do not leak either
-    ent_id = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, "task_organizer_settings")
+    ent_id = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, "family_mission_settings")
     state = hass.states.get(ent_id)
     assert state is not None
     assert "pin_hash" not in str(state.attributes) and "pin_salt" not in str(state.attributes)
@@ -87,21 +87,21 @@ async def test_get_data_never_leaks_hashes(hass, hass_ws_client, setup):
 
 async def test_set_kid_profile_requires_admin_and_validates(hass, hass_ws_client, hass_read_only_access_token, setup):
     user_ws = await hass_ws_client(hass, hass_read_only_access_token)
-    res = await _call(user_ws, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🦊",
+    res = await _call(user_ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊",
                       color="#ff0000", birth_year=2016)
     assert res["error"]["code"] == "unauthorized"
-    res = await _call(user_ws, "task_organizer/delete_kid_profile", participant_id=ANNA)
+    res = await _call(user_ws, "family_mission/delete_kid_profile", participant_id=ANNA)
     assert res["error"]["code"] == "unauthorized"
     assert "kids" not in setup.options
 
     ws = await hass_ws_client(hass)
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🦊",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊",
                       color="red;x", birth_year=2016)
     assert res["error"]["code"] == "invalid_color"
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🦊",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊",
                       color="#ff0000", birth_year=2016, pin="12a4")
     assert res["error"]["code"] == "invalid_pin"
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id="person.nobody", avatar="🦊",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id="person.nobody", avatar="🦊",
                       color="#ff0000", birth_year=2016)
     assert res["error"]["code"] == "unknown_person"
 
@@ -115,7 +115,7 @@ async def test_pin_kept_when_empty_and_cleared(hass, hass_ws_client, setup):
     assert setup.options["kids"][ANNA]["birth_year"] == 2015
     await _make_kid(ws, ANNA, pin=None, clear_pin=True)
     assert "pin_hash" not in setup.options["kids"][ANNA]
-    res = await _call(ws, "task_organizer/delete_kid_profile", participant_id=ANNA)
+    res = await _call(ws, "family_mission/delete_kid_profile", participant_id=ANNA)
     assert res["success"] and ANNA not in setup.options["kids"]
 
 
@@ -123,7 +123,7 @@ async def test_update_settings_cannot_overwrite_kids(hass, hass_ws_client, setup
     ws = await hass_ws_client(hass)
     await _make_kid(ws, ANNA, pin="1234")
     h = setup.options["kids"][ANNA]["pin_hash"]
-    res = await _call(ws, "task_organizer/update_settings",
+    res = await _call(ws, "family_mission/update_settings",
                       settings={"overdue_days": 9, "kids": {ANNA: {"pin_hash": "x", "avatar": "x"}}})
     assert res["success"]
     assert setup.options["overdue_days"] == 9
@@ -137,9 +137,9 @@ async def test_import_kids_admin_only_and_keeps_hash(hass, hass_ws_client, hass_
     incoming = {"kids": {ANNA: {"avatar": "🐼", "color": "#00ff00", "birth_year": 2014, "has_pin": True,
                                 "pin_hash": "evil"}}}
     user_ws = await hass_ws_client(hass, hass_read_only_access_token)
-    await _call(user_ws, "task_organizer/import_tasks", settings=incoming)
+    await _call(user_ws, "family_mission/import_tasks", settings=incoming)
     assert setup.options["kids"][ANNA]["avatar"] == "🦊"
-    await _call(ws, "task_organizer/import_tasks", settings=incoming)
+    await _call(ws, "family_mission/import_tasks", settings=incoming)
     assert setup.options["kids"][ANNA]["avatar"] == "🐼"
     assert setup.options["kids"][ANNA]["pin_hash"] == h
 
@@ -150,23 +150,23 @@ async def test_verify_pin_and_lockout(hass, hass_ws_client, setup):
     clock = {"t": 1000.0}
     hass.data[DOMAIN]["pin_limiter"] = PinLimiter(lambda: clock["t"])
 
-    assert (await _call(ws, "task_organizer/kid_verify_pin", kid_id=ANNA, pin="1234"))["result"] == {"success": True}
+    assert (await _call(ws, "family_mission/kid_verify_pin", kid_id=ANNA, pin="1234"))["result"] == {"success": True}
     for _ in range(4):
-        res = (await _call(ws, "task_organizer/kid_verify_pin", kid_id=ANNA, pin="0000"))["result"]
+        res = (await _call(ws, "family_mission/kid_verify_pin", kid_id=ANNA, pin="0000"))["result"]
         assert res["error"] == "wrong_pin"
-    res = (await _call(ws, "task_organizer/kid_verify_pin", kid_id=ANNA, pin="0000"))["result"]
+    res = (await _call(ws, "family_mission/kid_verify_pin", kid_id=ANNA, pin="0000"))["result"]
     assert res["error"] == "locked"
     # even the right PIN is refused while locked ...
-    res = (await _call(ws, "task_organizer/kid_verify_pin", kid_id=ANNA, pin="1234"))["result"]
+    res = (await _call(ws, "family_mission/kid_verify_pin", kid_id=ANNA, pin="1234"))["result"]
     assert res["error"] == "locked"
     # ... and also for the other kid commands
     task_id = await _add_task(ws, assignees=[ANNA])
-    res = (await _call(ws, "task_organizer/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="1234"))["result"]
+    res = (await _call(ws, "family_mission/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="1234"))["result"]
     assert res["error"] == "locked"
     clock["t"] += 61
-    assert (await _call(ws, "task_organizer/kid_verify_pin", kid_id=ANNA, pin="1234"))["result"]["success"]
+    assert (await _call(ws, "family_mission/kid_verify_pin", kid_id=ANNA, pin="1234"))["result"]["success"]
     # unknown kid
-    res = (await _call(ws, "task_organizer/kid_verify_pin", kid_id=BEN, pin="1234"))["result"]
+    res = (await _call(ws, "family_mission/kid_verify_pin", kid_id=BEN, pin="1234"))["result"]
     assert res["error"] == "unknown_kid"
 
 
@@ -175,19 +175,19 @@ async def test_complete_task_for_person_without_user(hass, hass_ws_client, setup
     await _make_kid(ws, ANNA, pin="1234")
     task_id = await _add_task(ws, assignees=[ANNA], complexity=4)
 
-    res = (await _call(ws, "task_organizer/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="0000"))["result"]
+    res = (await _call(ws, "family_mission/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="0000"))["result"]
     assert res == {"success": False, "error": "wrong_pin", "attempts_left": 4}
 
-    res = (await _call(ws, "task_organizer/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="1234"))["result"]
+    res = (await _call(ws, "family_mission/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="1234"))["result"]
     assert res["success"] and res["points"] == 4.0
     data = hass.data[DOMAIN]["data"]
     assert data["points"][ANNA] == 4.0
     assert data["history"][0]["user_id"] == ANNA
     # recurring: not due anymore -> a second tap is rejected
-    res = (await _call(ws, "task_organizer/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="1234"))["result"]
+    res = (await _call(ws, "family_mission/kid_complete_task", task_id=task_id, kid_id=ANNA, pin="1234"))["result"]
     assert res["error"] == "not_eligible"
     # name resolution for the person without user (leaderboard sensor)
-    ent = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, "task_organizer_leaderboard")
+    ent = er.async_get(hass).async_get_entity_id("sensor", DOMAIN, "family_mission_leaderboard")
     await hass.async_block_till_done()
     assert hass.states.get(ent).state == "Anna"
 
@@ -211,7 +211,7 @@ async def test_eligibility_errors(hass, hass_ws_client, setup):
     data = hass.data[DOMAIN]["data"]
 
     async def complete(task_id, kid=ANNA, pin="1234"):
-        return (await _call(ws, "task_organizer/kid_complete_task", task_id=task_id, kid_id=kid, pin=pin))["result"]
+        return (await _call(ws, "family_mission/kid_complete_task", task_id=task_id, kid_id=kid, pin=pin))["result"]
 
     # not assigned to this kid
     t = await _add_task(ws, assignees=[BEN_ID])
@@ -236,7 +236,7 @@ async def test_eligibility_errors(hass, hass_ws_client, setup):
     basis = await _add_task(ws, name="Basis", assignees=[ANNA], category="basis")
     bonus = await _add_task(ws, name="Bonus", category="bonus", interval=365, requires_routine=True)
     assert (await complete(bonus))["error"] == "basis_open"
-    assert (await _call(ws, "task_organizer/kid_claim_task", task_id=bonus, kid_id=ANNA, pin="1234"))["result"]["error"] == "basis_open"
+    assert (await _call(ws, "family_mission/kid_claim_task", task_id=bonus, kid_id=ANNA, pin="1234"))["result"]["error"] == "basis_open"
     # ... a bonus without the opt-in is free and its points are booked at once
     free = await _add_task(ws, name="Free bonus", category="bonus", interval=365)
     before = data["points"].get(ANNA, 0)
@@ -253,30 +253,30 @@ async def test_claim_flow(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     await _make_kid(ws, ANNA, pin="1234", birth_year=2016)
     await _make_kid(ws, BEN_ID, pin="4321", birth_year=2014)
-    await _call(ws, "task_organizer/update_settings", settings={"claim_minutes": 3})
+    await _call(ws, "family_mission/update_settings", settings={"claim_minutes": 3})
     await hass.async_block_till_done()
     bonus = await _add_task(ws, name="Bonus", category="bonus", interval=365, min_age=6)
 
-    res = (await _call(ws, "task_organizer/kid_claim_task", task_id=bonus, kid_id=ANNA, pin="1234"))["result"]
+    res = (await _call(ws, "family_mission/kid_claim_task", task_id=bonus, kid_id=ANNA, pin="1234"))["result"]
     assert res["success"]
-    task = (await _call(ws, "task_organizer/get_data"))["result"]["tasks"][bonus]
+    task = (await _call(ws, "family_mission/get_data"))["result"]["tasks"][bonus]
     assert task["claimed_by"] == ANNA
     until = dt_util.parse_datetime(task["claimed_until"])
     assert timedelta(minutes=2) < until - dt_util.utcnow() <= timedelta(minutes=3)
 
     # the other kid is blocked while the claim is active
-    res = (await _call(ws, "task_organizer/kid_complete_task", task_id=bonus, kid_id=BEN_ID, pin="4321"))["result"]
+    res = (await _call(ws, "family_mission/kid_complete_task", task_id=bonus, kid_id=BEN_ID, pin="4321"))["result"]
     assert res["error"] == "claimed"
-    res = (await _call(ws, "task_organizer/kid_claim_task", task_id=bonus, kid_id=BEN_ID, pin="4321"))["result"]
+    res = (await _call(ws, "family_mission/kid_claim_task", task_id=bonus, kid_id=BEN_ID, pin="4321"))["result"]
     assert res["error"] == "claimed"
 
     # expired claim -> free again
     hass.data[DOMAIN]["data"]["tasks"][bonus]["claimed_until"] = (dt_util.utcnow() - timedelta(minutes=1)).isoformat()
-    res = (await _call(ws, "task_organizer/kid_claim_task", task_id=bonus, kid_id=BEN_ID, pin="4321"))["result"]
+    res = (await _call(ws, "family_mission/kid_claim_task", task_id=bonus, kid_id=BEN_ID, pin="4321"))["result"]
     assert res["success"]
 
     # completing clears the claim
-    res = (await _call(ws, "task_organizer/kid_complete_task", task_id=bonus, kid_id=BEN_ID, pin="4321"))["result"]
+    res = (await _call(ws, "family_mission/kid_complete_task", task_id=bonus, kid_id=BEN_ID, pin="4321"))["result"]
     assert res["success"]
     task = hass.data[DOMAIN]["data"]["tasks"][bonus]
     assert "claimed_by" not in task and "claimed_until" not in task
@@ -290,12 +290,12 @@ async def test_task_category_and_min_age_fields(hass, hass_ws_client, setup):
     # legacy value from an old card is normalised
     t2 = await _add_task(ws, category="Allgemein")
     assert data["tasks"][t2]["category"] == "basis" and data["tasks"][t2]["min_age"] == 0
-    assert (await _call(ws, "task_organizer/edit_task", task_id=t, min_age=19))["success"] is False   # schema range
-    assert (await _call(ws, "task_organizer/edit_task", task_id=t, category="auftrag", min_age=12))["success"]
+    assert (await _call(ws, "family_mission/edit_task", task_id=t, min_age=19))["success"] is False   # schema range
+    assert (await _call(ws, "family_mission/edit_task", task_id=t, category="auftrag", min_age=12))["success"]
     assert data["tasks"][t]["category"] == "auftrag" and data["tasks"][t]["min_age"] == 12
 
     # templates + task from template
-    res = await _call(ws, "task_organizer/add_template", name="Tpl", complexity=3, icon="mdi:broom",
+    res = await _call(ws, "family_mission/add_template", name="Tpl", complexity=3, icon="mdi:broom",
                       category="bonus", min_age=9)
     assert res["success"]
     await hass.services.async_call(DOMAIN, "add_task", {"template": "Tpl"}, blocking=True)
@@ -311,7 +311,7 @@ async def test_task_category_and_min_age_fields(hass, hass_ws_client, setup):
     await hass.services.async_call(DOMAIN, "edit_template_by_name", {"template_name": "Tpl2", "min_age": 12}, blocking=True)
     tpl2 = next(t for t in data["templates"].values() if t["name"] == "Tpl2")
     assert tpl2["category"] == "auftrag" and tpl2["min_age"] == 12
-    res = await _call(ws, "task_organizer/edit_template", template_id=tpl2["id"], category="bonus")
+    res = await _call(ws, "family_mission/edit_template", template_id=tpl2["id"], category="bonus")
     assert res["success"] and tpl2["category"] == "bonus"
 
 
@@ -342,8 +342,8 @@ async def test_monthly_reset_resolves_names_without_user(hass, hass_ws_client, s
     task_id = await _add_task(ws, assignees=[ANNA], complexity=3)
     await _make_kid(ws, ANNA, pin="")
     events = []
-    hass.bus.async_listen("task_organizer_reset", lambda e: events.append(e))
-    await _call(ws, "task_organizer/complete_task", task_id=task_id, completed_by=[ANNA])
+    hass.bus.async_listen("family_mission_reset", lambda e: events.append(e))
+    await _call(ws, "family_mission/complete_task", task_id=task_id, completed_by=[ANNA])
     await hass.services.async_call(DOMAIN, "reset_monthly_points", {}, blocking=True)
     await hass.async_block_till_done()
     assert events and events[0].data["winner_name"] == "Anna"
@@ -354,9 +354,9 @@ async def test_kid_cannot_finish_with_open_steps(hass, hass_ws_client, setup):
     await _make_kid(ws, ANNA, pin="1234")
     t = await _add_task(ws, assignees=[ANNA], subtasks=[
         {"title": "a", "done": False}, {"title": "pill", "done": False, "optional": True}])
-    res = (await _call(ws, "task_organizer/kid_complete_task", task_id=t, kid_id=ANNA, pin="1234"))["result"]
+    res = (await _call(ws, "family_mission/kid_complete_task", task_id=t, kid_id=ANNA, pin="1234"))["result"]
     assert res == {"success": False, "error": "steps_open"}
     data = hass.data[DOMAIN]["data"]
     data["tasks"][t]["subtasks"][0]["done"] = True       # optional step stays open
-    res = (await _call(ws, "task_organizer/kid_complete_task", task_id=t, kid_id=ANNA, pin="1234"))["result"]
+    res = (await _call(ws, "family_mission/kid_complete_task", task_id=t, kid_id=ANNA, pin="1234"))["result"]
     assert res["success"] is True

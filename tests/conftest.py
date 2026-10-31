@@ -1,4 +1,4 @@
-"""Pytest configuration for the TaskOrganizer tests.
+"""Pytest configuration for the FamilyMission tests.
 
 The websocket / integration tests need ``pytest-homeassistant-custom-component``.
 The pure helper tests (``test_kids_helpers.py``) run without Home Assistant.

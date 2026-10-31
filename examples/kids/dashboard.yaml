@@ -1,4 +1,4 @@
-# TaskOrganizer - Beispiel-Dashboard fuer den Kindermodus
+# FamilyMission - Beispiel-Dashboard fuer den Kindermodus
 #
 # Zwei Ansichten:
 #   1. "Kinder"  - Vollbild-Panel fuer das Fire-HD-Tablet (Fully Kiosk, Querformat 1280x800).
@@ -28,7 +28,7 @@ views:
     icon: mdi:human-child
     type: panel
     cards:
-      - type: custom:task-organizer-kids
+      - type: custom:family-mission-kids
         title: Familien-Aufgaben
         timeout: 90               # Sekunden Inaktivitaet bis zurueck zum Startbildschirm
         sound: true               # kurze Jubel-Toene (WebAudio, keine Dateien)
@@ -50,11 +50,11 @@ views:
         cards:
           - type: heading
             heading: Freigaben & Bonus
-          - type: custom:task-organizer-parents
+          - type: custom:family-mission-parents
             title: Eltern
           - type: heading
             heading: Aufgaben
-          - type: custom:task-organizer-card
+          - type: custom:family-mission-card
             title: Aufgaben
             sort_by: due_date
             filter_by: "!paused"
@@ -63,17 +63,17 @@ views:
             show_add: true
             show_edit: true
             show_delete: true
-          - type: custom:task-organizer-protocol
+          - type: custom:family-mission-protocol
             title: Protokoll
       - type: grid
         cards:
           - type: heading
             heading: Punkte & Auswertung
-          - type: custom:task-organizer-leaderboard
+          - type: custom:family-mission-leaderboard
             title: Familien-Rangliste
             show_history: true
-          - type: custom:task-organizer-stats
+          - type: custom:family-mission-stats
           - type: heading
             heading: Einstellungen
-          - type: custom:task-organizer-settings
+          - type: custom:family-mission-settings
             show_advanced: false

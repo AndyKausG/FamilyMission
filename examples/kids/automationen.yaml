@@ -1,4 +1,4 @@
-# TaskOrganizer - Beispiel-Automationen fuer Bonus-Aufgaben
+# FamilyMission - Beispiel-Automationen fuer Bonus-Aufgaben
 #
 # Voraussetzung: Die Bonus-Aufgaben existieren einmalig als Aufgabe
 # (aus Vorlage anlegen, interval 365, KEINE Zuweisung = offen fuer alle).
@@ -6,13 +6,13 @@
 # Entity-IDs und Zustaende an die eigene Installation anpassen.
 
 # --- Spuelmaschine fertig -> Ausraeumen wird faellig ---
-- alias: "TaskOrganizer: Spuelmaschine fertig"
+- alias: "FamilyMission: Spuelmaschine fertig"
   triggers:
     - trigger: state
       entity_id: sensor.geschirrspueler_programmstatus   # anpassen
       to: "finished"                                     # anpassen
   actions:
-    - action: task_organizer.set_task_due_by_name
+    - action: family_mission.set_task_due_by_name
       data:
         task_name: "Spuelmaschine ausraeumen"
     - action: tts.speak                                  # Ansage am Fire Tablet (Fully Kiosk Media Player)
@@ -23,18 +23,18 @@
         message: "Neuer Bonus-Auftrag! Die Spuelmaschine wartet. Vier Punkte zu holen!"
 
 # --- Trockner fertig ---
-- alias: "TaskOrganizer: Trockner fertig"
+- alias: "FamilyMission: Trockner fertig"
   triggers:
     - trigger: state
       entity_id: sensor.trockner_programmstatus          # anpassen
       to: "finished"                                     # anpassen
   actions:
-    - action: task_organizer.set_task_due_by_name
+    - action: family_mission.set_task_due_by_name
       data:
         task_name: "Waesche aus dem Trockner + falten"
 
 # --- Muellabfuhr morgen (z.B. Waste Collection Schedule) ---
-- alias: "TaskOrganizer: Muell rausbringen"
+- alias: "FamilyMission: Muell rausbringen"
   triggers:
     - trigger: time
       at: "17:00:00"
@@ -44,12 +44,12 @@
       attribute: daysTo
       state: 1
   actions:
-    - action: task_organizer.set_task_due_by_name
+    - action: family_mission.set_task_due_by_name
       data:
         task_name: "Muell rausbringen"
 
 # --- Saugroboter: 30 min vor geplantem Start Weg freiraeumen ---
-- alias: "TaskOrganizer: Weg frei fuer Saugroboter"
+- alias: "FamilyMission: Weg frei fuer Saugroboter"
   triggers:
     - trigger: time
       at: "14:30:00"                                     # Roboter startet 15:00
@@ -57,15 +57,15 @@
     - condition: time
       weekday: [mon, wed, fri]
   actions:
-    - action: task_organizer.set_task_due_by_name
+    - action: family_mission.set_task_due_by_name
       data:
         task_name: "Weg frei fuer den Saugroboter"
 
 # --- Eltern informieren, wenn eine Aufgabe erledigt wurde ---
-- alias: "TaskOrganizer: Info an Eltern"
+- alias: "FamilyMission: Info an Eltern"
   triggers:
     - trigger: event
-      event_type: task_organizer_task_completed
+      event_type: family_mission_task_completed
   actions:
     - action: notify.mobile_app_eltern_handy             # anpassen
       data:

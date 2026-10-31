@@ -67,15 +67,15 @@ const I18N_STATS = {
  */
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "task-organizer-stats",
-  name: "Task Organizer: Reports",
+  type: "family-mission-stats",
+  name: "FamilyMission Reports",
   description: "Displays graphical reports and point progress charts.",
   preview: true,
 });
 
-class TaskOrganizerStats extends HTMLElement {
+class FamilyMissionStats extends HTMLElement {
   /**
-   * Initializes the TaskOrganizerStats element.
+   * Initializes the FamilyMissionStats element.
    */
   constructor() {
     super(); 
@@ -123,7 +123,7 @@ class TaskOrganizerStats extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key, replace = null) { 
-    return TaskOrganizerStats._localize(this._hass, key, replace);
+    return FamilyMissionStats._localize(this._hass, key, replace);
   }
 
   /**
@@ -138,7 +138,7 @@ class TaskOrganizerStats extends HTMLElement {
    */
   static getStubConfig(hass) { 
     return { 
-      type: "custom:task-organizer-stats", 
+      type: "custom:family-mission-stats", 
       title: this._localize(hass, 'title'),
       show_user_select: true,
       report_type: "overview"
@@ -150,7 +150,7 @@ class TaskOrganizerStats extends HTMLElement {
    * @returns {HTMLElement}
    */
   static getConfigElement() {
-    return document.createElement("task-organizer-stats-editor");
+    return document.createElement("family-mission-stats-editor");
   }
 
   /**
@@ -189,7 +189,7 @@ class TaskOrganizerStats extends HTMLElement {
     }
     this._unsubEvents = this._hass.connection.subscribeEvents(() => {
       this.fetchData();
-    }, "task_organizer_updated"); 
+    }, "family_mission_updated"); 
   }
 
   /**
@@ -231,7 +231,7 @@ class TaskOrganizerStats extends HTMLElement {
     for (const entityId in this._hass.states) { 
       if (entityId.startsWith('person.')) { 
         const state = this._hass.states[entityId]; 
-        this.users[TaskOrganizerStats.participantId(entityId, state)] = state.attributes.friendly_name || entityId; 
+        this.users[FamilyMissionStats.participantId(entityId, state)] = state.attributes.friendly_name || entityId; 
       } 
     } 
   }
@@ -240,7 +240,7 @@ class TaskOrganizerStats extends HTMLElement {
    * Fetches data from the backend.
    */
   fetchData() { 
-    this._hass.callWS({ type: 'task_organizer/get_data' }).then((data) => { 
+    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => { 
       this.history = data.history || [];
       this.points = data.points || {};
       this.settings = data.settings || {};
@@ -717,9 +717,9 @@ class TaskOrganizerStats extends HTMLElement {
 }
 
 /**
- * Editor for TaskOrganizerStats.
+ * Editor for FamilyMissionStats.
  */
-class TaskOrganizerStatsEditor extends HTMLElement {
+class FamilyMissionStatsEditor extends HTMLElement {
   setConfig(config) {
     this._config = config;
     this._render();
@@ -736,7 +736,7 @@ class TaskOrganizerStatsEditor extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key) {
-    return TaskOrganizerStats._localize(this._hass, key);
+    return FamilyMissionStats._localize(this._hass, key);
   }
 
   _render() {
@@ -821,5 +821,5 @@ class TaskOrganizerStatsEditor extends HTMLElement {
   }
 }
 
-customElements.define('task-organizer-stats-editor', TaskOrganizerStatsEditor);
-customElements.define('task-organizer-stats', TaskOrganizerStats);
+customElements.define('family-mission-stats-editor', FamilyMissionStatsEditor);
+customElements.define('family-mission-stats', FamilyMissionStats);

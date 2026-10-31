@@ -67,7 +67,7 @@ claim_minutes: "Bonus reservation (minutes)",
     expire_missed: "Missed duties expire at midnight (daily duties right away, weekly ones after 2 days) - no points, no deduction",
     help_btn: "Help", wizard_btn: "🚀 Kids mode quick start", wizard_hint: "Proposes an age-appropriate set of tasks, points and goals for your kids and creates everything in one click.",
     wizard_missing: "The wizard could not be loaded. Reload the page (Ctrl+F5) and try again.",
-    triggers_title: "Bonus triggers", triggers_desc: "Open a bonus task automatically when an entity changes to a state, e.g. when the dishwasher is finished. Fires the event task_organizer_bonus_opened.",
+    triggers_title: "Bonus triggers", triggers_desc: "Open a bonus task automatically when an entity changes to a state, e.g. when the dishwasher is finished. Fires the event family_mission_bonus_opened.",
     trig_task: "Bonus task", trig_pick_task: "— choose a bonus task —", trig_add: "Add trigger", trig_remove: "Remove trigger", trig_none: "No triggers yet.", trig_no_bonus: "No bonus task yet. Create a task without assignee and category \"Bonus\" (or let the quick start create them).",
     trig_when: "when {entity} becomes \"{state}\"", trig_error: "Could not save the triggers: "
   },
@@ -134,7 +134,7 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     expire_missed: "Verpasste Pflichten verfallen um Mitternacht (tägliche sofort, wöchentliche nach 2 Tagen) – ohne Punkte, ohne Abzug",
     help_btn: "Hilfe", wizard_btn: "🚀 Kindermodus-Schnellstart", wizard_hint: "Schlägt altersgerechte Aufgaben, Punkte und Ziele für eure Kinder vor und legt alles mit einem Klick an.",
     wizard_missing: "Der Assistent konnte nicht geladen werden. Seite neu laden (Strg+F5) und erneut versuchen.",
-    triggers_title: "Bonus-Auslöser / Bonus triggers", triggers_desc: "Öffnet eine Bonus-Aufgabe automatisch, wenn eine Entität einen Zustand annimmt, z.B. wenn die Spülmaschine fertig ist. Löst das Ereignis task_organizer_bonus_opened aus.",
+    triggers_title: "Bonus-Auslöser / Bonus triggers", triggers_desc: "Öffnet eine Bonus-Aufgabe automatisch, wenn eine Entität einen Zustand annimmt, z.B. wenn die Spülmaschine fertig ist. Löst das Ereignis family_mission_bonus_opened aus.",
     trig_task: "Bonus-Aufgabe", trig_pick_task: "— Bonus-Aufgabe wählen —", trig_add: "Auslöser hinzufügen", trig_remove: "Auslöser entfernen", trig_none: "Noch keine Auslöser.", trig_no_bonus: "Noch keine Bonus-Aufgabe vorhanden. Lege eine Aufgabe ohne Bearbeiter mit Kategorie „Bonus“ an (oder lass sie vom Schnellstart anlegen).",
     trig_when: "wenn {entity} auf \"{state}\" wechselt", trig_error: "Auslöser konnten nicht gespeichert werden: "
   }
@@ -145,8 +145,8 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
  */
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "task-organizer-settings",
-  name: "Task Organizer: Settings",
+  type: "family-mission-settings",
+  name: "FamilyMission Settings",
   description: "Displays and manages integration settings, colors, and imports/exports.",
   preview: true,
 });
@@ -230,9 +230,9 @@ function toSetNotifyOptions(hass, selected, eventOnlyLabel) {
     values.map(v => `<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`).join('');
 }
 
-class TaskOrganizerSettings extends HTMLElement {
+class FamilyMissionSettings extends HTMLElement {
   /**
-   * Initializes the TaskOrganizerSettings element.
+   * Initializes the FamilyMissionSettings element.
    */
     constructor() {
     super(); 
@@ -292,7 +292,7 @@ class TaskOrganizerSettings extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key) { 
-    return TaskOrganizerSettings._localize(this._hass, key);
+    return FamilyMissionSettings._localize(this._hass, key);
   }
 
   /**
@@ -307,7 +307,7 @@ class TaskOrganizerSettings extends HTMLElement {
    */
   static getStubConfig(hass) { 
     return { 
-      type: "custom:task-organizer-settings", 
+      type: "custom:family-mission-settings", 
       title: this._localize(hass, 'title'),
       show_advanced: false 
     }; 
@@ -318,7 +318,7 @@ class TaskOrganizerSettings extends HTMLElement {
    * @returns {HTMLElement}
    */
   static getConfigElement() {
-    return document.createElement("task-organizer-settings-editor");
+    return document.createElement("family-mission-settings-editor");
   }
 
   /**
@@ -354,7 +354,7 @@ class TaskOrganizerSettings extends HTMLElement {
     }
     this._unsubEvents = this._hass.connection.subscribeEvents(() => {
       this._fetchData();
-    }, "task_organizer_updated"); 
+    }, "family_mission_updated"); 
   }
 
   /**
@@ -444,7 +444,7 @@ class TaskOrganizerSettings extends HTMLElement {
     for (const entityId in this._hass.states) {
         if (entityId.startsWith('person.')) {
             const state = this._hass.states[entityId];
-            users[TaskOrganizerSettings.participantId(entityId, state)] = state.attributes.friendly_name || entityId;
+            users[FamilyMissionSettings.participantId(entityId, state)] = state.attributes.friendly_name || entityId;
         }
     }
     this.users = users;
@@ -454,7 +454,7 @@ class TaskOrganizerSettings extends HTMLElement {
    * Fetches the current settings and tasks from the backend.
    */
   _fetchData() { 
-    this._hass.callWS({ type: 'task_organizer/get_data' }).then((data) => { 
+    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => { 
       if (data.settings && Object.keys(data.settings).length > 0) { 
         this.settings = { ...this.settings, ...data.settings }; 
       } 
@@ -521,7 +521,7 @@ class TaskOrganizerSettings extends HTMLElement {
     const calls = [];
     if (this._role() === 'admin' && this._parentsDraft) {
       const st = this._parentsDraft;
-      calls.push({ type: 'task_organizer/set_parents', parents: [...st.parents], parents_manage: [...st.manage] });
+      calls.push({ type: 'family_mission/set_parents', parents: [...st.parents], parents_manage: [...st.manage] });
     }
     if (!this._canManage()) return calls;
     const stored = this.settings.kids || {};
@@ -547,7 +547,7 @@ class TaskOrganizerSettings extends HTMLElement {
           (parseInt(old.approval_sample_rate) || 0) !== rate || !!d.pin || d.clear_pin;
         if (changed) {
           const payload = {
-            type: 'task_organizer/set_kid_profile',
+            type: 'family_mission/set_kid_profile',
             participant_id: uid,
             avatar: (d.avatar || '🙂').trim() || '🙂',
             color: d.color,
@@ -560,7 +560,7 @@ class TaskOrganizerSettings extends HTMLElement {
           calls.push(payload);
         }
       } else if (stored[uid]) {
-        calls.push({ type: 'task_organizer/delete_kid_profile', participant_id: uid });
+        calls.push({ type: 'family_mission/delete_kid_profile', participant_id: uid });
       }
     }
     return calls;
@@ -646,7 +646,7 @@ class TaskOrganizerSettings extends HTMLElement {
       return;
     }
     
-    this._hass.callWS({ type: 'task_organizer/update_settings', settings: newSettings }).then(() => { 
+    this._hass.callWS({ type: 'family_mission/update_settings', settings: newSettings }).then(() => { 
       this._kidDrafts = {};
       this._parentsDraft = null;
       this._goalDrafts = {};
@@ -661,7 +661,7 @@ class TaskOrganizerSettings extends HTMLElement {
    */
   _triggerReset() { 
     if (confirm(this.localize('confirm_reset'))) { 
-      this._hass.callService('task_organizer', 'reset_monthly_points', {}).then(() => { 
+      this._hass.callService('family_mission', 'reset_monthly_points', {}).then(() => { 
         this._fetchData(); 
       }); 
     } 
@@ -672,7 +672,7 @@ class TaskOrganizerSettings extends HTMLElement {
    */
   _factoryReset() { 
     if (confirm(this.localize('confirm_factory'))) { 
-      this._hass.callWS({ type: 'task_organizer/factory_reset' }).then(() => { 
+      this._hass.callWS({ type: 'family_mission/factory_reset' }).then(() => { 
         location.reload(); 
       }); 
     } 
@@ -724,7 +724,7 @@ class TaskOrganizerSettings extends HTMLElement {
     else if (id === 'kids-toggle') { this._kidsOpen = !this._kidsOpen; this._render(); }
     else if (id === 'trig-toggle') { this._trigOpen = !this._trigOpen; this._render(); }
     else if (id === 'btn-wizard-open') this._openWizard();
-    else if (id === 'btn-help-open') { if (window.TaskOrganizerHelp) window.TaskOrganizerHelp.open(this._hass, 'setup'); }
+    else if (id === 'btn-help-open') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
     else if (id === 'btn-trig-add') this._addTrigger();
     else if (target.classList.contains('btn-trig-del')) this._removeTrigger(parseInt(target.dataset.index));
     else if (target.classList.contains('kid-emoji-pick')) {
@@ -896,7 +896,7 @@ class TaskOrganizerSettings extends HTMLElement {
         return;
     }
 
-    const type = this._editingTemplateId ? 'task_organizer/edit_template' : 'task_organizer/add_template';
+    const type = this._editingTemplateId ? 'family_mission/edit_template' : 'family_mission/add_template';
     if (this._editingTemplateId) {
       payload.template_id = this._editingTemplateId;
     }
@@ -953,7 +953,7 @@ class TaskOrganizerSettings extends HTMLElement {
    */
   _deleteTemplate(id) {
     if (confirm(this.localize('confirm_delete_template'))) {
-      this._hass.callWS({ type: 'task_organizer/delete_template', template_id: id })
+      this._hass.callWS({ type: 'family_mission/delete_template', template_id: id })
         .then(() => {
           alert(this.localize('template_deleted'));
           this._showToast(this.localize('template_deleted'));
@@ -985,7 +985,7 @@ class TaskOrganizerSettings extends HTMLElement {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "task_organizer_export.json");
+    downloadAnchorNode.setAttribute("download", "family_mission_export.json");
     
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
@@ -1017,7 +1017,7 @@ class TaskOrganizerSettings extends HTMLElement {
       try {
         const importedData = JSON.parse(e.target.result);
         
-        let payload = { type: 'task_organizer/import_tasks' };
+        let payload = { type: 'family_mission/import_tasks' };
         
         if (importedData.tasks || importedData.templates || importedData.history || importedData.settings) {
             if (importedData.tasks) payload.tasks = importedData.tasks;
@@ -1266,7 +1266,7 @@ class TaskOrganizerSettings extends HTMLElement {
           </div>
           <div class="section-content ${this._kidsOpen ? 'open' : ''}" id="kids-content">
             <p class="kids-note">${this.localize('kids_desc')}</p>
-            ${window.TaskOrganizerHelp ? `<button class="btn btn-help" id="btn-help-open">❓ ${this.localize('help_btn')}</button>` : ''}
+            ${window.FamilyMissionHelp ? `<button class="btn btn-help" id="btn-help-open">❓ ${this.localize('help_btn')}</button>` : ''}
             ${isAdmin ? '' : `<p class="kids-note" style="color: var(--warning-color, #FFA000);">${this.localize('kids_admin_only')}</p>`}
             ${isAdmin ? `
               <div class="wizard-box">
@@ -1357,18 +1357,18 @@ class TaskOrganizerSettings extends HTMLElement {
 
   /**
    * Makes sure the wizard / trigger picker elements are defined. They live in
-   * task-organizer-wizard.js, which the integration registers as a resource;
+   * family-mission-wizard.js, which the integration registers as a resource;
    * the dynamic import is the fallback for manually managed resources.
    * @returns {Promise<boolean>} - True when the elements are available.
    */
   async _ensureWizardLoaded() {
-    if (customElements.get('task-organizer-wizard')) return true;
+    if (customElements.get('family-mission-wizard')) return true;
     try {
-      await import('/task_organizer_frontend/task-organizer-wizard.js');
+      await import('/family_mission_frontend/family-mission-wizard.js');
     } catch (err) {
-      console.warn('TaskOrganizer: wizard could not be loaded', err);
+      console.warn('FamilyMission: wizard could not be loaded', err);
     }
-    return !!customElements.get('task-organizer-wizard');
+    return !!customElements.get('family-mission-wizard');
   }
 
   /**
@@ -1381,7 +1381,7 @@ class TaskOrganizerSettings extends HTMLElement {
       return;
     }
     if (this._wizard) this._wizard.remove();
-    const wizard = document.createElement('task-organizer-wizard');
+    const wizard = document.createElement('family-mission-wizard');
     wizard.addEventListener('wizard-closed', () => {
       this._wizard = null;
       this._kidDrafts = {};
@@ -1458,7 +1458,7 @@ class TaskOrganizerSettings extends HTMLElement {
                   </select>
                 </label>
                 ${this._bonusTasks().length ? '' : `<p class="kids-note">${this.localize('trig_no_bonus')}</p>`}
-                <task-organizer-trigger-picker id="trig-picker"></task-organizer-trigger-picker>
+                <family-mission-trigger-picker id="trig-picker"></family-mission-trigger-picker>
                 <button class="btn btn-save" id="btn-trig-add" style="margin-top: 0;" ${d.task && d.entity_id && d.to_state ? '' : 'disabled'}>${this.localize('trig_add')}</button>
               </div>` : ''}
           </div>
@@ -1497,7 +1497,7 @@ class TaskOrganizerSettings extends HTMLElement {
    */
   async _saveTriggers(triggers) {
     try {
-      await this._hass.callWS({ type: 'task_organizer/set_bonus_triggers', triggers });
+      await this._hass.callWS({ type: 'family_mission/set_bonus_triggers', triggers });
       return true;
     } catch (err) {
       alert(this.localize('trig_error') + (err && err.message ? err.message : ''));
@@ -1977,9 +1977,9 @@ class TaskOrganizerSettings extends HTMLElement {
 }
 
 /**
- * Editor for TaskOrganizerSettings.
+ * Editor for FamilyMissionSettings.
  */
-class TaskOrganizerSettingsEditor extends HTMLElement {
+class FamilyMissionSettingsEditor extends HTMLElement {
   setConfig(config) {
     this._config = config;
     this._render();
@@ -1996,7 +1996,7 @@ class TaskOrganizerSettingsEditor extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key) {
-    return TaskOrganizerSettings._localize(this._hass, key);
+    return FamilyMissionSettings._localize(this._hass, key);
   }
 
   _render() {
@@ -2062,5 +2062,5 @@ class TaskOrganizerSettingsEditor extends HTMLElement {
   }
 }
 
-customElements.define('task-organizer-settings-editor', TaskOrganizerSettingsEditor);
-customElements.define('task-organizer-settings', TaskOrganizerSettings);
+customElements.define('family-mission-settings-editor', FamilyMissionSettingsEditor);
+customElements.define('family-mission-settings', FamilyMissionSettings);

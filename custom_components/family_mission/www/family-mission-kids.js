@@ -1,5 +1,5 @@
 /**
- * TaskOrganizer Kids card.
+ * FamilyMission Kids card.
  *
  * A big, touch friendly card for a wall/kiosk tablet (designed for 1280x800 landscape).
  * Kids are Home Assistant `person` entities that do NOT need a user account: their
@@ -156,8 +156,8 @@ const I18N_KIDS = {
  */
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "task-organizer-kids",
-  name: "Task Organizer: Kids",
+  type: "family-mission-kids",
+  name: "FamilyMission Kids",
   description: "Touch friendly kids view with PIN pad, own tasks, bonus tasks, family goal, confetti and sound.",
   preview: false,
 });
@@ -177,7 +177,7 @@ function fmtKids(value) {
 const KIDS_RING_RADIUS = 52;
 const KIDS_RING_CIRCUMFERENCE = 2 * Math.PI * KIDS_RING_RADIUS;
 
-class TaskOrganizerKids extends HTMLElement {
+class FamilyMissionKids extends HTMLElement {
   /**
    * Initializes the card and its internal state.
    */
@@ -264,7 +264,7 @@ class TaskOrganizerKids extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key, replace = null) {
-    return TaskOrganizerKids._localize(this._hass, key, replace);
+    return FamilyMissionKids._localize(this._hass, key, replace);
   }
 
   /**
@@ -286,7 +286,7 @@ class TaskOrganizerKids extends HTMLElement {
 
   static getStubConfig(hass) {
     return {
-      type: "custom:task-organizer-kids",
+      type: "custom:family-mission-kids",
       title: this._localize(hass, 'title'),
       timeout: 90,
       sound: true,
@@ -296,7 +296,7 @@ class TaskOrganizerKids extends HTMLElement {
   }
 
   static getConfigElement() {
-    return document.createElement("task-organizer-kids-editor");
+    return document.createElement("family-mission-kids-editor");
   }
 
   /**
@@ -396,7 +396,7 @@ class TaskOrganizerKids extends HTMLElement {
     if (!this._hass) return;
     this._unsubEvents = this._hass.connection.subscribeEvents(
       () => this._fetchData(),
-      "task_organizer_updated"
+      "family_mission_updated"
     );
   }
 
@@ -422,7 +422,7 @@ class TaskOrganizerKids extends HTMLElement {
    */
   _fetchData() {
     if (!this._hass) return;
-    this._hass.callWS({ type: 'task_organizer/get_data' }).then((data) => {
+    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
       this.tasks = data.tasks || {};
       this.points = data.points || {};
       this.settings = data.settings || {};
@@ -436,7 +436,7 @@ class TaskOrganizerKids extends HTMLElement {
       this.praise = Array.isArray(data.praise) ? data.praise : [];
       this._fetched = true;
       this._render();
-    }).catch((err) => console.error("TaskOrganizer Kids: could not load data", err));
+    }).catch((err) => console.error("FamilyMission Kids: could not load data", err));
   }
 
   // ---------------------------------------------------------------------------
@@ -608,7 +608,7 @@ class TaskOrganizerKids extends HTMLElement {
     for (const entityId in states) {
       if (!entityId.startsWith('person.')) continue;
       const state = states[entityId];
-      map[TaskOrganizerKids.participantId(entityId, state)] = {
+      map[FamilyMissionKids.participantId(entityId, state)] = {
         name: (state.attributes && state.attributes.friendly_name) || entityId,
         picture: (state.attributes && state.attributes.entity_picture) || ''
       };
@@ -701,10 +701,10 @@ class TaskOrganizerKids extends HTMLElement {
     if (id) this._praiseDone.add(id);
     if (id && session && this._hass) {
       const payload = session.mine
-        ? { type: 'task_organizer/my_praise_seen', praise_id: id }
-        : { type: 'task_organizer/kid_praise_seen', kid_id: session.kidId, praise_id: id };
+        ? { type: 'family_mission/my_praise_seen', praise_id: id }
+        : { type: 'family_mission/kid_praise_seen', kid_id: session.kidId, praise_id: id };
       if (!session.mine && session.pin) payload.pin = session.pin;
-      this._hass.callWS(payload).then(() => this._fetchData()).catch((err) => console.error("TaskOrganizer Kids: could not mark praise as seen", err));
+      this._hass.callWS(payload).then(() => this._fetchData()).catch((err) => console.error("FamilyMission Kids: could not mark praise as seen", err));
     }
     this._maybeShowPraise();
   }
@@ -739,8 +739,8 @@ class TaskOrganizerKids extends HTMLElement {
 
   /** Websocket payload of a kid command: PIN-checked `kid_*` on the shared tablet, `my_*` (no kid_id, no PIN) in mine mode. */
   _kidCmd(cmd, extra) {
-    if (this._session.mine) return { type: `task_organizer/my_${cmd}`, ...extra };
-    const payload = { type: `task_organizer/kid_${cmd}`, kid_id: this._session.kidId, ...extra };
+    if (this._session.mine) return { type: `family_mission/my_${cmd}`, ...extra };
+    const payload = { type: `family_mission/kid_${cmd}`, kid_id: this._session.kidId, ...extra };
     if (this._session.pin) payload.pin = this._session.pin;
     return payload;
   }
@@ -844,7 +844,7 @@ class TaskOrganizerKids extends HTMLElement {
       }
       this._handleActionError(res);
     } catch (err) {
-      console.error("TaskOrganizer Kids: could not redeem", err);
+      console.error("FamilyMission Kids: could not redeem", err);
       this._showToast(this.localize('err_generic'));
     }
     this._busy = false;
@@ -1137,15 +1137,15 @@ class TaskOrganizerKids extends HTMLElement {
     if (sheet.type === 'postpone') {
       const until = this._postponeUntil(sheet);
       if (!until) return;
-      payload = { type: 'task_organizer/parent_task_action', task_id: sheet.taskId, action: 'postpone', until };
+      payload = { type: 'family_mission/parent_task_action', task_id: sheet.taskId, action: 'postpone', until };
       message = this.localize('pa_postponed');
     } else if (sheet.kind === 'skip') {
-      payload = { type: 'task_organizer/parent_task_action', task_id: sheet.taskId, action: 'skip_today' };
+      payload = { type: 'family_mission/parent_task_action', task_id: sheet.taskId, action: 'skip_today' };
       message = this.localize('pa_skipped');
     } else if (sheet.kind === 'complete') {
-      payload = { type: 'task_organizer/parent_complete_for', task_id: sheet.taskId, kid_id: this._session.kidId };
+      payload = { type: 'family_mission/parent_complete_for', task_id: sheet.taskId, kid_id: this._session.kidId };
     } else {
-      payload = { type: 'task_organizer/undo_completion', history_id: sheet.historyId };
+      payload = { type: 'family_mission/undo_completion', history_id: sheet.historyId };
       message = this.localize('pa_undone');
     }
     this._busy = true;
@@ -1158,7 +1158,7 @@ class TaskOrganizerKids extends HTMLElement {
         this._showToast(this._errorText(res));
       }
     } catch (err) {
-      console.error("TaskOrganizer Kids: parent action failed", err);
+      console.error("FamilyMission Kids: parent action failed", err);
       this._showToast(this.localize('err_generic'));
     }
     this._busy = false;
@@ -1320,7 +1320,7 @@ class TaskOrganizerKids extends HTMLElement {
     const kid = kids.find(k => k.id === this._session.kidId);
     const helpers = sheet.selected.map(id => (sheet.pins[id] ? { kid_id: id, pin: sheet.pins[id] } : { kid_id: id }));
     try {
-      const payload = { type: 'task_organizer/kid_complete_task', task_id: sheet.taskId, kid_id: this._session.kidId, helpers };
+      const payload = { type: 'family_mission/kid_complete_task', task_id: sheet.taskId, kid_id: this._session.kidId, helpers };
       if (this._session.pin) payload.pin = this._session.pin;
       const res = await this._hass.callWS(payload);
       if (res.success) {
@@ -1341,7 +1341,7 @@ class TaskOrganizerKids extends HTMLElement {
         this._handleActionError(res);
       }
     } catch (err) {
-      console.error("TaskOrganizer Kids: could not complete task together", err);
+      console.error("FamilyMission Kids: could not complete task together", err);
       this._showToast(this.localize('err_generic'));
     }
     this._busy = false;
@@ -1464,7 +1464,7 @@ class TaskOrganizerKids extends HTMLElement {
     const pin = this._pin;
     this._busy = true;
     try {
-      const res = await this._hass.callWS({ type: 'task_organizer/kid_verify_pin', kid_id: kidId, pin });
+      const res = await this._hass.callWS({ type: 'family_mission/kid_verify_pin', kid_id: kidId, pin });
       this._busy = false;
       if (res.success) {
         if (this._helperMode()) this._helperVerified(kidId, pin);
@@ -1541,10 +1541,10 @@ class TaskOrganizerKids extends HTMLElement {
       // Kid/own-device command: the tablet user has no role for edit_task
       const res = this._session
         ? await this._hass.callWS(this._kidCmd('toggle_step', { task_id: taskId, index, done }))
-        : await this._hass.callWS({ type: 'task_organizer/edit_task', task_id: taskId, subtasks: task.subtasks });
+        : await this._hass.callWS({ type: 'family_mission/edit_task', task_id: taskId, subtasks: task.subtasks });
       if (res && res.success === false) { this._handleActionError(res); this._fetchData(); }
     } catch (err) {
-      console.error("TaskOrganizer Kids: could not save subtask", err);
+      console.error("FamilyMission Kids: could not save subtask", err);
       this._showToast(this.localize('err_generic'));
       this._fetchData();
     }
@@ -1586,7 +1586,7 @@ class TaskOrganizerKids extends HTMLElement {
       }
       this._handleActionError(res);
     } catch (err) {
-      console.error("TaskOrganizer Kids: could not complete task", err);
+      console.error("FamilyMission Kids: could not complete task", err);
       this._showToast(this.localize('err_generic'));
     }
     this._busy = false;
@@ -2696,9 +2696,9 @@ class TaskOrganizerKids extends HTMLElement {
 }
 
 /**
- * Editor for the TaskOrganizerKids card.
+ * Editor for the FamilyMissionKids card.
  */
-class TaskOrganizerKidsEditor extends HTMLElement {
+class FamilyMissionKidsEditor extends HTMLElement {
   setConfig(config) {
     this._config = config;
     this._render();
@@ -2710,7 +2710,7 @@ class TaskOrganizerKidsEditor extends HTMLElement {
   }
 
   localize(key) {
-    return TaskOrganizerKids._localize(this._hass, key);
+    return FamilyMissionKids._localize(this._hass, key);
   }
 
   _render() {
@@ -2796,5 +2796,5 @@ class TaskOrganizerKidsEditor extends HTMLElement {
   }
 }
 
-customElements.define('task-organizer-kids-editor', TaskOrganizerKidsEditor);
-customElements.define('task-organizer-kids', TaskOrganizerKids);
+customElements.define('family-mission-kids-editor', FamilyMissionKidsEditor);
+customElements.define('family-mission-kids', FamilyMissionKids);

@@ -95,8 +95,8 @@ const I18N_CARD = {
  */
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "task-organizer-card",
-  name: "Task Organizer: Task List",
+  type: "family-mission-card",
+  name: "FamilyMission Task List",
   description: "A custom list card to display and manage household tasks.",
   preview: true,
 });
@@ -128,9 +128,9 @@ function toCardNotifyOptions(hass, selected, eventOnlyLabel) {
     values.map(v => `<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`).join('');
 }
 
-class TaskOrganizerCard extends HTMLElement {
+class FamilyMissionCard extends HTMLElement {
   /**
-   * Initializes the TaskOrganizerCard element and its internal state.
+   * Initializes the FamilyMissionCard element and its internal state.
    */
   constructor() {
     super();
@@ -187,7 +187,7 @@ class TaskOrganizerCard extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key, replace = null) {
-    return TaskOrganizerCard._localize(this._hass, key, replace);
+    return FamilyMissionCard._localize(this._hass, key, replace);
   }
 
   static getLayoutOptions() { 
@@ -199,7 +199,7 @@ class TaskOrganizerCard extends HTMLElement {
    */
   static getStubConfig(hass) { 
       return { 
-          type: "custom:task-organizer-card", 
+          type: "custom:family-mission-card", 
           title: this._localize(hass, 'title'),
           sort_by: "due_date", 
           sort_order: "default", 
@@ -231,7 +231,7 @@ class TaskOrganizerCard extends HTMLElement {
    * @returns {HTMLElement}
    */
   static getConfigElement() {
-    return document.createElement("task-organizer-card-editor");
+    return document.createElement("family-mission-card-editor");
   }
 
   /**
@@ -272,7 +272,7 @@ class TaskOrganizerCard extends HTMLElement {
       if (!this._hass) return;
       this._unsubEvents = this._hass.connection.subscribeEvents(
           () => this._fetchData(), 
-          "task_organizer_updated"
+          "family_mission_updated"
       ); 
   }
 
@@ -322,7 +322,7 @@ class TaskOrganizerCard extends HTMLElement {
     for (const entityId in this._hass.states) {
       if (entityId.startsWith('person.')) {
         const state = this._hass.states[entityId];
-        users[TaskOrganizerCard.participantId(entityId, state)] = state.attributes.friendly_name || entityId;
+        users[FamilyMissionCard.participantId(entityId, state)] = state.attributes.friendly_name || entityId;
       }
     }
     this.users = users;
@@ -332,7 +332,7 @@ class TaskOrganizerCard extends HTMLElement {
    * Fetches the current task and settings data from the backend.
    */
   _fetchData() {
-    this._hass.callWS({ type: 'task_organizer/get_data' }).then((data) => {
+    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
       this.tasks = data.tasks || {};
       this.templates = data.templates || {};
       if (data.settings) {
@@ -543,7 +543,7 @@ class TaskOrganizerCard extends HTMLElement {
     
     // Send only the subtasks list to the backend to ensure a partial update
     await this._hass.callWS({
-        type: 'task_organizer/edit_task',
+        type: 'family_mission/edit_task',
         task_id: this._currentTaskId,
         subtasks: this._completionSubtasks
     });
@@ -572,7 +572,7 @@ class TaskOrganizerCard extends HTMLElement {
 
     // Erst alle Unteraufgaben auf erledigt setzen
     await this._hass.callWS({
-        type: 'task_organizer/edit_task',
+        type: 'family_mission/edit_task',
         task_id: this._currentTaskId,
         subtasks: updatedSubtasks
     });
@@ -920,7 +920,7 @@ class TaskOrganizerCard extends HTMLElement {
    */
   _completeTask(taskId, completedBy, pointsDistribution = null) { 
     const payload = { 
-      type: 'task_organizer/complete_task', 
+      type: 'family_mission/complete_task', 
       task_id: taskId, 
       completed_by: completedBy 
     };
@@ -929,7 +929,7 @@ class TaskOrganizerCard extends HTMLElement {
     }
     this._hass.callWS(payload)
       .catch(err => {
-        console.error("TaskOrganizer: Fehler beim Abschließen der Aufgabe", err);
+        console.error("FamilyMission: Fehler beim Abschließen der Aufgabe", err);
         this._showToast("Fehler: " + (err.message || "Unbekannter Fehler beim Abschließen"));
       });
   }
@@ -1002,7 +1002,7 @@ class TaskOrganizerCard extends HTMLElement {
    */
   _deleteTask(taskId) { 
       if (confirm(this.localize('confirm_delete'))) { 
-          this._hass.callWS({ type: 'task_organizer/delete_task', task_id: taskId }).then(() => { 
+          this._hass.callWS({ type: 'family_mission/delete_task', task_id: taskId }).then(() => { 
               this._showToast(this.localize('deleted')); 
               this._fetchData(); 
           }); 
@@ -1311,7 +1311,7 @@ class TaskOrganizerCard extends HTMLElement {
       subtasks: this._subtasks
     };
     
-    const type = this._editingTaskId ? 'task_organizer/edit_task' : 'task_organizer/add_task';
+    const type = this._editingTaskId ? 'family_mission/edit_task' : 'family_mission/add_task';
     if (this._editingTaskId) payload.task_id = this._editingTaskId;
     
     this._hass.callWS({ type, ...payload })
@@ -1329,7 +1329,7 @@ class TaskOrganizerCard extends HTMLElement {
         }
       })
       .catch(err => {
-        console.error("TaskOrganizer: Fehler beim Speichern", err);
+        console.error("FamilyMission: Fehler beim Speichern", err);
         this._showToast("Fehler: " + (err.message || "Unbekannter Fehler"));
       });
   }
@@ -2022,9 +2022,9 @@ class TaskOrganizerCard extends HTMLElement {
 }
 
 /**
- * Editor for the TaskOrganizerCard.
+ * Editor for the FamilyMissionCard.
  */
-class TaskOrganizerCardEditor extends HTMLElement {
+class FamilyMissionCardEditor extends HTMLElement {
   setConfig(config) {
     this._config = config;
     this._render();
@@ -2041,7 +2041,7 @@ class TaskOrganizerCardEditor extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key) {
-    return TaskOrganizerCard._localize(this._hass, key);
+    return FamilyMissionCard._localize(this._hass, key);
   }
 
   _render() {
@@ -2054,7 +2054,7 @@ class TaskOrganizerCardEditor extends HTMLElement {
       <div class="card-config">
         <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px; padding: 12px; background: var(--secondary-background-color); border-radius: 8px; border: 1px solid var(--divider-color);">
           <ha-icon icon="mdi:help-circle-outline" style="color: var(--primary-color);"></ha-icon>
-          <a href="https://github.com/PatrickvonWiegen/TaskOrganizer/blob/main/README.md#1-household-tasks-task-organizer-card" target="_blank" rel="noreferrer" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">
+          <a href="https://github.com/AndyKausG/FamilyMission/blob/main/README.md#1-household-tasks-family-mission-card" target="_blank" rel="noreferrer" style="color: var(--primary-color); text-decoration: none; font-weight: 500;">
             ${this.localize('help_link')}
           </a>
         </div>
@@ -2142,5 +2142,5 @@ class TaskOrganizerCardEditor extends HTMLElement {
   }
 }
 
-customElements.define('task-organizer-card-editor', TaskOrganizerCardEditor);
-customElements.define('task-organizer-card', TaskOrganizerCard);
+customElements.define('family-mission-card-editor', FamilyMissionCardEditor);
+customElements.define('family-mission-card', FamilyMissionCard);

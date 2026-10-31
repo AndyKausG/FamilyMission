@@ -1,4 +1,4 @@
-"""Initialization of the TaskOrganizer integration."""
+"""Initialization of the FamilyMission integration."""
 
 import copy
 import logging
@@ -315,7 +315,7 @@ def _kids_mode_active(hass: HomeAssistant) -> bool:
 def _guard_kids_mode(hass: HomeAssistant, connection, msg: dict, allowed: tuple) -> bool:
     """Role check for the classic commands, enforced only while kids mode is in use.
 
-    Without kids profiles TaskOrganizer keeps its original behaviour (every
+    Without kids profiles FamilyMission keeps its original behaviour (every
     Home Assistant user may manage tasks, settings and history). With kids
     profiles the shared tablet user must not be able to change data outside
     the PIN-protected kid commands.
@@ -342,7 +342,7 @@ def _parent_candidates(hass: HomeAssistant, options: dict) -> list[dict]:
 @websocket_api.async_response
 async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
     """
-    Handle the websocket request to get all task organizer data.
+    Handle the websocket request to get all family mission data.
     
     :param hass: The Home Assistant instance.
     :param connection: The active websocket connection.
@@ -2051,7 +2051,7 @@ async def _async_remove_expired_adhoc(hass: HomeAssistant) -> int:
 # ---- push notification actions -------------------------------------------------
 
 async def _async_handle_push_action(hass: HomeAssistant, action: str) -> None:
-    """Execute ``TO_APPROVE_<id>`` / ``TO_NOTDONE_<id>`` / ``TO_CHEAT_<id>`` and ``TO_RAPPROVE_`` / ``TO_RREJECT_``."""
+    """Execute ``FM_APPROVE_<id>`` / ``FM_NOTDONE_<id>`` / ``FM_CHEAT_<id>`` and ``FM_RAPPROVE_`` / ``FM_RREJECT_``."""
     if DOMAIN not in hass.data:
         return
     for prefix, approve in ((ACTION_REWARD_APPROVE, True), (ACTION_REWARD_REJECT, False)):
@@ -3344,7 +3344,7 @@ def _restore_full_goals(hass: HomeAssistant) -> None:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
-    Set up the TaskOrganizer integration from a config entry.
+    Set up the FamilyMission integration from a config entry.
     
     :param hass: The Home Assistant instance.
     :param entry: The configuration entry to setup.
@@ -3444,7 +3444,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     def _mobile_action(event) -> None:
         """Approve / reject from an actionable push notification."""
         action = event.data.get("action")
-        if isinstance(action, str) and action.startswith("TO_"):
+        if isinstance(action, str) and action.startswith("FM_"):
             hass.async_create_task(_async_handle_push_action(hass, action))
 
     entry.async_on_unload(hass.bus.async_listen(EVENT_MOBILE_APP_ACTION, _mobile_action))
@@ -3923,7 +3923,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register static path for frontend cards
     frontend_path = hass.config.path(f"custom_components/{DOMAIN}/www")
     await hass.http.async_register_static_paths([
-        StaticPathConfig("/task_organizer_frontend", frontend_path, False)
+        StaticPathConfig("/family_mission_frontend", frontend_path, False)
     ])
 
     async def register_lovelace_resources(event=None):
@@ -3940,17 +3940,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await resources.async_load()
         
         cache_buster = f"{entry.version}_{int(time.time())}"
-        base_path = "/task_organizer_frontend"
+        base_path = "/family_mission_frontend"
         needed_cards = [
-            f"{base_path}/task-organizer-card.js", 
-            f"{base_path}/task-organizer-leaderboard.js", 
-            f"{base_path}/task-organizer-stats.js", 
-            f"{base_path}/task-organizer-settings.js",
-            f"{base_path}/task-organizer-protocol.js",
-            f"{base_path}/task-organizer-kids.js",
-            f"{base_path}/task-organizer-wizard.js",
-            f"{base_path}/task-organizer-parents.js",
-            f"{base_path}/task-organizer-help.js"
+            f"{base_path}/family-mission-card.js", 
+            f"{base_path}/family-mission-leaderboard.js", 
+            f"{base_path}/family-mission-stats.js", 
+            f"{base_path}/family-mission-settings.js",
+            f"{base_path}/family-mission-protocol.js",
+            f"{base_path}/family-mission-kids.js",
+            f"{base_path}/family-mission-wizard.js",
+            f"{base_path}/family-mission-parents.js",
+            f"{base_path}/family-mission-help.js"
         ]
         
         current_resources = {
@@ -3978,7 +3978,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
-    Unload the TaskOrganizer config entry.
+    Unload the FamilyMission config entry.
     
     :param hass: The Home Assistant instance.
     :param entry: The configuration entry to unload.

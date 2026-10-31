@@ -1,4 +1,4 @@
-"""Sensors for the TaskOrganizer integration."""
+"""Sensors for the FamilyMission integration."""
 import json
 from datetime import timedelta
 
@@ -11,27 +11,27 @@ from .kids import resolve_participant_name, sanitize_settings
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """
-    Initialize all sensors for the TaskOrganizer integration.
+    Initialize all sensors for the FamilyMission integration.
     
     :param hass: The Home Assistant instance.
     :param entry: The config entry.
     :param async_add_entities: Callback to add entities to HA.
     """
     sensors = [
-        TaskOrganizerAllTasksSensor(hass),
-        TaskOrganizerDueTasksSensor(hass),
-        TaskOrganizerOverdueTasksSensor(hass),
-        TaskOrganizerDueAndOverdueTasksSensor(hass),
-        TaskOrganizerSettingsSensor(hass),
-        TaskOrganizerPointsSensor(hass),
-        TaskOrganizerLeaderboardSensor(hass),
-        TaskOrganizerTemplatesSensor(hass),
+        FamilyMissionAllTasksSensor(hass),
+        FamilyMissionDueTasksSensor(hass),
+        FamilyMissionOverdueTasksSensor(hass),
+        FamilyMissionDueAndOverdueTasksSensor(hass),
+        FamilyMissionSettingsSensor(hass),
+        FamilyMissionPointsSensor(hass),
+        FamilyMissionLeaderboardSensor(hass),
+        FamilyMissionTemplatesSensor(hass),
     ]
     async_add_entities(sensors)
 
 
-class TaskOrganizerBaseSensor(SensorEntity):
-    """Base class representing a generic Task Organizer sensor."""
+class FamilyMissionBaseSensor(SensorEntity):
+    """Base class representing a generic FamilyMission sensor."""
     
     _attr_has_entity_name = True
 
@@ -60,13 +60,13 @@ class TaskOrganizerBaseSensor(SensorEntity):
         self.async_write_ha_state()
 
 
-class TaskOrganizerAllTasksSensor(TaskOrganizerBaseSensor):
+class FamilyMissionAllTasksSensor(FamilyMissionBaseSensor):
     """Sensor tracking the total number of tasks."""
     
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, hass: HomeAssistant):
-        super().__init__(hass, "task_organizer_all_tasks", "all_tasks")
+        super().__init__(hass, "family_mission_all_tasks", "all_tasks")
         self._attr_icon = "mdi:calendar-check-outline"
 
     @property
@@ -84,14 +84,14 @@ class TaskOrganizerAllTasksSensor(TaskOrganizerBaseSensor):
         }
 
 
-class TaskOrganizerDueTasksSensor(TaskOrganizerBaseSensor):
+class FamilyMissionDueTasksSensor(FamilyMissionBaseSensor):
     """Sensor tracking the number of currently due tasks."""
     
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, hass: HomeAssistant):
         """Initialize the sensor for due tasks."""
-        super().__init__(hass, "task_organizer_due_tasks", "due_tasks")
+        super().__init__(hass, "family_mission_due_tasks", "due_tasks")
         self._attr_icon = "mdi:calendar-check"
 
     def _get_due_tasks(self) -> list:
@@ -134,14 +134,14 @@ class TaskOrganizerDueTasksSensor(TaskOrganizerBaseSensor):
         }
 
 
-class TaskOrganizerOverdueTasksSensor(TaskOrganizerBaseSensor):
+class FamilyMissionOverdueTasksSensor(FamilyMissionBaseSensor):
     """Sensor tracking the number of overdue tasks."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, hass: HomeAssistant):
         """Initialize the sensor for overdue tasks."""
-        super().__init__(hass, "task_organizer_overdue_tasks", "overdue_tasks")
+        super().__init__(hass, "family_mission_overdue_tasks", "overdue_tasks")
         self._attr_icon = "mdi:calendar-alert"
 
     def _get_overdue_tasks(self) -> list:
@@ -181,7 +181,7 @@ class TaskOrganizerOverdueTasksSensor(TaskOrganizerBaseSensor):
         return {"json_string": json.dumps(overdue_tasks), "data": overdue_tasks}
 
 
-class TaskOrganizerDueAndOverdueTasksSensor(TaskOrganizerBaseSensor):
+class FamilyMissionDueAndOverdueTasksSensor(FamilyMissionBaseSensor):
     """Sensor tracking the number of due and overdue tasks combined."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -189,7 +189,7 @@ class TaskOrganizerDueAndOverdueTasksSensor(TaskOrganizerBaseSensor):
     def __init__(self, hass: HomeAssistant):
         """Initialize the sensor for due and overdue tasks."""
         super().__init__(
-            hass, "task_organizer_due_and_overdue_tasks", "due_and_overdue_tasks"
+            hass, "family_mission_due_and_overdue_tasks", "due_and_overdue_tasks"
         )
         self._attr_icon = "mdi:calendar-multiple-check"
 
@@ -223,11 +223,11 @@ class TaskOrganizerDueAndOverdueTasksSensor(TaskOrganizerBaseSensor):
         return {"json_string": json.dumps(due_tasks), "data": due_tasks}
 
 
-class TaskOrganizerSettingsSensor(TaskOrganizerBaseSensor):
+class FamilyMissionSettingsSensor(FamilyMissionBaseSensor):
     """Sensor tracking the integration settings."""
 
     def __init__(self, hass: HomeAssistant):
-        super().__init__(hass, "task_organizer_settings", "settings")
+        super().__init__(hass, "family_mission_settings", "settings")
         self._attr_icon = "mdi:cog"
 
     @property
@@ -242,13 +242,13 @@ class TaskOrganizerSettingsSensor(TaskOrganizerBaseSensor):
         return sanitize_settings(self._data.get("settings", {}))
 
 
-class TaskOrganizerPointsSensor(TaskOrganizerBaseSensor):
+class FamilyMissionPointsSensor(FamilyMissionBaseSensor):
     """Sensor tracking the points of all users."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, hass: HomeAssistant):
-        super().__init__(hass, "task_organizer_points", "points")
+        super().__init__(hass, "family_mission_points", "points")
         self._attr_icon = "mdi:star"
 
     @property
@@ -280,11 +280,11 @@ class TaskOrganizerPointsSensor(TaskOrganizerBaseSensor):
         }
 
 
-class TaskOrganizerLeaderboardSensor(TaskOrganizerBaseSensor):
+class FamilyMissionLeaderboardSensor(FamilyMissionBaseSensor):
     """Sensor tracking the current leaderboard leader."""
 
     def __init__(self, hass: HomeAssistant):
-        super().__init__(hass, "task_organizer_leaderboard", "leaderboard")
+        super().__init__(hass, "family_mission_leaderboard", "leaderboard")
         self._attr_icon = "mdi:trophy"
 
     @property
@@ -319,14 +319,14 @@ class TaskOrganizerLeaderboardSensor(TaskOrganizerBaseSensor):
         return {"json_string": json.dumps(leaderboard), "data": leaderboard}
 
 
-class TaskOrganizerTemplatesSensor(TaskOrganizerBaseSensor):
+class FamilyMissionTemplatesSensor(FamilyMissionBaseSensor):
     """Sensor tracking the total number of templates."""
 
     _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, hass: HomeAssistant):
         """Initialize the sensor for templates."""
-        super().__init__(hass, "task_organizer_templates", "templates")
+        super().__init__(hass, "family_mission_templates", "templates")
         self._attr_icon = "mdi:file-document-multiple-outline"
 
     @property
