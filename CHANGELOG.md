@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.0.2] - 2026-11-01
+
+- **Fix:** "My tasks" for adults showed the open bonus tasks below the own tasks in a single column, out of view. Bonus tasks now get their own column next to the own tasks (single column only without open bonus).
+
 ## [1.0.1] - 2026-11-01
 
 - **Adults close open bonus tasks:** in "My tasks" (`mode: mine`) adults without kid profile see the open bonus tasks with "✅ I did it". The task leaves the bonus board without points (0-point history entry, can be undone); websocket `family_mission/my_close_bonus`.

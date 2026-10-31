@@ -2089,7 +2089,7 @@ class FamilyMissionKids extends HTMLElement {
       : `<div class="empty-state small">😴 ${escKids(this.localize('no_bonus'))}</div>`;
 
     return `
-      <div class="root kidview ${kid.isBirthday ? 'bday' : ''} ${adult ? 'adult' : ''}" style="--kc:${kid.color}">
+      <div class="root kidview ${kid.isBirthday ? 'bday' : ''} ${adult ? 'adult' : ''} ${adult && !this._allBonus().length ? 'solo' : ''}" style="--kc:${kid.color}">
         <header class="kv-head">
           ${!mine || this._shop ? `<button class="back" data-action="${this._shop ? 'shop-close' : 'back'}" aria-label="${escKids(this.localize('back'))}"><span class="back-arrow">⬅</span><span class="back-label"> ${escKids(this.localize('back'))}</span></button>` : ''}
           <div class="kv-who">
@@ -2483,7 +2483,8 @@ class FamilyMissionKids extends HTMLElement {
       .shop-btn { margin-left: auto; min-height: 88px; padding: 0 28px; border-radius: 44px; background: #F9A825; color: #1b1b1b; border: 4px solid #F57F17; font-size: 32px; font-weight: 800; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 0 rgba(0,0,0,0.22); }
       .shop-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.22); }
       .shop-bal { font-size: 26px; padding: 4px 14px; border-radius: 22px; background: rgba(255,255,255,0.6); }
-      .kidview.adult .kv-body { grid-template-columns: minmax(0, 1fr); }
+      /* adults: one column only when there is no open bonus task to show */
+      .kidview.adult.solo .kv-body { grid-template-columns: minmax(0, 1fr); }
       .shopview .col-shop { grid-column: 1 / -1; }
       .wallet-big { font-size: 28px; font-weight: 700; color: var(--k-sub); margin: -4px 0 12px; }
       .wallet-big b { font-size: 56px; color: var(--k-text); font-weight: 900; vertical-align: middle; margin-left: 8px; }
