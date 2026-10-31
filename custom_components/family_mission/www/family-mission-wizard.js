@@ -98,7 +98,7 @@ const I18N_WIZARD = {
   }
 };
 
-const I18N_PARENTS = {
+const I18N_PARENTS_PICKER = {
   en: {
     loading: "Loading…", error: "Something went wrong: ", already: "set up",
     me_label: "I am", partner_label: "Partner", me: "Me", you: "You", alternate: "Take turns", min: "~{n} min",
@@ -386,8 +386,8 @@ class FamilyMissionParentsPicker extends HTMLElement {
   connectedCallback() { if (this._hass) { if (!this._data && !this._loading) this._load(); else this._render(); } }
 
   _t(key, vars) {
-    const dict = I18N_PARENTS[wzLang(this._hass)] || I18N_PARENTS.en;
-    const text = dict[key] !== undefined ? dict[key] : (I18N_PARENTS.en[key] !== undefined ? I18N_PARENTS.en[key] : key);
+    const dict = I18N_PARENTS_PICKER[wzLang(this._hass)] || I18N_PARENTS_PICKER.en;
+    const text = dict[key] !== undefined ? dict[key] : (I18N_PARENTS_PICKER.en[key] !== undefined ? I18N_PARENTS_PICKER.en[key] : key);
     return wzFormat(text, vars);
   }
 
@@ -403,9 +403,11 @@ class FamilyMissionParentsPicker extends HTMLElement {
       this._partner = d.partner || this._otherAdult(this._me);
       this._sel = {};
       const existing = d.existing || {};
+      // The small preselection only applies to the first setup; later only what exists is ticked.
+      const firstSetup = Object.keys(existing).length === 0;
       (d.items || []).forEach(it => {
         if (existing[it.key]) this._sel[it.key] = existing[it.key].mode || 'me';
-        else if (it.preselected) this._sel[it.key] = this._defaultMode();
+        else if (firstSetup && it.preselected) this._sel[it.key] = this._defaultMode();
       });
     } catch (err) {
       this._error = (err && err.message) || String(err);

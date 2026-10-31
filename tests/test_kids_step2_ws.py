@@ -156,8 +156,7 @@ async def test_approve_awards_like_a_normal_completion(hass, hass_ws_client, set
     ws = await hass_ws_client(hass)
     await _make_kid(ws)
     completed = _collect(hass, "family_mission_task_completed")
-    leaderboard = _collect(hass, "family_mission_leaderboard_changed")
-    _data(hass)["points"] = {BEN_ID: 2.0, ANNA: 0}              # Anna overtakes Ben -> leaderboard event
+    _data(hass)["points"] = {BEN_ID: 2.0, ANNA: 0}
     normal = await _add_task(ws, assignees=[ANNA], complexity=4, name="Normal")
     flagged = await _add_task(ws, assignees=[ANNA], complexity=4, name="Flagged", requires_approval=True)
 
@@ -165,10 +164,8 @@ async def test_approve_awards_like_a_normal_completion(hass, hass_ws_client, set
     ref_entry = dict(_data(hass)["history"][0])
     await hass.async_block_till_done()
     ref_event = completed[-1]
-    ref_leaderboard = len(leaderboard)
-    assert ref_leaderboard == 1
 
-    # reset the points to compare the leaderboard event as well
+    # reset the points to compare both ways
     _data(hass)["points"] = {BEN_ID: 2.0, ANNA: 0}
     _data(hass)["history"].clear()
     await _kid_complete(ws, flagged)
@@ -181,7 +178,6 @@ async def test_approve_awards_like_a_normal_completion(hass, hass_ws_client, set
     assert (entry["user_id"], entry["points"], entry["task_id"]) == (ANNA, 4.0, flagged)
     assert _data(hass)["points"][ANNA] == 4.0
     assert completed[-1] == {**ref_event, "task_id": flagged, "task_name": "Flagged"}
-    assert len(leaderboard) == 2                                  # leaderboard event fired again
     assert _data(hass)["pending"] == {}
     # double approval (card + push) is harmless and awards nothing
     assert (await _call(ws, "family_mission/approve", pending_id=pid))["result"] == {"success": False, "error": "not_found"}

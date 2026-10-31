@@ -1232,7 +1232,7 @@ class FamilyMissionParents extends HTMLElement {
         if (this._more === 'tasks' || this._more === 'settings') embedKey = this._more;
       } else body = this._renderToday();
     }
-    app.innerHTML = `<ha-card><div class="head"><span class="head-title">${title}</span>${window.FamilyMissionHelp ? `<button class="help-btn" data-action="help" data-anchor="daily">❓ ${escParents(this.localize('help_btn'))}</button>` : ''}</div>${tabs}<div class="body">${body}</div></ha-card>`;
+    app.innerHTML = `<ha-card><div class="head"><span class="head-title">${title}</span>${window.FamilyMissionHelp ? `<button class="help-btn" data-action="help" data-anchor="parents">❓ ${escParents(this.localize('help_btn'))}</button>` : ''}</div>${tabs}<div class="body">${body}</div></ha-card>`;
     this._syncEmbed(embedKey);
     // The dialog layer is not rebuilt on data refreshes (it would reset what is typed);
     // it only closes when its approval was handled elsewhere in the meantime.

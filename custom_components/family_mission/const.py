@@ -18,7 +18,6 @@ DEFAULT_OVERDUE_DAYS = 5
 
 # Event names
 EVENT_TASK_UPDATED = "family_mission_updated"
-EVENT_LEADERBOARD_CHANGED = "family_mission_leaderboard_changed"
 EVENT_TASK_COMPLETED = "family_mission_task_completed"
 EVENT_TASK_CREATED = "family_mission_task_created"
 EVENT_RESET = "family_mission_reset"
@@ -30,6 +29,9 @@ EVENT_TASK_REMINDER = "family_mission_task_reminder"
 EVENT_REWARD_REQUESTED = "family_mission_reward_requested"
 EVENT_REWARD_RESOLVED = "family_mission_reward_resolved"
 EVENT_PRAISE = "family_mission_praise"
+EVENT_HANDOVER_REQUESTED = "family_mission_handover_requested"
+EVENT_HANDOVER_RESOLVED = "family_mission_handover_resolved"
+EVENT_WEEKLY_SUMMARY = "family_mission_weekly_summary"
 
 # Event fired by the Home Assistant companion app when a notification action is tapped
 EVENT_MOBILE_APP_ACTION = "mobile_app_notification_action"
@@ -38,6 +40,8 @@ ACTION_NOT_DONE = "FM_NOTDONE_"
 ACTION_CHEAT = "FM_CHEAT_"
 ACTION_REWARD_APPROVE = "FM_RAPPROVE_"
 ACTION_REWARD_REJECT = "FM_RREJECT_"
+ACTION_TAKE = "FM_TAKE_"
+ACTION_DECLINE = "FM_DECLINE_"
 
 # WebSocket Command Types
 WS_TYPE_GET_DATA = "family_mission/get_data"
@@ -86,6 +90,14 @@ WS_TYPE_REDEMPTION_RESOLVE = "family_mission/redemption_resolve"
 WS_TYPE_SEND_PRAISE = "family_mission/send_praise"
 WS_TYPE_KID_PRAISE_SEEN = "family_mission/kid_praise_seen"
 WS_TYPE_MY_PRAISE_SEEN = "family_mission/my_praise_seen"
+WS_TYPE_PARENTS_CATALOG = "family_mission/parents_catalog"
+WS_TYPE_PARENTS_APPLY = "family_mission/parents_apply"
+WS_TYPE_PARENT_TASK_SET = "family_mission/parent_task_set"
+WS_TYPE_PARENT_TASK_ADD = "family_mission/parent_task_add"
+WS_TYPE_PARENT_TASK_DONE = "family_mission/parent_task_done"
+WS_TYPE_HANDOVER_ASK = "family_mission/handover_ask"
+WS_TYPE_HANDOVER_ANSWER = "family_mission/handover_answer"
+WS_TYPE_WEEKLY_SUMMARY = "family_mission/weekly_summary"
 
 # Service Names
 SERVICE_RESET_MONTHLY_POINTS = "reset_monthly_points"

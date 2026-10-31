@@ -216,7 +216,7 @@ async def test_undo_recreates_one_time_task(hass, hass_ws_client, setup, freezer
     assert data["points"][ANNA] == 0
 
 
-async def test_undo_multi_participant_and_leaderboard_event(hass, hass_ws_client, setup, freezer):
+async def test_undo_multi_participant(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
     tid = await _add_task(ws, complexity=6)
@@ -226,18 +226,6 @@ async def test_undo_multi_participant_and_leaderboard_event(hass, hass_ws_client
     res = await _call(ws, "family_mission/undo_completion", history_id=data["history"][1]["id"])
     assert res["result"]["removed"] == 2
     assert data["points"] == {ANNA: 0, SAM_ID: 0} and data["history"] == []
-
-
-async def test_undo_fires_leaderboard_event_when_order_changes(hass, hass_ws_client, setup, freezer):
-    ws = await hass_ws_client(hass)
-    freezer.move_to(NOON)
-    _data(hass)["points"][ANNA] = 3.0
-    tid = await _add_task(ws, complexity=5)
-    await _call(ws, "family_mission/complete_task", task_id=tid, completed_by=[SAM_ID])   # Ben leads now
-    leaderboard = _collect(hass, "family_mission_leaderboard_changed")
-    await _call(ws, "family_mission/undo_completion", history_id=_data(hass)["history"][0]["id"])
-    await hass.async_block_till_done()
-    assert leaderboard and leaderboard[0]["new_leaderboard"][0]["user_id"] == ANNA
 
 
 async def test_undo_is_admin_only(hass, hass_ws_client, hass_read_only_access_token, setup):
