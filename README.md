@@ -1,94 +1,96 @@
-# TaskOrganizer for Home Assistant
+# FamilyMission for Home Assistant
 
-TaskOrganizer is a integration for Home Assistant designed to manage household tasks in a gamified way. It allows you to create tasks with intervals and complexity points, assign them to roommates, and crown a "Roommate of the Month".
+> **Credits:** FamilyMission is based on [**TaskOrganizer**](https://github.com/patrickvonwiegen/TaskOrganizer) by Patrick von Wiegen (MIT license). It continues as a project of its own, maintained by [AndyKausG](https://github.com/AndyKausG), and can be installed **next to** TaskOrganizer without any conflict.
 
-Suggestions for improvement or bug reports are welcome.
+FamilyMission turns household chores into **family missions**: small tasks with points, time windows and instant feedback. Kids tick off their missions on a wall tablet (with a PIN, no Home Assistant account needed), collect points in a wallet, spend them in a reward shop and fill a cooperative family goal together. Parents approve, praise and adjust everything from their phone.
+
+Suggestions for improvement and bug reports are welcome: [issues](https://github.com/AndyKausG/FamilyMission/issues).
 
 ## Features
-* **Task Management**: Show, create, edit, and delete tasks directly in your dashboard. Assign tasks to specific areas and give them a unique icon.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/f8fa36ed-233c-4784-99bb-535cfb788205" />
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/40408802-bd37-41c7-950e-aef76062b458" />
 
-* **Search Functionality**: Quickly find tasks by name or description using the integrated search bar.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/f3a24024-4412-4e88-befc-66e4a8100f47" />
+* **Family missions**: tasks with intervals, complexity points, subtasks (progress in %), one-time and recurring tasks, templates, categories (`basis` duty, `bonus`, `auftrag`) and a minimum age.
+* **Kids' wall tablet with PIN**: one big tile per kid with a progress ring, PIN pad, personal task and bonus view, confetti and sounds, auto-return to the home screen. See [Kids mode](#kids-mode).
+* **Parents card and roles**: approvals, "not done" / "cheated", bonus points and deductions, undo, praise, and a role model (admin, manager, parent). See [Parents role](#parents-role).
+* **Reward shop**: a per-kid wallet that survives the monthly reset, configurable rewards, a savings goal, redemptions that parents approve from a push notification. See [Reward shop](#reward-shop).
+* **Praise**: a sticker and a friendly message instead of points. See [Praise](#praise).
+* **Quick-start wizard**: proposes an age-appropriate setup (tasks, rotation, goals) from a built-in catalog and creates everything in one click. See [Kids mode quick-start wizard](#kids-mode-quick-start-wizard).
+* **Time windows**: duties are only available at the right time of day; missed duties expire at midnight. See [Time windows](#time-windows).
+* **Reminders**: per task a time of day; an event and an optional `notify.*` call for open tasks. See [Task reminders](#task-reminders).
+* **Own-device view** (`mode: mine`): kids and adults see their own tasks on their own phone, without tiles and PIN. See [My tasks](#my-tasks-own-device-mode-mine).
+* **Monthly goals, family rocket, leaderboard, reports and history protocol** with editable entries.
+* **Bonus triggers**: a bonus task opens by itself when a device state changes (e.g. the dishwasher is done).
+* **In-app help in German, French and English** (the parents guide, searchable, offline). Also available as Markdown: [Deutsch](docs/parents-guide.de.md) · [English](docs/parents-guide.en.md) · [Français](docs/parents-guide.fr.md).
 
-* **Subtasks**: Break down complex tasks into smaller sub-steps. Includes a progress indicator (%) and a dedicated completion dialog.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/30f2debe-c15e-4150-af17-783a827d2236" />
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/1389a275-beb5-4636-8ece-4dfbc8291901" />
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/4c18de25-250b-4837-b38c-96229667a5f8" />
+## Screenshots
 
-* **One-time & Recurring Tasks**: Supports both recurring tasks with an interval and one-time tasks that are deleted upon completion.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/e032b7c4-72a7-4442-99ec-59972ea352ac" />
+<!-- Replace the placeholders with real screenshots (docs/images/...). -->
 
-* **Task Templates**: Create and manage templates to quickly add frequently used tasks.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/7d278343-8473-42ae-b9ab-1f23f23b8272" />
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/791eaac0-63b3-48a0-804d-8bfa11cff376" />
+| Kids card (wall tablet) | Parents card | Reward shop |
+| :---: | :---: | :---: |
+| _screenshot placeholder_ | _screenshot placeholder_ | _screenshot placeholder_ |
 
-* **Points System**: Each task has a complexity level (1-10); points can be distributed flexibly upon completion. For 3+ participants, an interactive spider chart allows shifting the point tendency by dragging a center point. 
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/4d5fa9ba-0a0c-4702-9797-f9da9f8363da" />
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/389f566d-ab40-4d2e-ada4-7e07b5e11011" />
-
-* **Interval Management**: Tasks can be paused until a specific date or have their next due date manually set to any chosen date. Override the global overdue setting for individual tasks.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/41a75d46-6855-4be5-9bd4-65dec23bec90" />
-
-* **Roommate of the Month**: A podium system visualizes current standings. At the end of the month, points are archived, and a long-term history is maintained.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/8860eb6b-1b92-436b-bbf1-9908bde8f7ec" />
-
-* **History Protocol**: A history log allows you to view the history and modify the points and the assignee afterwards.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/a63d8081-eb54-4c36-a9de-00c3c6345cf5" />
-
-* **Advanced Reports**: Graphical visualization of your progress. Includes a "Completed Tasks" view with trend analysis and a "Goal Setting" burndown chart to track your monthly point targets.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/3f28e234-6ed6-406c-8577-9fd4e22de873" />
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/c98534b9-3283-482e-a356-b35185c9c521" />
-
-
-* **Monthly Point Goals**: Set personal point goals for each roommate in the settings. If a user reaches their goal, a checkered flag icon appears in the leaderboard and a progress bar is shown in the log when filtering by that user.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/3a5bbe6e-c67c-419a-886b-3fc4895a72ef" />
-  <img width="10%" alt="image" src="https://github.com/user-attachments/assets/e0e16fbe-5984-4c48-9ba0-c5b794045836" />
-
-* **Kids Mode**: A touch-friendly kids card for a wall/kiosk tablet with PIN pad, personal progress, bonus tasks, a cooperative family goal, confetti and sound. Kids do not need a Home Assistant user. See [Kids mode](#kids-mode).
-
-* **Configuration**: Manage global settings, colors, overdue thresholds, and task templates. Secure your data by exporting all tasks to a JSON file or importing them back.
-  <br>
-  <img width="24%" alt="image" src="https://github.com/user-attachments/assets/119748db-9521-4125-b44e-71b9f21afebb" />
+| Task list | Settings and quick-start wizard | Reports |
+| :---: | :---: | :---: |
+| _screenshot placeholder_ | _screenshot placeholder_ | _screenshot placeholder_ |
 
 ## Installation
-### Option 1: HACS (Recommended)
-- Add this repository to HACS.
-- Search for "TaskOrganizer" under "Integrations".
-- Install the integration.
-- Restart Home Assistant.
-### Option 2: Manual
-- Open the directory for your HA configuration (where you find configuration.yaml).
-- If you do not have a custom_components directory (folder) there, you need to create it.
-- In the custom_components directory create a new folder called task_organizer.
-- Download all the files from the custom_components/task_organizer/ directory in this repository.
-- Place the files you downloaded in the new directory (folder) you created.
-- Restart Home Assistant.
-  
-## Dashboard Cards
-The integration includes four specialized cards for the Lovelace dashboard.
 
-### 1. Household Tasks (`task-organizer-card`)
+### Option 1: HACS custom repository (recommended)
+1. In HACS open the three-dot menu and choose **Custom repositories**.
+2. Add `https://github.com/AndyKausG/FamilyMission` with the category **Integration**.
+3. Search for "FamilyMission" in HACS, download it and restart Home Assistant.
+4. Go to **Settings > Devices & services > Add integration** and add **FamilyMission**.
+
+### Option 2: Manual
+1. Open the directory of your Home Assistant configuration (where `configuration.yaml` is).
+2. Create the directory `custom_components` if it does not exist.
+3. Copy the folder `custom_components/family_mission/` of this repository into it.
+4. Restart Home Assistant and add the integration as described above.
+
+The cards are registered as Lovelace resources automatically (only FamilyMission's own files, `/family_mission_frontend/family-mission-*.js`; the resources of other integrations are never touched). A browser refresh may be needed after the first start.
+
+## Migration from TaskOrganizer
+
+FamilyMission uses its own domain (`family_mission`), its own storage (`.storage/family_mission.storage`) and its own card, service and event names, so it runs **next to** an installed TaskOrganizer.
+
+**Automatic takeover.** When FamilyMission starts for the first time and has no data of its own (no tasks, history and points), it looks for the storage of TaskOrganizer (`.storage/task_organizer.storage`) and **copies** everything: tasks, templates, history, points, wallet, redemptions, pending approvals, praise, monthly history and all other stored keys. The options of an existing TaskOrganizer config entry (settings, kid profiles including PIN hashes, parents and roles, rewards, goals, bonus triggers, wizard memory, ...) are copied into FamilyMission's entry as well, as long as its own options are still empty.
+
+* TaskOrganizer's storage and config entry are only **read**, never changed or deleted.
+* The takeover is marked in the data (`migrated_from`) and runs only once.
+* A persistent notification tells you what to adapt (see the table below). Afterwards you can remove TaskOrganizer.
+
+**Repeat on purpose.** The admin-only service `family_mission.import_from_task_organizer` replaces all FamilyMission data and settings with a fresh copy. It requires `overwrite: true`:
+
+```yaml
+action: family_mission.import_from_task_organizer
+data:
+  overwrite: true
+```
+
+**What you have to change by hand:**
+
+| Where | TaskOrganizer (old) | FamilyMission (new) |
+| :--- | :--- | :--- |
+| Dashboard cards | `custom:task-organizer-card`, `-leaderboard`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help` | `custom:family-mission-card`, `-leaderboard`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help` |
+| Services | `task_organizer.<service>` | `family_mission.<service>` |
+| Events | `task_organizer_<event>` (e.g. `task_organizer_task_completed`) | `family_mission_<event>` |
+| Push action prefixes | `TO_APPROVE_`, `TO_NOTDONE_`, `TO_CHEAT_`, `TO_RAPPROVE_`, `TO_RREJECT_` | `FM_APPROVE_`, `FM_NOTDONE_`, `FM_CHEAT_`, `FM_RAPPROVE_`, `FM_RREJECT_` |
+| Websocket API | `task_organizer/<command>` | `family_mission/<command>` |
+| Entities | `sensor.task_organizer_*`, `button.task_organizer_*` | `sensor.family_mission_*`, `button.family_mission_*` |
+
+Entity ids of the new sensors differ from the old ones, so update dashboards and automations that reference them.
+
+## Dashboard Cards
+The integration ships these cards for the Lovelace dashboard (`custom:family-mission-card`, `-leaderboard`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help`). A complete example dashboard with a kids view and a parents view is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
+
+### 1. Household Tasks (`family-mission-card`)
 The main card for viewing and completing tasks.
 
-<img width="381" height="579" alt="image" src="https://github.com/user-attachments/assets/f8fa36ed-233c-4784-99bb-535cfb788205" />
 
 
 **YAML Configuration:**
 ```yaml
-type: custom:task-organizer-card
+type: custom:family-mission-card
 title: "Household Tasks" # Custom title for the card (Default: Household Tasks)
 sort_by: due_date        # Options: due_date, points, assignee, alphabet (default due_date)
 sort_order: desc         # Options: default, asc, desc (default default)
@@ -122,61 +124,56 @@ show_add: true           # Shows the add task button (Default true)
 - `filter_by: "onetime, !done"` (All pending one-time tasks)
 - `filter_by: "room:kitchen, overdue"` (All overdue tasks in the kitchen)
 
-### 2. Roommate of the Month (task-organizer-leaderboard)
+### 2. Roommate of the Month (family-mission-leaderboard)
 Displays the winner's podium and an optional history of previous months.
 
-<img width="488" height="609" alt="image" src="https://github.com/user-attachments/assets/8860eb6b-1b92-436b-bbf1-9908bde8f7ec" />
 
 **YAML Configuration:**
 ```yaml
-type: custom:task-organizer-leaderboard
+type: custom:family-mission-leaderboard
 show_history: true      # Displays the table of previous winners (default: true)
 ```
 
-### 3. Household Log (task-organizer-protocol)
+### 3. Household Log (family-mission-protocol)
 A list of recently completed tasks with the option to correct or delete entries.
 
-<img width="383" height="354" alt="image" src="https://github.com/user-attachments/assets/a63d8081-eb54-4c36-a9de-00c3c6345cf5" />
 
 **YAML Configuration:**
 ```yaml
-type: custom:task-organizer-protocol
+type: custom:family-mission-protocol
 title: "Who did what?"
 filter_by: all      # Options: all (Default all)
 items_per_page: 10  # Number of displayed items
 ```
 
-### 4. Reports (task-organizer-stats)
+### 4. Reports (family-mission-stats)
 Provides advanced reporting with different views like "Completed Tasks" and "Goal Setting", including monthly point charts and progress tracking.
 
-<img width="24%" alt="image" src="https://github.com/user-attachments/assets/3f28e234-6ed6-406c-8577-9fd4e22de873" />
-<img width="24%" alt="image" src="https://github.com/user-attachments/assets/c98534b9-3283-482e-a356-b35185c9c521" />
 
 **YAML Configuration:**
 ```yaml
-type: custom:task-organizer-stats
+type: custom:family-mission-stats
 title: "Reports"
 report_type: overview  # Options: overview, burndown
 show_user_select: true # Allows selecting a specific user
 ```
 
-### 5. Settings (task-organizer-settings)
+### 5. Settings (family-mission-settings)
 Allows customization of colors, data export, and factory resets.
 
-<img width="385" height="713" alt="image" src="https://github.com/user-attachments/assets/119748db-9521-4125-b44e-71b9f21afebb" />
 
 **YAML Configuration:**
 ```yaml
-type: custom:task-organizer-settings
+type: custom:family-mission-settings
 show_advanced: false    # Unlocks the reset and factory reset area (Default: false)
 ```
 
-### 6. Kids (task-organizer-kids)
+### 6. Kids (family-mission-kids)
 A big, colourful, touch-friendly card for a tablet in landscape mode (designed for 1280x800). See [Kids mode](#kids-mode) for the concept and the setup.
 
 **YAML Configuration:**
 ```yaml
-type: custom:task-organizer-kids
+type: custom:family-mission-kids
 title: Family Tasks        # Optional
 timeout: 90                # Seconds of inactivity until the card returns to the home screen (Default: 90)
 sound: true                # Cheerful sounds generated with WebAudio (Default: true)
@@ -189,18 +186,18 @@ On a phone (card width below 700 px, measured on the card itself, not on the scr
 
 Use it in a dashboard view of type `panel` (full screen). A complete example with a parents view is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 
-### 7. Parents (task-organizer-parents)
+### 7. Parents (family-mission-parents)
 Approvals, bonus points and deductions for the parents, designed for phones. See [Parent approval](#parent-approval).
 
 ## Kids mode
-Kids mode turns TaskOrganizer into a motivating family system for kids (designed for ages 6-12): immediate visual rewards, personal progress instead of ranking siblings, one cooperative family goal and optional "first duties, then bonus".
+Kids mode turns FamilyMission into a motivating family system for kids (designed for ages 6-12): immediate visual rewards, personal progress instead of ranking siblings, one cooperative family goal and optional "first duties, then bonus".
 
 **Typical setup:** one wall tablet (e.g. an Android tablet with Fully Kiosk Browser) that is permanently logged in as a single Home Assistant user (e.g. "Tablet", not an admin) and shows the kids card. The parents use their own admin users on their phones.
 
 ### Parents guide (in-app help)
 A practical guide for parents (basic idea, 10-minute setup, ramp-up weeks, daily routine, approvals, choosing rewards, praising, goals, phasing out, FAQ) in German, French and English:
 
-* In Home Assistant: the **❓ Hilfe** buttons of the parents card, the Kids section of the settings card and the quick-start wizard open it as a full-screen overlay at the matching chapter (table of contents, collapsible chapters, search, works offline; language from your Home Assistant profile, fallback English). It can also be placed as a card: `type: custom:task-organizer-help` (optional `anchor: ramp` to open a chapter).
+* In Home Assistant: the **❓ Hilfe** buttons of the parents card, the Kids section of the settings card and the quick-start wizard open it as a full-screen overlay at the matching chapter (table of contents, collapsible chapters, search, works offline; language from your Home Assistant profile, fallback English). It can also be placed as a card: `type: custom:family-mission-help` (optional `anchor: ramp` to open a chapter).
 * As documents: [Deutsch](docs/parents-guide.de.md) · [Français](docs/parents-guide.fr.md) · [English](docs/parents-guide.en.md).
 
 ### Kids do not need a Home Assistant user
@@ -214,7 +211,7 @@ Kids are `person` entities. The *participant ID* used for points, history and as
 | Category | Meaning |
 | :--- | :--- |
 | `basis` (default) | A duty that is assigned to a kid and recurs (e.g. "Set the table"). |
-| `bonus` | Not assigned, opened by an automation with `task_organizer.set_task_due_by_name`; the first kid who takes it gets it (first come, first served). |
+| `bonus` | Not assigned, opened by an automation with `family_mission.set_task_due_by_name`; the first kid who takes it gets it (first come, first served). |
 | `auftrag` | One-time job assigned by a parent. |
 
 `min_age` (0-18) hides a task from kids who are too young (age = current year - birth year). Tasks created before this feature behave like `basis` tasks with `min_age` 0. The example templates in [`examples/kids/vorlagen.yaml`](examples/kids/vorlagen.yaml) already contain both fields; bonus automations are in [`examples/kids/automationen.yaml`](examples/kids/automationen.yaml).
@@ -233,7 +230,7 @@ Creating 40 tasks per family by hand is tedious and it is hard to know how many 
 What is created:
 * **Basis tasks per kid**, e.g. "Morning mission Anna" (subtasks are filtered by age, e.g. vacuuming only from age 8), daily and weekly tasks, each with `category: basis`, `min_age` and the kid as the assignee.
 * **Rotation tasks** for the shared duties (one task per kid, staggered due dates).
-* **Open bonus tasks** (e.g. "Unload the dishwasher", "Empty the dryer + fold", "Take out the trash"): unassigned, interval 365 days and *not due yet*. They become due through a [bonus trigger](#bonus-triggers) or your own automation (`task_organizer.set_task_due_by_name`).
+* **Open bonus tasks** (e.g. "Unload the dishwasher", "Empty the dryer + fold", "Take out the trash"): unassigned, interval 365 days and *not due yet*. They become due through a [bonus trigger](#bonus-triggers) or your own automation (`family_mission.set_task_due_by_name`).
 * **Auftrag templates** ("Help with cooking", "Vacuum the car", "Clean the windows", "Clean the bathroom sink") as templates only; create the task when you need it (new "From template" dropdown in the task editor).
 * The kid profiles (birth year, avatar, colour; an existing PIN is kept), the monthly goals `point_goals` and the `family_goal`.
 
@@ -245,10 +242,10 @@ Every generated task carries `generated_by: "wizard"` and a `wizard_key` (`<cata
 
 | Command (**admin or manager**) | Description |
 | :--- | :--- |
-| `task_organizer/wizard_catalog` | Task catalog (German and English names) and household features. |
-| `task_organizer/wizard_preview` | `kids` (`id`, `birth_year`, ...), `features`, `start_date`, `phase` (`start` / `normal`), optional `household_day` (0 = Monday ... 6, default 5), `excluded` wizard keys and `points` overrides. Returns the proposal: tasks per kid, rotation plan, load warnings, goals and family goal. Saves nothing. |
-| `task_organizer/wizard_apply` | The same input plus `selection` (wizard keys to create), `goals`, `family_goal` (`points`, `reward`), `replace_existing`, `reschedule` and `device_triggers`. Creates everything, saves once and returns the counts. |
-| `task_organizer/set_bonus_triggers` | Replaces the list of [bonus triggers](#bonus-triggers). |
+| `family_mission/wizard_catalog` | Task catalog (German and English names) and household features. |
+| `family_mission/wizard_preview` | `kids` (`id`, `birth_year`, ...), `features`, `start_date`, `phase` (`start` / `normal`), optional `household_day` (0 = Monday ... 6, default 5), `excluded` wizard keys and `points` overrides. Returns the proposal: tasks per kid, rotation plan, load warnings, goals and family goal. Saves nothing. |
+| `family_mission/wizard_apply` | The same input plus `selection` (wizard keys to create), `goals`, `family_goal` (`points`, `reward`), `replace_existing`, `reschedule` and `device_triggers`. Creates everything, saves once and returns the counts. |
+| `family_mission/set_bonus_triggers` | Replaces the list of [bonus triggers](#bonus-triggers). |
 
 ### Time windows
 Tasks and templates have the optional fields `available_from` and `available_until` (`HH:MM`, local Home Assistant time; an empty value means no limit). They are set in the task dialog and the template editor ("Only from" / "Only until"), by the services `add_task`, `edit_task_by_name`, `add_template`, `edit_template_by_name`, the websocket commands and the import. The wizard sets default windows for all basis tasks (e.g. 05:00-10:00 for the morning mission and 17:00-21:00 for the evening mission, see "Spreading over the day and the week").
@@ -258,15 +255,15 @@ Tasks and templates have the optional fields `available_from` and `available_unt
 * The normal task card (parents) is never restricted: you can complete a task at any time.
 
 ### Undo (parents)
-The websocket command `task_organizer/undo_completion` (admin, manager or parent) (`history_id`) takes back a task completion: all history entries of that completion (they share a `completion_id`; older entries without one are undone individually) are removed, their points are subtracted (never below 0), the task gets its previous due date back (`previous_due_date` is stored in the history entry; without it the task is due now), subtasks are reset and a one-time task that was deleted by the completion is recreated from a snapshot stored in the history entry. There is no deduction. A second undo answers `{"success": false, "error": "not_found"}`. The parents card shows "↩️ Rückgängig" (with a confirmation) on task entries in the per-kid history, the protocol card has an undo button for administrators.
+The websocket command `family_mission/undo_completion` (admin, manager or parent) (`history_id`) takes back a task completion: all history entries of that completion (they share a `completion_id`; older entries without one are undone individually) are removed, their points are subtracted (never below 0), the task gets its previous due date back (`previous_due_date` is stored in the history entry; without it the task is due now), subtasks are reset and a one-time task that was deleted by the completion is recreated from a snapshot stored in the history entry. There is no deduction. A second undo answers `{"success": false, "error": "not_found"}`. The parents card shows "↩️ Rückgängig" (with a confirmation) on task entries in the per-kid history, the protocol card has an undo button for administrators.
 
 ### Parent actions on the kids card
 A Home Assistant user with a parent role (administrator, manager or parent, see [Parents role](#parents-role)) who opens the kids card (and enters the kid's PIN) sees a small icon row below every task: **⏭️ Skip today**, **⏸️ Postpone** (a sheet: tomorrow / the day after tomorrow / a date picked with day and month selects) and **✅ Complete for the kid**. Below the duties a list "Done today" offers **↩️ Undo** for the completions of this kid from today. Skip, complete and undo ask for a confirmation. On the tablet user (no role) nothing changes; there is no way to delete a task from the kids card.
 
 | Command | Allowed | Description |
 | :--- | :--- | :--- |
-| `task_organizer/parent_task_action` | admin, manager, parent | `task_id`, `action`: `skip_today` moves the task to its next occurrence without points and writes a history entry of type `skipped` (0 points, reason "Von Eltern ausgesetzt" / "Skipped by parents"; it is not counted as missed; a one-time task is postponed to tomorrow instead of being deleted). `postpone` hides the task until `until` (`YYYY-MM-DD`, the first day it is back, default tomorrow; `invalid_date` for a date that is not in the future). |
-| `task_organizer/parent_complete_for` | admin, manager, parent | `task_id`, `kid_id`. A normal completion for the kid with 100 % of the points (history, events, next occurrence) that ignores PIN, time window, open steps and approval rules. |
+| `family_mission/parent_task_action` | admin, manager, parent | `task_id`, `action`: `skip_today` moves the task to its next occurrence without points and writes a history entry of type `skipped` (0 points, reason "Von Eltern ausgesetzt" / "Skipped by parents"; it is not counted as missed; a one-time task is postponed to tomorrow instead of being deleted). `postpone` hides the task until `until` (`YYYY-MM-DD`, the first day it is back, default tomorrow; `invalid_date` for a date that is not in the future). |
+| `family_mission/parent_complete_for` | admin, manager, parent | `task_id`, `kid_id`. A normal completion for the kid with 100 % of the points (history, events, next occurrence) that ignores PIN, time window, open steps and approval rules. |
 
 Both answer `{"success": false, "error": "not_found"}` for an unknown task (`parent_complete_for` also `unknown_kid`).
 
@@ -276,10 +273,10 @@ On every task with `allow_together` the kids card offers a second button **👫 
 * The backend verifies every helper PIN with the normal lockout of that kid (5 wrong attempts lock it for 60 s). Structural checks (duplicate helper, the main kid as helper, unknown kid, too young) come first and cost no attempt; the first failing helper stops the check, so a request cannot try more PINs than a direct PIN check. Answers: `{"success": false, "error": "wrong_pin" | "locked" | "too_young" | "unknown_kid" | "duplicate_helper", "helper_id": "<kid>"}`.
 * The points of the task are split equally among all participants (rounded to 0.1 per kid, like the shared completion of the classic card). The setting `team_bonus` (0-3 points, default 1, settings card > Kids > Teamwork) adds that many extra points per participant as a separate history entry of type `bonus` with the reason "Teamarbeit" / "Teamwork"; it belongs to the same completion, so ↩️ undo takes it back as well, and it does not count for the family goal. A task done alone never gets a team bonus.
 * Open steps, the time window and the eligibility rules only apply to the main kid (the one who is logged in).
-* If the task needs approval, one pending entry for all participants is created (`helpers` in the pending record and in the `task_organizer_approval_requested` event); approving awards everybody, rejecting as "cheated" penalises only the main kid.
+* If the task needs approval, one pending entry for all participants is created (`helpers` in the pending record and in the `family_mission_approval_requested` event); approving awards everybody, rejecting as "cheated" penalises only the main kid.
 
 ### Spontaneous bonus
-The **➕ Spontan-Bonus** button of the parents card opens a sheet to create a one-time bonus task in a few taps: name (required, up to 60 characters), icon chip (🛒 🍞 🧺 🧹 📦 🐕 ⭐), estimated minutes (5 / 10 / 15 / 30, suggesting 2 / 3 / 4 / 6 points, editable 1-10), target ("All kids" or one kid) with a minimum age, and an expiry ("No expiry" or "Today until HH:MM"). The admin-only websocket command `task_organizer/add_adhoc_bonus` (`name`, `points`, optional `icon`, `minutes`, `kid_id`, `min_age`, `expires_at` as ISO date/time) creates a task with `interval: 0`, category `bonus`, `adhoc: true` and `expires_at`, and fires `task_organizer_task_created` and [`task_organizer_bonus_opened`](#task_organizer_bonus_opened), so existing tablet announcements work. Errors: `unauthorized`, `invalid_name`, `invalid_icon`, `unknown_person`, `invalid_expiry`. A kid-targeted task uses the normal assignee rule. Expired ad-hoc tasks are removed automatically (checked every minute) without points or history; the kids card hides them as soon as they expire and shows "bis 18:00" on the bonus board.
+The **➕ Spontan-Bonus** button of the parents card opens a sheet to create a one-time bonus task in a few taps: name (required, up to 60 characters), icon chip (🛒 🍞 🧺 🧹 📦 🐕 ⭐), estimated minutes (5 / 10 / 15 / 30, suggesting 2 / 3 / 4 / 6 points, editable 1-10), target ("All kids" or one kid) with a minimum age, and an expiry ("No expiry" or "Today until HH:MM"). The admin-only websocket command `family_mission/add_adhoc_bonus` (`name`, `points`, optional `icon`, `minutes`, `kid_id`, `min_age`, `expires_at` as ISO date/time) creates a task with `interval: 0`, category `bonus`, `adhoc: true` and `expires_at`, and fires `family_mission_task_created` and [`family_mission_bonus_opened`](#family_mission_bonus_opened), so existing tablet announcements work. Errors: `unauthorized`, `invalid_name`, `invalid_icon`, `unknown_person`, `invalid_expiry`. A kid-targeted task uses the normal assignee rule. Expired ad-hoc tasks are removed automatically (checked every minute) without points or history; the kids card hides them as soon as they expire and shows "bis 18:00" on the bonus board.
 
 ### Missed duties
 With `expire_missed` (default on; settings card, Kids section) a duty that was not done does not stay overdue forever: at local midnight (and at startup when a midnight was missed; once per day) every kid-assigned `basis` task that is still due from an earlier day moves to its next occurrence - daily duties (and rotation turns of daily rotations) right away, weekly or longer ones (`interval >= 7`) after a grace period of 2 days. No points are awarded or deducted; each expiry writes a history entry of type `missed` (0 points) that only the parents card and the protocol card show. Bonus tasks never expire this way (ad-hoc bonus tasks use `expires_at`).
@@ -288,7 +285,7 @@ With `expire_missed` (default on; settings card, Kids section) a duty that was n
 A bonus task can open itself when a Home Assistant entity changes to a state, without writing an automation: the dishwasher program is finished, the dryer is done, the robot vacuum starts. A trigger consists of the bonus task (referenced by its `wizard_key` or `task_id`), an `entity_id` and the target state `to_state`; they are stored in the setting `bonus_triggers`.
 
 * Create them in the wizard (step 2) or in the settings card, section **Bonus-Auslöser / Bonus triggers**: choose the bonus task, search an entity (domains `sensor`, `binary_sensor`, `vacuum`, `select`, `input_boolean`, `switch`) and enter the state; the state is suggested from the `options` of enum sensors and the current state.
-* When the entity **changes** to exactly that state (string comparison, `on` / `off` for binary sensors), the task is set due immediately (like `set_task_due_by_name`) and the event [`task_organizer_bonus_opened`](#task_organizer_bonus_opened) is fired. The first state after a restart and the recovery from `unknown` / `unavailable` do not trigger. If the task is already open, nothing happens (no second announcement).
+* When the entity **changes** to exactly that state (string comparison, `on` / `off` for binary sensors), the task is set due immediately (like `set_task_due_by_name`) and the event [`family_mission_bonus_opened`](#family_mission_bonus_opened) is fired. The first state after a restart and the recovery from `unknown` / `unavailable` do not trigger. If the task is already open, nothing happens (no second announcement).
 * The listeners are registered when the integration starts, re-registered whenever the settings change and removed when it is unloaded.
 
 ### How the kids card works
@@ -305,11 +302,11 @@ All of these return `{"success": true, ...}` or `{"success": false, "error": <co
 
 | Command | Description |
 | :--- | :--- |
-| `task_organizer/kid_verify_pin` | `kid_id`, `pin`. Checks the PIN (a kid without PIN is always accepted). |
-| `task_organizer/kid_claim_task` | `task_id`, `kid_id`, `pin`. Reserves a task for the kid. |
-| `task_organizer/kid_complete_task` | `task_id`, `kid_id`, `pin`, optional `helpers` (`[{kid_id, pin}]`, see [Doing a task together](#doing-a-task-together)). Checks the PIN and the eligibility (task due and not paused, kid assigned, old enough, not claimed by another kid, duties first for bonus tasks with `requires_routine`) and awards the points. |
-| `task_organizer/set_kid_profile` | **Admin or manager.** `participant_id`, `avatar`, `color` (hex), `birth_year`, optional `pin` (4 digits, empty = keep) and `clear_pin`. |
-| `task_organizer/delete_kid_profile` | **Admin or manager.** `participant_id`. |
+| `family_mission/kid_verify_pin` | `kid_id`, `pin`. Checks the PIN (a kid without PIN is always accepted). |
+| `family_mission/kid_claim_task` | `task_id`, `kid_id`, `pin`. Reserves a task for the kid. |
+| `family_mission/kid_complete_task` | `task_id`, `kid_id`, `pin`, optional `helpers` (`[{kid_id, pin}]`, see [Doing a task together](#doing-a-task-together)). Checks the PIN and the eligibility (task due and not paused, kid assigned, old enough, not claimed by another kid, duties first for bonus tasks with `requires_routine`) and awards the points. |
+| `family_mission/set_kid_profile` | **Admin or manager.** `participant_id`, `avatar`, `color` (hex), `birth_year`, optional `pin` (4 digits, empty = keep) and `clear_pin`. |
+| `family_mission/delete_kid_profile` | **Admin or manager.** `participant_id`. |
 
 ### Birthday
 Give a kid a **birthday** (settings card -> Kids, or wizard step 1). The age is then exact (it changes on the birthday, not on January 1st; a Feb 29 birthday is celebrated on Feb 28 in common years); without a birthday the birth year is used as before. On the birthday (checked at startup and daily at 00:02, once per birthday):
@@ -319,13 +316,13 @@ Give a kid a **birthday** (settings card -> Kids, or wizard step 1). The age is 
 * **Birthday bonus** (`birthday_bonus_points`, default 10, 0 = off): a history entry of type `birthday`. It counts for the kid's monthly points and goal but not for the family goal.
 * **Level-up:** the kids card shows what the new age unlocks (tasks/templates whose `min_age` is reached and catalog entries that become available or replace outgrown ones). Task packages are never changed automatically: a persistent notification reminds the parents to run the quick start again.
 
-The event `task_organizer_kid_birthday` (`kid_id`, `name`, `age`, `unlocked`) is fired, e.g. for a push message:
+The event `family_mission_kid_birthday` (`kid_id`, `name`, `age`, `unlocked`) is fired, e.g. for a push message:
 
 ```yaml
 alias: Kid birthday push
 trigger:
   - platform: event
-    event_type: task_organizer_kid_birthday
+    event_type: family_mission_kid_birthday
 action:
   - service: notify.mobile_app_alexs_phone
     data:
@@ -337,20 +334,20 @@ action:
 
 ### Parent approval
 * A task (or template) can have **"Requires parent approval"** (`requires_approval`). Per kid, a **spot-check rate** (0-100 %, settings card) additionally sends random completions to the parents. After cheating, the kid is in **strict mode** until `strict_until`: every task needs approval.
-* When such a task is completed on the kids card, the kid sees a soft celebration ("Mama or Papa will take a look"), the task advances like a normal completion (it cannot be completed twice) but **no points are awarded yet**. The completion is stored as a pending entry (`pending` in `get_data`) and the event `task_organizer_approval_requested` (`pending_id`, `task_name`, `kid_id`, `kid_name`, `points`) is fired.
+* When such a task is completed on the kids card, the kid sees a soft celebration ("Mama or Papa will take a look"), the task advances like a normal completion (it cannot be completed twice) but **no points are awarded yet**. The completion is stored as a pending entry (`pending` in `get_data`) and the event `family_mission_approval_requested` (`pending_id`, `task_name`, `kid_id`, `kid_name`, `points`) is fired.
 * Parents decide in the **parents card** or via push notification:
-  * **Approve:** the points, the history entry and the events (`task_organizer_task_completed`, leaderboard) are exactly those of a normal completion, dated at the approval time (a pending entry survives the monthly reset and counts for the month it is approved in).
+  * **Approve:** the points, the history entry and the events (`family_mission_task_completed`, leaderboard) are exactly those of a normal completion, dated at the approval time (a pending entry survives the monthly reset and counts for the month it is approved in).
   * **Not done:** no points, the task is due again, no penalty.
   * **Cheated:** no points, a deduction of `round(task points x cheat_penalty_factor)` (default 1.0, 0-2) with the reason "Cheated: <task>", and strict mode for `cheat_strict_days` days (default 7, 0 = off).
-* Approving twice (card and push) is harmless: the second attempt finds nothing to do. Event `task_organizer_approval_resolved` (`pending_id`, `result`, ...) is fired afterwards, e.g. to clear a notification.
+* Approving twice (card and push) is harmless: the second attempt finds nothing to do. Event `family_mission_approval_resolved` (`pending_id`, `result`, ...) is fired afterwards, e.g. to clear a notification.
 
-Actionable notification (the companion app fires `mobile_app_notification_action`; TaskOrganizer handles the actions `TO_APPROVE_<id>`, `TO_NOTDONE_<id>`, `TO_CHEAT_<id>` itself):
+Actionable notification (the companion app fires `mobile_app_notification_action`; FamilyMission handles the actions `FM_APPROVE_<id>`, `FM_NOTDONE_<id>`, `FM_CHEAT_<id>` itself):
 
 ```yaml
 alias: Ask parents for approval
 trigger:
   - platform: event
-    event_type: task_organizer_approval_requested
+    event_type: family_mission_approval_requested
 action:
   - service: notify.mobile_app_alexs_phone
     data:
@@ -359,18 +356,18 @@ action:
       data:
         tag: "to_{{ trigger.event.data.pending_id }}"
         actions:
-          - action: "TO_APPROVE_{{ trigger.event.data.pending_id }}"
+          - action: "FM_APPROVE_{{ trigger.event.data.pending_id }}"
             title: "✅ Approve"
-          - action: "TO_NOTDONE_{{ trigger.event.data.pending_id }}"
+          - action: "FM_NOTDONE_{{ trigger.event.data.pending_id }}"
             title: "↩️ Not done"
-          - action: "TO_CHEAT_{{ trigger.event.data.pending_id }}"
+          - action: "FM_CHEAT_{{ trigger.event.data.pending_id }}"
             title: "🚫 Cheated"
   # repeat the notify action for the second parent
 ---
 alias: Clear the approval notification
 trigger:
   - platform: event
-    event_type: task_organizer_approval_resolved
+    event_type: family_mission_approval_resolved
 action:
   - service: notify.mobile_app_alexs_phone
     data:
@@ -384,18 +381,18 @@ action:
 Kids can spend their points on rewards chosen by the parents.
 
 * **Wallet:** every point a kid earns (task, approval, team bonus, birthday bonus, manual bonus, "complete for kid") is also credited to a per-kid wallet (`wallet` in `get_data`). Penalties, undo and deleting/editing history entries debit it (never below 0). The wallet is **not** reset at the monthly reset, so the monthly points, goals and family goal work as before. On the first start with the shop the wallet is initialised with the current month points.
-* **Rewards:** settings card or parents card (admins and managers: "Manage rewards"): emoji, name, cost (1-1000), minimum age and active flag, at most 30. "Load suggestions" adds a starter set. Command `task_organizer/set_rewards`; `update_settings` and imports never touch rewards, wallet or redemptions.
+* **Rewards:** settings card or parents card (admins and managers: "Manage rewards"): emoji, name, cost (1-1000), minimum age and active flag, at most 30. "Load suggestions" adds a starter set. Command `family_mission/set_rewards`; `update_settings` and imports never touch rewards, wallet or redemptions.
 * **Kids card:** a "🛍️ Shop" button in the kid view (hidden without active rewards) opens the shop: balance, rewards as cards (affordable ones highlighted, others with progress "noch 23 ⭐"), "Einlösen" with confirmation and a "⭐ Sparziel" toggle. The savings goal is shown as a small bar on the home tile. Redeeming (`kid_redeem`, PIN checked) deducts at once and creates a pending redemption.
 * **Parents card:** section "Einlösungen" with "✅ Einlösen" (`redemption_resolve`, `approve: true`, marks it done) and "↩️ Ablehnen" (refunds the wallet, history type `refund`). The wallet balance is shown next to the monthly points. Redeem/refund history entries (`redeem`, `refund`) never change the monthly points.
-* **Events:** `task_organizer_reward_requested` (`redemption_id`, `kid_id`, `kid_name`, `reward_id`, `name`, `emoji`, `cost`) and `task_organizer_reward_resolved` (same plus `result`: `approved` | `rejected`).
+* **Events:** `family_mission_reward_requested` (`redemption_id`, `kid_id`, `kid_name`, `reward_id`, `name`, `emoji`, `cost`) and `family_mission_reward_resolved` (same plus `result`: `approved` | `rejected`).
 
-Actionable notification (`TO_RAPPROVE_<id>` / `TO_RREJECT_<id>`, idempotent like the approval actions):
+Actionable notification (`FM_RAPPROVE_<id>` / `FM_RREJECT_<id>`, idempotent like the approval actions):
 
 ```yaml
 alias: Ask parents about a reward
 trigger:
   - platform: event
-    event_type: task_organizer_reward_requested
+    event_type: family_mission_reward_requested
 action:
   - service: notify.mobile_app_alexs_phone
     data:
@@ -403,9 +400,9 @@ action:
       message: "{{ trigger.event.data.cost }} points spent"
       data:
         actions:
-          - action: "TO_RAPPROVE_{{ trigger.event.data.redemption_id }}"
+          - action: "FM_RAPPROVE_{{ trigger.event.data.redemption_id }}"
             title: "✅ Redeem"
-          - action: "TO_RREJECT_{{ trigger.event.data.redemption_id }}"
+          - action: "FM_RREJECT_{{ trigger.event.data.redemption_id }}"
             title: "↩️ Decline (refund)"
 ```
 
@@ -425,14 +422,14 @@ Tasks and templates have the optional fields `reminder_at` (`HH:MM`, local time)
 
 The minute timer fires, once per task and day, as soon as the time has passed, the task is due and still open (not paused or expired) and its time window has not ended yet:
 
-* the event `task_organizer_task_reminder` with `task_id`, `task_name`, `assignees` (participant ids) and `assignee_names`;
+* the event `family_mission_task_reminder` with `task_id`, `task_name`, `assignees` (participant ids) and `assignee_names`;
 * if a target is set, the notify service is called with the title "Erinnerung" / "Reminder" (language of Home Assistant) and the message "<task> ist noch offen" / "<task> is still open". An unknown service is logged as a warning and does not stop anything.
 
 ```yaml
 alias: Speak the reminder
 trigger:
   - platform: event
-    event_type: task_organizer_task_reminder
+    event_type: family_mission_task_reminder
 action:
   - service: notify.mobile_app_alexs_phone
     data:
@@ -440,33 +437,33 @@ action:
 ```
 
 ### Bonus points and deductions
-The websocket command `task_organizer/adjust_points` (admin, manager or parent) (`kid_id`, `points` +-1..50, `reason` required, max 80 characters) and the service `task_organizer.adjust_points` add a history entry of type `bonus` or `penalty` with the reason. A kid never drops below 0 points (the applied amount is recorded). History entries have an optional `type` (`task` for old entries, `bonus`, `penalty`, `birthday`) and `reason`; the protocol card shows them with icons, deleting a deduction refunds it. The type `missed` (0 points) marks an [expired duty](#missed-duties).
+The websocket command `family_mission/adjust_points` (admin, manager or parent) (`kid_id`, `points` +-1..50, `reason` required, max 80 characters) and the service `family_mission.adjust_points` add a history entry of type `bonus` or `penalty` with the reason. A kid never drops below 0 points (the applied amount is recorded). History entries have an optional `type` (`task` for old entries, `bonus`, `penalty`, `birthday`) and `reason`; the protocol card shows them with icons, deleting a deduction refunds it. The type `missed` (0 points) marks an [expired duty](#missed-duties).
 
 **Privacy:** deductions and strict mode are never shown on the kids card home screen, only in the kid's own view after the PIN (a neutral line like "-4 points: Cheated: Set the table" and a small note while strict mode is active).
 
 **Family goal:** `family_points` (in `get_data`, used by the family rocket) is computed from this period's history entries of type `task`; birthday bonus, bonus points and deductions do not count.
 
-### Parents card (`task-organizer-parents`)
+### Parents card (`family-mission-parents`)
 A phone-friendly dashboard for parents (administrators and users with the parents role, see "Parents role"): open approvals with the buttons Approve / Not done / Cheated (with a confirmation that shows the deduction), quick +1 +5 -1 -5 per kid with a reason sheet, the **❤️ Loben** button ([praise](#praise)), the **➕ Spontan-Bonus** button ([spontaneous bonus](#spontaneous-bonus)), strict mode indicator and the latest history entries per kid, where task entries have a **↩️ Rückgängig** button ([undo](#undo-parents)). Non-admins only see a short note.
 
 ```yaml
-type: custom:task-organizer-parents
+type: custom:family-mission-parents
 title: Parents
 ```
 
 ### Praise
-Social recognition without points. On the parents card every kid has a **❤️ Loben** button: a sheet with sticker chips (❤️ ⭐ 🌟 👏 🏆 💪 🦸 🎉 😊 🙌), message chips ("Danke fürs Helfen!", "Das hast du super gemacht!", "Ich bin stolz auf dich!", "Toll, wie du drangeblieben bist!") and a free text (max 120 characters). The websocket command `task_organizer/send_praise` (`kid_id`, `sticker`, optional `message`; admin, manager or parent) stores the praise in `data["praise"]` (the last 50 per kid; `id`, `kid_id`, `from_name`, `message`, `sticker`, `timestamp`, `seen`), where `from_name` is the name of the person linked to the sending user (else the user name), adds a history entry of type `praise` with 0 points (protocol card: ❤️ and the message; statistics and goals ignore it) and fires `task_organizer_praise`.
+Social recognition without points. On the parents card every kid has a **❤️ Loben** button: a sheet with sticker chips (❤️ ⭐ 🌟 👏 🏆 💪 🦸 🎉 😊 🙌), message chips ("Danke fürs Helfen!", "Das hast du super gemacht!", "Ich bin stolz auf dich!", "Toll, wie du drangeblieben bist!") and a free text (max 120 characters). The websocket command `family_mission/send_praise` (`kid_id`, `sticker`, optional `message`; admin, manager or parent) stores the praise in `data["praise"]` (the last 50 per kid; `id`, `kid_id`, `from_name`, `message`, `sticker`, `timestamp`, `seen`), where `from_name` is the name of the person linked to the sending user (else the user name), adds a history entry of type `praise` with 0 points (protocol card: ❤️ and the message; statistics and goals ignore it) and fires `family_mission_praise`.
 
 On the kids card unseen praise shows as a small bouncing sticker on **that kid's** home tile only (no comparison between siblings). When the kid opens their view (after the PIN, or on the own device with `mode: mine`) a big friendly overlay shows sticker, message and "von <name>" with a gentle sound (setting `sound`); closing it calls `kid_praise_seen` (`kid_id`, `pin`, `praise_id`) or `my_praise_seen` (`praise_id`) and marks it as seen. A kid can only mark its own praise.
 
-#### Event `task_organizer_praise`
+#### Event `family_mission_praise`
 Data: `kid_id`, `kid_name`, `from_name`, `message`, `sticker`. Example: read the praise out on the Fully Kiosk tablet (media player of the Fully Kiosk Browser integration):
 
 ```yml
-alias: "TaskOrganizer: Read out praise on the tablet"
+alias: "FamilyMission: Read out praise on the tablet"
 trigger:
   - platform: event
-    event_type: "task_organizer_praise"
+    event_type: "family_mission_praise"
 action:
   - action: tts.speak
     target:
@@ -480,7 +477,7 @@ action:
 
 ### Parents role
 
-By default every parent action needs a Home Assistant administrator. With the **parents role** a normal (non-admin) Home Assistant user can be a parent without full admin rights. An administrator configures it in the settings card under **Kids > Parents**: tick **Parent** and, if wanted, **May manage** per user (listed are the persons that have a Home Assistant user; "may manage" implies parent). The lists are stored as the settings `parents` and `parents_manage` and can only be changed by an administrator with the admin-only websocket command `task_organizer/set_parents` (`parents`, `parents_manage`; unknown, inactive and system users are rejected with `invalid_user`). `update_settings` and imports ignore both keys. **Do not enter the tablet user** of the kids card: it would be allowed to approve its own tasks.
+By default every parent action needs a Home Assistant administrator. With the **parents role** a normal (non-admin) Home Assistant user can be a parent without full admin rights. An administrator configures it in the settings card under **Kids > Parents**: tick **Parent** and, if wanted, **May manage** per user (listed are the persons that have a Home Assistant user; "may manage" implies parent). The lists are stored as the settings `parents` and `parents_manage` and can only be changed by an administrator with the admin-only websocket command `family_mission/set_parents` (`parents`, `parents_manage`; unknown, inactive and system users are rejected with `invalid_user`). `update_settings` and imports ignore both keys. **Do not enter the tablet user** of the kids card: it would be allowed to approve its own tasks.
 
 | Role | Allowed |
 | --- | --- |
@@ -489,7 +486,7 @@ By default every parent action needs a Home Assistant administrator. With the **
 | Parent (`parents`) | `approve`, `reject`, `adjust_points`, `undo_completion`, `add_adhoc_bonus`, `parent_task_action`, `parent_complete_for`; parents card and undo in the protocol card; sees the settings read-only |
 | Anyone else | none of the above (error `unauthorized`) |
 
-`get_data` returns `my_role` (`admin`, `manager`, `parent` or `null`) for the calling user and `ha_users` (persons with a user: `user_id`, `name`) for the settings card. Services such as `task_organizer.adjust_points` stay Home Assistant admin-level, and actionable push notifications are unchanged.
+`get_data` returns `my_role` (`admin`, `manager`, `parent` or `null`) for the calling user and `ha_users` (persons with a user: `user_id`, `name`) for the settings card. Services such as `family_mission.adjust_points` stay Home Assistant admin-level, and actionable push notifications are unchanged.
 
 **Classic commands while kids mode is in use.** As soon as at least one kid profile exists, the classic websocket commands are role-gated too, so the shared tablet user can only use the PIN-protected kid commands:
 
@@ -499,13 +496,13 @@ By default every parent action needs a Home Assistant administrator. With the **
 | `update_settings` | admin, manager |
 | `import_tasks`, `factory_reset` | admin |
 
-Without kid profiles nothing changes: every Home Assistant user may manage tasks, templates, settings and history as before. Note that the button entities (`button.task_organizer_reset_month`, `button.task_organizer_factory_reset`) and the services are not covered by these checks; hide or disable the factory reset button if non-admin users can reach entity controls.
+Without kid profiles nothing changes: every Home Assistant user may manage tasks, templates, settings and history as before. Note that the button entities (`button.family_mission_reset_month`, `button.family_mission_factory_reset`) and the services are not covered by these checks; hide or disable the factory reset button if non-admin users can reach entity controls.
 
 ### Settings of step 2
 `cheat_penalty_factor` (0-2), `cheat_strict_days` (0-30), `birthday_bonus_points` (0-50), `team_bonus` (0-3), `birthday_duty_free`, `expire_missed` and the per-kid spot-check rate are in the settings card (Kids). `update_settings` cannot overwrite kid profiles, pending approvals, history or points.
 
 ### Security notes
-* PINs are stored as salted SHA-256 hashes. The hashes are never sent to the frontend (`task_organizer/get_data` only reports `has_pin`) and never appear in the attributes of `sensor.task_organizer_settings`.
+* PINs are stored as salted SHA-256 hashes. The hashes are never sent to the frontend (`family_mission/get_data` only reports `has_pin`) and never appear in the attributes of `sensor.family_mission_settings`.
 * The PIN is a *convenience barrier between siblings*, not a security feature against attackers: the kids card talks to Home Assistant with the permissions of the logged-in tablet user, so that user must not be an administrator. The regular task card and the other websocket commands are not PIN-protected.
 * Brute-force protection is kept in memory (a restart of Home Assistant unlocks the kids).
 
@@ -514,25 +511,25 @@ The integration provides the following sensors:
 
 | Sensor | Description |
 | :--- | :--- |
-| `sensor.task_organizer_all_tasks` | Displays the total number of created tasks. The full task list (including subtasks) is available as JSON in the attributes. |
-| `sensor.task_organizer_due_tasks` | Displays the number of tasks that are due but not yet overdue. |
-| `sensor.task_organizer_overdue_tasks` | Displays the number of overdue tasks. |
-| `sensor.task_organizer_due_and_overdue_tasks` | Displays the combined number of due and overdue tasks. |
-| `sensor.task_organizer_points` | Shows the current point standings for all users. Perfect for custom visualizations. |
-| `sensor.task_organizer_leaderboard` | Displays the name of the roommate currently in the lead. |
-| `sensor.task_organizer_templates` | Displays the number of available templates. The full template list (including subtasks) is available as JSON in the attributes. |
-| `sensor.task_organizer_settings` | Provides the current configuration (colors, overdue thresholds, kid profiles without PIN hashes). |
+| `sensor.family_mission_all_tasks` | Displays the total number of created tasks. The full task list (including subtasks) is available as JSON in the attributes. |
+| `sensor.family_mission_due_tasks` | Displays the number of tasks that are due but not yet overdue. |
+| `sensor.family_mission_overdue_tasks` | Displays the number of overdue tasks. |
+| `sensor.family_mission_due_and_overdue_tasks` | Displays the combined number of due and overdue tasks. |
+| `sensor.family_mission_points` | Shows the current point standings for all users. Perfect for custom visualizations. |
+| `sensor.family_mission_leaderboard` | Displays the name of the roommate currently in the lead. |
+| `sensor.family_mission_templates` | Displays the number of available templates. The full template list (including subtasks) is available as JSON in the attributes. |
+| `sensor.family_mission_settings` | Provides the current configuration (colors, overdue thresholds, kid profiles without PIN hashes). |
 
 ## Buttons
 | Button | Description |
 | :--- | :--- |
-| `button.task_organizer_reset_month`| Triggers the monthly reset (archives points and starts a new period). |
-| `button.task_organizer_factory_reset` | Performs a factory reset (deletes all data). |
+| `button.family_mission_reset_month`| Triggers the monthly reset (archives points and starts a new period). |
+| `button.family_mission_factory_reset` | Performs a factory reset (deletes all data). |
 
 ## Services
-TaskOrganizer offers services that can be used in automations or scripts:
+FamilyMission offers services that can be used in automations or scripts:
 
-### `task_organizer.add_task`
+### `family_mission.add_task`
 Creates a new recurring or one-time task, optionally from a template.
 * **template**: (Optional) The name of a template to use. Fills in other fields if they are not provided.
 * **name**: (Optional if template is used) What should the task be called?
@@ -548,25 +545,25 @@ Creates a new recurring or one-time task, optionally from a template.
 * **override_overdue_days**: (Optional) Overrides the global setting for the number of days after which this task is considered overdue.
 * **subtasks**: (Optional) A list of subtasks (objects with 'title' and 'done' keys).
 
-### `task_organizer.complete_task_by_name`
+### `family_mission.complete_task_by_name`
 Marks a task as completed by its exact name.
 * **task_name**: The name of the task.
 * **user_id**: (Optional) Who completed the task.
 
-### `task_organizer.set_task_due_by_name`
+### `family_mission.set_task_due_by_name`
 Marks a task as due immediately by its exact name.
 * **task_name**: The name of the task.
 
-### `task_organizer.pause_task_by_name`
+### `family_mission.pause_task_by_name`
 Pauses a task until a specific date.
 * **task_name**: The name of the task.
 * **pause_until**: The date until which the task should be paused (e.g., "2024-12-31").
 
-### `task_organizer.remove_task_by_name`
+### `family_mission.remove_task_by_name`
 Removes a task by its exact name.
 * **task_name**: The exact name of the task.
 
-### `task_organizer.edit_task_by_name`
+### `family_mission.edit_task_by_name`
 Edits an existing task by its exact name.
 * **task_name**: The exact name of the task to edit.
 * **new_name**: (Optional) The new name for the task.
@@ -581,7 +578,7 @@ Edits an existing task by its exact name.
 * **override_overdue_days**: (Optional) Overrides the global setting.
 * **subtasks**: (Optional) The updated list of subtasks.
 
-### `task_organizer.add_template`
+### `family_mission.add_template`
 Creates a new template.
 * **name**: The name of the template.
 * **description**: (Optional) Additional info.
@@ -594,11 +591,11 @@ Creates a new template.
 * **assignees**: (Optional) List of user IDs or person entities.
 * **subtasks**: (Optional) A list of subtasks for this template.
 
-### `task_organizer.remove_template_by_name`
+### `family_mission.remove_template_by_name`
 Removes a template by its exact name.
 * **template_name**: The exact name of the template.
 
-### `task_organizer.edit_template_by_name`
+### `family_mission.edit_template_by_name`
 Edits an existing template by its exact name.
 * **template_name**: The exact name of the template to edit.
 * **new_name**: (Optional) The new name for the template.
@@ -612,16 +609,16 @@ Edits an existing template by its exact name.
 * **assignees**: (Optional) List of user IDs or person entities.
 * **subtasks**: (Optional) The updated list of subtasks.
 
-### `task_organizer.reset_monthly_points`
+### `family_mission.reset_monthly_points`
 Manually resets all points to 0 and saves the current month to the history.
 
-### `task_organizer.factory_reset`
+### `family_mission.factory_reset`
 Deletes all tasks, history, and points, returning the integration to its initial state.
 
 ## Events
-TaskOrganizer fires custom events to allow for advanced automations.
+FamilyMission fires custom events to allow for advanced automations.
 
-### task_organizer_task_completed
+### family_mission_task_completed
 This event is fired whenever a task is marked as completed. It is useful for triggering notifications or other household automations.
 
 #### Event Data:
@@ -635,10 +632,10 @@ This event is fired whenever a task is marked as completed. It is useful for tri
 Say "Thank you" via a media player when someone completes a specific task.
 
 ```yml
-alias: "TaskOrganizer: Thank You Message"
+alias: "FamilyMission: Thank You Message"
 trigger:
   - platform: event
-    event_type: "task_organizer_task_completed"
+    event_type: "family_mission_task_completed"
 condition:
   - condition: template
     value_template: "{{ trigger.event.data.task_name == 'Take out the trash' }}"
@@ -649,7 +646,7 @@ action:
       message: "Thank you for taking out the trash!"
 ```
 
-### task_organizer_leaderboard_changed
+### family_mission_leaderboard_changed
 This event is triggered whenever the ranking order within the Top 3 roommates changes. This can happen when a task is completed, points are manually edited, or the month is reset.
 
 #### Event Data:
@@ -664,10 +661,10 @@ Each list entry contains user_id, name (friendly name), and points.
 Celebrate when a roommate takes the lead!
 
 ```yml
-alias: "TaskOrganizer: New Leader Notification"
+alias: "FamilyMission: New Leader Notification"
 trigger:
   - platform: event
-    event_type: "task_organizer_leaderboard_changed"
+    event_type: "family_mission_leaderboard_changed"
 condition:
   # Only trigger if the person in 1st place (index 0) has changed
   - condition: template
@@ -681,7 +678,7 @@ action:
         with {{ trigger.event.data.new_leaderboard[0].points }} points!
 ```
 
-### task_organizer_task_created
+### family_mission_task_created
 This event is fired whenever a new task is created. It is useful for notifying roommates about new tasks or triggering other automations.
 
 #### Event Data:
@@ -704,10 +701,10 @@ This event is fired whenever a new task is created. It is useful for notifying r
 Send a notification when a new high-complexity task is created.
 
 ```yml
-alias: "TaskOrganizer: New High-Complexity Task Notification"
+alias: "FamilyMission: New High-Complexity Task Notification"
 trigger:
   - platform: event
-    event_type: "task_organizer_task_created"
+    event_type: "family_mission_task_created"
 condition:
   - condition: template
     value_template: "{{ trigger.event.data.complexity >= 8 }}"
@@ -718,7 +715,7 @@ action:
       message: "A new difficult task '{{ trigger.event.data.name }}' has been added."
 ```
 
-### task_organizer_bonus_opened
+### family_mission_bonus_opened
 This event is fired when a [bonus trigger](#bonus-triggers) opened a bonus task (the observed entity changed to the configured state).
 
 #### Event Data:
@@ -730,10 +727,10 @@ This event is fired when a [bonus trigger](#bonus-triggers) opened a bonus task 
 Announce the open bonus task on the wall tablet (Fully Kiosk Browser integration, which provides a `media_player` for the tablet):
 
 ```yml
-alias: "TaskOrganizer: Announce bonus task on the tablet"
+alias: "FamilyMission: Announce bonus task on the tablet"
 trigger:
   - platform: event
-    event_type: "task_organizer_bonus_opened"
+    event_type: "family_mission_bonus_opened"
 action:
   - action: tts.speak
     target:
@@ -745,7 +742,7 @@ action:
         {{ trigger.event.data.points }} points for the first one!
 ```
 
-### task_organizer_reset
+### family_mission_reset
 This event is fired when the monthly points reset occurs (either automatically at the start of a month or manually via service).
 
 #### Event Data:
@@ -758,10 +755,10 @@ This event is fired when the monthly points reset occurs (either automatically a
 Announce the winner and list the scores of all participants after a reset.
 
 ```yml
-alias: "TaskOrganizer: Winner Announcement"
+alias: "FamilyMission: Winner Announcement"
 trigger:
   - platform: event
-    event_type: "task_organizer_reset"
+    event_type: "family_mission_reset"
 action:
   - action: notify.persistent_notification
     data:
@@ -776,6 +773,9 @@ action:
 
 
 ## Installation & Data Storage
-All data is stored securely in the internal Home Assistant database at .storage/task_organizer.storage.
+All data is stored in the internal Home Assistant storage at `.storage/family_mission.storage`.
 
 Colors and overdue thresholds can be defined globally within the settings card.
+
+## Credits and license
+FamilyMission is based on [TaskOrganizer](https://github.com/patrickvonwiegen/TaskOrganizer) by Patrick von Wiegen (MIT). Maintained by [AndyKausG](https://github.com/AndyKausG). Released under the [MIT license](LICENSE) (copyright Patrick von Wiegen and AndyKausG).

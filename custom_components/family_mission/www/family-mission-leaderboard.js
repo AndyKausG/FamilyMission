@@ -13,15 +13,15 @@ const I18N_BOARD = {
  */
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "task-organizer-leaderboard",
-  name: "Task Organizer: Leaderboard",
+  type: "family-mission-leaderboard",
+  name: "FamilyMission Leaderboard",
   description: "Displays the roommate of the month and the history of previous winners.",
   preview: true,
 });
 
-class TaskOrganizerLeaderboard extends HTMLElement {
+class FamilyMissionLeaderboard extends HTMLElement {
   /**
-   * Initializes the TaskOrganizerLeaderboard element.
+   * Initializes the FamilyMissionLeaderboard element.
    */
   constructor() {
     super();
@@ -65,7 +65,7 @@ class TaskOrganizerLeaderboard extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key, replace = null) { 
-    return TaskOrganizerLeaderboard._localize(this._hass, key, replace);
+    return FamilyMissionLeaderboard._localize(this._hass, key, replace);
   }
 
   /**
@@ -85,7 +85,7 @@ class TaskOrganizerLeaderboard extends HTMLElement {
    */
   static getStubConfig(hass) { 
     return { 
-      type: "custom:task-organizer-leaderboard", 
+      type: "custom:family-mission-leaderboard", 
       title: this._localize(hass, 'title'),
       show_history: true 
     }; 
@@ -96,7 +96,7 @@ class TaskOrganizerLeaderboard extends HTMLElement {
    * @returns {HTMLElement}
    */
   static getConfigElement() {
-    return document.createElement("task-organizer-leaderboard-editor");
+    return document.createElement("family-mission-leaderboard-editor");
   }
 
   /**
@@ -131,7 +131,7 @@ class TaskOrganizerLeaderboard extends HTMLElement {
     }
     this._unsubEvents = this._hass.connection.subscribeEvents(() => {
       this.fetchData();
-    }, "task_organizer_updated"); 
+    }, "family_mission_updated"); 
   }
 
   /**
@@ -168,7 +168,7 @@ class TaskOrganizerLeaderboard extends HTMLElement {
     for (const entityId in this._hass.states) { 
       if (entityId.startsWith('person.')) { 
         const state = this._hass.states[entityId]; 
-        this.users[TaskOrganizerLeaderboard.participantId(entityId, state)] = { 
+        this.users[FamilyMissionLeaderboard.participantId(entityId, state)] = { 
           name: state.attributes.friendly_name || entityId, 
           picture: state.attributes.entity_picture || '' 
         }; 
@@ -180,7 +180,7 @@ class TaskOrganizerLeaderboard extends HTMLElement {
    * Fetches data from the backend.
    */
   fetchData() { 
-    this._hass.callWS({ type: 'task_organizer/get_data' }).then((data) => { 
+    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => { 
         this.points = data.points || {}; 
         this.currentMonth = data.current_month || ""; 
         this.currentPeriodStart = data.current_period_start || "";
@@ -414,9 +414,9 @@ class TaskOrganizerLeaderboard extends HTMLElement {
 }
 
 /**
- * Editor for TaskOrganizerLeaderboard.
+ * Editor for FamilyMissionLeaderboard.
  */
-class TaskOrganizerLeaderboardEditor extends HTMLElement {
+class FamilyMissionLeaderboardEditor extends HTMLElement {
   setConfig(config) {
     this._config = config;
     this._render();
@@ -433,7 +433,7 @@ class TaskOrganizerLeaderboardEditor extends HTMLElement {
    * @returns {string} - The translated text.
    */
   localize(key) {
-    return TaskOrganizerLeaderboard._localize(this._hass, key);
+    return FamilyMissionLeaderboard._localize(this._hass, key);
   }
 
   _render() {
@@ -499,5 +499,5 @@ class TaskOrganizerLeaderboardEditor extends HTMLElement {
   }
 }
 
-customElements.define('task-organizer-leaderboard-editor', TaskOrganizerLeaderboardEditor);
-customElements.define('task-organizer-leaderboard', TaskOrganizerLeaderboard);
+customElements.define('family-mission-leaderboard-editor', FamilyMissionLeaderboardEditor);
+customElements.define('family-mission-leaderboard', FamilyMissionLeaderboard);

@@ -1,4 +1,4 @@
-"""Initialization of the TaskOrganizer integration."""
+"""Initialization of the FamilyMission integration."""
 
 import copy
 import logging
@@ -25,6 +25,7 @@ from homeassistant.helpers.event import (
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .migration import async_auto_migrate, async_import_now, notify_migrated
 from .const import (
     DOMAIN,
     EVENT_TASK_UPDATED,
@@ -94,6 +95,7 @@ from .const import (
     WS_TYPE_KID_PRAISE_SEEN,
     WS_TYPE_MY_PRAISE_SEEN,
     SERVICE_ADJUST_POINTS,
+    SERVICE_IMPORT_FROM_TASK_ORGANIZER,
     SERVICE_ADD_TASK,
     SERVICE_COMPLETE_TASK_BY_NAME,
     SERVICE_RESET_MONTHLY_POINTS,
@@ -315,7 +317,7 @@ def _kids_mode_active(hass: HomeAssistant) -> bool:
 def _guard_kids_mode(hass: HomeAssistant, connection, msg: dict, allowed: tuple) -> bool:
     """Role check for the classic commands, enforced only while kids mode is in use.
 
-    Without kids profiles TaskOrganizer keeps its original behaviour (every
+    Without kids profiles FamilyMission keeps its original behaviour (every
     Home Assistant user may manage tasks, settings and history). With kids
     profiles the shared tablet user must not be able to change data outside
     the PIN-protected kid commands.
@@ -342,7 +344,7 @@ def _parent_candidates(hass: HomeAssistant, options: dict) -> list[dict]:
 @websocket_api.async_response
 async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
     """
-    Handle the websocket request to get all task organizer data.
+    Handle the websocket request to get all family mission data.
     
     :param hass: The Home Assistant instance.
     :param connection: The active websocket connection.
@@ -2051,7 +2053,7 @@ async def _async_remove_expired_adhoc(hass: HomeAssistant) -> int:
 # ---- push notification actions -------------------------------------------------
 
 async def _async_handle_push_action(hass: HomeAssistant, action: str) -> None:
-    """Execute ``TO_APPROVE_<id>`` / ``TO_NOTDONE_<id>`` / ``TO_CHEAT_<id>`` and ``TO_RAPPROVE_`` / ``TO_RREJECT_``."""
+    """Execute ``FM_APPROVE_<id>`` / ``FM_NOTDONE_<id>`` / ``FM_CHEAT_<id>`` and ``FM_RAPPROVE_`` / ``FM_RREJECT_``."""
     if DOMAIN not in hass.data:
         return
     for prefix, approve in ((ACTION_REWARD_APPROVE, True), (ACTION_REWARD_REJECT, False)):
@@ -3342,26 +3344,8 @@ def _restore_full_goals(hass: HomeAssistant) -> None:
         hass.config_entries.async_update_entry(entries[0], options=new_options)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """
-    Set up the TaskOrganizer integration from a config entry.
-    
-    :param hass: The Home Assistant instance.
-    :param entry: The configuration entry to setup.
-    :return: Boolean indicating successful setup.
-    """
-    hass.data.setdefault(DOMAIN, {})
-    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-    data = await store.async_load()
-    
-    if data is None:
-        data = {
-            "tasks": {}, "points": {}, "history": [], "settings": {}, 
-            "monthly_history": {}, "current_month": dt_util.now().strftime("%Y-%m"), 
-            "current_period_start": dt_util.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(),
-            "templates": {}
-        }
-    
+def _ensure_data_defaults(data: dict) -> None:
+    """Add all keys a storage needs and run the additive task migrations."""
     # Ensure all required keys exist
     data.setdefault("monthly_history", {})
     data.setdefault("current_month", dt_util.now().strftime("%Y-%m"))
@@ -3387,8 +3371,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             migrate_task_like(item)
             _migrate_replaced_by(item)
 
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """
+    Set up the FamilyMission integration from a config entry.
+    
+    :param hass: The Home Assistant instance.
+    :param entry: The configuration entry to setup.
+    :return: Boolean indicating successful setup.
+    """
+    hass.data.setdefault(DOMAIN, {})
+    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    data = await store.async_load()
+    
+    if data is None:
+        data = {
+            "tasks": {}, "points": {}, "history": [], "settings": {}, 
+            "monthly_history": {}, "current_month": dt_util.now().strftime("%Y-%m"), 
+            "current_period_start": dt_util.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(),
+            "templates": {}
+        }
+
+    # Take over the data of an installed TaskOrganizer once (copy only)
+    data, migrated = await async_auto_migrate(hass, entry, data)
+
+    _ensure_data_defaults(data)
+
     # IMPORTANT: Ensure settings from config entry options are always reflected in data
     data["settings"] = dict(entry.options)
+    if migrated:
+        await store.async_save(data)
+        notify_migrated(hass)
 
     hass.data[DOMAIN]["store"] = store
     hass.data[DOMAIN]["data"] = data
@@ -3444,7 +3457,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     def _mobile_action(event) -> None:
         """Approve / reject from an actionable push notification."""
         action = event.data.get("action")
-        if isinstance(action, str) and action.startswith("TO_"):
+        if isinstance(action, str) and action.startswith("FM_"):
             hass.async_create_task(_async_handle_push_action(hass, action))
 
     entry.async_on_unload(hass.bus.async_listen(EVENT_MOBILE_APP_ACTION, _mobile_action))
@@ -3854,6 +3867,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise ServiceValidationError(f"Unknown person / participant: {call.data['kid_id']}")
         await _async_adjust_points(hass, kid_id, call.data["points"], reason)
 
+    async def handle_import_from_task_organizer(call: ServiceCall):
+        """Service handle: repeat the TaskOrganizer import on purpose (overwrites own data)."""
+        if call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None or not user.is_admin:
+                raise HomeAssistantError("Admin permission required")
+        if call.data.get("overwrite") is not True:
+            raise ServiceValidationError("Set overwrite: true - this replaces ALL FamilyMission data")
+        new_data = await async_import_now(hass, entry)
+        if new_data is None:
+            raise ServiceValidationError("No TaskOrganizer data found (storage task_organizer.storage)")
+        _ensure_data_defaults(new_data)
+        new_data["settings"] = dict(entry.options)
+        await store.async_save(new_data)
+        hass.data[DOMAIN]["data"] = new_data
+        async_setup_bonus_triggers(hass)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+        notify_migrated(hass)
+
     # Register services
     hass.services.async_register(
         DOMAIN, SERVICE_ADJUST_POINTS, handle_adjust_points,
@@ -3862,6 +3894,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             vol.Required("points"): vol.All(vol.Coerce(int), vol.Range(min=-MAX_ADJUST_POINTS, max=MAX_ADJUST_POINTS), vol.NotIn([0])),
             vol.Required("reason"): vol.All(cv.string, vol.Length(max=MAX_REASON_LENGTH)),
         }),
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_IMPORT_FROM_TASK_ORGANIZER, handle_import_from_task_organizer,
+        schema=vol.Schema({vol.Required("overwrite"): cv.boolean}),
     )
     hass.services.async_register(DOMAIN, SERVICE_RESET_MONTHLY_POINTS, handle_manual_reset)
     hass.services.async_register(DOMAIN, SERVICE_FACTORY_RESET, handle_factory_reset)
@@ -3922,9 +3958,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Register static path for frontend cards
     frontend_path = hass.config.path(f"custom_components/{DOMAIN}/www")
-    await hass.http.async_register_static_paths([
-        StaticPathConfig("/task_organizer_frontend", frontend_path, False)
-    ])
+    # The static path survives a reload of the integration; registering it a
+    # second time would raise "route already registered".
+    if not hass.data.get(f"{DOMAIN}_static_path"):
+        await hass.http.async_register_static_paths([
+            StaticPathConfig("/family_mission_frontend", frontend_path, False)
+        ])
+        hass.data[f"{DOMAIN}_static_path"] = True
 
     async def register_lovelace_resources(event=None):
         """Register the custom cards in Lovelace resources."""
@@ -3940,17 +3980,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             await resources.async_load()
         
         cache_buster = f"{entry.version}_{int(time.time())}"
-        base_path = "/task_organizer_frontend"
+        base_path = "/family_mission_frontend"
         needed_cards = [
-            f"{base_path}/task-organizer-card.js", 
-            f"{base_path}/task-organizer-leaderboard.js", 
-            f"{base_path}/task-organizer-stats.js", 
-            f"{base_path}/task-organizer-settings.js",
-            f"{base_path}/task-organizer-protocol.js",
-            f"{base_path}/task-organizer-kids.js",
-            f"{base_path}/task-organizer-wizard.js",
-            f"{base_path}/task-organizer-parents.js",
-            f"{base_path}/task-organizer-help.js"
+            f"{base_path}/family-mission-card.js", 
+            f"{base_path}/family-mission-leaderboard.js", 
+            f"{base_path}/family-mission-stats.js", 
+            f"{base_path}/family-mission-settings.js",
+            f"{base_path}/family-mission-protocol.js",
+            f"{base_path}/family-mission-kids.js",
+            f"{base_path}/family-mission-wizard.js",
+            f"{base_path}/family-mission-parents.js",
+            f"{base_path}/family-mission-help.js"
         ]
         
         current_resources = {
@@ -3978,7 +4018,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
-    Unload the TaskOrganizer config entry.
+    Unload the FamilyMission config entry.
     
     :param hass: The Home Assistant instance.
     :param entry: The configuration entry to unload.

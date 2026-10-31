@@ -4,7 +4,7 @@ import pytest
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.task_organizer.const import DOMAIN
+from custom_components.family_mission.const import DOMAIN
 
 ANNA, BEN, CLARA, DAVID = "person.anna", "person.ben", "person.clara", "person.david"
 FEATURES = ["school", "dishwasher", "dryer", "washer", "robot_vacuum", "garden", "driveway"]
@@ -54,7 +54,7 @@ _call.n = 1000
 
 async def _apply(ws, **kw):
     payload = {**BASE, **kw}
-    return await _call(ws, "task_organizer/wizard_apply", **payload)
+    return await _call(ws, "family_mission/wizard_apply", **payload)
 
 
 def _tasks(hass):
@@ -71,7 +71,7 @@ async def test_wizard_is_admin_only(hass, hass_ws_client, hass_read_only_access_
         ("wizard_catalog", {}), ("wizard_preview", BASE), ("wizard_apply", BASE),
         ("set_bonus_triggers", {"triggers": []}),
     ):
-        res = await _call(ws, f"task_organizer/{type_}", **extra)
+        res = await _call(ws, f"family_mission/{type_}", **extra)
         assert res["error"]["code"] == "unauthorized", type_
     assert _tasks(hass) == {}
     assert "kids" not in setup.options
@@ -79,12 +79,12 @@ async def test_wizard_is_admin_only(hass, hass_ws_client, hass_read_only_access_
 
 async def test_catalog_and_preview(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
-    res = await _call(ws, "task_organizer/wizard_catalog")
+    res = await _call(ws, "family_mission/wizard_catalog")
     result = res["result"]
     assert len(result["features"]) == 8 and len(result["catalog"]) >= 25
     assert result["has_wizard_tasks"] is False and result["avatars"]
 
-    res = await _call(ws, "task_organizer/wizard_preview", **BASE)
+    res = await _call(ws, "family_mission/wizard_preview", **BASE)
     proposal = res["result"]
     assert [k["name"] for k in proposal["kids"]] == ["Anna", "Ben", "Clara", "David"]
     assert proposal["goals"][ANNA] == 215 and proposal["family_goal"] == 650
@@ -95,18 +95,18 @@ async def test_catalog_and_preview(hass, hass_ws_client, setup):
     assert "dishwasher_load:person.anna" in proposal["suggested_excluded"]
     assert "morning:person.david" not in proposal["suggested_excluded"]
 
-    res = await _call(ws, "task_organizer/wizard_preview", **{**BASE, "excluded": ["table_set:person.david"],
+    res = await _call(ws, "family_mission/wizard_preview", **{**BASE, "excluded": ["table_set:person.david"],
                                                                 "language": "en"})
     assert res["result"]["counts"]["tasks"] == 43
-    res = await _call(ws, "task_organizer/wizard_preview", **{**BASE, "kids": [{"id": "person.ghost", "birth_year": 2015}]})
+    res = await _call(ws, "family_mission/wizard_preview", **{**BASE, "kids": [{"id": "person.ghost", "birth_year": 2015}]})
     assert res["error"]["code"] == "unknown_person"
-    res = await _call(ws, "task_organizer/wizard_preview", **{**BASE, "kids": [{"id": ANNA, "birth_year": 2015, "color": "red;x"}]})
+    res = await _call(ws, "family_mission/wizard_preview", **{**BASE, "kids": [{"id": ANNA, "birth_year": 2015, "color": "red;x"}]})
     assert res["error"]["code"] == "invalid_color"
 
 
 async def test_apply_creates_everything(hass, hass_ws_client, setup):
     created_events = []
-    hass.bus.async_listen("task_organizer_task_created", lambda e: created_events.append(e.data["name"]))
+    hass.bus.async_listen("family_mission_task_created", lambda e: created_events.append(e.data["name"]))
     ws = await hass_ws_client(hass)
     res = await _apply(ws, goals={ANNA: 200}, family_goal={"points": 640, "reward": "Pizza-Abend"})
     assert res["success"], res
@@ -152,7 +152,7 @@ async def test_apply_creates_everything(hass, hass_ws_client, setup):
     assert opts["overdue_days"] == 5
 
     # the saved data reaches the frontend settings, without secrets
-    res = await _call(ws, "task_organizer/get_data")
+    res = await _call(ws, "family_mission/get_data")
     assert res["result"]["settings"]["wizard"]["features"] == FEATURES
     assert res["result"]["settings"]["kids"][ANNA]["has_pin"] is False
 
@@ -188,7 +188,7 @@ async def test_apply_validates_before_changing_anything(hass, hass_ws_client, se
 
 async def test_pin_is_kept_and_set(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🐯",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🐯",
                       color="#112233", birth_year=2014, pin="4711")
     assert res["success"]
     pin_hash = setup.options["kids"][ANNA]["pin_hash"]
@@ -203,7 +203,7 @@ async def test_pin_is_kept_and_set(hass, hass_ws_client, setup):
 
 async def test_replace_existing_only_touches_wizard_tasks(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
-    manual = await _call(ws, "task_organizer/add_task", name="Morgen-Mission Anna", interval=1, complexity=3,
+    manual = await _call(ws, "family_mission/add_task", name="Morgen-Mission Anna", interval=1, complexity=3,
                          icon="mdi:broom", assignees=[ANNA])
     manual_id = manual["result"]["task_id"]
     assert (await _apply(ws))["success"]
@@ -212,7 +212,7 @@ async def test_replace_existing_only_touches_wizard_tasks(hass, hass_ws_client, 
 
     # earn points and history: must survive
     task = _by_key(hass)["morning:person.anna"]
-    res = await _call(ws, "task_organizer/complete_task", task_id=task["id"], completed_by=[ANNA])
+    res = await _call(ws, "family_mission/complete_task", task_id=task["id"], completed_by=[ANNA])
     assert res["success"]
     points_before = dict(hass.data[DOMAIN]["data"]["points"])
     history_before = list(hass.data[DOMAIN]["data"]["history"])
@@ -255,7 +255,7 @@ async def test_replace_keeps_other_kids_non_rotation_tasks(hass, hass_ws_client,
 
 async def test_existing_templates_are_not_duplicated(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
-    res = await _call(ws, "task_organizer/add_template", name="auto aussaugen", complexity=3, icon="mdi:car")
+    res = await _call(ws, "family_mission/add_template", name="auto aussaugen", complexity=3, icon="mdi:car")
     assert res["success"]
     res = await _apply(ws)
     assert res["result"]["templates"] == 3
@@ -272,11 +272,11 @@ async def test_device_trigger_opens_bonus_task_and_fires_event(hass, hass_ws_cli
     assert setup.options["bonus_triggers"] == [
         {"wizard_key": "dishwasher_unload:open", "entity_id": "sensor.dishwasher_program", "to_state": "finished"}]
     # the settings reach the frontend
-    res = await _call(ws, "task_organizer/get_data")
+    res = await _call(ws, "family_mission/get_data")
     assert res["result"]["settings"]["bonus_triggers"][0]["to_state"] == "finished"
 
     events = []
-    hass.bus.async_listen("task_organizer_bonus_opened", lambda e: events.append(dict(e.data)))
+    hass.bus.async_listen("family_mission_bonus_opened", lambda e: events.append(dict(e.data)))
     task = _by_key(hass)["dishwasher_unload:open"]
     assert dt_util.parse_datetime(task["due_date"]) > dt_util.utcnow()
 
@@ -300,12 +300,12 @@ async def test_device_trigger_opens_bonus_task_and_fires_event(hass, hass_ws_cli
 async def test_trigger_ignores_unavailable_recovery_and_first_state(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     assert (await _apply(ws))["success"]
-    res = await _call(ws, "task_organizer/set_bonus_triggers", triggers=[
+    res = await _call(ws, "family_mission/set_bonus_triggers", triggers=[
         {"wizard_key": "trash:open", "entity_id": "binary_sensor.bin_full", "to_state": "on"}])
     assert res["success"]
     await hass.async_block_till_done()
     events = []
-    hass.bus.async_listen("task_organizer_bonus_opened", lambda e: events.append(e.data["task_name"]))
+    hass.bus.async_listen("family_mission_bonus_opened", lambda e: events.append(e.data["task_name"]))
 
     hass.states.async_set("binary_sensor.bin_full", "on")          # first state ever
     hass.states.async_set("binary_sensor.bin_full", "unavailable")
@@ -321,10 +321,10 @@ async def test_trigger_ignores_unavailable_recovery_and_first_state(hass, hass_w
 
 async def test_trigger_by_task_id_and_removal(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
-    res = await _call(ws, "task_organizer/add_task", name="Bonus", interval=365, complexity=3, icon="mdi:star",
+    res = await _call(ws, "family_mission/add_task", name="Bonus", interval=365, complexity=3, icon="mdi:star",
                       category="bonus", custom_due_date="2099-01-01T00:00:00")
     task_id = res["result"]["task_id"]
-    res = await _call(ws, "task_organizer/set_bonus_triggers", triggers=[
+    res = await _call(ws, "family_mission/set_bonus_triggers", triggers=[
         {"task_id": task_id, "entity_id": "input_boolean.x", "to_state": "on"}])
     assert res["success"]
     await hass.async_block_till_done()
@@ -335,7 +335,7 @@ async def test_trigger_by_task_id_and_removal(hass, hass_ws_client, setup):
 
     # removing the trigger removes the listener
     _tasks(hass)[task_id]["due_date"] = "2099-01-01T00:00:00+00:00"
-    res = await _call(ws, "task_organizer/set_bonus_triggers", triggers=[])
+    res = await _call(ws, "family_mission/set_bonus_triggers", triggers=[])
     assert res["success"]
     await hass.async_block_till_done()
     assert "bonus_unsub" not in hass.data[DOMAIN]
@@ -344,15 +344,15 @@ async def test_trigger_by_task_id_and_removal(hass, hass_ws_client, setup):
     await hass.async_block_till_done()
     assert _tasks(hass)[task_id]["due_date"].startswith("2099")
 
-    res = await _call(ws, "task_organizer/set_bonus_triggers", triggers=[{"entity_id": "input_boolean.x", "to_state": "on"}])
+    res = await _call(ws, "family_mission/set_bonus_triggers", triggers=[{"entity_id": "input_boolean.x", "to_state": "on"}])
     assert res["error"]["code"] == "invalid_trigger"
 
 
 async def test_update_settings_cannot_overwrite_triggers(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
-    await _call(ws, "task_organizer/set_bonus_triggers", triggers=[
+    await _call(ws, "family_mission/set_bonus_triggers", triggers=[
         {"wizard_key": "trash:open", "entity_id": "sensor.a", "to_state": "x"}])
-    res = await _call(ws, "task_organizer/update_settings", settings={"bonus_triggers": [], "wizard": {"x": 1}, "overdue_days": 7})
+    res = await _call(ws, "family_mission/update_settings", settings={"bonus_triggers": [], "wizard": {"x": 1}, "overdue_days": 7})
     assert res["success"]
     assert setup.options["bonus_triggers"][0]["entity_id"] == "sensor.a"
     assert "wizard" not in setup.options and setup.options["overdue_days"] == 7
@@ -365,7 +365,7 @@ async def test_listeners_are_cleaned_up_on_unload(hass, hass_ws_client, setup):
     await hass.async_block_till_done()
     assert hass.data[DOMAIN]["bonus_unsub"]
     events = []
-    hass.bus.async_listen("task_organizer_bonus_opened", lambda e: events.append(e.data))
+    hass.bus.async_listen("family_mission_bonus_opened", lambda e: events.append(e.data))
 
     assert await hass.config_entries.async_unload(setup.entry_id)
     await hass.async_block_till_done()

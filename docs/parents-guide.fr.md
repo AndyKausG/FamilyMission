@@ -1,6 +1,6 @@
 # Guide des parents
 
-Comment faire fonctionner TaskOrganizer à la maison
+Comment faire fonctionner FamilyMission à la maison
 
 [Deutsch](parents-guide.de.md) · [English](parents-guide.en.md)
 
@@ -16,12 +16,13 @@ Comment faire fonctionner TaskOrganizer à la maison
 8. [Objectifs mensuels, fusée de la famille, anneau au-delà de 100 %](#goals)
 9. [Réduire progressivement](#fade)
 10. [Questions fréquentes / problèmes](#faq)
+11. [À propos de FamilyMission](#about)
 
 <a id="basics"></a>
 
 ## 1. 💡 L'idée de base
 
-TaskOrganizer transforme les tâches ménagères en petites missions avec un **retour immédiat** : l'enfant coche une tâche, entend un jingle et voit son anneau grandir. C'est cette immédiateté qui porte les enfants au quotidien.
+FamilyMission transforme les tâches ménagères en petites missions avec un **retour immédiat** : l'enfant coche une tâche, entend un jingle et voit son anneau grandir. C'est cette immédiateté qui porte les enfants au quotidien.
 
 - **Progresser à son rythme plutôt que rivaliser :** chaque enfant a son propre objectif mensuel. Les vignettes restent dans un ordre fixe, il n'y a pas de classement entre frères et sœurs.
 - **Objectif familial :** ensemble, vous remplissez la fusée de la famille. Tout le monde tire dans le même sens.
@@ -153,4 +154,14 @@ Reportez l'attention libérée sur une nouvelle habitude, mais une seule à la f
 - **L'enfant ne veut plus de points.** C'est normal après quelques semaines. Renouvelez les récompenses, misez davantage sur les expériences, réduisez progressivement les routines qui marchent bien et demandez ce qui manque à l'enfant. Les points ne sont jamais un moyen de pression.
 - **Maladie / vacances.** Mettez des tâches en pause dans l'éditeur de tâches (pause jusqu'à une date) ou utilisez « Suspendre aujourd'hui » pour des jours isolés. Le jour d'anniversaire, les obligations sont automatiquement suspendues. Pour de longues pauses, adaptez l'objectif mensuel.
 - **Frères et sœurs d'âges différents.** Les tâches ont un âge minimum, chaque enfant a son propre objectif. Gardez l'effort par minute comparable, pas le nombre de tâches. Les plus grands peuvent aider les plus petits avec « Ensemble ».
-- **La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de TaskOrganizer, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement.
+- **La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de FamilyMission, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement.
+
+<a id="about"></a>
+
+## 11. ℹ️ À propos de FamilyMission
+
+FamilyMission est basé sur **TaskOrganizer** de Patrick von Wiegen (licence MIT) et poursuivi par AndyKausG comme projet indépendant : https://github.com/AndyKausG/FamilyMission
+
+Projet d'origine : https://github.com/patrickvonwiegen/TaskOrganizer
+
+> 💡 Si vous venez de TaskOrganizer : FamilyMission reprend automatiquement les données au premier démarrage (copie, TaskOrganizer reste inchangé). Détails dans le README.

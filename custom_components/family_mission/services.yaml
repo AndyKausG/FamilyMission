@@ -559,3 +559,15 @@ adjust_points:
       example: Helped without being asked
       selector:
         text:
+
+import_from_task_organizer:
+  name: Import from TaskOrganizer
+  description: Replaces ALL FamilyMission data and settings with a fresh copy of the data and options of an installed TaskOrganizer (storage task_organizer.storage and its config entry). TaskOrganizer itself is never changed. Admin only.
+  fields:
+    overwrite:
+      name: Overwrite
+      description: Must be switched on to confirm that the current FamilyMission data is replaced.
+      required: true
+      default: false
+      selector:
+        boolean:

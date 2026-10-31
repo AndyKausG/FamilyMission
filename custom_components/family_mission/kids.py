@@ -1,4 +1,4 @@
-"""Pure helper functions for the TaskOrganizer kids mode.
+"""Pure helper functions for the FamilyMission kids mode.
 
 This module intentionally has NO dependency on Home Assistant so that it can be
 unit-tested standalone. Everything that needs the current time, the settings

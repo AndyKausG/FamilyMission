@@ -1,5 +1,5 @@
 /**
- * TaskOrganizer Parents card.
+ * FamilyMission Parents card.
  *
  * A dashboard for the parents (administrators and users with the parent role), made for phones:
  *  1. "Freigaben": completions by kids that wait for approval - approve, "not
@@ -103,8 +103,8 @@ const PARENTS_REWARD_SUGGESTIONS = {
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "task-organizer-parents",
-  name: "Task Organizer: Parents",
+  type: "family-mission-parents",
+  name: "FamilyMission Parents",
   description: "Parent dashboard for phones: approve kids' tasks, give bonus points or deductions with a reason, see the latest history.",
   preview: false,
 });
@@ -147,7 +147,7 @@ function parTimeOptions(value, emptyLabel) {
     times.map(t => `<option value="${t}" ${t === v ? 'selected' : ''}>${t}</option>`).join('');
 }
 
-class TaskOrganizerParents extends HTMLElement {
+class FamilyMissionParents extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -190,7 +190,7 @@ class TaskOrganizerParents extends HTMLElement {
     return text;
   }
 
-  localize(key, replace = null) { return TaskOrganizerParents._localize(this._hass, key, replace); }
+  localize(key, replace = null) { return FamilyMissionParents._localize(this._hass, key, replace); }
 
   static participantId(entityId, state) {
     return (state && state.attributes && state.attributes.user_id) || entityId;
@@ -201,10 +201,10 @@ class TaskOrganizerParents extends HTMLElement {
   getCardSize() { return 8; }
 
   static getStubConfig(hass) {
-    return { type: "custom:task-organizer-parents", title: this._localize(hass, 'title') };
+    return { type: "custom:family-mission-parents", title: this._localize(hass, 'title') };
   }
 
-  static getConfigElement() { return document.createElement("task-organizer-parents-editor"); }
+  static getConfigElement() { return document.createElement("family-mission-parents-editor"); }
 
   setConfig(config) {
     if (!config) throw new Error("Invalid configuration");
@@ -226,7 +226,7 @@ class TaskOrganizerParents extends HTMLElement {
 
   _subscribe() {
     if (!this._hass) return;
-    this._unsubEvents = this._hass.connection.subscribeEvents(() => this._fetchData(), "task_organizer_updated");
+    this._unsubEvents = this._hass.connection.subscribeEvents(() => this._fetchData(), "family_mission_updated");
   }
 
   set hass(hass) {
@@ -248,7 +248,7 @@ class TaskOrganizerParents extends HTMLElement {
 
   _fetchData() {
     if (!this._hass) return;
-    this._hass.callWS({ type: 'task_organizer/get_data' }).then((data) => {
+    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
       this._myRole = data.my_role || null;
       this.pending = data.pending || {};
       this.history = Array.isArray(data.history) ? data.history : [];
@@ -258,7 +258,7 @@ class TaskOrganizerParents extends HTMLElement {
       this.redemptions = data.redemptions || {};
       this._fetched = true;
       this._render();
-    }).catch((err) => console.error("TaskOrganizer Parents: could not load data", err));
+    }).catch((err) => console.error("FamilyMission Parents: could not load data", err));
   }
 
   // ---------------------------------------------------------------------------
@@ -271,7 +271,7 @@ class TaskOrganizerParents extends HTMLElement {
     for (const entityId in states) {
       if (!entityId.startsWith('person.')) continue;
       const state = states[entityId];
-      map[TaskOrganizerParents.participantId(entityId, state)] = {
+      map[FamilyMissionParents.participantId(entityId, state)] = {
         name: (state.attributes && state.attributes.friendly_name) || entityId
       };
     }
@@ -415,7 +415,7 @@ class TaskOrganizerParents extends HTMLElement {
     else if (action === 'praise-sticker' && this._praise) { this._praise.sticker = el.dataset.sticker; this._renderLayer(); }
     else if (action === 'praise-chip' && this._praise) { this._praise.message = el.dataset.text; this._renderLayer(); }
     else if (action === 'praise-send') this._sendPraise();
-    else if (action === 'help') { if (window.TaskOrganizerHelp) window.TaskOrganizerHelp.open(this._hass, el.dataset.anchor); }
+    else if (action === 'help') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, el.dataset.anchor); }
     else if (action === 'rw-open') this._openRewards();
     else if (action === 'rw-add') this._rewardsAdd(false);
     else if (action === 'rw-suggest') this._rewardsAdd(true);
@@ -429,7 +429,7 @@ class TaskOrganizerParents extends HTMLElement {
     this._busy.add(id);
     this._render();
     try {
-      const res = await this._hass.callWS({ type: 'task_organizer/redemption_resolve', redemption_id: id, approve });
+      const res = await this._hass.callWS({ type: 'family_mission/redemption_resolve', redemption_id: id, approve });
       if (!res.success) this._toast(this.localize('toast_gone'));
       else this._toast(approve ? this.localize('toast_rd_done') : this.localize('toast_rd_rejected', { n: fmtParents(rec ? rec.cost : 0) }));
     } catch (err) {
@@ -470,7 +470,7 @@ class TaskOrganizerParents extends HTMLElement {
     }
     this._busy.add('rewards');
     try {
-      await this._hass.callWS({ type: 'task_organizer/set_rewards', rewards: rewards.map(r => { const c = { ...r }; if (!c.id) delete c.id; return c; }) });
+      await this._hass.callWS({ type: 'family_mission/set_rewards', rewards: rewards.map(r => { const c = { ...r }; if (!c.id) delete c.id; return c; }) });
       this._rw = null;
       this._renderLayer();
       this._toast(this.localize('toast_rewards_saved'));
@@ -551,7 +551,7 @@ class TaskOrganizerParents extends HTMLElement {
     this._busy.add(pendingId);
     this._render();
     try {
-      const res = await this._hass.callWS({ type: 'task_organizer/approve', pending_id: pendingId });
+      const res = await this._hass.callWS({ type: 'family_mission/approve', pending_id: pendingId });
       if (res.success) this._toast(this.localize('toast_approved', { n: fmtParents(res.points), name: rec ? this._kid(rec.kid_id).name : '' }));
       else this._toast(this.localize('toast_gone'));
     } catch (err) {
@@ -567,7 +567,7 @@ class TaskOrganizerParents extends HTMLElement {
     this._busy.add(pendingId);
     this._render();
     try {
-      const res = await this._hass.callWS({ type: 'task_organizer/reject', pending_id: pendingId, mode });
+      const res = await this._hass.callWS({ type: 'family_mission/reject', pending_id: pendingId, mode });
       if (!res.success) this._toast(this.localize('toast_gone'));
       else if (mode === 'cheated') this._toast(this.localize('toast_cheated', { n: this._penalty(rec ? rec.points : 0), name: rec ? this._kid(rec.kid_id).name : '' }));
       else this._toast(this.localize('toast_not_done'));
@@ -609,7 +609,7 @@ class TaskOrganizerParents extends HTMLElement {
     const kid = this._kid(sheet.kidId);
     try {
       const res = await this._hass.callWS({
-        type: 'task_organizer/adjust_points', kid_id: sheet.kidId, points: sheet.amount, reason: sheet.reason.trim().slice(0, 80)
+        type: 'family_mission/adjust_points', kid_id: sheet.kidId, points: sheet.amount, reason: sheet.reason.trim().slice(0, 80)
       });
       this._sheet = null;
       this._renderLayer();
@@ -632,7 +632,7 @@ class TaskOrganizerParents extends HTMLElement {
     this._undo = null;
     this._renderLayer();
     try {
-      const res = await this._hass.callWS({ type: 'task_organizer/undo_completion', history_id: id });
+      const res = await this._hass.callWS({ type: 'family_mission/undo_completion', history_id: id });
       this._toast(this.localize(res.success ? 'toast_undone' : 'toast_undo_gone'));
     } catch (err) {
       this._toast(this.localize('err') + (err && err.message ? err.message : ''));
@@ -647,7 +647,7 @@ class TaskOrganizerParents extends HTMLElement {
     this._busy.add('praise');
     const kid = this._kid(pr.kidId);
     try {
-      await this._hass.callWS({ type: 'task_organizer/send_praise', kid_id: pr.kidId, sticker: pr.sticker, message: pr.message.trim().slice(0, 120) });
+      await this._hass.callWS({ type: 'family_mission/send_praise', kid_id: pr.kidId, sticker: pr.sticker, message: pr.message.trim().slice(0, 120) });
       this._praise = null;
       this._renderLayer();
       this._toast(this.localize('toast_praise', { name: kid.name }));
@@ -744,7 +744,7 @@ class TaskOrganizerParents extends HTMLElement {
     const a = this._adhoc;
     if (!a || !this._adhocValid() || this._busy.has('adhoc')) return;
     this._busy.add('adhoc');
-    const payload = { type: 'task_organizer/add_adhoc_bonus', name: a.name.trim(), icon: a.icon, points: a.points, min_age: a.minAge };
+    const payload = { type: 'family_mission/add_adhoc_bonus', name: a.name.trim(), icon: a.icon, points: a.points, min_age: a.minAge };
     if (a.minutes) payload.minutes = a.minutes;
     if (a.kid) payload.kid_id = a.kid;
     const expiry = this._adhocExpiry();
@@ -836,7 +836,7 @@ class TaskOrganizerParents extends HTMLElement {
     } else {
       body = `${this._renderApprovals()}${this._renderRedemptions()}${this._renderKids()}`;
     }
-    app.innerHTML = `<ha-card><div class="head"><span class="head-title">${title}</span>${window.TaskOrganizerHelp ? `<button class="help-btn" data-action="help" data-anchor="daily">❓ ${escParents(this.localize('help_btn'))}</button>` : ''}</div><div class="body">${body}</div></ha-card>`;
+    app.innerHTML = `<ha-card><div class="head"><span class="head-title">${title}</span>${window.FamilyMissionHelp ? `<button class="help-btn" data-action="help" data-anchor="daily">❓ ${escParents(this.localize('help_btn'))}</button>` : ''}</div><div class="body">${body}</div></ha-card>`;
     // The dialog layer is not rebuilt on data refreshes (it would reset what is typed);
     // it only closes when its approval was handled elsewhere in the meantime.
     if (this._confirm && !this.pending[this._confirm]) {
@@ -1143,11 +1143,11 @@ class TaskOrganizerParents extends HTMLElement {
   }
 }
 
-/** Editor for the TaskOrganizerParents card. */
-class TaskOrganizerParentsEditor extends HTMLElement {
+/** Editor for the FamilyMissionParents card. */
+class FamilyMissionParentsEditor extends HTMLElement {
   setConfig(config) { this._config = config; this._render(); }
   set hass(hass) { this._hass = hass; this._render(); }
-  localize(key) { return TaskOrganizerParents._localize(this._hass, key); }
+  localize(key) { return FamilyMissionParents._localize(this._hass, key); }
 
   _render() {
     if (!this._config || !this._hass) return;
@@ -1179,5 +1179,5 @@ class TaskOrganizerParentsEditor extends HTMLElement {
   }
 }
 
-customElements.define('task-organizer-parents-editor', TaskOrganizerParentsEditor);
-customElements.define('task-organizer-parents', TaskOrganizerParents);
+customElements.define('family-mission-parents-editor', FamilyMissionParentsEditor);
+customElements.define('family-mission-parents', FamilyMissionParents);

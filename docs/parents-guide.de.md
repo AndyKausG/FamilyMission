@@ -1,6 +1,6 @@
 # Elternratgeber
 
-Wie TaskOrganizer bei euch zu Hause gut funktioniert
+Wie FamilyMission bei euch zu Hause gut funktioniert
 
 [Français](parents-guide.fr.md) · [English](parents-guide.en.md)
 
@@ -16,12 +16,13 @@ Wie TaskOrganizer bei euch zu Hause gut funktioniert
 8. [Monatsziele, Familien-Rakete, Ring über 100 %](#goals)
 9. [Ausschleichen](#fade)
 10. [Häufige Fragen / Probleme](#faq)
+11. [Über FamilyMission](#about)
 
 <a id="basics"></a>
 
 ## 1. 💡 Die Grundidee
 
-TaskOrganizer macht aus Haushaltsaufgaben kleine Missionen mit **sofortiger Rückmeldung**: Das Kind hakt etwas ab, hört einen Jingle und sieht seinen Ring wachsen. Genau diese Unmittelbarkeit trägt Kinder durch den Alltag.
+FamilyMission macht aus Haushaltsaufgaben kleine Missionen mit **sofortiger Rückmeldung**: Das Kind hakt etwas ab, hört einen Jingle und sieht seinen Ring wachsen. Genau diese Unmittelbarkeit trägt Kinder durch den Alltag.
 
 - **Eigener Fortschritt statt Wettbewerb:** Jedes Kind hat sein eigenes Monatsziel. Die Kacheln stehen in fester Reihenfolge, es gibt keine Rangliste unter Geschwistern.
 - **Familienziel:** Gemeinsam füllt ihr die Familien-Rakete. Alle ziehen an einem Strang.
@@ -153,4 +154,14 @@ Gebt die frei gewordene Aufmerksamkeit an eine neue Gewohnheit weiter, aber imme
 - **Kind will keine Punkte mehr.** Das ist nach einigen Wochen normal. Erneuert die Belohnungen, setzt mehr auf Erlebnisse, schleicht gut laufende Routinen aus und fragt, was dem Kind fehlt. Punkte sind nie ein Druckmittel.
 - **Krankheit / Ferien.** Pausiert Aufgaben im Task-Editor (Pause bis Datum) oder nutzt „Heute aussetzen“ für einzelne Tage. Am Geburtstag sind Pflichten automatisch frei. Passt bei langen Pausen das Monatsziel an.
 - **Geschwister unterschiedlich alt.** Aufgaben haben ein Mindestalter, jedes Kind hat ein eigenes Ziel. Haltet den Aufwand pro Minute vergleichbar, nicht die Zahl der Aufgaben. Ältere können Jüngeren mit „Zusammen“ helfen.
-- **Tablet zeigt eine alte Version.** Das ist der Browser-Cache. Seite neu laden (im Fully Kiosk Browser: Cache leeren und neu laden), in der Companion-App den Frontend-Cache leeren. Nach einem Update von TaskOrganizer erscheint die neue Version nach einem Neustart von Home Assistant und einem Neuladen.
+- **Tablet zeigt eine alte Version.** Das ist der Browser-Cache. Seite neu laden (im Fully Kiosk Browser: Cache leeren und neu laden), in der Companion-App den Frontend-Cache leeren. Nach einem Update von FamilyMission erscheint die neue Version nach einem Neustart von Home Assistant und einem Neuladen.
+
+<a id="about"></a>
+
+## 11. ℹ️ Über FamilyMission
+
+FamilyMission basiert auf **TaskOrganizer** von Patrick von Wiegen (MIT-Lizenz) und wird von AndyKausG als eigenes Projekt weitergeführt: https://github.com/AndyKausG/FamilyMission
+
+Ursprungsprojekt: https://github.com/patrickvonwiegen/TaskOrganizer
+
+> 💡 Wer von TaskOrganizer kommt: FamilyMission übernimmt die Daten beim ersten Start automatisch (Kopie, TaskOrganizer bleibt unverändert). Details stehen in der README.

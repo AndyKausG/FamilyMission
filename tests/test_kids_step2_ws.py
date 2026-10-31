@@ -8,8 +8,8 @@ from homeassistant.components import persistent_notification
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.task_organizer import _async_handle_birthdays
-from custom_components.task_organizer.const import DOMAIN
+from custom_components.family_mission import _async_handle_birthdays
+from custom_components.family_mission.const import DOMAIN
 
 ANNA = "person.anna"          # no HA user
 BEN = "person.ben"            # has HA user "user-ben"
@@ -51,7 +51,7 @@ _call.n = 5000
 
 async def _make_kid(ws, pid=ANNA, pin="1234", **kw):
     kw.setdefault("birth_year", 2016)
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id=pid, avatar="🦊",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id=pid, avatar="🦊",
                       color="#ff8800", pin=pin, **kw)
     assert res["success"], res
     return res
@@ -60,13 +60,13 @@ async def _make_kid(ws, pid=ANNA, pin="1234", **kw):
 async def _add_task(ws, **kw):
     payload = {"name": "Task", "interval": 1, "complexity": 4, "icon": "mdi:broom", "category": "basis"}
     payload.update(kw)
-    res = await _call(ws, "task_organizer/add_task", **payload)
+    res = await _call(ws, "family_mission/add_task", **payload)
     assert res["success"], res
     return res["result"]["task_id"]
 
 
 async def _kid_complete(ws, task_id, kid=ANNA, pin="1234"):
-    return (await _call(ws, "task_organizer/kid_complete_task", task_id=task_id, kid_id=kid, pin=pin))["result"]
+    return (await _call(ws, "family_mission/kid_complete_task", task_id=task_id, kid_id=kid, pin=pin))["result"]
 
 
 def _data(hass):
@@ -86,7 +86,7 @@ def _collect(hass, event):
 async def test_task_flag_creates_pending_without_points(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     await _make_kid(ws)
-    requested = _collect(hass, "task_organizer_approval_requested")
+    requested = _collect(hass, "family_mission_approval_requested")
     task_id = await _add_task(ws, assignees=[ANNA], complexity=4, requires_approval=True, name="Tisch decken")
 
     res = await _kid_complete(ws, task_id)
@@ -102,7 +102,7 @@ async def test_task_flag_creates_pending_without_points(hass, hass_ws_client, se
     # the task was advanced: it cannot be completed twice
     assert (await _kid_complete(ws, task_id))["error"] == "not_eligible"
     # get_data exposes the pending list (no secrets)
-    got = (await _call(ws, "task_organizer/get_data"))["result"]
+    got = (await _call(ws, "family_mission/get_data"))["result"]
     assert list(got["pending"]) == [pending["id"]] and "pin_hash" not in str(got)
 
 
@@ -110,9 +110,9 @@ async def test_requires_approval_field_roundtrip(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     t = await _add_task(ws)
     assert _data(hass)["tasks"][t]["requires_approval"] is False
-    assert (await _call(ws, "task_organizer/edit_task", task_id=t, requires_approval=True))["success"]
+    assert (await _call(ws, "family_mission/edit_task", task_id=t, requires_approval=True))["success"]
     assert _data(hass)["tasks"][t]["requires_approval"] is True
-    res = await _call(ws, "task_organizer/add_template", name="Tpl", complexity=3, icon="mdi:broom",
+    res = await _call(ws, "family_mission/add_template", name="Tpl", complexity=3, icon="mdi:broom",
                       requires_approval=True)
     assert res["success"]
     await hass.services.async_call(DOMAIN, "add_task", {"template": "Tpl", "name": "FromTpl"}, blocking=True)
@@ -121,7 +121,7 @@ async def test_requires_approval_field_roundtrip(hass, hass_ws_client, setup):
     await hass.services.async_call(DOMAIN, "edit_task_by_name", {"task_name": "FromTpl", "requires_approval": False}, blocking=True)
     assert created["requires_approval"] is False
     tpl = next(x for x in _data(hass)["templates"].values() if x["name"] == "Tpl")
-    assert (await _call(ws, "task_organizer/edit_template", template_id=tpl["id"], requires_approval=False))["success"]
+    assert (await _call(ws, "family_mission/edit_template", template_id=tpl["id"], requires_approval=False))["success"]
     assert tpl["requires_approval"] is False
 
 
@@ -147,7 +147,7 @@ async def test_sample_rate_spot_checks(hass, hass_ws_client, setup):
     with patch("random.random", return_value=0.5):
         assert "pending" not in await _kid_complete(ws, t4)
     # rate is validated
-    res = await _call(ws, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🦊", color="#ff8800",
+    res = await _call(ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊", color="#ff8800",
                       birth_year=2016, approval_sample_rate=101)
     assert res["success"] is False
 
@@ -155,8 +155,8 @@ async def test_sample_rate_spot_checks(hass, hass_ws_client, setup):
 async def test_approve_awards_like_a_normal_completion(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     await _make_kid(ws)
-    completed = _collect(hass, "task_organizer_task_completed")
-    leaderboard = _collect(hass, "task_organizer_leaderboard_changed")
+    completed = _collect(hass, "family_mission_task_completed")
+    leaderboard = _collect(hass, "family_mission_leaderboard_changed")
     _data(hass)["points"] = {BEN_ID: 2.0, ANNA: 0}              # Anna overtakes Ben -> leaderboard event
     normal = await _add_task(ws, assignees=[ANNA], complexity=4, name="Normal")
     flagged = await _add_task(ws, assignees=[ANNA], complexity=4, name="Flagged", requires_approval=True)
@@ -173,7 +173,7 @@ async def test_approve_awards_like_a_normal_completion(hass, hass_ws_client, set
     _data(hass)["history"].clear()
     await _kid_complete(ws, flagged)
     (pid,) = _data(hass)["pending"]
-    assert (await _call(ws, "task_organizer/approve", pending_id=pid))["result"] == {"success": True, "points": 4.0}
+    assert (await _call(ws, "family_mission/approve", pending_id=pid))["result"] == {"success": True, "points": 4.0}
     await hass.async_block_till_done()
 
     entry = _data(hass)["history"][0]
@@ -184,7 +184,7 @@ async def test_approve_awards_like_a_normal_completion(hass, hass_ws_client, set
     assert len(leaderboard) == 2                                  # leaderboard event fired again
     assert _data(hass)["pending"] == {}
     # double approval (card + push) is harmless and awards nothing
-    assert (await _call(ws, "task_organizer/approve", pending_id=pid))["result"] == {"success": False, "error": "not_found"}
+    assert (await _call(ws, "family_mission/approve", pending_id=pid))["result"] == {"success": False, "error": "not_found"}
     assert _data(hass)["points"][ANNA] == 4.0 and len(_data(hass)["history"]) == 1
 
 
@@ -196,12 +196,12 @@ async def test_reject_not_done_reopens_without_penalty(hass, hass_ws_client, set
     task = _data(hass)["tasks"][task_id]
     assert dt_util.parse_datetime(task["due_date"]) > dt_util.utcnow() + timedelta(days=2)
     (pid,) = _data(hass)["pending"]
-    assert (await _call(ws, "task_organizer/reject", pending_id=pid, mode="not_done"))["result"]["success"]
+    assert (await _call(ws, "family_mission/reject", pending_id=pid, mode="not_done"))["result"]["success"]
     assert dt_util.parse_datetime(task["due_date"]) <= dt_util.utcnow()      # due again, on the list
     data = _data(hass)
     assert data["pending"] == {} and data["points"].get(ANNA, 0) == 0 and data["history"] == []
     assert "strict_until" not in setup.options["kids"][ANNA]
-    assert (await _call(ws, "task_organizer/reject", pending_id=pid, mode="not_done"))["result"]["success"] is False
+    assert (await _call(ws, "family_mission/reject", pending_id=pid, mode="not_done"))["result"]["success"] is False
 
 
 async def test_reject_cheated_penalty_and_strict_mode(hass, hass_ws_client, setup, freezer):
@@ -212,9 +212,9 @@ async def test_reject_cheated_penalty_and_strict_mode(hass, hass_ws_client, setu
     task_id = await _add_task(ws, assignees=[ANNA], complexity=4, requires_approval=True, name="Tisch decken")
     await _kid_complete(ws, task_id)
     (pid,) = _data(hass)["pending"]
-    resolved = _collect(hass, "task_organizer_approval_resolved")
+    resolved = _collect(hass, "family_mission_approval_resolved")
 
-    assert (await _call(ws, "task_organizer/reject", pending_id=pid, mode="cheated"))["result"]["success"]
+    assert (await _call(ws, "family_mission/reject", pending_id=pid, mode="cheated"))["result"]["success"]
     data = _data(hass)
     assert data["points"][ANNA] == 6.0
     entry = data["history"][0]
@@ -238,13 +238,13 @@ async def test_reject_cheated_penalty_and_strict_mode(hass, hass_ws_client, setu
 async def test_cheat_settings_and_clamp_at_zero(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     await _make_kid(ws)
-    await _call(ws, "task_organizer/update_settings", settings={"cheat_penalty_factor": 0.5, "cheat_strict_days": 0})
+    await _call(ws, "family_mission/update_settings", settings={"cheat_penalty_factor": 0.5, "cheat_strict_days": 0})
     await hass.async_block_till_done()
     _data(hass)["points"][ANNA] = 1.0
     task_id = await _add_task(ws, assignees=[ANNA], complexity=5, requires_approval=True)
     await _kid_complete(ws, task_id)
     (pid,) = _data(hass)["pending"]
-    await _call(ws, "task_organizer/reject", pending_id=pid, mode="cheated")
+    await _call(ws, "family_mission/reject", pending_id=pid, mode="cheated")
     data = _data(hass)
     # 5 x 0.5 = 2.5 -> 3 (half up), but only 1 point was available
     assert data["points"][ANNA] == 0
@@ -260,9 +260,9 @@ async def test_approval_commands_are_admin_only(hass, hass_ws_client, hass_read_
     (pid,) = _data(hass)["pending"]
     user_ws = await hass_ws_client(hass, hass_read_only_access_token)
     for type_, extra in (("approve", {}), ("reject", {"mode": "not_done"})):
-        res = await _call(user_ws, f"task_organizer/{type_}", pending_id=pid, **extra)
+        res = await _call(user_ws, f"family_mission/{type_}", pending_id=pid, **extra)
         assert res["error"]["code"] == "unauthorized"
-    res = await _call(user_ws, "task_organizer/adjust_points", kid_id=ANNA, points=5, reason="x")
+    res = await _call(user_ws, "family_mission/adjust_points", kid_id=ANNA, points=5, reason="x")
     assert res["error"]["code"] == "unauthorized"
     assert pid in _data(hass)["pending"] and _data(hass)["points"].get(ANNA, 0) == 0
 
@@ -279,16 +279,16 @@ async def test_push_notification_actions(hass, hass_ws_client, setup):
     def fire(action):
         hass.bus.async_fire("mobile_app_notification_action", {"action": action})
 
-    fire(f"TO_APPROVE_{ids['A']}")
-    fire(f"TO_APPROVE_{ids['A']}")                      # duplicate tap
-    fire("TO_APPROVE_does-not-exist")                   # unknown id
+    fire(f"FM_APPROVE_{ids['A']}")
+    fire(f"FM_APPROVE_{ids['A']}")                      # duplicate tap
+    fire("FM_APPROVE_does-not-exist")                   # unknown id
     fire("SOMETHING_ELSE")
     fire(None)
     await hass.async_block_till_done()
     assert _data(hass)["points"][ANNA] == 3.0 and len(_data(hass)["history"]) == 1
 
-    fire(f"TO_NOTDONE_{ids['B']}")
-    fire(f"TO_CHEAT_{ids['C']}")
+    fire(f"FM_NOTDONE_{ids['B']}")
+    fire(f"FM_CHEAT_{ids['C']}")
     await hass.async_block_till_done()
     data = _data(hass)
     assert data["pending"] == {}
@@ -303,7 +303,7 @@ async def test_update_settings_cannot_touch_runtime_data(hass, hass_ws_client, s
     task_id = await _add_task(ws, assignees=[ANNA], requires_approval=True)
     await _kid_complete(ws, task_id)
     before = dict(_data(hass)["pending"])
-    res = await _call(ws, "task_organizer/update_settings", settings={
+    res = await _call(ws, "family_mission/update_settings", settings={
         "pending": {}, "history": [{"id": "x"}], "points": {ANNA: 999}, "birthday_handled": {ANNA: "2020-01-01"},
         "kids": {ANNA: {"strict_until": "2000-01-01"}}, "cheat_strict_days": 3})
     assert res["success"]
@@ -314,7 +314,7 @@ async def test_update_settings_cannot_touch_runtime_data(hass, hass_ws_client, s
         assert key not in setup.options
     assert setup.options["cheat_strict_days"] == 3 and "strict_until" not in setup.options["kids"][ANNA]
     # the import path is protected as well
-    await _call(ws, "task_organizer/import_tasks", settings={"pending": {}, "history": [], "x": 1})
+    await _call(ws, "family_mission/import_tasks", settings={"pending": {}, "history": [], "x": 1})
     assert "pending" not in setup.options and _data(hass)["pending"] == before
 
 
@@ -327,9 +327,9 @@ async def test_monthly_reset_keeps_pending(hass, hass_ws_client, setup):
     await hass.services.async_call(DOMAIN, "reset_monthly_points", {}, blocking=True)
     assert pid in _data(hass)["pending"]
     # approved after the reset: the points count for the NEW period
-    await _call(ws, "task_organizer/approve", pending_id=pid)
+    await _call(ws, "family_mission/approve", pending_id=pid)
     assert _data(hass)["points"][ANNA] == 3.0
-    got = (await _call(ws, "task_organizer/get_data"))["result"]
+    got = (await _call(ws, "family_mission/get_data"))["result"]
     assert got["family_points"] == 3.0 or got["family_points"] == 0.0   # kid profile exists -> counted
     assert got["family_points"] == 3.0
 
@@ -340,13 +340,13 @@ async def test_monthly_reset_keeps_pending(hass, hass_ws_client, setup):
 
 async def test_adjust_points_ws_and_service(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
-    res = await _call(ws, "task_organizer/adjust_points", kid_id=ANNA, points=5, reason="Ungefragt geholfen")
+    res = await _call(ws, "family_mission/adjust_points", kid_id=ANNA, points=5, reason="Ungefragt geholfen")
     assert res["result"]["success"] and res["result"]["applied"] == 5
     entry = _data(hass)["history"][0]
     assert entry["type"] == "bonus" and entry["reason"] == "Ungefragt geholfen" and entry["points"] == 5
     assert _data(hass)["points"][ANNA] == 5
 
-    res = await _call(ws, "task_organizer/adjust_points", kid_id=ANNA, points=-8, reason="Absprache nicht eingehalten")
+    res = await _call(ws, "family_mission/adjust_points", kid_id=ANNA, points=-8, reason="Absprache nicht eingehalten")
     assert res["result"]["applied"] == -5                    # clamped at 0
     assert _data(hass)["points"][ANNA] == 0
     entry = _data(hass)["history"][0]
@@ -355,9 +355,9 @@ async def test_adjust_points_ws_and_service(hass, hass_ws_client, setup):
     # validation
     for bad in (dict(points=0, reason="x"), dict(points=51, reason="x"), dict(points=-51, reason="x"),
                 dict(points=3, reason=""), dict(points=3, reason="   "), dict(points=3, reason="x" * 81)):
-        res = await _call(ws, "task_organizer/adjust_points", kid_id=ANNA, **bad)
+        res = await _call(ws, "family_mission/adjust_points", kid_id=ANNA, **bad)
         assert res["success"] is False, bad
-    res = await _call(ws, "task_organizer/adjust_points", kid_id="person.nobody", points=3, reason="x")
+    res = await _call(ws, "family_mission/adjust_points", kid_id="person.nobody", points=3, reason="x")
     assert res["error"]["code"] == "unknown_person"
 
     # service: person entity -> participant id (user id when linked)
@@ -368,7 +368,7 @@ async def test_adjust_points_ws_and_service(hass, hass_ws_client, setup):
 
     # delete refunds a penalty
     penalty = next(h for h in _data(hass)["history"] if h["type"] == "penalty")
-    await _call(ws, "task_organizer/delete_history_item", entry_id=penalty["id"])
+    await _call(ws, "family_mission/delete_history_item", entry_id=penalty["id"])
     assert _data(hass)["points"][ANNA] == 5
 
 
@@ -393,23 +393,23 @@ async def test_family_points_count_only_approved_task_points(hass, hass_ws_clien
     await _make_kid(ws, birthday="2016-10-29")
     t = await _add_task(ws, assignees=[ANNA], complexity=4)
     await _kid_complete(ws, t)
-    await _call(ws, "task_organizer/adjust_points", kid_id=ANNA, points=7, reason="Bonus")
-    await _call(ws, "task_organizer/adjust_points", kid_id=ANNA, points=-2, reason="Abzug")
+    await _call(ws, "family_mission/adjust_points", kid_id=ANNA, points=7, reason="Bonus")
+    await _call(ws, "family_mission/adjust_points", kid_id=ANNA, points=-2, reason="Abzug")
     await _async_handle_birthdays(hass)                         # birthday bonus 10
     assert _data(hass)["points"][ANNA] == 4 + 7 - 2 + 10
-    got = (await _call(ws, "task_organizer/get_data"))["result"]
+    got = (await _call(ws, "family_mission/get_data"))["result"]
     assert got["family_points"] == 4.0
 
     # entries from before the period do not count; legacy entries without type do
     _data(hass)["current_period_start"] = (dt_util.utcnow() + timedelta(days=1)).isoformat()
-    assert (await _call(ws, "task_organizer/get_data"))["result"]["family_points"] == 0
+    assert (await _call(ws, "family_mission/get_data"))["result"]["family_points"] == 0
     _data(hass)["current_period_start"] = (dt_util.utcnow() - timedelta(days=1)).isoformat()
     legacy = next(h for h in _data(hass)["history"] if h["type"] == "task")
     del legacy["type"]
-    assert (await _call(ws, "task_organizer/get_data"))["result"]["family_points"] == 4.0
+    assert (await _call(ws, "family_mission/get_data"))["result"]["family_points"] == 4.0
     # parents (no kid profile) never count
     await hass.services.async_call(DOMAIN, "complete_task_by_name", {"task_name": "Task", "user_id": BEN}, blocking=True)
-    assert (await _call(ws, "task_organizer/get_data"))["result"]["family_points"] == 4.0
+    assert (await _call(ws, "family_mission/get_data"))["result"]["family_points"] == 4.0
 
 
 # ---------------------------------------------------------------------------
@@ -422,7 +422,7 @@ async def test_set_kid_profile_birthday(hass, hass_ws_client, setup, freezer):
     await _make_kid(ws, birthday="2016-02-29", birth_year=1999)
     kid = setup.options["kids"][ANNA]
     assert kid["birthday"] == "2016-02-29" and kid["birth_year"] == 2016        # derived from the birthday
-    pub = (await _call(ws, "task_organizer/get_data"))["result"]["settings"]["kids"][ANNA]
+    pub = (await _call(ws, "family_mission/get_data"))["result"]["settings"]["kids"][ANNA]
     assert pub["birthday"] == "2016-02-29" and "pin_hash" not in pub
     # year-only update keeps a matching birthday, a different year drops it
     await _make_kid(ws, pin="", birth_year=2016)
@@ -434,7 +434,7 @@ async def test_set_kid_profile_birthday(hass, hass_ws_client, setup, freezer):
     await _make_kid(ws, pin="", birthday=None, birth_year=2014)
     assert "birthday" not in setup.options["kids"][ANNA]
     for bad in ("2016-13-40", "garbage", "2030-01-01", "20160101"):
-        res = await _call(ws, "task_organizer/set_kid_profile", participant_id=ANNA, avatar="🦊",
+        res = await _call(ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊",
                           color="#ff8800", birthday=bad)
         assert res["error"]["code"] == "invalid_birthday", bad
 
@@ -457,7 +457,7 @@ async def test_birthday_flow(hass, hass_ws_client, setup, freezer):
     freezer.move_to(NOON)
     await _make_kid(ws, birthday="2016-10-29")
     await _make_kid(ws, BEN_ID, pin="", birthday="2014-03-01")
-    events = _collect(hass, "task_organizer_kid_birthday")
+    events = _collect(hass, "family_mission_kid_birthday")
     solo = await _add_task(ws, name="Solo", assignees=[ANNA], interval=2)
     shared = await _add_task(ws, name="Shared", assignees=[ANNA, BEN_ID])
     other = await _add_task(ws, name="Other kid", assignees=[BEN_ID])
@@ -466,7 +466,7 @@ async def test_birthday_flow(hass, hass_ws_client, setup, freezer):
     bonus = await _add_task(ws, name="Open bonus", assignees=[], category="bonus", interval=365)
     one_time = await _add_task(ws, name="One time", assignees=[ANNA], interval=0)
     unlock_task = await _add_task(ws, name="Rasen mähen", assignees=[], category="bonus", min_age=10)
-    await _call(ws, "task_organizer/add_template", name="Auto waschen", complexity=3, icon="mdi:car",
+    await _call(ws, "family_mission/add_template", name="Auto waschen", complexity=3, icon="mdi:car",
                 category="auftrag", min_age=10)
     tasks = _data(hass)["tasks"]
     future_due = tasks[future]["due_date"]
@@ -505,7 +505,7 @@ async def test_birthday_flow(hass, hass_ws_client, setup, freezer):
     await _async_handle_birthdays(hass)
     assert tasks[solo]["due_date"] != due and len(data["history"]) == 1 and len(events) == 1
     # kids card data
-    got = (await _call(ws, "task_organizer/get_data"))["result"]
+    got = (await _call(ws, "family_mission/get_data"))["result"]
     assert got["birthday_levelup"][ANNA]["age"] == 10 and got["birthday_handled"][ANNA]
 
     # next day: the level-up info is gone, nothing new happens
@@ -518,7 +518,7 @@ async def test_birthday_settings_switch_features_off(hass, hass_ws_client, setup
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
     await _make_kid(ws, birthday="2016-10-29")
-    await _call(ws, "task_organizer/update_settings", settings={"birthday_bonus_points": 0, "birthday_duty_free": False})
+    await _call(ws, "family_mission/update_settings", settings={"birthday_bonus_points": 0, "birthday_duty_free": False})
     await hass.async_block_till_done()
     solo = await _add_task(ws, assignees=[ANNA])
     await _async_handle_birthdays(hass)
@@ -558,19 +558,19 @@ async def test_wizard_uses_exact_age(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     base = {"features": ["school"], "start_date": "2026-11-01", "phase": "start", "language": "de"}
     # turns 8 on 2026-12-01: still 7 at the start of the plan -> 5 minute blitz, not the 10 minute one
-    res = await _call(ws, "task_organizer/wizard_preview",
+    res = await _call(ws, "family_mission/wizard_preview",
                       kids=[{"id": ANNA, "birthday": "2018-12-01"}], **base)
     kid = res["result"]["kids"][0]
     assert kid["age"] == 7 and kid["birthday"] == "2018-12-01"
     assert any("5 Minuten" in t["name"] for t in kid["tasks"])
-    res = await _call(ws, "task_organizer/wizard_preview",
+    res = await _call(ws, "family_mission/wizard_preview",
                       kids=[{"id": ANNA, "birth_year": 2018}], **base)
     assert res["result"]["kids"][0]["age"] == 8                       # year fallback
-    res = await _call(ws, "task_organizer/wizard_preview",
+    res = await _call(ws, "family_mission/wizard_preview",
                       kids=[{"id": ANNA, "birthday": "2999-01-01"}], **base)
     assert res["error"]["code"] == "invalid_birthday"
     # apply stores the birthday and derives the birth year
-    res = await _call(ws, "task_organizer/wizard_apply",
+    res = await _call(ws, "family_mission/wizard_apply",
                       kids=[{"id": ANNA, "birthday": "2018-12-01"}], **base)
     assert res["success"], res
     assert setup.options["kids"][ANNA]["birthday"] == "2018-12-01"
@@ -619,7 +619,7 @@ async def _team(hass, ws, **task_kw):
 
 
 async def _together(ws, task_id, helpers, pin="1234"):
-    res = await _call(ws, "task_organizer/kid_complete_task", task_id=task_id, kid_id=ANNA, pin=pin, helpers=helpers)
+    res = await _call(ws, "family_mission/kid_complete_task", task_id=task_id, kid_id=ANNA, pin=pin, helpers=helpers)
     return res["result"]
 
 
@@ -638,7 +638,7 @@ async def test_together_splits_points_and_adds_team_bonus(hass, hass_ws_client, 
     assert len({h["completion_id"] for h in history}) == 1                 # one completion
     # undo takes everything back, bonus included
     task_entry = next(h for h in history if h["type"] == "task")
-    assert (await _call(ws, "task_organizer/undo_completion", history_id=task_entry["id"]))["result"]["removed"] == 6
+    assert (await _call(ws, "family_mission/undo_completion", history_id=task_entry["id"]))["result"]["removed"] == 6
     assert all(v == 0 for v in _data(hass)["points"].values()) and _data(hass)["history"] == []
 
 
@@ -646,12 +646,12 @@ async def test_together_team_bonus_setting(hass, hass_ws_client, setup, freezer)
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
     task_id = await _team(hass, ws)
-    assert (await _call(ws, "task_organizer/update_settings", settings={"team_bonus": 0}))["success"]
+    assert (await _call(ws, "family_mission/update_settings", settings={"team_bonus": 0}))["success"]
     res = await _together(ws, task_id, [{"kid_id": BEN_ID, "pin": "5555"}])
     assert res["points"] == 2.5 and res["team_bonus"] == 0
     assert [h["type"] for h in _data(hass)["history"]] == ["task", "task"]
     # a solo completion never gets a team bonus
-    assert (await _call(ws, "task_organizer/update_settings", settings={"team_bonus": 3}))["success"]
+    assert (await _call(ws, "family_mission/update_settings", settings={"team_bonus": 3}))["success"]
     solo = await _add_task(ws)
     assert (await _kid_complete(ws, solo))["success"]
     assert [h["type"] for h in _data(hass)["history"]].count("bonus") == 0
@@ -683,7 +683,7 @@ async def test_together_helper_pins_cannot_be_brute_forced(hass, hass_ws_client,
     assert res["error"] == "locked" and res["helper_id"] == BEN_ID
     # now even the right PIN is refused, directly and as helper
     assert (await _together(ws, task_id, [{"kid_id": BEN_ID, "pin": "5555"}]))["error"] == "locked"
-    assert (await _call(ws, "task_organizer/kid_verify_pin", kid_id=BEN_ID, pin="5555"))["result"]["error"] == "locked"
+    assert (await _call(ws, "family_mission/kid_verify_pin", kid_id=BEN_ID, pin="5555"))["result"]["error"] == "locked"
     assert _data(hass)["history"] == []
 
 
@@ -715,7 +715,7 @@ async def test_together_with_approval_creates_one_pending_for_all(hass, hass_ws_
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
     task_id = await _team(hass, ws, requires_approval=True, name="Garden")
-    requested = _collect(hass, "task_organizer_approval_requested")
+    requested = _collect(hass, "family_mission_approval_requested")
     res = await _together(ws, task_id, [{"kid_id": BEN_ID, "pin": "5555"}, {"kid_id": CLARA}])
     assert res["success"] and res["pending"] is True
     (pending,) = _data(hass)["pending"].values()
@@ -723,13 +723,13 @@ async def test_together_with_approval_creates_one_pending_for_all(hass, hass_ws_
     assert _data(hass)["points"].get(ANNA, 0) == 0 and _data(hass)["history"] == []
     await hass.async_block_till_done()
     assert requested[0]["helpers"] == [BEN_ID, CLARA]
-    res = await _call(ws, "task_organizer/approve", pending_id=pending["id"])
+    res = await _call(ws, "family_mission/approve", pending_id=pending["id"])
     assert res["result"]["success"]
     points = _data(hass)["points"]
     assert points[ANNA] == points[BEN_ID] == points[CLARA] == 2.7
     assert [h["type"] for h in _data(hass)["history"]].count("bonus") == 3
     # approving again awards nothing more
-    assert (await _call(ws, "task_organizer/approve", pending_id=pending["id"]))["result"]["success"] is False
+    assert (await _call(ws, "family_mission/approve", pending_id=pending["id"]))["result"]["success"] is False
     assert _data(hass)["points"][ANNA] == 2.7
 
 
@@ -745,7 +745,7 @@ async def test_together_not_allowed_costs_no_pin_attempt(hass, hass_ws_client, s
         res = await _together(ws, task_id, [{"kid_id": BEN_ID, "pin": "0000"}])
         assert res == {"success": False, "error": "together_not_allowed"}
     # Ben's PIN limiter is untouched and nothing was booked
-    assert (await _call(ws, "task_organizer/kid_verify_pin", kid_id=BEN_ID, pin="5555"))["result"]["success"]
+    assert (await _call(ws, "family_mission/kid_verify_pin", kid_id=BEN_ID, pin="5555"))["result"]["success"]
     assert _data(hass)["history"] == [] and task_id in _data(hass)["tasks"]
     # alone it still works
     assert (await _kid_complete(ws, task_id))["success"]
@@ -758,13 +758,13 @@ async def test_allow_together_defaults_by_category_and_is_editable(hass, hass_ws
     auftrag = await _add_task(ws, category="auftrag")
     tasks = _data(hass)["tasks"]
     assert [tasks[t]["allow_together"] for t in (basis, bonus, auftrag)] == [False, True, True]
-    assert (await _call(ws, "task_organizer/edit_task", task_id=basis, allow_together=True))["success"]
+    assert (await _call(ws, "family_mission/edit_task", task_id=basis, allow_together=True))["success"]
     assert tasks[basis]["allow_together"] is True
     # templates carry the flag, too
-    res = await _call(ws, "task_organizer/add_template", name="T", complexity=3, icon="mdi:broom", category="bonus")
+    res = await _call(ws, "family_mission/add_template", name="T", complexity=3, icon="mdi:broom", category="bonus")
     tid = res["result"]["template_id"]
     assert _data(hass)["templates"][tid]["allow_together"] is True
-    assert (await _call(ws, "task_organizer/edit_template", template_id=tid, allow_together=False))["success"]
+    assert (await _call(ws, "family_mission/edit_template", template_id=tid, allow_together=False))["success"]
     assert _data(hass)["templates"][tid]["allow_together"] is False
 
 

@@ -1,9 +1,9 @@
 /**
  * Kids mode quick-start wizard and the bonus trigger picker.
  *
- * - <task-organizer-wizard>: full-screen dialog (opened by the settings card) that
+ * - <family-mission-wizard>: full-screen dialog (opened by the settings card) that
  *   proposes a complete, age-appropriate setup and creates it in one click.
- * - <task-organizer-trigger-picker>: small entity + target-state picker that is
+ * - <family-mission-trigger-picker>: small entity + target-state picker that is
  *   used by the wizard (step 2) and by the "Bonus triggers" section of the settings card.
  *
  * The task catalog and all calculations live in the backend (kids_catalog.py);
@@ -164,7 +164,7 @@ function wzBdayBind(root) {
   });
 }
 
-class TaskOrganizerTriggerPicker extends HTMLElement {
+class FamilyMissionTriggerPicker extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -336,7 +336,7 @@ class TaskOrganizerTriggerPicker extends HTMLElement {
 /**
  * The quick-start wizard dialog.
  */
-class TaskOrganizerWizard extends HTMLElement {
+class FamilyMissionWizard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -373,8 +373,8 @@ class TaskOrganizerWizard extends HTMLElement {
     this._render();
     try {
       const [catalog, data] = await Promise.all([
-        hass.callWS({ type: 'task_organizer/wizard_catalog' }),
-        hass.callWS({ type: 'task_organizer/get_data' })
+        hass.callWS({ type: 'family_mission/wizard_catalog' }),
+        hass.callWS({ type: 'family_mission/get_data' })
       ]);
       this._init(catalog, data);
     } catch (err) {
@@ -398,7 +398,7 @@ class TaskOrganizerWizard extends HTMLElement {
       if (!entityId.startsWith('person.')) continue;
       const st = this._hass.states[entityId];
       persons.push({
-        id: TaskOrganizerWizard.participantId(entityId, st),
+        id: FamilyMissionWizard.participantId(entityId, st),
         name: (st.attributes && st.attributes.friendly_name) || entityId,
         isParent: !!(st.attributes && st.attributes.user_id)
       });
@@ -554,7 +554,7 @@ class TaskOrganizerWizard extends HTMLElement {
     const seq = ++this._previewSeq;
     s.previewBusy = true;
     try {
-      const preview = await this._hass.callWS({ type: 'task_organizer/wizard_preview', ...this._payload() });
+      const preview = await this._hass.callWS({ type: 'family_mission/wizard_preview', ...this._payload() });
       if (seq !== this._previewSeq) return;
       s.preview = preview;
       s.previewError = '';
@@ -621,7 +621,7 @@ class TaskOrganizerWizard extends HTMLElement {
     }
     try {
       s.result = await this._hass.callWS({
-        type: 'task_organizer/wizard_apply',
+        type: 'family_mission/wizard_apply',
         ...this._payload(),
         selection,
         goals,
@@ -776,7 +776,7 @@ class TaskOrganizerWizard extends HTMLElement {
     const finished = this._step === 5;
     this.shadowRoot.innerHTML = `${this._styles()}
       <div class="overlay"><div class="wz" role="dialog" aria-modal="true" aria-label="${wzEsc(this._t('title'))}">
-        <div class="head"><h2>🚀 ${wzEsc(this._t('title'))}</h2>${window.TaskOrganizerHelp ? `<button class="help" data-act="help">❓ ${wzEsc(this._t('help'))}</button>` : ''}<button class="x" data-act="close" aria-label="${wzEsc(this._t('close'))}">✕</button></div>
+        <div class="head"><h2>🚀 ${wzEsc(this._t('title'))}</h2>${window.FamilyMissionHelp ? `<button class="help" data-act="help">❓ ${wzEsc(this._t('help'))}</button>` : ''}<button class="x" data-act="close" aria-label="${wzEsc(this._t('close'))}">✕</button></div>
         ${finished ? '' : `
         <div class="steps">${stepNames.map((n, i) => `<div class="pill ${i === step ? 'active' : i < step ? 'done' : ''}"><b>${i < step ? '✓' : i + 1}</b>${wzEsc(this._t(n))}</div>`).join('')}</div>
         <div class="stepline">${wzEsc(this._t('step_of', { n: step + 1, m: 5 }))} · ${wzEsc(this._t(stepNames[step]))}</div>
@@ -830,7 +830,7 @@ class TaskOrganizerWizard extends HTMLElement {
 
   _bindPickers() {
     const s = this._s;
-    this.shadowRoot.querySelectorAll('task-organizer-trigger-picker').forEach(el => {
+    this.shadowRoot.querySelectorAll('family-mission-trigger-picker').forEach(el => {
       el.hass = this._hass;
       el.value = s.triggers[el.dataset.wk] || { entity_id: '', to_state: '', filter: '' };
       el.addEventListener('change', (ev) => { s.triggers[el.dataset.wk] = ev.detail; });
@@ -898,7 +898,7 @@ class TaskOrganizerWizard extends HTMLElement {
         <div class="card" style="border-left-color:var(--primary-color,#03a9f4)">
           <div class="row"><ha-icon icon="${wzEsc(f.icon)}"></ha-icon><div class="grow"><div class="name">${wzEsc(this._lang === 'de' ? f.name_de : f.name_en)}</div>
             <div class="muted">${wzEsc(this._t('auto_open'))} → ${wzEsc(entry ? this._name(entry) : wk)}</div></div></div>
-          <task-organizer-trigger-picker data-wk="${wzEsc(wk)}"></task-organizer-trigger-picker>
+          <family-mission-trigger-picker data-wk="${wzEsc(wk)}"></family-mission-trigger-picker>
         </div>`;
     }).join('')).join('');
     return `<p class="muted">${wzEsc(this._t('home_intro'))}</p>
@@ -1086,7 +1086,7 @@ class TaskOrganizerWizard extends HTMLElement {
     const act = el.dataset.act;
     const s = this._s;
     if (act === 'close') this.close();
-    else if (act === 'help') { if (window.TaskOrganizerHelp) window.TaskOrganizerHelp.open(this._hass, 'setup'); }
+    else if (act === 'help') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
     else if (act === 'back' && this._step > 0) this._go(this._step - 1);
     else if (act === 'next' && this._canNext()) this._go(this._step + 1);
     else if (act === 'apply') this._apply();
@@ -1201,5 +1201,5 @@ class TaskOrganizerWizard extends HTMLElement {
   }
 }
 
-if (!customElements.get('task-organizer-trigger-picker')) customElements.define('task-organizer-trigger-picker', TaskOrganizerTriggerPicker);
-if (!customElements.get('task-organizer-wizard')) customElements.define('task-organizer-wizard', TaskOrganizerWizard);
+if (!customElements.get('family-mission-trigger-picker')) customElements.define('family-mission-trigger-picker', FamilyMissionTriggerPicker);
+if (!customElements.get('family-mission-wizard')) customElements.define('family-mission-wizard', FamilyMissionWizard);

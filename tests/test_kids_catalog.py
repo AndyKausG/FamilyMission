@@ -9,7 +9,7 @@ import pytest
 # Load the module without importing the package (Home Assistant is not needed)
 _spec = importlib.util.spec_from_file_location(
     "kids_catalog_under_test",
-    Path(__file__).resolve().parents[1] / "custom_components" / "task_organizer" / "kids_catalog.py",
+    Path(__file__).resolve().parents[1] / "custom_components" / "family_mission" / "kids_catalog.py",
 )
 kc = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(kc)

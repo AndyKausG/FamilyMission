@@ -1,8 +1,8 @@
 /**
- * TaskOrganizer Help: the parents guide as in-app online help (German / French / English).
+ * FamilyMission Help: the parents guide as in-app online help (German / French / English).
  *
- * Usable as a card (`type: custom:task-organizer-help`) and as a full-screen overlay that the
- * other cards open with `window.TaskOrganizerHelp.open(hass, 'chapter-id')`. The content is bundled in
+ * Usable as a card (`type: custom:family-mission-help`) and as a full-screen overlay that the
+ * other cards open with `window.FamilyMissionHelp.open(hass, 'chapter-id')`. The content is bundled in
  * this file (works offline); the language comes from `hass.language` (de, fr, en; fallback en).
  * The same text lives in docs/parents-guide.<lang>.md.
  *
@@ -14,7 +14,7 @@
 const HELP_CONTENT = {
   de: {
     title: "Elternratgeber",
-    subtitle: "Wie TaskOrganizer bei euch zu Hause gut funktioniert",
+    subtitle: "Wie FamilyMission bei euch zu Hause gut funktioniert",
     search: "Im Ratgeber suchen",
     toc: "Inhalt",
     close: "Schließen",
@@ -23,7 +23,7 @@ const HELP_CONTENT = {
     results: "{n} Kapitel gefunden",
     chapters: [
       { id: "basics", icon: "💡", title: "Die Grundidee", blocks: [
-        "TaskOrganizer macht aus Haushaltsaufgaben kleine Missionen mit **sofortiger Rückmeldung**: Das Kind hakt etwas ab, hört einen Jingle und sieht seinen Ring wachsen. Genau diese Unmittelbarkeit trägt Kinder durch den Alltag.",
+        "FamilyMission macht aus Haushaltsaufgaben kleine Missionen mit **sofortiger Rückmeldung**: Das Kind hakt etwas ab, hört einen Jingle und sieht seinen Ring wachsen. Genau diese Unmittelbarkeit trägt Kinder durch den Alltag.",
         [
           "**Eigener Fortschritt statt Wettbewerb:** Jedes Kind hat sein eigenes Monatsziel. Die Kacheln stehen in fester Reihenfolge, es gibt keine Rangliste unter Geschwistern.",
           "**Familienziel:** Gemeinsam füllt ihr die Familien-Rakete. Alle ziehen an einem Strang.",
@@ -129,14 +129,19 @@ const HELP_CONTENT = {
           "**Kind will keine Punkte mehr.** Das ist nach einigen Wochen normal. Erneuert die Belohnungen, setzt mehr auf Erlebnisse, schleicht gut laufende Routinen aus und fragt, was dem Kind fehlt. Punkte sind nie ein Druckmittel.",
           "**Krankheit / Ferien.** Pausiert Aufgaben im Task-Editor (Pause bis Datum) oder nutzt „Heute aussetzen“ für einzelne Tage. Am Geburtstag sind Pflichten automatisch frei. Passt bei langen Pausen das Monatsziel an.",
           "**Geschwister unterschiedlich alt.** Aufgaben haben ein Mindestalter, jedes Kind hat ein eigenes Ziel. Haltet den Aufwand pro Minute vergleichbar, nicht die Zahl der Aufgaben. Ältere können Jüngeren mit „Zusammen“ helfen.",
-          "**Tablet zeigt eine alte Version.** Das ist der Browser-Cache. Seite neu laden (im Fully Kiosk Browser: Cache leeren und neu laden), in der Companion-App den Frontend-Cache leeren. Nach einem Update von TaskOrganizer erscheint die neue Version nach einem Neustart von Home Assistant und einem Neuladen."
+          "**Tablet zeigt eine alte Version.** Das ist der Browser-Cache. Seite neu laden (im Fully Kiosk Browser: Cache leeren und neu laden), in der Companion-App den Frontend-Cache leeren. Nach einem Update von FamilyMission erscheint die neue Version nach einem Neustart von Home Assistant und einem Neuladen."
         ]
+      ] },
+      { id: "about", icon: "ℹ️", title: "Über FamilyMission", blocks: [
+        "FamilyMission basiert auf **TaskOrganizer** von Patrick von Wiegen (MIT-Lizenz) und wird von AndyKausG als eigenes Projekt weitergeführt: https://github.com/AndyKausG/FamilyMission",
+        "Ursprungsprojekt: https://github.com/patrickvonwiegen/TaskOrganizer",
+        { tip: "Wer von TaskOrganizer kommt: FamilyMission übernimmt die Daten beim ersten Start automatisch (Kopie, TaskOrganizer bleibt unverändert). Details stehen in der README." }
       ] }
     ]
   },
   fr: {
     title: "Guide des parents",
-    subtitle: "Comment faire fonctionner TaskOrganizer à la maison",
+    subtitle: "Comment faire fonctionner FamilyMission à la maison",
     search: "Rechercher dans le guide",
     toc: "Sommaire",
     close: "Fermer",
@@ -145,7 +150,7 @@ const HELP_CONTENT = {
     results: "{n} chapitre(s) trouvé(s)",
     chapters: [
       { id: "basics", icon: "💡", title: "L'idée de base", blocks: [
-        "TaskOrganizer transforme les tâches ménagères en petites missions avec un **retour immédiat** : l'enfant coche une tâche, entend un jingle et voit son anneau grandir. C'est cette immédiateté qui porte les enfants au quotidien.",
+        "FamilyMission transforme les tâches ménagères en petites missions avec un **retour immédiat** : l'enfant coche une tâche, entend un jingle et voit son anneau grandir. C'est cette immédiateté qui porte les enfants au quotidien.",
         [
           "**Progresser à son rythme plutôt que rivaliser :** chaque enfant a son propre objectif mensuel. Les vignettes restent dans un ordre fixe, il n'y a pas de classement entre frères et sœurs.",
           "**Objectif familial :** ensemble, vous remplissez la fusée de la famille. Tout le monde tire dans le même sens.",
@@ -251,14 +256,19 @@ const HELP_CONTENT = {
           "**L'enfant ne veut plus de points.** C'est normal après quelques semaines. Renouvelez les récompenses, misez davantage sur les expériences, réduisez progressivement les routines qui marchent bien et demandez ce qui manque à l'enfant. Les points ne sont jamais un moyen de pression.",
           "**Maladie / vacances.** Mettez des tâches en pause dans l'éditeur de tâches (pause jusqu'à une date) ou utilisez « Suspendre aujourd'hui » pour des jours isolés. Le jour d'anniversaire, les obligations sont automatiquement suspendues. Pour de longues pauses, adaptez l'objectif mensuel.",
           "**Frères et sœurs d'âges différents.** Les tâches ont un âge minimum, chaque enfant a son propre objectif. Gardez l'effort par minute comparable, pas le nombre de tâches. Les plus grands peuvent aider les plus petits avec « Ensemble ».",
-          "**La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de TaskOrganizer, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement."
+          "**La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de FamilyMission, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement."
         ]
+      ] },
+      { id: "about", icon: "ℹ️", title: "À propos de FamilyMission", blocks: [
+        "FamilyMission est basé sur **TaskOrganizer** de Patrick von Wiegen (licence MIT) et poursuivi par AndyKausG comme projet indépendant : https://github.com/AndyKausG/FamilyMission",
+        "Projet d'origine : https://github.com/patrickvonwiegen/TaskOrganizer",
+        { tip: "Si vous venez de TaskOrganizer : FamilyMission reprend automatiquement les données au premier démarrage (copie, TaskOrganizer reste inchangé). Détails dans le README." }
       ] }
     ]
   },
   en: {
     title: "Parents guide",
-    subtitle: "How to make TaskOrganizer work well at home",
+    subtitle: "How to make FamilyMission work well at home",
     search: "Search the guide",
     toc: "Contents",
     close: "Close",
@@ -267,7 +277,7 @@ const HELP_CONTENT = {
     results: "{n} chapter(s) found",
     chapters: [
       { id: "basics", icon: "💡", title: "The basic idea", blocks: [
-        "TaskOrganizer turns household chores into small missions with **instant feedback**: the child ticks something off, hears a jingle and watches their ring grow. That immediacy is what carries children through the day.",
+        "FamilyMission turns household chores into small missions with **instant feedback**: the child ticks something off, hears a jingle and watches their ring grow. That immediacy is what carries children through the day.",
         [
           "**Own progress instead of competition:** every child has their own monthly goal. The tiles stay in a fixed order, and there is no ranking among siblings.",
           "**Family goal:** together you fill the family rocket. Everyone pulls in the same direction.",
@@ -373,8 +383,13 @@ const HELP_CONTENT = {
           "**Kid does not want points any more.** That is normal after a few weeks. Renew the rewards, focus more on experiences, phase out routines that run well and ask what the child is missing. Points are never a means of pressure.",
           "**Illness / holidays.** Pause tasks in the task editor (pause until a date) or use “Skip today” for single days. On the birthday, duties are automatically off. For long breaks, adjust the monthly goal.",
           "**Siblings of different ages.** Tasks have a minimum age, every child has their own goal. Keep the effort per minute comparable, not the number of tasks. Older kids can help younger ones with “Together”.",
-          "**Tablet shows an old version.** That is the browser cache. Reload the page (in Fully Kiosk Browser: clear the cache and reload), in the companion app clear the frontend cache. After a TaskOrganizer update, the new version appears after a Home Assistant restart and a reload."
+          "**Tablet shows an old version.** That is the browser cache. Reload the page (in Fully Kiosk Browser: clear the cache and reload), in the companion app clear the frontend cache. After a FamilyMission update, the new version appears after a Home Assistant restart and a reload."
         ]
+      ] },
+      { id: "about", icon: "ℹ️", title: "About FamilyMission", blocks: [
+        "FamilyMission is based on **TaskOrganizer** by Patrick von Wiegen (MIT license) and continued by AndyKausG as a project of its own: https://github.com/AndyKausG/FamilyMission",
+        "Original project: https://github.com/patrickvonwiegen/TaskOrganizer",
+        { tip: "Coming from TaskOrganizer? FamilyMission takes over your data automatically on first start (a copy, TaskOrganizer stays untouched). Details are in the README." }
       ] }
     ]
   }
@@ -420,13 +435,13 @@ function plainHelp(block) {
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "task-organizer-help",
-  name: "Task Organizer: Help",
+  type: "family-mission-help",
+  name: "FamilyMission Help",
   description: "Parents guide with table of contents, search and collapsible chapters (de, fr, en).",
   preview: false,
 });
 
-class TaskOrganizerHelp extends HTMLElement {
+class FamilyMissionHelp extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
@@ -448,9 +463,9 @@ class TaskOrganizerHelp extends HTMLElement {
    * @param {string} [anchor] - Chapter id to open and scroll to.
    */
   static open(hass, anchor) {
-    const existing = document.querySelector('task-organizer-help[overlay]');
+    const existing = document.querySelector('family-mission-help[overlay]');
     if (existing) existing.close();
-    const el = document.createElement('task-organizer-help');
+    const el = document.createElement('family-mission-help');
     el.setAttribute('overlay', '');
     el.hass = hass;
     el.goTo(anchor);
@@ -458,7 +473,7 @@ class TaskOrganizerHelp extends HTMLElement {
     return el;
   }
 
-  static getStubConfig() { return { type: "custom:task-organizer-help" }; }
+  static getStubConfig() { return { type: "custom:family-mission-help" }; }
   static getLayoutOptions() { return { grid_columns: 12, grid_rows: "auto", grid_min_columns: 6 }; }
   getCardSize() { return 8; }
 
@@ -676,5 +691,5 @@ class TaskOrganizerHelp extends HTMLElement {
   }
 }
 
-window.TaskOrganizerHelp = TaskOrganizerHelp;
-customElements.define('task-organizer-help', TaskOrganizerHelp);
+window.FamilyMissionHelp = FamilyMissionHelp;
+customElements.define('family-mission-help', FamilyMissionHelp);
