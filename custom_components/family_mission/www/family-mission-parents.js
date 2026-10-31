@@ -1251,7 +1251,10 @@ class FamilyMissionParents extends HTMLElement {
         const tag = k === 'tasks' ? 'family-mission-card' : 'family-mission-settings';
         if (customElements.get(tag)) {
           const el = document.createElement(tag);
-          try { el.setConfig({ type: 'custom:' + tag }); } catch (err) { console.warn('FamilyMission Parents: embedded card config failed', err); }
+          // Options of the embedded card come from `tasks_card:` / `settings_card:` of this card's config
+          const extra = this._config[k === 'tasks' ? 'tasks_card' : 'settings_card'];
+          const cfg = Object.assign({}, extra && typeof extra === 'object' ? extra : {}, { type: 'custom:' + tag });
+          try { el.setConfig(cfg); } catch (err) { console.warn('FamilyMission Parents: embedded card config failed', err); }
           el.hass = this._hass;
           host.appendChild(el);
           this._embeds[k] = el;

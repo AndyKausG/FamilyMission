@@ -440,7 +440,20 @@ A phone-friendly dashboard for parents (administrators and users with the parent
 ```yaml
 type: custom:family-mission-parents
 title: Parents
+# optional: options of the cards embedded under "More"
+tasks_card:            # same options as custom:family-mission-card
+  sort_by: due_date
+  filter_by: "!paused"
+  items_per_page: 10
+  show_search: true
+  show_add: true
+  show_edit: true
+  show_delete: true
+settings_card:         # same options as custom:family-mission-settings
+  show_advanced: false
 ```
+
+`tasks_card` and `settings_card` are optional; without them the embedded task list and settings use their defaults. A separate task list or settings card on the same dashboard is then no longer needed.
 
 ### We parents (parent tasks)
 New in 2.0. The household and planning work of the adults, set up once and then just ticked off. **No points, no ranking, no red.** Parent tasks live in the normal task list (`parent_task: true`, `category: basis`, `complexity: 0`, `generated_by: parents`) and never count for points, wallet, family goal or monthly goal; a completion writes a history entry of type `parent` with `points: 0` and `minutes`.

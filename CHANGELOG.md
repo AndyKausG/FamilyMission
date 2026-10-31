@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.0.1] - 2026-11-01
+
+- **Parents hub:** new optional card options `tasks_card:` and `settings_card:` pass their options (e.g. `sort_by`, `filter_by`, `items_per_page`, `show_advanced`) to the task list and settings embedded under "More". The example dashboard no longer shows them twice.
+
 ## [2.0.0] - 2026-11-01
 
 ### Added
