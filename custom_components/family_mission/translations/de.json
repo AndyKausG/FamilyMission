@@ -187,6 +187,13 @@
         "points": { "name": "Punkte", "description": "Positiv für einen Bonus, negativ für einen Abzug (jeweils 1 bis 50)." },
         "reason": { "name": "Begründung", "description": "Warum? Wird im Protokoll angezeigt (max. 80 Zeichen)." }
       }
+    },
+    "import_from_task_organizer": {
+      "name": "Aus TaskOrganizer importieren",
+      "description": "Ersetzt ALLE FamilyMission-Daten und -Einstellungen durch eine frische Kopie der Daten und Optionen eines installierten TaskOrganizers (Speicher task_organizer.storage und dessen Config-Eintrag). TaskOrganizer selbst wird nie verändert. Nur für Admins.",
+      "fields": {
+        "overwrite": { "name": "Überschreiben", "description": "Muss eingeschaltet sein, um zu bestätigen, dass die aktuellen FamilyMission-Daten ersetzt werden." }
+      }
     }
   }
 }

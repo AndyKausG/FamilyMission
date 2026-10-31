@@ -25,6 +25,7 @@ from homeassistant.helpers.event import (
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
+from .migration import async_auto_migrate, async_import_now, notify_migrated
 from .const import (
     DOMAIN,
     EVENT_TASK_UPDATED,
@@ -94,6 +95,7 @@ from .const import (
     WS_TYPE_KID_PRAISE_SEEN,
     WS_TYPE_MY_PRAISE_SEEN,
     SERVICE_ADJUST_POINTS,
+    SERVICE_IMPORT_FROM_TASK_ORGANIZER,
     SERVICE_ADD_TASK,
     SERVICE_COMPLETE_TASK_BY_NAME,
     SERVICE_RESET_MONTHLY_POINTS,
@@ -3342,26 +3344,8 @@ def _restore_full_goals(hass: HomeAssistant) -> None:
         hass.config_entries.async_update_entry(entries[0], options=new_options)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """
-    Set up the FamilyMission integration from a config entry.
-    
-    :param hass: The Home Assistant instance.
-    :param entry: The configuration entry to setup.
-    :return: Boolean indicating successful setup.
-    """
-    hass.data.setdefault(DOMAIN, {})
-    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
-    data = await store.async_load()
-    
-    if data is None:
-        data = {
-            "tasks": {}, "points": {}, "history": [], "settings": {}, 
-            "monthly_history": {}, "current_month": dt_util.now().strftime("%Y-%m"), 
-            "current_period_start": dt_util.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(),
-            "templates": {}
-        }
-    
+def _ensure_data_defaults(data: dict) -> None:
+    """Add all keys a storage needs and run the additive task migrations."""
     # Ensure all required keys exist
     data.setdefault("monthly_history", {})
     data.setdefault("current_month", dt_util.now().strftime("%Y-%m"))
@@ -3387,8 +3371,37 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             migrate_task_like(item)
             _migrate_replaced_by(item)
 
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """
+    Set up the FamilyMission integration from a config entry.
+    
+    :param hass: The Home Assistant instance.
+    :param entry: The configuration entry to setup.
+    :return: Boolean indicating successful setup.
+    """
+    hass.data.setdefault(DOMAIN, {})
+    store = Store(hass, STORAGE_VERSION, STORAGE_KEY)
+    data = await store.async_load()
+    
+    if data is None:
+        data = {
+            "tasks": {}, "points": {}, "history": [], "settings": {}, 
+            "monthly_history": {}, "current_month": dt_util.now().strftime("%Y-%m"), 
+            "current_period_start": dt_util.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(),
+            "templates": {}
+        }
+
+    # Take over the data of an installed TaskOrganizer once (copy only)
+    data, migrated = await async_auto_migrate(hass, entry, data)
+
+    _ensure_data_defaults(data)
+
     # IMPORTANT: Ensure settings from config entry options are always reflected in data
     data["settings"] = dict(entry.options)
+    if migrated:
+        await store.async_save(data)
+        notify_migrated(hass)
 
     hass.data[DOMAIN]["store"] = store
     hass.data[DOMAIN]["data"] = data
@@ -3854,6 +3867,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             raise ServiceValidationError(f"Unknown person / participant: {call.data['kid_id']}")
         await _async_adjust_points(hass, kid_id, call.data["points"], reason)
 
+    async def handle_import_from_task_organizer(call: ServiceCall):
+        """Service handle: repeat the TaskOrganizer import on purpose (overwrites own data)."""
+        if call.context.user_id:
+            user = await hass.auth.async_get_user(call.context.user_id)
+            if user is None or not user.is_admin:
+                raise HomeAssistantError("Admin permission required")
+        if call.data.get("overwrite") is not True:
+            raise ServiceValidationError("Set overwrite: true - this replaces ALL FamilyMission data")
+        new_data = await async_import_now(hass, entry)
+        if new_data is None:
+            raise ServiceValidationError("No TaskOrganizer data found (storage task_organizer.storage)")
+        _ensure_data_defaults(new_data)
+        new_data["settings"] = dict(entry.options)
+        await store.async_save(new_data)
+        hass.data[DOMAIN]["data"] = new_data
+        async_setup_bonus_triggers(hass)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+        notify_migrated(hass)
+
     # Register services
     hass.services.async_register(
         DOMAIN, SERVICE_ADJUST_POINTS, handle_adjust_points,
@@ -3862,6 +3894,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             vol.Required("points"): vol.All(vol.Coerce(int), vol.Range(min=-MAX_ADJUST_POINTS, max=MAX_ADJUST_POINTS), vol.NotIn([0])),
             vol.Required("reason"): vol.All(cv.string, vol.Length(max=MAX_REASON_LENGTH)),
         }),
+    )
+    hass.services.async_register(
+        DOMAIN, SERVICE_IMPORT_FROM_TASK_ORGANIZER, handle_import_from_task_organizer,
+        schema=vol.Schema({vol.Required("overwrite"): cv.boolean}),
     )
     hass.services.async_register(DOMAIN, SERVICE_RESET_MONTHLY_POINTS, handle_manual_reset)
     hass.services.async_register(DOMAIN, SERVICE_FACTORY_RESET, handle_factory_reset)
