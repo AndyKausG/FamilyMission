@@ -689,6 +689,7 @@ def public_kids(kids: dict | None) -> dict:
             "approval_sample_rate": normalize_sample_rate(profile.get("approval_sample_rate")),
             "strict_until": profile.get("strict_until"),
             "goal_reward": profile.get("goal_reward"),
+            "care": normalize_care(profile.get("care")),
             "has_pin": bool(profile.get("pin_hash") and profile.get("pin_salt")),
         }
         result[kid_id] = entry
@@ -735,6 +736,8 @@ def merge_imported_kids(existing: dict | None, incoming: Any) -> dict:
         strict = parse_birthday(profile.get("strict_until"))
         if strict is not None:
             target["strict_until"] = strict.isoformat()
+        if "care" in profile:
+            target["care"] = normalize_care(profile.get("care"))
         target.setdefault("avatar", DEFAULT_KID_AVATAR)
         target.setdefault("color", DEFAULT_KID_COLOR)
         target.setdefault("birth_year", None)
@@ -753,6 +756,7 @@ def build_kid_profile(
     clear_pin: bool = False,
     birthday: Any = _UNSET,
     approval_sample_rate: Any = _UNSET,
+    care: Any = _UNSET,
 ) -> dict:
     """Return the new stored profile. An empty ``pin`` keeps the old one.
 
@@ -780,6 +784,12 @@ def build_kid_profile(
 
     if approval_sample_rate is not _UNSET:
         profile["approval_sample_rate"] = normalize_sample_rate(approval_sample_rate)
+    if care is not _UNSET:
+        entries = normalize_care(care)
+        if entries:
+            profile["care"] = entries
+        else:
+            profile.pop("care", None)
     if clear_pin:
         profile.pop("pin_hash", None)
         profile.pop("pin_salt", None)
@@ -915,15 +925,21 @@ def bonus_needs_routine(task: dict) -> bool:
     )
 
 
-def open_required_steps(task: dict) -> list[dict]:
-    """Subtasks that still have to be ticked before a kid may finish the task.
+def open_required_steps(task: dict, care_steps: Iterable[dict] | None = None) -> list[dict]:
+    """Steps that still have to be done before a kid may finish the task.
 
-    Subtasks marked ``optional`` (e.g. a medication reminder) never block.
+    Stored subtasks block until ticked, except those marked ``optional``.
+    ``care_steps`` are the virtual medication steps of the kid's morning /
+    evening mission (never stored in ``subtasks``, see ``care_steps_for``): both
+    answers ("taken" and "not today") count as done, only an unanswered step
+    blocks.
     """
-    return [
+    steps = [
         st for st in (task.get("subtasks") or [])
         if isinstance(st, dict) and not st.get("done") and not st.get("optional")
     ]
+    steps.extend(st for st in (care_steps or ()) if isinstance(st, dict) and not st.get("answer"))
+    return steps
 
 
 def check_eligibility(
@@ -1111,3 +1127,205 @@ def find_reward(rewards: Any, reward_id: Any) -> dict | None:
         if isinstance(reward, dict) and reward.get("id") == reward_id:
             return reward
     return None
+
+
+# ---------------------------------------------------------------------------
+# Care (medication) per kid
+# ---------------------------------------------------------------------------
+# A kid profile may carry ``care`` entries (a daily tablet, drops, an inhaler ...).
+# They are shown as a virtual step in the morning / evening mission or as a small
+# item of their own; the answers are logged per day in ``data["care_log"]``.
+# Never points, never an approval, never a penalty.
+
+CARE_ANCHORS = ("morning", "evening", "time")
+CARE_TAKEN = "taken"
+CARE_DECLINED = "declined"
+CARE_UNANSWERED = "unanswered"
+CARE_STATUSES = (CARE_TAKEN, CARE_DECLINED, CARE_UNANSWERED)
+CARE_ANSWERS = (CARE_TAKEN, CARE_DECLINED)
+MAX_CARE_ENTRIES = 6
+MAX_CARE_LABEL = 30
+DEFAULT_CARE_LABEL = "Tablette"
+DEFAULT_CARE_EMOJI = "💊"
+DEFAULT_CARE_TIME = "08:00"
+DEFAULT_CARE_DEADLINES = {"morning": "10:00", "evening": "21:00"}
+# Without a matching mission the item is shown from this time on
+CARE_VISIBLE_FROM = {"morning": "05:00", "evening": "17:00"}
+DEFAULT_ALERT_COUNT = 3
+DEFAULT_ALERT_DAYS = 7
+CARE_LOG_KEEP_DAYS = 60
+
+
+def _care_weekdays(value: Any) -> list[int]:
+    """Sorted unique weekdays 0-6 (Monday = 0); everything unusable means every day."""
+    if isinstance(value, (list, tuple)):
+        days = {d for d in value if isinstance(d, int) and not isinstance(d, bool) and 0 <= d <= 6}
+        if days:
+            return sorted(days)
+    return list(range(7))
+
+
+def _care_deadline(value: Any, anchor: str, time_value: str) -> str:
+    deadline = normalize_time(value)
+    if deadline:
+        return deadline
+    if anchor in DEFAULT_CARE_DEADLINES:
+        return DEFAULT_CARE_DEADLINES[anchor]
+    minutes = min(23 * 60 + 59, _minutes_of_day(time_value) + 120)
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def normalize_care(raw: Any) -> list[dict]:
+    """Validate the care entries of a kid profile; invalid values fall back to the defaults.
+
+    Entry: ``{id, label, emoji, anchor morning|evening|time, time, weekdays, deadline,
+    notify_parents, decline_alert {enabled, count, days}}``. Anything that is not a
+    list gives ``[]``, entries that are not dicts are dropped (at most 6 are kept).
+    """
+    if not isinstance(raw, (list, tuple)):
+        return []
+    result: list[dict] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, dict) or len(result) >= MAX_CARE_ENTRIES:
+            continue
+        label = item.get("label")
+        label = label.strip()[:MAX_CARE_LABEL] if isinstance(label, str) else ""
+        emoji = item.get("emoji")
+        emoji = emoji.strip() if isinstance(emoji, str) else ""
+        if not emoji or len(emoji) > 16:
+            emoji = DEFAULT_CARE_EMOJI
+        anchor = item.get("anchor") if item.get("anchor") in CARE_ANCHORS else "morning"
+        time_value = normalize_time(item.get("time")) or DEFAULT_CARE_TIME
+        cid = item.get("id")
+        if not isinstance(cid, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", cid) or cid in seen:
+            cid = secrets.token_hex(4)
+        seen.add(cid)
+        alert = item.get("decline_alert") if isinstance(item.get("decline_alert"), dict) else {}
+        count = _int_in(alert.get("count"), 1, 30)
+        days = _int_in(alert.get("days"), 1, CARE_LOG_KEEP_DAYS)
+        result.append({
+            "id": cid,
+            "label": label or DEFAULT_CARE_LABEL,
+            "emoji": emoji,
+            "anchor": anchor,
+            "time": time_value,
+            "weekdays": _care_weekdays(item.get("weekdays")),
+            "deadline": _care_deadline(item.get("deadline"), anchor, time_value),
+            "notify_parents": item.get("notify_parents") is not False,
+            "decline_alert": {
+                "enabled": alert.get("enabled") is True,
+                "count": count if count is not None else DEFAULT_ALERT_COUNT,
+                "days": days if days is not None else DEFAULT_ALERT_DAYS,
+            },
+        })
+    return result
+
+
+def care_due_on(entry: dict, day: date) -> bool:
+    """True when the care entry applies on ``day`` (its weekdays)."""
+    return day.weekday() in (entry.get("weekdays") or range(7))
+
+
+def care_find(log: Iterable[dict] | None, day: str, kid_id: str, care_id: str) -> dict | None:
+    """The log entry of one kid / care entry / day (``day`` = ``YYYY-MM-DD``)."""
+    for item in log or ():
+        if (isinstance(item, dict) and item.get("date") == day
+                and item.get("kid_id") == kid_id and item.get("care_id") == care_id):
+            return item
+    return None
+
+
+def care_answer_of(log: Iterable[dict] | None, day: str, kid_id: str, care_id: str) -> str | None:
+    """``taken`` / ``declined`` when answered, else ``None`` (``unanswered`` is no answer)."""
+    item = care_find(log, day, kid_id, care_id)
+    return item["status"] if item and item.get("status") in CARE_ANSWERS else None
+
+
+def care_record(
+    log: list, day: str, kid_id: str, care_id: str, status: str, at: str, confirmed_by: str | None = None,
+) -> dict:
+    """Set the status of one entry/day in ``log`` (in place) and return the log entry.
+
+    A changed status resets the ``pushed`` marker, so the parents hear about the
+    new status once.
+    """
+    item = care_find(log, day, kid_id, care_id)
+    if item is None:
+        item = {"date": day, "kid_id": kid_id, "care_id": care_id, "status": status, "at": at,
+                "confirmed_by": confirmed_by, "pushed": False}
+        log.append(item)
+        return item
+    if item.get("status") != status:
+        item["pushed"] = False
+    item.update(status=status, at=at, confirmed_by=confirmed_by)
+    return item
+
+
+def care_prune(log: Iterable[dict] | None, today: date, keep_days: int = CARE_LOG_KEEP_DAYS) -> list[dict]:
+    """The log without entries older than ``keep_days``."""
+    limit = (today - timedelta(days=keep_days)).isoformat()
+    return [i for i in (log or ()) if isinstance(i, dict) and str(i.get("date", "")) >= limit]
+
+
+def care_steps_for(
+    care: Iterable[dict] | None, anchor: str, day: date, log: Iterable[dict] | None, kid_id: str,
+) -> list[dict]:
+    """The virtual steps of a kid's ``anchor`` mission on ``day``.
+
+    ``{kind: "care", care_id, title, emoji, answer}``; ``answer`` is ``taken`` /
+    ``declined`` / ``None``. Not stored in the task's ``subtasks``.
+    """
+    steps = []
+    for entry in care or ():
+        if entry.get("anchor") != anchor or not care_due_on(entry, day):
+            continue
+        steps.append({
+            "kind": "care", "care_id": entry["id"], "title": entry.get("label") or DEFAULT_CARE_LABEL,
+            "emoji": entry.get("emoji") or DEFAULT_CARE_EMOJI,
+            "answer": care_answer_of(log, day.isoformat(), kid_id, entry["id"]),
+        })
+    return steps
+
+
+def care_deadline_passed(entry: dict, now: datetime) -> bool:
+    """True once the local time of ``now`` has reached the deadline of the entry."""
+    deadline = normalize_time(entry.get("deadline"))
+    return deadline is not None and now.hour * 60 + now.minute >= _minutes_of_day(deadline)
+
+
+def decline_alert_due(
+    log: Iterable[dict] | None, kid_id: str, entry: dict, today: date, last_alert: str | None = None,
+) -> bool:
+    """True when the entry was declined ``count`` times within ``days`` days (counter restarts after an alert).
+
+    Only declines after ``last_alert`` (``YYYY-MM-DD``) count; always False while
+    the alert is off.
+    """
+    alert = entry.get("decline_alert") or {}
+    if alert.get("enabled") is not True:
+        return False
+    count = _int_in(alert.get("count"), 1, 30) or DEFAULT_ALERT_COUNT
+    days = _int_in(alert.get("days"), 1, CARE_LOG_KEEP_DAYS) or DEFAULT_ALERT_DAYS
+    first = (today - timedelta(days=days - 1)).isoformat()
+    after = last_alert or ""
+    declined = [
+        i for i in (log or ())
+        if isinstance(i, dict) and i.get("kid_id") == kid_id and i.get("care_id") == entry.get("id")
+        and i.get("status") == CARE_DECLINED and first <= str(i.get("date", "")) <= today.isoformat()
+        and str(i.get("date", "")) > after
+    ]
+    return len(declined) >= count
+
+
+def care_texts(kind: str, kid_name: str, label: str, lang: str, count: int = 0, days: int = 0) -> tuple[str, str]:
+    """``(title, message)`` of a push to the parents; ``kind`` = declined | unanswered | alert."""
+    de = lang == "de"
+    title = "💊 Gesundheit" if de else "💊 Health"
+    if kind == "declined":
+        return title, (f"{kid_name}: {label} heute nicht genommen." if de else f"{kid_name}: {label} not taken today.")
+    if kind == "unanswered":
+        return title, (f"{kid_name}: {label} ist noch offen (keine Antwort)." if de
+                       else f"{kid_name}: {label} is still open (no answer).")
+    return title, (f"{kid_name}: {label} {count}x in {days} Tagen abgelehnt." if de
+                   else f"{kid_name}: {label} declined {count}x in {days} days.")

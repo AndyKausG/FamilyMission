@@ -72,6 +72,7 @@ Les enfants qui ont besoin de beaucoup de structure profitent surtout d'horaires
 
 - **Plages horaires :** les tâches ne sont actives qu'à l'heure prévue. Avant, un symbole indique à partir de quand.
 - **Étapes :** de petites étapes à cocher (s'habiller, faire le lit). « Terminé ! » n'est possible que lorsque toutes les étapes sont cochées.
+- **Médicament :** si vous avez ajouté un comprimé, des gouttes ou un inhalateur à un enfant (réglages → enfant → « 💊 Médicaments »), il apparaît comme une étape de plus dans la mission du matin ou du soir avec « ✓ Pris » et « Pas aujourd'hui ». Les deux réponses comptent ; seule l'absence de réponse bloque « Terminé ! ». Il ne donne jamais de points et personne n'est jugé.
 - **Terminé :** donne tout de suite des points, des confettis et un son, ou attend votre validation.
 - **👫 Ensemble :** là où c'est autorisé, plusieurs enfants font une tâche ensemble. Les points sont partagés, avec un bonus d'équipe en plus.
 - **Bonus :** des tâches supplémentaires facultatives. Celui qui touche « Prendre » la réserve pour quelques minutes.
@@ -85,6 +86,7 @@ Les enfants qui ont besoin de beaucoup de structure profitent surtout d'horaires
 - **Suspendre aujourd'hui :** une tâche saute aujourd'hui (maladie, sortie), sans points et sans pénalité.
 - **Reporter :** repousser la tâche à une date ultérieure.
 - **Valider pour l'enfant :** vous enregistrez après coup une tâche faite, par exemple si la tablette n'était pas à portée de main.
+- **Santé aujourd'hui :** dans l'onglet Aujourd'hui, vous voyez pour chaque enfant si le médicament a été pris ; « ✓ donné » enregistre que vous l'avez donné vous-même. Vous recevez une notification quand un enfant dit « Pas aujourd'hui » ou ne répond pas avant l'heure limite (la nuit, elle attend le matin). Une alerte facultative signale quand « Pas aujourd'hui » revient trop souvent. L'onglet Enfants montre les 7 derniers jours.
 - **Annuler :** coché par erreur ? L'entrée peut être annulée, les points sont retirés.
 
 <a id="approval"></a>

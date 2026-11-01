@@ -72,6 +72,7 @@ Kinder, die viel Struktur brauchen, profitieren besonders von festen Zeiten, wen
 
 - **Zeitfenster:** Aufgaben sind nur zur passenden Zeit aktiv. Davor zeigt ein Symbol, ab wann es losgeht.
 - **Schritte:** Kleine Häkchen-Schritte (Anziehen, Bett machen). „Fertig!“ geht erst, wenn alle Schritte abgehakt sind.
+- **Medikament:** Habt ihr bei einem Kind eine Tablette, Tropfen oder einen Inhalator eingetragen (Einstellungen → Kind → „💊 Medikamente“), erscheint sie als weiterer Schritt in der Morgen- oder Abend-Mission mit „✓ Genommen“ und „Heute nicht“. Beide Antworten zählen; nur ohne Antwort bleibt „Fertig!“ gesperrt. Es gibt nie Punkte und niemand wird bewertet.
 - **Fertig:** gibt sofort Punkte, Konfetti und Ton, oder wartet auf eure Freigabe.
 - **👫 Zusammen:** Wo erlaubt, machen mehrere Kinder eine Aufgabe gemeinsam. Die Punkte werden geteilt, dazu gibt es einen Team-Bonus.
 - **Bonus:** freiwillige Zusatzaufgaben. Wer „Übernehmen“ tippt, reserviert sie für ein paar Minuten.
@@ -85,6 +86,7 @@ Kinder, die viel Struktur brauchen, profitieren besonders von festen Zeiten, wen
 - **Heute aussetzen:** Eine Aufgabe fällt heute aus (krank, Ausflug), ohne Punkte und ohne Minus.
 - **Zurückstellen:** Die Aufgabe auf ein späteres Datum schieben.
 - **Für Kind erledigen:** Ihr bucht eine erledigte Aufgabe nach, etwa wenn das Tablet nicht zur Hand war.
+- **Gesundheit heute:** Im Reiter Heute seht ihr pro Kind, ob das Medikament genommen wurde; mit „✓ gegeben“ tragt ihr ein, dass ihr es selbst gegeben habt. Ihr bekommt eine Push-Nachricht, wenn ein Kind „Heute nicht“ sagt oder bis zur Frist nicht antwortet (nachts erst am Morgen). Ein optionaler Alarm meldet, wenn „Heute nicht“ zu oft vorkommt. Im Reiter Kinder seht ihr die letzten 7 Tage.
 - **Rückgängig:** Falsch abgehakt? Der Eintrag lässt sich zurücknehmen, die Punkte werden wieder abgezogen.
 
 <a id="approval"></a>

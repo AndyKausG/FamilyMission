@@ -72,6 +72,7 @@ Kids who need a lot of structure benefit most from fixed times, few steps per mi
 
 - **Time windows:** tasks are only active at the right time. Before that, a symbol shows when it starts.
 - **Steps:** small steps to tick (get dressed, make the bed). “Done!” only works once all steps are ticked.
+- **Medication:** if you added a tablet, drops or an inhaler to a child (settings → kid → “💊 Medication”), it shows up as one more step in the morning or evening mission with “✓ Taken” and “Not today”. Both answers count; only no answer holds “Done!” back. It never gives points and nobody is judged.
 - **Done:** gives points, confetti and a sound right away, or waits for your approval.
 - **👫 Together:** where allowed, several kids do a task together. The points are shared, plus a team bonus.
 - **Bonus:** voluntary extra tasks. Whoever taps “Take it” reserves it for a few minutes.
@@ -85,6 +86,7 @@ Kids who need a lot of structure benefit most from fixed times, few steps per mi
 - **Skip today:** a task drops out today (sick, outing), with no points and no penalty.
 - **Postpone:** move the task to a later date.
 - **Complete for the kid:** you record a task that was done, for example when the tablet was not at hand.
+- **Health today:** on the Today tab you see per child whether the medication was taken; “✓ given” records that you gave it yourself. You get a push when a child says “Not today” or does not answer by the deadline (at night it waits until morning). An optional alert tells you when “Not today” happens too often. The Kids tab shows the last 7 days.
 - **Undo:** ticked by mistake? The entry can be taken back and the points are deducted again.
 
 <a id="approval"></a>

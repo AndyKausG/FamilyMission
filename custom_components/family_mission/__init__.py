@@ -97,6 +97,9 @@ from .const import (
     WS_TYPE_MY_CLAIM_TASK,
     WS_TYPE_KID_TOGGLE_STEP,
     WS_TYPE_MY_TOGGLE_STEP,
+    WS_TYPE_KID_CARE_ANSWER,
+    WS_TYPE_MY_CARE_ANSWER,
+    WS_TYPE_CARE_CONFIRM,
     WS_TYPE_MY_CLOSE_BONUS,
     WS_TYPE_MY_REDEEM,
     WS_TYPE_MY_SET_GOAL,
@@ -137,6 +140,7 @@ from .const import (
     SERVICE_REMOVE_TEMPLATE_BY_NAME,
     SERVICE_EDIT_TEMPLATE_BY_NAME,
 )
+from . import kids as kidslib
 from . import kids_catalog, parents_catalog, waste
 from .kids import (
     DEFAULT_NIGHT_SLEEP,
@@ -375,6 +379,8 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
     response_data.setdefault("redemptions", {})
     response_data.setdefault("praise", [])
     response_data["family_points"] = _family_points(hass)
+    response_data["care_today"] = _care_today(hass)
+    response_data["care_log"] = _care_log_recent(hass)
     rocket = data.get("rocket")
     # A record of an earlier period no longer counts
     response_data["rocket"] = rocket if isinstance(rocket, dict) and rocket.get("period") == data.get("current_month") else None
@@ -854,6 +860,8 @@ async def ws_factory_reset(hass: HomeAssistant, connection: websocket_api.Active
 _PROTECTED_SETTING_KEYS = (
     "pending", "history", "points", "tasks", "templates",
     "birthday_handled", "birthday_levelup", "monthly_history",
+    # Care (medication) log and alert memory are runtime data
+    "care_log", "care_alerts",
     # Reward shop: wallet / redemptions are runtime data, rewards have set_rewards
     "wallet", "redemptions", "rewards", "praise",
     # Roles are only changed through the admin-only set_parents command
@@ -1283,6 +1291,7 @@ def _update_kids(hass: HomeAssistant, kids: dict) -> None:
     vol.Optional("birth_year", default=None): vol.Any(None, vol.All(int, vol.Range(min=1900, max=2100))),
     vol.Optional("birthday"): vol.Any(None, str),
     vol.Optional("approval_sample_rate"): vol.All(int, vol.Range(min=0, max=100)),
+    vol.Optional("care"): list,
     vol.Optional("pin"): vol.Any(None, str),
     vol.Optional("clear_pin", default=False): bool,
 })
@@ -1320,6 +1329,8 @@ async def ws_set_kid_profile(hass: HomeAssistant, connection: websocket_api.Acti
         extra["birthday"] = birthday
     if "approval_sample_rate" in msg:
         extra["approval_sample_rate"] = msg["approval_sample_rate"]
+    if "care" in msg:
+        extra["care"] = msg["care"]  # validated (defaults for invalid values) by build_kid_profile
 
     kids = copy.deepcopy(_get_entry(hass).options.get("kids") or {})
     kids[pid] = build_kid_profile(
@@ -1469,7 +1480,8 @@ async def ws_kid_complete_task(hass: HomeAssistant, connection: websocket_api.Ac
 
 async def _async_kid_complete(hass: HomeAssistant, task_id: str, ctx: dict, helpers: list) -> dict:
     """Complete a task for the identified kid / person (shared by kid_complete_task and my_complete_task)."""
-    if open_required_steps(ctx["task"]):
+    care_attached = _care_attached(hass, ctx["kid_id"], task_id)
+    if open_required_steps(ctx["task"], [i["step"] for i in care_attached]):
         return {"success": False, "error": ERR_STEPS_OPEN}
 
     if helpers and not allow_together(ctx["task"]):
@@ -1491,6 +1503,7 @@ async def _async_kid_complete(hass: HomeAssistant, task_id: str, ctx: dict, help
     profile = (ctx["settings"].get("kids") or {}).get(kid_id)
     if profile is not None and needs_approval(task, profile, dt_util.now().date()):
         await _async_request_approval(hass, task_id, kid_id, points, helper_ids, bonus)
+        _care_lock(hass, kid_id, care_attached)
         return {"success": True, "pending": True, "points": points, "task_name": task_name}
 
     if helpers:
@@ -1500,11 +1513,242 @@ async def _async_kid_complete(hass: HomeAssistant, task_id: str, ctx: dict, help
         success = await _async_complete_task_internal(hass, task_id, [kid_id], {kid_id: 100})
     if not success:
         return {"success": False, "error": ERR_NOT_FOUND}
+    _care_lock(hass, kid_id, care_attached)
 
     result = {"success": True, "points": points, "task_name": task_name}
     if helpers:
         result["team_bonus"] = bonus
     return result
+
+
+# ---------------------------------------------------------------------------
+# Care (medication) per kid
+# ---------------------------------------------------------------------------
+
+ERR_CARE_LOCKED = "care_locked"
+
+
+def _kid_care(settings: dict, kid_id: str) -> list[dict]:
+    """The validated care entries of a kid profile."""
+    profile = (settings.get("kids") or {}).get(kid_id)
+    return kidslib.normalize_care(profile.get("care")) if isinstance(profile, dict) else []
+
+
+def _care_mission(hass: HomeAssistant, kid_id: str, anchor: str, settings: dict, now: datetime) -> str | None:
+    """Task id of the kid's open morning / evening mission (wizard task of that catalog key), else ``None``."""
+    if anchor not in ("morning", "evening"):
+        return None
+    overdue_days = settings.get("overdue_days", kidslib.DEFAULT_OVERDUE_DAYS)
+    for task_id, task in sorted(hass.data[DOMAIN]["data"]["tasks"].items()):
+        if task.get("parent_task") or task.get("generated_by") != kids_catalog.GENERATED_BY:
+            continue
+        if kids_catalog.split_key(task.get("wizard_key") or "")[0] != anchor:
+            continue
+        if kid_id not in kidslib._assignee_list(task):
+            continue
+        if is_open(task, now, overdue_days) and not is_expired(task, now) and window_state(task, now) != WINDOW_TOO_LATE:
+            return task_id
+    return None
+
+
+def _care_items(hass: HomeAssistant, kid_id: str, now: datetime | None = None) -> list[dict]:
+    """The care entries of a kid that apply today, with answer, mission and visibility."""
+    settings = _get_entry(hass).options
+    now = now or dt_util.now()
+    day = now.date()
+    log = hass.data[DOMAIN]["data"].get("care_log") or []
+    items = []
+    for entry in _kid_care(settings, kid_id):
+        if not kidslib.care_due_on(entry, day):
+            continue
+        logged = kidslib.care_find(log, day.isoformat(), kid_id, entry["id"])
+        mission = _care_mission(hass, kid_id, entry["anchor"], settings, now)
+        items.append({
+            **entry,
+            "answer": kidslib.care_answer_of(log, day.isoformat(), kid_id, entry["id"]),
+            "status": logged["status"] if logged else None,
+            "locked": bool(logged and logged.get("locked")),
+            "mission_task_id": mission,
+            "visible_from": entry["time"] if entry["anchor"] == "time" else kidslib.CARE_VISIBLE_FROM[entry["anchor"]],
+        })
+    return items
+
+
+def _care_today(hass: HomeAssistant) -> dict:
+    """``{kid_id: [item, ...]}`` for every kid with care entries due today."""
+    result = {}
+    now = dt_util.now()
+    for kid_id in (_get_entry(hass).options.get("kids") or {}):
+        items = _care_items(hass, kid_id, now)
+        if items:
+            result[kid_id] = items
+    return result
+
+
+def _care_log_recent(hass: HomeAssistant, days: int = 8) -> list[dict]:
+    """The care log of the last ``days`` days (the parents' history)."""
+    first = (dt_util.now().date() - timedelta(days=days - 1)).isoformat()
+    return [i for i in hass.data[DOMAIN]["data"].get("care_log") or [] if str(i.get("date", "")) >= first]
+
+
+def _care_attached(hass: HomeAssistant, kid_id: str, task_id: str) -> list[dict]:
+    """Care items that are a virtual step of the mission ``task_id``: ``[{"item": ..., "step": ...}]``."""
+    result = []
+    for item in _care_items(hass, kid_id):
+        if item["mission_task_id"] == task_id:
+            result.append({"item": item, "step": {
+                "kind": "care", "care_id": item["id"], "title": item["label"], "emoji": item["emoji"],
+                "answer": item["answer"],
+            }})
+    return result
+
+
+def _care_lock(hass: HomeAssistant, kid_id: str, attached: list[dict]) -> None:
+    """The answers of a completed mission can no longer be changed by the kid."""
+    log = hass.data[DOMAIN]["data"].setdefault("care_log", [])
+    day = dt_util.now().date().isoformat()
+    for att in attached:
+        item = kidslib.care_find(log, day, kid_id, att["item"]["id"])
+        if item:
+            item["locked"] = True
+
+
+async def _async_care_answer(
+    hass: HomeAssistant, kid_id: str, care_id: str, status: str, confirmed_by: str | None = None, parent: bool = False,
+) -> dict:
+    """Store the answer of today (kid or confirmation by a parent) and let the parents hear about it."""
+    item = next((i for i in _care_items(hass, kid_id) if i["id"] == care_id), None)
+    if item is None or status not in kidslib.CARE_ANSWERS:
+        return {"success": False, "error": ERR_NOT_FOUND}
+    if item["locked"] and not parent:
+        return {"success": False, "error": ERR_CARE_LOCKED}
+    data = hass.data[DOMAIN]["data"]
+    log = data.setdefault("care_log", [])
+    kidslib.care_record(
+        log, dt_util.now().date().isoformat(), kid_id, care_id, status, dt_util.utcnow().isoformat(), confirmed_by,
+    )
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    await _async_check_care(hass)  # a decline reaches the parents right away
+    return {"success": True, "status": status}
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_KID_CARE_ANSWER,
+    vol.Required("kid_id"): str,
+    vol.Optional("pin"): vol.Any(None, str),
+    vol.Required("care_id"): str,
+    vol.Required("status"): vol.In(kidslib.CARE_ANSWERS),
+})
+@websocket_api.async_response
+async def ws_kid_care_answer(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Answer a care entry as a kid (PIN like ``kid_toggle_step``): taken / not today."""
+    result, _settings, _kids = _verify_kid(hass, msg["kid_id"], msg.get("pin"))
+    if not result["success"]:
+        connection.send_result(msg["id"], result)
+        return
+    connection.send_result(msg["id"], await _async_care_answer(hass, msg["kid_id"], msg["care_id"], msg["status"]))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_MY_CARE_ANSWER,
+    vol.Required("care_id"): str,
+    vol.Required("status"): vol.In(kidslib.CARE_ANSWERS),
+})
+@websocket_api.async_response
+async def ws_my_care_answer(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Answer a care entry as the calling user (needs a kid profile; the HA login is the proof)."""
+    error, ctx = _my_context(hass, connection, msg, with_task=False)
+    if error is None and ctx["kid_id"] not in ctx["kids"]:
+        error = {"success": False, "error": ERR_UNKNOWN_KID}
+    if error:
+        connection.send_result(msg["id"], error)
+        return
+    connection.send_result(msg["id"], await _async_care_answer(hass, ctx["kid_id"], msg["care_id"], msg["status"]))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_CARE_CONFIRM,
+    vol.Required("kid_id"): str,
+    vol.Required("care_id"): str,
+})
+@websocket_api.async_response
+async def ws_care_confirm(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """A parent confirms "given" (status taken, ``confirmed_by`` = the parent); works after the mission is done."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    connection.send_result(msg["id"], await _async_care_answer(
+        hass, msg["kid_id"], msg["care_id"], kidslib.CARE_TAKEN, confirmed_by=connection.user.id, parent=True,
+    ))
+
+
+async def _async_check_care(hass: HomeAssistant) -> int:
+    """Care timers (every minute): unanswered at the deadline, pushes to the parents, decline alerts.
+
+    The deadline is logged as ``unanswered`` at once; the push is sent as soon as
+    it is not night (``pushed`` marker per log entry, so every status is announced
+    once). Returns the number of pushes.
+    """
+    if DOMAIN not in hass.data:
+        return 0
+    options = _get_entry(hass).options
+    kids = options.get("kids") or {}
+    care_of = {
+        kid_id: {e["id"]: e for e in kidslib.normalize_care(profile.get("care"))}
+        for kid_id, profile in kids.items() if isinstance(profile, dict) and profile.get("care")
+    }
+    if not care_of:
+        return 0
+    data = hass.data[DOMAIN]["data"]
+    now = dt_util.now()
+    today = now.date()
+    day = today.isoformat()
+    log = data["care_log"] = kidslib.care_prune(data.get("care_log"), today)
+    alerts = data.setdefault("care_alerts", {})
+    changed = False
+
+    for kid_id, entries in care_of.items():
+        for entry in entries.values():
+            if (kidslib.care_due_on(entry, today) and kidslib.care_deadline_passed(entry, now)
+                    and kidslib.care_find(log, day, kid_id, entry["id"]) is None):
+                kidslib.care_record(log, day, kid_id, entry["id"], kidslib.CARE_UNANSWERED, dt_util.utcnow().isoformat())
+                changed = True
+
+    messages: list[tuple[str, str, str]] = []
+    if not _parent_night(hass):
+        lang = _lang(hass)
+        yesterday = (today - timedelta(days=1)).isoformat()
+        for item in log:
+            if (item.get("pushed") or item.get("status") not in (kidslib.CARE_DECLINED, kidslib.CARE_UNANSWERED)
+                    or str(item.get("date", "")) < yesterday):
+                continue
+            item["pushed"] = True
+            changed = True
+            entry = care_of.get(item.get("kid_id"), {}).get(item.get("care_id"))
+            if entry is None or not entry["notify_parents"]:
+                continue
+            title, text = kidslib.care_texts(
+                item["status"], _participant_name(hass, item["kid_id"]), f"{entry['emoji']} {entry['label']}", lang,
+            )
+            messages.append((title, text, f"{DOMAIN}_care_{item['kid_id']}_{item['care_id']}"))
+        for kid_id, entries in care_of.items():
+            for entry in entries.values():
+                key = f"{kid_id}:{entry['id']}"
+                if kidslib.decline_alert_due(log, kid_id, entry, today, alerts.get(key)):
+                    alerts[key] = day
+                    changed = True
+                    alert = entry["decline_alert"]
+                    title, text = kidslib.care_texts(
+                        "alert", _participant_name(hass, kid_id), f"{entry['emoji']} {entry['label']}", lang,
+                        alert["count"], alert["days"],
+                    )
+                    messages.append((title, text, f"{DOMAIN}_care_alert_{kid_id}_{entry['id']}"))
+    if changed:
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    for title, text, tag in messages:
+        await _async_push_all_adults(hass, title, text, tag=tag)
+    return len(messages)
 
 
 # ---------------------------------------------------------------------------
@@ -5050,6 +5294,8 @@ def _ensure_data_defaults(data: dict) -> None:
     data.setdefault("pending", {})
     data.setdefault("birthday_handled", {})
     data.setdefault("birthday_levelup", {})
+    data.setdefault("care_log", [])
+    data.setdefault("care_alerts", {})
     # Reward shop: the wallet survives the monthly reset. First start with the
     # shop: already earned points of the month become the starting balance.
     if not isinstance(data.get("wallet"), dict):
@@ -5136,6 +5382,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_check_weekly_summary(hass)
         await _async_check_waste(hass)
         await _async_check_savings_goals(hass)
+        await _async_check_care(hass)
 
     await _async_remove_expired_adhoc(hass)
 
@@ -5187,7 +5434,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "monthly_history": {}, "current_month": dt_util.now().strftime("%Y-%m"), 
             "current_period_start": dt_util.utcnow().isoformat(),
             "templates": {}, "pending": {}, "birthday_handled": {}, "birthday_levelup": {},
-            "wallet": {}, "redemptions": {}, "praise": [],
+            "wallet": {}, "redemptions": {}, "praise": [], "care_log": [], "care_alerts": {},
         }
         hass.data[DOMAIN]["data"] = new_data
         
@@ -5630,6 +5877,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_delete_task)
     websocket_api.async_register_command(hass, ws_factory_reset)
     websocket_api.async_register_command(hass, ws_update_settings)
+    websocket_api.async_register_command(hass, ws_kid_care_answer)
+    websocket_api.async_register_command(hass, ws_my_care_answer)
+    websocket_api.async_register_command(hass, ws_care_confirm)
     websocket_api.async_register_command(hass, ws_delete_history_item)
     websocket_api.async_register_command(hass, ws_edit_history_item)
     websocket_api.async_register_command(hass, ws_import_tasks)

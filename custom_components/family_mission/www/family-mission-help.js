@@ -61,6 +61,7 @@ const HELP_CONTENT = {
         [
           "**Zeitfenster:** Aufgaben sind nur zur passenden Zeit aktiv. Davor zeigt ein Symbol, ab wann es losgeht.",
           "**Schritte:** Kleine Häkchen-Schritte (Anziehen, Bett machen). „Fertig!“ geht erst, wenn alle Schritte abgehakt sind.",
+          "**Medikament:** Habt ihr bei einem Kind eine Tablette, Tropfen oder einen Inhalator eingetragen (Einstellungen → Kind → „💊 Medikamente“), erscheint sie als weiterer Schritt in der Morgen- oder Abend-Mission mit „✓ Genommen“ und „Heute nicht“. Beide Antworten zählen; nur ohne Antwort bleibt „Fertig!“ gesperrt. Es gibt nie Punkte und niemand wird bewertet.",
           "**Fertig:** gibt sofort Punkte, Konfetti und Ton, oder wartet auf eure Freigabe.",
           "**👫 Zusammen:** Wo erlaubt, machen mehrere Kinder eine Aufgabe gemeinsam. Die Punkte werden geteilt, dazu gibt es einen Team-Bonus.",
           "**Bonus:** freiwillige Zusatzaufgaben. Wer „Übernehmen“ tippt, reserviert sie für ein paar Minuten.",
@@ -74,6 +75,7 @@ const HELP_CONTENT = {
           "**Heute aussetzen:** Eine Aufgabe fällt heute aus (krank, Ausflug), ohne Punkte und ohne Minus.",
           "**Zurückstellen:** Die Aufgabe auf ein späteres Datum schieben.",
           "**Für Kind erledigen:** Ihr bucht eine erledigte Aufgabe nach, etwa wenn das Tablet nicht zur Hand war.",
+          "**Gesundheit heute:** Im Reiter Heute seht ihr pro Kind, ob das Medikament genommen wurde; mit „✓ gegeben“ tragt ihr ein, dass ihr es selbst gegeben habt. Ihr bekommt eine Push-Nachricht, wenn ein Kind „Heute nicht“ sagt oder bis zur Frist nicht antwortet (nachts erst am Morgen). Ein optionaler Alarm meldet, wenn „Heute nicht“ zu oft vorkommt. Im Reiter Kinder seht ihr die letzten 7 Tage.",
           "**Rückgängig:** Falsch abgehakt? Der Eintrag lässt sich zurücknehmen, die Punkte werden wieder abgezogen."
         ]
       ] },
@@ -226,6 +228,7 @@ const HELP_CONTENT = {
         [
           "**Plages horaires :** les tâches ne sont actives qu'à l'heure prévue. Avant, un symbole indique à partir de quand.",
           "**Étapes :** de petites étapes à cocher (s'habiller, faire le lit). « Terminé ! » n'est possible que lorsque toutes les étapes sont cochées.",
+          "**Médicament :** si vous avez ajouté un comprimé, des gouttes ou un inhalateur à un enfant (réglages → enfant → « 💊 Médicaments »), il apparaît comme une étape de plus dans la mission du matin ou du soir avec « ✓ Pris » et « Pas aujourd'hui ». Les deux réponses comptent ; seule l'absence de réponse bloque « Terminé ! ». Il ne donne jamais de points et personne n'est jugé.",
           "**Terminé :** donne tout de suite des points, des confettis et un son, ou attend votre validation.",
           "**👫 Ensemble :** là où c'est autorisé, plusieurs enfants font une tâche ensemble. Les points sont partagés, avec un bonus d'équipe en plus.",
           "**Bonus :** des tâches supplémentaires facultatives. Celui qui touche « Prendre » la réserve pour quelques minutes.",
@@ -239,6 +242,7 @@ const HELP_CONTENT = {
           "**Suspendre aujourd'hui :** une tâche saute aujourd'hui (maladie, sortie), sans points et sans pénalité.",
           "**Reporter :** repousser la tâche à une date ultérieure.",
           "**Valider pour l'enfant :** vous enregistrez après coup une tâche faite, par exemple si la tablette n'était pas à portée de main.",
+          "**Santé aujourd'hui :** dans l'onglet Aujourd'hui, vous voyez pour chaque enfant si le médicament a été pris ; « ✓ donné » enregistre que vous l'avez donné vous-même. Vous recevez une notification quand un enfant dit « Pas aujourd'hui » ou ne répond pas avant l'heure limite (la nuit, elle attend le matin). Une alerte facultative signale quand « Pas aujourd'hui » revient trop souvent. L'onglet Enfants montre les 7 derniers jours.",
           "**Annuler :** coché par erreur ? L'entrée peut être annulée, les points sont retirés."
         ]
       ] },
@@ -391,6 +395,7 @@ const HELP_CONTENT = {
         [
           "**Time windows:** tasks are only active at the right time. Before that, a symbol shows when it starts.",
           "**Steps:** small steps to tick (get dressed, make the bed). “Done!” only works once all steps are ticked.",
+          "**Medication:** if you added a tablet, drops or an inhaler to a child (settings → kid → “💊 Medication”), it shows up as one more step in the morning or evening mission with “✓ Taken” and “Not today”. Both answers count; only no answer holds “Done!” back. It never gives points and nobody is judged.",
           "**Done:** gives points, confetti and a sound right away, or waits for your approval.",
           "**👫 Together:** where allowed, several kids do a task together. The points are shared, plus a team bonus.",
           "**Bonus:** voluntary extra tasks. Whoever taps “Take it” reserves it for a few minutes.",
@@ -404,6 +409,7 @@ const HELP_CONTENT = {
           "**Skip today:** a task drops out today (sick, outing), with no points and no penalty.",
           "**Postpone:** move the task to a later date.",
           "**Complete for the kid:** you record a task that was done, for example when the tablet was not at hand.",
+          "**Health today:** on the Today tab you see per child whether the medication was taken; “✓ given” records that you gave it yourself. You get a push when a child says “Not today” or does not answer by the deadline (at night it waits until morning). An optional alert tells you when “Not today” happens too often. The Kids tab shows the last 7 days.",
           "**Undo:** ticked by mistake? The entry can be taken back and the points are deducted again."
         ]
       ] },

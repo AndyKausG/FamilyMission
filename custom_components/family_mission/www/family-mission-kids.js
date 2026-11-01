@@ -65,6 +65,8 @@ const I18N_KIDS = {
     err_not_yet: "Not yet! This task starts a little later.",
     err_too_late: "Too late for today. New chance tomorrow!", err_steps_open: "Tick all steps first!", err_together_not_allowed: "This task is a solo job.",
     steps_left: "Still {n} step(s) to tick",
+    care_taken: "✓ Taken", care_declined: "Not today",
+    err_care_locked: "That is done for today.",
     pa_skip: "Skip today", pa_postpone: "Postpone", pa_complete: "Complete for {name}", pa_undo: "Undo",
     pa_cancel: "Cancel", pa_ok: "OK", pa_done_today: "Done today",
     pa_confirm_skip: "Skip \"{task}\" today? No points are given.",
@@ -142,6 +144,8 @@ const I18N_KIDS = {
     err_not_yet: "Noch nicht dran! Die Aufgabe startet etwas später.",
     err_too_late: "Heute zu spät. Morgen gibt es eine neue Chance!", err_steps_open: "Hake zuerst alle Schritte ab!", err_together_not_allowed: "Diese Aufgabe machst du allein.",
     steps_left: "Noch {n} Schritt(e) abhaken",
+    care_taken: "✓ Genommen", care_declined: "Heute nicht",
+    err_care_locked: "Das ist für heute erledigt.",
     pa_skip: "Heute aussetzen", pa_postpone: "Zurückstellen", pa_complete: "Für {name} erledigen", pa_undo: "Rückgängig",
     pa_cancel: "Abbrechen", pa_ok: "OK", pa_done_today: "Heute erledigt",
     pa_confirm_skip: "\"{task}\" heute aussetzen? Es gibt keine Punkte.",
@@ -340,6 +344,7 @@ class FamilyMissionKids extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this.tasks = {};
+    this.careToday = {};
     this.points = {};
     this.settings = {};
     this.pending = {};
@@ -681,6 +686,7 @@ class FamilyMissionKids extends HTMLElement {
     this._inflight++;
     return this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
       this.tasks = data.tasks || {};
+      this.careToday = data.care_today || {};
       this.points = data.points || {};
       this.settings = data.settings || {};
       this.pending = data.pending || {};
@@ -1352,6 +1358,7 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'pin-cancel' && this._helperMode()) this._helperCancel();
     else if (action === 'pin-cancel' || action === 'back') this._goHome();
     else if (action === 'toggle-sub') this._toggleSubtask(el.dataset.task, parseInt(el.dataset.idx));
+    else if (action === 'care-answer') this._careAnswer(el.dataset.care, el.dataset.status);
     else if (action === 'ap-approve') this._apAct(el.dataset.id, true);
     else if (action === 'ap-not-done') this._apAct(el.dataset.id, false);
     else if (action === 'close-bonus') this._closeBonus(el.dataset.task);
@@ -1886,6 +1893,69 @@ class FamilyMissionKids extends HTMLElement {
       this._showToast(this.localize('err_generic'));
       this._fetchData();
     }
+  }
+
+  /** Care (medication) items of a kid that are a virtual step of this mission. */
+  _careSteps(kid, task) {
+    return ((this.careToday || {})[kid.id] || []).filter(c => c.mission_task_id === task.id);
+  }
+
+  /** Care items of a kid shown as a small card of their own (unanswered, or fixed-time items). */
+  _careStandalone(kid) {
+    if (kid.adult || !kid.id) return [];
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    return ((this.careToday || {})[kid.id] || []).filter(c => {
+      if (c.mission_task_id) return false;
+      const from = this._hhmm(c.visible_from);
+      if (from !== null && minutes < from) return false;
+      return !c.answer || c.anchor === 'time';
+    });
+  }
+
+  /** Answers a care item ("taken" / "not today"); both count as done. Changeable until the mission is completed. */
+  async _careAnswer(careId, status) {
+    if (!this._session || this._busy) return;
+    const kidId = this._session.mine ? (this._mineKid() || {}).id : this._session.kidId;
+    const item = ((this.careToday || {})[kidId] || []).find(c => c.id === careId);
+    if (!item || item.locked) return;
+    item.answer = status;
+    this._render();
+    try {
+      const res = await this._hass.callWS(this._kidCmd('care_answer', { care_id: careId, status }));
+      if (res && res.success === false) this._handleActionError(res);
+      else this._fetchData();
+    } catch (err) {
+      console.error("FamilyMission Kids: could not save the answer", err);
+      this._showToast(this.localize('err_generic'));
+      this._fetchData();
+    }
+  }
+
+  /** The two answer buttons of a care item (neutral: "not today" is no failure). */
+  _careButtons(c, disabled) {
+    const btn = (status, label) => `<button class="care-btn ${status} ${c.answer === status ? 'on' : ''}" data-action="care-answer"
+        data-care="${escKids(c.id)}" data-status="${status}" aria-pressed="${c.answer === status ? 'true' : 'false'}" ${disabled || c.locked ? 'disabled' : ''}>${escKids(label)}</button>`;
+    return btn('taken', this.localize('care_taken')) + btn('declined', this.localize('care_declined'));
+  }
+
+  /** A care step inside a mission: label plus the two answer buttons. */
+  _renderCareStep(c, disabled) {
+    return `<div class="care-step ${c.answer ? 'answered' : ''}">
+        <span class="care-title"><span aria-hidden="true">${escKids(c.emoji)}</span> ${escKids(c.label)}</span>
+        <span class="care-btns">${this._careButtons(c, disabled)}</span>
+      </div>`;
+  }
+
+  /** Small card of its own for care items without a mission (no points, no stars). */
+  _renderCareCard(c) {
+    return `<article class="task duty cat-basis care-card">
+        <div class="t-top">
+          <div class="t-icon" aria-hidden="true">${escKids(c.emoji)}</div>
+          <div class="t-main"><div class="t-name">${escKids(c.label)}</div></div>
+          <div class="t-action care-btns">${this._careButtons(c, this._busy)}</div>
+        </div>
+      </article>`;
   }
 
   async _claim(taskId) {
@@ -2880,6 +2950,7 @@ class FamilyMissionKids extends HTMLElement {
     const dutyHtml = (mine && this._isParent() ? this._renderParentApprovals(persons) : '') + (duties.length
       ? duties.map(t => this._renderTask(t, kid, 'duty', persons)).join('')
       : `<div class="empty-state small">🎉 ${escKids(this.localize('no_tasks'))}</div>`)
+      + this._careStandalone(kid).map(c => this._renderCareCard(c)).join('')
       + this._renderReplaced(kid) + this._renderWaiting(waiting) + this._renderPrivate(kid)
       + (this._isParent() ? this._renderDoneToday(kid) : '');
     const bonusHtml = bonus.length
@@ -3081,7 +3152,8 @@ class FamilyMissionKids extends HTMLElement {
       action = `<button class="btn btn-claim" data-action="claim" data-task="${escKids(task.id)}" ${busy}>${escKids(this.localize('claim'))}</button>`;
     } else {
       // "Fertig!" only once every required step is ticked (optional steps never block)
-      const open = (Array.isArray(task.subtasks) ? task.subtasks : []).filter(st => st && !st.done && !st.optional).length;
+      const open = (Array.isArray(task.subtasks) ? task.subtasks : []).filter(st => st && !st.done && !st.optional).length +
+        this._careSteps(kid, task).filter(c => !c.answer).length;
       action = `<button class="btn btn-done" data-action="complete" data-task="${escKids(task.id)}" ${busy} ${open ? 'disabled' : ''}>${escKids(this.localize('done_btn'))} ✅</button>`;
       if (!this._isMine() && this._allowTogether(task) && this._helperCandidates(task, kid).length) {
         action += `<button class="btn btn-together" data-action="together" data-task="${escKids(task.id)}" ${busy} ${open ? 'disabled' : ''}>👫 ${escKids(this.localize('together'))}</button>`;
@@ -3089,12 +3161,14 @@ class FamilyMissionKids extends HTMLElement {
       if (open) note = `<div class="t-note">${escKids(this.localize('steps_left', { n: open }))}</div>`;
     }
 
-    const subs = mode !== 'window' && Array.isArray(task.subtasks) && task.subtasks.length
-      ? `<div class="subs">${task.subtasks.map((st, i) => `
+    const careSteps = mode === 'window' ? [] : this._careSteps(kid, task);
+    const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length;
+    const subs = mode !== 'window' && (hasSubs || careSteps.length)
+      ? `<div class="subs">${(hasSubs ? task.subtasks : []).map((st, i) => `
           <button class="sub ${st.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${i}"
                   ${mode === 'locked' || mode === 'window' ? 'disabled' : ''} aria-pressed="${st.done ? 'true' : 'false'}">
             <span class="box">${st.done ? '✓' : ''}</span><span class="sub-title">${escKids(st.title)}</span>
-          </button>`).join('')}</div>`
+          </button>`).join('')}${careSteps.map(c => this._renderCareStep(c, mode === 'locked')).join('')}</div>`
       : '';
 
     const cat = this._category(task);
@@ -3309,6 +3383,15 @@ class FamilyMissionKids extends HTMLElement {
       .sub.done .box { background: var(--k-good); border-color: var(--k-good); }
       .sub.done .sub-title { text-decoration: line-through; text-decoration-thickness: 3px; }
       .sub-title { overflow-wrap: anywhere; }
+      .care-step { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px; border-radius: 22px; border: 3px solid var(--k-line); font-size: 23px; font-weight: 700; }
+      .care-title { overflow-wrap: anywhere; }
+      .care-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+      .care-btn { min-height: 60px; min-width: 120px; padding: 8px 18px; border-radius: 20px; font-size: 22px; font-weight: 800; background: transparent; border: 3px solid var(--k-line); color: var(--k-text); }
+      .care-btn.taken.on { background: var(--k-good); border-color: var(--k-good); color: #fff; }
+      .care-btn.declined.on { background: color-mix(in srgb, var(--k-sub) 28%, var(--k-card)); border-color: var(--k-sub); }
+      .care-btn:active:not(:disabled) { transform: scale(0.97); }
+      .care-btn:disabled { opacity: 0.6; }
+      .care-card .t-icon { font-size: 40px; display: grid; place-items: center; }
 
       /* ---------- parent actions (parent role only) ---------- */
       .pact { display: flex; gap: 12px; justify-content: flex-end; padding-top: 10px; border-top: 3px dashed var(--k-line); }
@@ -3557,6 +3640,8 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .t-note { font-size: 15px; }
       :host([narrow]) .replaced-note { font-size: 14px; margin: 2px 2px 8px; }
       :host([narrow]) .sub { min-height: 46px; padding: 6px 10px; font-size: 16px; border-width: 2px; border-radius: 16px; gap: 10px; }
+      :host([narrow]) .care-step { padding: 6px 10px; font-size: 16px; border-width: 2px; border-radius: 16px; }
+      :host([narrow]) .care-btn { min-height: 44px; min-width: 90px; font-size: 16px; border-width: 2px; }
       :host([narrow]) .sub .box { width: 30px; height: 30px; border-width: 3px; border-radius: 9px; font-size: 20px; }
       :host([narrow]) .party { flex-direction: column; max-height: none; gap: 8px; }
       :host([narrow]) .lv-title { font-size: 20px; }

@@ -61,6 +61,9 @@ const I18N_PARENTS = {
     pt_all_done: "Nothing left for you today.", pt_partner: "With {name} today ({n})", pt_other: "the others", pt_done_today: "Done today ({n})",
     skip_btn: "Skip", skip_all: "Skip everything today", skip_title: "{name}: skip today", skip_none: "No open tasks today.",
     kid_today: "Today: {done} of {total} done", kid_no_tasks: "No tasks for today.",
+    care_title: "💊 Health today", care_none_today: "Nothing due today.", care_given: "✓ Given", care_given_title: "Mark as given",
+    care_st_taken: "taken", care_st_taken_by: "given by a parent", care_st_declined: "not today", care_st_unanswered: "no answer", care_st_open: "open",
+    care_history: "Last 7 days", care_hist_title: "💊 Health", care_legend: "✓ taken · – not today · ! no answer",
     st_open: "open", st_waiting: "awaiting approval", st_done: "done", for_kid: "Do it for {name}",
     m_ptasks: "Parent tasks", m_ptasks_d: "Who does what, planning, duration", m_tasks: "Tasks", m_tasks_d: "Kids' tasks and templates",
     m_shop: "Shop", m_shop_d: "Redemptions and rewards", m_settings: "Settings", m_settings_d: "Kids, points, notifications",
@@ -126,6 +129,9 @@ const I18N_PARENTS = {
     pt_all_done: "Heute ist nichts mehr offen.", pt_partner: "Bei {name} heute ({n})", pt_other: "den anderen", pt_done_today: "Heute erledigt ({n})",
     skip_btn: "Aussetzen", skip_all: "Heute alles aussetzen", skip_title: "{name}: heute aussetzen", skip_none: "Heute ist nichts offen.",
     kid_today: "Heute: {done} von {total} erledigt", kid_no_tasks: "Keine Aufgaben für heute.",
+    care_title: "💊 Gesundheit heute", care_none_today: "Heute ist nichts fällig.", care_given: "✓ gegeben", care_given_title: "Als gegeben eintragen",
+    care_st_taken: "genommen", care_st_taken_by: "von Eltern gegeben", care_st_declined: "heute nicht", care_st_unanswered: "keine Antwort", care_st_open: "offen",
+    care_history: "Letzte 7 Tage", care_hist_title: "💊 Gesundheit", care_legend: "✓ genommen · – heute nicht · ! keine Antwort",
     st_open: "offen", st_waiting: "wartet auf Freigabe", st_done: "erledigt", for_kid: "Für {name} erledigen",
     m_ptasks: "Eltern-Aufgaben", m_ptasks_d: "Wer macht was, Planung, Dauer", m_tasks: "Aufgaben", m_tasks_d: "Kinder-Aufgaben und Vorlagen",
     m_shop: "Shop", m_shop_d: "Einlösungen und Belohnungen", m_settings: "Einstellungen", m_settings_d: "Kinder, Punkte, Benachrichtigungen",
@@ -416,6 +422,8 @@ class FamilyMissionParents extends HTMLElement {
       this.wallet = data.wallet || {};
       this.redemptions = data.redemptions || {};
       this.tasks = data.tasks || {};
+      this.careToday = data.care_today || {};
+      this.careLog = Array.isArray(data.care_log) ? data.care_log : [];
       this.adults = Array.isArray(data.adults) ? data.adults : [];
       this.pushWarning = data.push_warning || null;
       this.me = data.me || null;
@@ -619,6 +627,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'own-when' && this._own) { this._own.when = el.dataset.when; if (el.dataset.when === 'custom' && !this._own.date) this._own.date = this._addDays(this._todayKey(), 2); this._renderLayer(); }
     else if (action === 'pt-postpone') this._ptPostpone(el.dataset.id);
     else if (action === 'kt-done') this._ktDone(el.dataset.id, el.dataset.kid);
+    else if (action === 'care-given') this._careGiven(el.dataset.kid, el.dataset.care);
     else if (action === 'kt-skip') this._ktSkip(el.dataset.id);
     else if (action === 'skip-all') this._skipAll(el.dataset.kid);
     else if (action === 'praise-pick') this._pickKidFor('praise');
@@ -1122,6 +1131,11 @@ class FamilyMissionParents extends HTMLElement {
     return this._call('kt:' + taskId, { type: 'family_mission/parent_complete_for', task_id: taskId, kid_id: kidId }, this.localize('toast_kid_done'));
   }
 
+  /** A parent confirms that the medication was given (status taken, confirmed_by = the parent). */
+  _careGiven(kidId, careId) {
+    return this._call('care:' + kidId + ':' + careId, { type: 'family_mission/care_confirm', kid_id: kidId, care_id: careId }, this.localize('toast_kid_done'));
+  }
+
   _ktSkip(taskId) {
     return this._call('kt:' + taskId, { type: 'family_mission/parent_task_action', task_id: taskId, action: 'skip_today' }, this.localize('toast_skipped'));
   }
@@ -1434,7 +1448,70 @@ class FamilyMissionParents extends HTMLElement {
   // ---- tab "Heute" -------------------------------------------------------------
 
   _renderToday() {
-    return `${this._renderPushWarning()}${this._renderKidStatus()}${this._renderWaiting()}${this._renderOwnTasks()}${this._renderQuick()}`;
+    return `${this._renderPushWarning()}${this._renderKidStatus()}${this._renderWaiting()}${this._renderCare()}${this._renderOwnTasks()}${this._renderQuick()}`;
+  }
+
+  /** Care entries (medication) of a kid profile. */
+  _careEntries(kidId) {
+    const profile = (this.settings.kids || {})[kidId];
+    return profile && Array.isArray(profile.care) ? profile.care : [];
+  }
+
+  /** Log entry of one kid / care entry / day. */
+  _careLogItem(kidId, careId, day) {
+    return (this.careLog || []).find(i => i.kid_id === kidId && i.care_id === careId && i.date === day) || null;
+  }
+
+  /** Status text of a care item of today. */
+  _careStatusText(item) {
+    if (item.answer === 'taken') {
+      const logged = this._careLogItem(item.kid_id || '', item.id, this._todayKey());
+      return this.localize(logged && logged.confirmed_by ? 'care_st_taken_by' : 'care_st_taken');
+    }
+    if (item.answer === 'declined') return this.localize('care_st_declined');
+    return this.localize(item.status === 'unanswered' ? 'care_st_unanswered' : 'care_st_open');
+  }
+
+  /** "Health today": status per kid and entry with a "given" button (only when a kid has care entries). */
+  _renderCare() {
+    const kids = this._kids().filter(k => this._careEntries(k.id).length);
+    if (!kids.length) return '';
+    const today = this.careToday || {};
+    const rows = kids.map(kid => (today[kid.id] || []).map(item => {
+      const taken = item.answer === 'taken';
+      const busy = this._busy.has('care:' + kid.id + ':' + item.id) ? 'disabled' : '';
+      const state = this._careStatusText({ ...item, kid_id: kid.id });
+      const cls = taken ? 'taken' : item.answer === 'declined' ? 'declined' : item.status === 'unanswered' ? 'unanswered' : 'open';
+      return `
+        <div class="care-row" style="--kc:${kid.color}">
+          ${this._avatar(kid)}
+          <span class="care-main"><span class="care-name">${escParents(kid.name)}: ${escParents(item.emoji)} ${escParents(item.label)}</span>
+            <span class="care-st ${cls}">${escParents(state)}</span></span>
+          ${taken ? '' : `<button class="btn ok sm care-give" data-action="care-given" data-kid="${escParents(kid.id)}" data-care="${escParents(item.id)}" title="${escParents(this.localize('care_given_title'))}" ${busy}>${escParents(this.localize('care_given'))}</button>`}
+        </div>`;
+    }).join('')).join('');
+    return `<section id="care-section"><h2>${escParents(this.localize('care_title'))}</h2>
+      <div class="care-rows">${rows || `<div class="empty small">${escParents(this.localize('care_none_today'))}</div>`}</div></section>`;
+  }
+
+  /** Seven-day history per care entry of a kid (Kids tab, parents only). */
+  _renderCareHistory(kid) {
+    const entries = this._careEntries(kid.id);
+    if (!entries.length) return '';
+    const days = [];
+    for (let i = 6; i >= 0; i--) days.push(this._addDays(this._todayKey(), -i));
+    const mark = { taken: '✓', declined: '–', unanswered: '!' };
+    const rows = entries.map(entry => `
+      <div class="care-hist-row">
+        <span class="care-hist-name">${escParents(entry.emoji)} ${escParents(entry.label)}</span>
+        <span class="care-dots">${days.map(day => {
+          const item = this._careLogItem(kid.id, entry.id, day);
+          const st = item ? item.status : '';
+          return `<span class="care-dot ${st}" title="${escParents(this._formatDate(day))}">${mark[st] || '·'}</span>`;
+        }).join('')}</span>
+      </div>`).join('');
+    return `<h3 class="sub">${escParents(this.localize('care_hist_title'))} · ${escParents(this.localize('care_history'))}</h3>
+      <div class="care-hist">${rows}<div class="care-legend">${escParents(this.localize('care_legend'))}</div></div>`;
   }
 
   /** Yellow hint while no adult can receive the approval push. */
@@ -1723,6 +1800,7 @@ class FamilyMissionParents extends HTMLElement {
           <h3 class="sub">${escParents(this.localize('kid_today', { done: t.done.length, total: t.total }))}</h3>
           <div class="trows">${rows || `<div class="empty small">${escParents(this.localize('kid_no_tasks'))}</div>`}</div>
           ${t.open.length ? `<button class="btn neutral" data-action="skip-all" data-kid="${escParents(kid.id)}">⏸️ ${escParents(this.localize('skip_all'))}</button>` : ''}
+          ${this._renderCareHistory(kid)}
           <div class="quick">${quick}</div>
           <button class="praise-btn" data-action="praise-open" data-kid="${escParents(kid.id)}">❤️ ${escParents(this.localize('praise_btn'))}</button>
           <details class="hist" data-kid-history="${escParents(kid.id)}" ${this._open.has(kid.id) ? 'open' : ''}>
@@ -2104,6 +2182,23 @@ class FamilyMissionParents extends HTMLElement {
       .qk { min-height: 72px; padding: 6px; border-radius: 14px; border: 2px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
       .qk span { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; text-align: center; }
       .qk:active { transform: scale(0.97); }
+      .care-rows { display: flex; flex-direction: column; gap: 8px; }
+      .care-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--p-line); border-left: 5px solid var(--kc); }
+      .care-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+      .care-name { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+      .care-st { font-size: 13px; color: var(--p-sub); }
+      .care-st.taken { color: var(--p-ok); }
+      .care-st.unanswered { color: var(--warning-color, #E65100); font-weight: 700; }
+      .care-give { flex: none; min-width: 96px; }
+      .care-hist { display: flex; flex-direction: column; gap: 6px; }
+      .care-hist-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .care-hist-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+      .care-dots { display: flex; gap: 4px; flex: none; }
+      .care-dot { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; font-weight: 800; background: var(--secondary-background-color, #f0f0f0); color: var(--p-sub); }
+      .care-dot.taken { background: color-mix(in srgb, var(--p-ok) 22%, transparent); color: var(--p-ok); }
+      .care-dot.declined { color: var(--primary-text-color); }
+      .care-dot.unanswered { background: color-mix(in srgb, var(--warning-color, #E65100) 22%, transparent); color: var(--warning-color, #E65100); }
+      .care-legend { font-size: 12px; color: var(--p-sub); }
       .trows { display: flex; flex-direction: column; gap: 8px; }
       .trow { padding: 8px 10px; border-radius: 12px; border: 1px solid var(--p-line); display: flex; flex-direction: column; gap: 8px; }
       .trow-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }

@@ -598,3 +598,89 @@ def test_open_required_steps():
     t["subtasks"][1]["done"] = True
     assert kids.open_required_steps(t) == []
     assert kids.open_required_steps({}) == []
+
+
+# -- care (medication) --------------------------------------------------------
+
+def test_open_required_steps_with_care_steps():
+    t = _task(subtasks=[{"title": "a", "done": True}])
+    open_care = {"kind": "care", "care_id": "p", "title": "Tablette", "answer": None}
+    taken = {**open_care, "care_id": "q", "answer": "taken"}
+    declined = {**open_care, "care_id": "r", "answer": "declined"}
+    # both answers count as done, only the unanswered step blocks
+    assert kids.open_required_steps(t, [taken, declined]) == []
+    assert kids.open_required_steps(t, [taken, open_care, declined]) == [open_care]
+    assert kids.open_required_steps(t) == []
+
+
+def test_normalize_care_defaults_and_limits():
+    assert kids.normalize_care(None) == [] and kids.normalize_care("x") == [] and kids.normalize_care([1, None]) == []
+    [e] = kids.normalize_care([{}])
+    assert (e["label"], e["emoji"], e["anchor"], e["time"], e["deadline"]) == ("Tablette", "💊", "morning", "08:00", "10:00")
+    assert e["weekdays"] == list(range(7)) and e["notify_parents"] is True
+    assert e["decline_alert"] == {"enabled": False, "count": 3, "days": 7}
+    [e] = kids.normalize_care([{"id": "x y", "anchor": "evening", "weekdays": [6, 1, 1, True, 7, -1],
+                                "deadline": "25:00", "notify_parents": False,
+                                "decline_alert": {"enabled": True, "count": 99, "days": 14}}])
+    assert e["id"] != "x y" and e["anchor"] == "evening" and e["deadline"] == "21:00"
+    assert e["weekdays"] == [1, 6] and e["notify_parents"] is False
+    assert e["decline_alert"] == {"enabled": True, "count": 3, "days": 14}
+    [e] = kids.normalize_care([{"anchor": "time", "time": "23:30"}])
+    assert e["deadline"] == "23:59"
+    many = kids.normalize_care([{"id": "same"}] * 10)
+    assert len(many) == kids.MAX_CARE_ENTRIES and len({m["id"] for m in many}) == len(many)
+
+
+def test_care_profile_roundtrip_and_public():
+    profile = kids.build_kid_profile(None, "🦊", "#ff0000", 2016, care=[{"label": "Inhalator"}])
+    assert profile["care"][0]["label"] == "Inhalator"
+    assert kids.public_kids({"k": profile})["k"]["care"][0]["label"] == "Inhalator"
+    assert "care" in kids.build_kid_profile(profile, "🦊", "#ff0000", 2016)          # kept when not sent
+    assert "care" not in kids.build_kid_profile(profile, "🦊", "#ff0000", 2016, care=[])
+    merged = kids.merge_imported_kids({}, {"k": {"avatar": "🦊", "care": [{"label": "A"}, "junk"]}})
+    assert [c["label"] for c in merged["k"]["care"]] == ["A"]
+
+
+def test_care_log_helpers_and_steps():
+    log = []
+    monday = datetime(2026, 10, 26).date()
+    entry = kids.normalize_care([{"id": "p", "weekdays": [0], "anchor": "morning"}, {"id": "e", "anchor": "evening"}])
+    assert [s["care_id"] for s in kids.care_steps_for(entry, "morning", monday, log, "k")] == ["p"]
+    assert kids.care_steps_for(entry, "morning", monday + timedelta(days=1), log, "k") == []   # Tuesday
+    item = kids.care_record(log, "2026-10-26", "k", "p", "declined", "t1")
+    assert item["pushed"] is False and kids.care_answer_of(log, "2026-10-26", "k", "p") == "declined"
+    item["pushed"] = True
+    kids.care_record(log, "2026-10-26", "k", "p", "declined", "t2")
+    assert item["pushed"] is True                                        # same status: no new push
+    kids.care_record(log, "2026-10-26", "k", "p", "taken", "t3", "parent")
+    assert item["pushed"] is False and item["confirmed_by"] == "parent" and len(log) == 1
+    assert kids.care_steps_for(entry, "morning", monday, log, "k")[0]["answer"] == "taken"
+    kids.care_record(log, "2026-10-26", "k", "e", "unanswered", "t4")
+    assert kids.care_answer_of(log, "2026-10-26", "k", "e") is None      # unanswered is no answer
+    old = {"date": "2026-01-01", "kid_id": "k", "care_id": "p", "status": "taken"}
+    assert kids.care_prune(log + [old], monday) == log
+
+
+def test_care_deadline_and_decline_alert():
+    [e] = kids.normalize_care([{"id": "p", "deadline": "10:00",
+                                "decline_alert": {"enabled": True, "count": 3, "days": 5}}])
+    assert not kids.care_deadline_passed(e, datetime(2026, 10, 29, 9, 59))
+    assert kids.care_deadline_passed(e, datetime(2026, 10, 29, 10, 0))
+    today = datetime(2026, 10, 29).date()
+
+    def declined(*days):
+        return [{"date": f"2026-10-{d}", "kid_id": "k", "care_id": "p", "status": "declined"} for d in days]
+
+    assert not kids.decline_alert_due(declined(28, 29), "k", e, today)
+    assert kids.decline_alert_due(declined(27, 28, 29), "k", e, today)
+    assert not kids.decline_alert_due(declined(20, 28, 29), "k", e, today)               # outside the 5 days
+    assert not kids.decline_alert_due(declined(27, 28, 29), "k", e, today, last_alert="2026-10-28")
+    assert not kids.decline_alert_due(declined(27, 28, 29), "other", e, today)
+    off = {**e, "decline_alert": {**e["decline_alert"], "enabled": False}}
+    assert not kids.decline_alert_due(declined(27, 28, 29), "k", off, today)
+
+
+def test_care_texts():
+    assert "Lena" in kids.care_texts("declined", "Lena", "💊 Tablette", "de")[1]
+    assert "3x" in kids.care_texts("alert", "Lena", "T", "en", 3, 7)[1]
+    assert "open" in kids.care_texts("unanswered", "Lena", "T", "en")[1]

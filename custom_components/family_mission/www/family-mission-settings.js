@@ -52,6 +52,12 @@ const I18N_SETTINGS = {
     kids_save_error: "Could not save the kid profiles: ",
     kid_birthday: "Birthday", kid_birth_year_fallback: "Birth year (if no birthday)", kid_sample: "Spot checks by parents: {n} %",
     kid_sample_hint: "Share of completions that a parent checks at random before points are awarded (0 = none).",
+    care_title: "💊 Medication", care_hint: "A daily tablet, drops or an inhaler: shown to the kid as a step of the morning / evening mission (or at a fixed time). Never any points; \"not today\" counts as answered.",
+    care_add: "+ Add medication", care_remove: "Remove", care_label: "Name", care_emoji: "Emoji", care_anchor: "Shown with",
+    care_anchor_morning: "Morning mission", care_anchor_evening: "Evening mission", care_anchor_time: "Fixed time", care_time: "At",
+    care_deadline: "Parents are told if unanswered at", care_weekdays: "Days", care_notify: "Tell parents when declined or unanswered",
+    care_alert: "Extra alert when declined often", care_alert_count: "times", care_alert_days: "within days",
+    care_days: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
     invalid_birthday: "The birthday must be a valid date in the past.",
     approval_title: "Approval & consequences",
     cheat_penalty_factor: "Deduction when cheating (x task points)", cheat_strict_days: "Strict mode after cheating (days, 0 = off)",
@@ -151,6 +157,12 @@ claim_minutes: "Bonus reservation (minutes)",
     kids_save_error: "Kinder-Profile konnten nicht gespeichert werden: ",
     kid_birthday: "Geburtstag", kid_birth_year_fallback: "Geburtsjahr (falls kein Geburtstag)", kid_sample: "Stichproben durch Eltern: {n} %",
     kid_sample_hint: "Anteil der Erledigungen, die Mama oder Papa zufällig prüfen, bevor Punkte gutgeschrieben werden (0 = keine).",
+    care_title: "💊 Medikamente", care_hint: "Eine Tablette, Tropfen oder ein Inhalator pro Tag: erscheint beim Kind als Schritt der Morgen- / Abend-Mission (oder zu einer festen Uhrzeit). Nie Punkte; \"Heute nicht\" zählt als beantwortet.",
+    care_add: "+ Medikament hinzufügen", care_remove: "Entfernen", care_label: "Name", care_emoji: "Emoji", care_anchor: "Erscheint bei",
+    care_anchor_morning: "Morgen-Mission", care_anchor_evening: "Abend-Mission", care_anchor_time: "Feste Uhrzeit", care_time: "Um",
+    care_deadline: "Eltern erfahren es, wenn bis dahin keine Antwort kommt", care_weekdays: "Tage", care_notify: "Eltern benachrichtigen bei \"Heute nicht\" oder keiner Antwort",
+    care_alert: "Zusätzlicher Alarm bei häufigem Ablehnen", care_alert_count: "mal", care_alert_days: "innerhalb von Tagen",
+    care_days: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
     invalid_birthday: "Der Geburtstag muss ein gültiges Datum in der Vergangenheit sein.",
     approval_title: "Freigabe & Konsequenzen",
     cheat_penalty_factor: "Abzug bei Schummeln (x Aufgabenpunkte)", cheat_strict_days: "Strenge Phase nach Schummeln (Tage, 0 = aus)",
@@ -567,6 +579,7 @@ class FamilyMissionSettings extends HTMLElement {
         birth_year: (k && k.birth_year) || '',
         birthday: (k && k.birthday) || '',
         approval_sample_rate: (k && parseInt(k.approval_sample_rate)) || 0,
+        care: JSON.parse(JSON.stringify((k && Array.isArray(k.care)) ? k.care : [])),
         pin: '',
         clear_pin: false
       };
@@ -621,9 +634,10 @@ class FamilyMissionSettings extends HTMLElement {
         const birthYear = (!isNaN(year) && year >= 1900 && year <= 2100) ? year : null;
         const rate = Math.max(0, Math.min(100, parseInt(d.approval_sample_rate) || 0));
         const old = stored[uid];
+        const careChanged = JSON.stringify(d.care || []) !== JSON.stringify((old && old.care) || []);
         const changed = !old || old.avatar !== d.avatar || old.color !== d.color ||
           (old.birth_year || null) !== birthYear || (old.birthday || null) !== (birthday || null) ||
-          (parseInt(old.approval_sample_rate) || 0) !== rate || !!d.pin || d.clear_pin;
+          (parseInt(old.approval_sample_rate) || 0) !== rate || !!d.pin || d.clear_pin || careChanged;
         if (changed) {
           const payload = {
             type: 'family_mission/set_kid_profile',
@@ -634,6 +648,7 @@ class FamilyMissionSettings extends HTMLElement {
             birthday: birthday || null,
             approval_sample_rate: rate
           };
+          if (careChanged) payload.care = d.care || [];
           if (d.pin) payload.pin = d.pin;
           if (d.clear_pin) payload.clear_pin = true;
           calls.push(payload);
@@ -1243,6 +1258,14 @@ class FamilyMissionSettings extends HTMLElement {
         .kid-hint { font-size: 11px; opacity: 0.8; }
         .kid-field input[type="date"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; box-sizing: border-box; }
         .kid-emojis { display: flex; flex-wrap: wrap; gap: 4px; }
+        .care-editor { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--divider-color); padding-top: 8px; }
+        .care-editor h4 { margin: 0; }
+        .care-entry { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--divider-color); border-radius: 8px; }
+        .care-days { display: flex; flex-wrap: wrap; gap: 6px; }
+        .care-day { min-width: 40px; min-height: 36px; border-radius: 18px; border: 1px solid var(--divider-color); background: transparent; color: var(--primary-text-color); cursor: pointer; }
+        .care-day.on { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-primary-color, #fff); }
+        .care-alert-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+        .care-alert-row input[type=number] { width: 64px; }
         .kid-emoji-pick { background: transparent; border: 1px solid var(--divider-color); border-radius: 8px; font-size: 20px; width: 36px; height: 36px; cursor: pointer; padding: 0; }
         .kid-emoji-pick.active { border-color: var(--primary-color); background: var(--secondary-background-color); }
         .kid-emoji-pick:disabled { opacity: 0.5; cursor: default; }
@@ -1313,6 +1336,62 @@ class FamilyMissionSettings extends HTMLElement {
   }
 
   /**
+   * Medication editor of a kid row: one block per entry (label, emoji, anchor, time, weekdays, deadline, notify, decline alert).
+   * @returns {string} - The HTML.
+   */
+  _renderCareEditor(uid, d, dis, esc) {
+    const days = this.localize('care_days');
+    const entries = (d.care || []).map((c, i) => {
+      const alert = c.decline_alert || {};
+      const at = `data-uid="${esc(uid)}" data-ci="${i}"`;
+      return `
+        <div class="care-entry">
+          <div class="kid-fields">
+            <label class="kid-field">${this.localize('care_emoji')}
+              <input type="text" class="care-emoji" ${at} maxlength="8" value="${esc(c.emoji || '💊')}" ${dis}>
+            </label>
+            <label class="kid-field">${this.localize('care_label')}
+              <input type="text" class="care-label" ${at} maxlength="30" placeholder="Tablette" value="${esc(c.label || '')}" ${dis}>
+            </label>
+            <label class="kid-field">${this.localize('care_anchor')}
+              <select class="care-anchor" ${at} ${dis}>
+                ${['morning', 'evening', 'time'].map(a => `<option value="${a}" ${c.anchor === a ? 'selected' : ''}>${this.localize('care_anchor_' + a)}</option>`).join('')}
+              </select>
+            </label>
+            ${c.anchor === 'time' ? `<label class="kid-field">${this.localize('care_time')}
+              <input type="time" class="care-time" ${at} value="${esc(c.time || '08:00')}" ${dis}>
+            </label>` : ''}
+            <label class="kid-field">${this.localize('care_deadline')}
+              <input type="time" class="care-deadline" ${at} value="${esc(c.deadline || '10:00')}" ${dis}>
+            </label>
+          </div>
+          <div class="care-days" role="group" aria-label="${esc(this.localize('care_weekdays'))}">
+            ${days.map((name, wd) => `<button type="button" class="care-day ${(c.weekdays || []).includes(wd) ? 'on' : ''}" ${at} data-wd="${wd}"
+                aria-pressed="${(c.weekdays || []).includes(wd) ? 'true' : 'false'}" ${dis}>${esc(name)}</button>`).join('')}
+          </div>
+          <ha-formfield label="${esc(this.localize('care_notify'))}">
+            <ha-checkbox class="care-notify" ${at} ${c.notify_parents !== false ? 'checked' : ''} ${dis}></ha-checkbox>
+          </ha-formfield>
+          <div class="care-alert-row">
+            <ha-formfield label="${esc(this.localize('care_alert'))}">
+              <ha-checkbox class="care-alert" ${at} ${alert.enabled ? 'checked' : ''} ${dis}></ha-checkbox>
+            </ha-formfield>
+            ${alert.enabled ? `<input type="number" class="care-alert-count" ${at} min="1" max="30" value="${esc(alert.count || 3)}" ${dis}> ${this.localize('care_alert_count')}
+              <input type="number" class="care-alert-days" ${at} min="1" max="60" value="${esc(alert.days || 7)}" ${dis}> ${this.localize('care_alert_days')}` : ''}
+          </div>
+          <button type="button" class="btn care-remove" ${at} ${dis}>${this.localize('care_remove')}</button>
+        </div>`;
+    }).join('');
+    return `
+      <div class="care-editor">
+        <h4>${this.localize('care_title')}</h4>
+        <p class="kids-note">${this.localize('care_hint')}</p>
+        ${entries}
+        ${(d.care || []).length < 6 ? `<button type="button" class="btn care-add" data-uid="${esc(uid)}" ${dis}>${this.localize('care_add')}</button>` : ''}
+      </div>`;
+  }
+
+  /**
    * Renders the collapsible "Kids" section (kid profiles + family goal).
    * @returns {string} - The HTML.
    */
@@ -1373,7 +1452,8 @@ class FamilyMissionSettings extends HTMLElement {
               <span class="kid-sample-label">${this.localize('kid_sample').replace('{n}', `<b>${d.approval_sample_rate}</b>`)}</span>
               <input type="range" class="kid-sample" data-uid="${esc(uid)}" min="0" max="100" step="5" value="${esc(d.approval_sample_rate)}" ${dis}>
               <span class="kid-hint">${this.localize('kid_sample_hint')}</span>
-            </label>` : ''}
+            </label>
+            ${this._renderCareEditor(uid, d, dis, esc)}` : ''}
         </div>`;
     }).join('');
 
@@ -2076,6 +2156,45 @@ class FamilyMissionSettings extends HTMLElement {
     }
   }
 
+  /** Wires the medication editor of the kid rows to the drafts. */
+  _bindCareInputs(root) {
+    const entry = (el) => (this._kidDraft(el.dataset.uid).care || [])[parseInt(el.dataset.ci)];
+    const on = (selector, type, fn, rerender = false) => root.querySelectorAll(selector).forEach(el => el.addEventListener(type, (ev) => {
+      const c = entry(el);
+      if (!c) return;
+      fn(c, ev, el);
+      if (rerender) this._render();
+    }));
+    on('.care-emoji', 'input', (c, ev) => { c.emoji = ev.target.value; });
+    on('.care-label', 'input', (c, ev) => { c.label = ev.target.value; });
+    on('.care-anchor', 'change', (c, ev) => {
+      c.anchor = ev.target.value;
+      if (c.anchor !== 'time') c.deadline = c.anchor === 'evening' ? '21:00' : '10:00';
+    }, true);
+    on('.care-time', 'input', (c, ev) => { if (ev.target.value) c.time = ev.target.value; });
+    on('.care-deadline', 'input', (c, ev) => { if (ev.target.value) c.deadline = ev.target.value; });
+    on('.care-day', 'click', (c, ev, el) => {
+      const wd = parseInt(el.dataset.wd);
+      const set = new Set(c.weekdays || []);
+      if (set.has(wd)) set.delete(wd); else set.add(wd);
+      c.weekdays = [...set].sort();
+    }, true);
+    on('.care-notify', 'change', (c, ev) => { c.notify_parents = !!ev.target.checked; });
+    on('.care-alert', 'change', (c, ev) => {
+      c.decline_alert = { count: 3, days: 7, ...(c.decline_alert || {}), enabled: !!ev.target.checked };
+    }, true);
+    on('.care-alert-count', 'input', (c, ev) => { c.decline_alert = { ...(c.decline_alert || {}), count: parseInt(ev.target.value) || 3 }; });
+    on('.care-alert-days', 'input', (c, ev) => { c.decline_alert = { ...(c.decline_alert || {}), days: parseInt(ev.target.value) || 7 }; });
+    on('.care-remove', 'click', (c, ev, el) => { this._kidDraft(el.dataset.uid).care.splice(parseInt(el.dataset.ci), 1); }, true);
+    root.querySelectorAll('.care-add').forEach(el => el.addEventListener('click', () => {
+      const d = this._kidDraft(el.dataset.uid);
+      d.care = d.care || [];
+      d.care.push({ id: '', label: '', emoji: '💊', anchor: 'morning', time: '08:00', weekdays: [0, 1, 2, 3, 4, 5, 6],
+        deadline: '10:00', notify_parents: true, decline_alert: { enabled: false, count: 3, days: 7 } });
+      this._render();
+    }));
+  }
+
   /**
    * Wires the inputs of the kids section to the drafts (no re-render while typing).
    */
@@ -2129,6 +2248,7 @@ class FamilyMissionSettings extends HTMLElement {
     root.querySelectorAll('.kid-clear-pin').forEach(el => el.addEventListener('change', (ev) => {
       this._kidDraft(el.dataset.uid).clear_pin = !!ev.target.checked;
     }));
+    this._bindCareInputs(root);
     root.querySelectorAll('.user-goal-input').forEach(el => el.addEventListener('input', (ev) => {
       this._goalDrafts[el.dataset.uid] = ev.target.value;
     }));
