@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.0] - 2026-11-01
+
+- **Savings goal announcement:** when a kid's wallet reaches the cost of the chosen savings goal, the voice announcement says "Anna hat das Sparziel erreicht: Kino. Jetzt kann eingelöst werden!" (new announcement kind `goal`, checkbox "Ein Kind erreicht sein Sparziel" in the settings card). Announced once per reach: dropping below the cost (e.g. after redeeming) or changing the goal makes the next reach count again. Goals already reached before the update stay silent. At night the announcement waits until wake-up time (unless `announce_night`).
+- **New event** `family_mission_savings_goal_reached` (`kid_id`, `kid_name`, `reward_id`, `name`, `emoji`, `cost`, `balance`) for own automations; fired together with the announcement.
+- **Note:** if you already saved the announcement settings, tick the new checkbox once (saved lists keep their choice).
+- **Docs:** README, help and parents' guide (de/en/fr).
+- **Tests:** new `tests/test_goal_announce_ws.py`.
+
 ## [2.4.1] - 2026-11-01
 
 - **Quick start, step "We parents":** new "Skip" button (goes on without creating or changing parent tasks; the summary says "Parent tasks: skipped") and a "Deselect all" link (unticks the templates that are not set up yet; existing parent tasks are never removed). The step mentions that parent tasks can be added later under parents' hub → More → Parent tasks.

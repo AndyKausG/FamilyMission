@@ -35,6 +35,7 @@ EVENT_WEEKLY_SUMMARY = "family_mission_weekly_summary"
 EVENT_ROCKET_READY = "family_mission_rocket_ready"
 EVENT_ROCKET_COUNTDOWN = "family_mission_rocket_countdown"
 EVENT_ROCKET_LAUNCHED = "family_mission_rocket_launched"
+EVENT_SAVINGS_GOAL_REACHED = "family_mission_savings_goal_reached"
 
 # Event fired by the Home Assistant companion app when a notification action is tapped
 EVENT_MOBILE_APP_ACTION = "mobile_app_notification_action"

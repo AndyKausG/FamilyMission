@@ -98,7 +98,7 @@ claim_minutes: "Bonus reservation (minutes)",
     an_title: "Voice announcement", an_desc: "Speaks new bonus tasks on speakers, e.g. \"Dad created a bonus task: carry up the shopping. 3 points.\"",
     an_enabled: "Announcements on", an_tts: "Text-to-speech engine", an_tts_none: "No TTS entity found (e.g. Google Translate, Piper, Home Assistant Cloud).",
     an_players: "Speakers", an_players_none: "No media players found.", an_events: "Announce", an_ev_adhoc: "Bonus task created by a parent",
-    an_ev_waste: "Waste collection tasks", an_ev_trigger: "Bonus tasks opened by a device trigger", an_night: "Also at night (night mode)",
+    an_ev_waste: "Waste collection tasks", an_ev_trigger: "Bonus tasks opened by a device trigger", an_ev_goal: "A kid reaches the savings goal", an_night: "Also at night (night mode)",
     an_names: "Spoken name per adult (e.g. \"Dad\")", an_test: "Test announcement", an_test_ok: "Announcement sent.",
     an_test_none: "Choose an engine and at least one speaker.", an_test_fail: "Announcement failed: {e}", an_choose: "- choose -"
   },
@@ -196,7 +196,7 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     an_title: "Sprachdurchsage", an_desc: "Sagt neue Bonusaufgaben über Lautsprecher an, z.B. \"Papa hat eine Bonusaufgabe erstellt: Einkäufe hochtragen. 3 Punkte.\"",
     an_enabled: "Durchsage einschalten", an_tts: "Sprachausgabe (TTS)", an_tts_none: "Keine TTS-Entität gefunden (z.B. Google Translate, Piper, Home Assistant Cloud).",
     an_players: "Lautsprecher", an_players_none: "Keine Mediaplayer gefunden.", an_events: "Ansagen bei", an_ev_adhoc: "Bonusaufgabe von Eltern erstellt",
-    an_ev_waste: "Müll-Aufgaben", an_ev_trigger: "Bonusaufgabe durch Gerätetrigger geöffnet", an_night: "Auch nachts (Nachtmodus)",
+    an_ev_waste: "Müll-Aufgaben", an_ev_trigger: "Bonusaufgabe durch Gerätetrigger geöffnet", an_ev_goal: "Ein Kind erreicht sein Sparziel", an_night: "Auch nachts (Nachtmodus)",
     an_names: "Gesprochener Name je Erwachsenem (z.B. \"Papa\")", an_test: "Test-Durchsage", an_test_ok: "Durchsage gesendet.",
     an_test_none: "Sprachausgabe und mindestens einen Lautsprecher wählen.", an_test_fail: "Durchsage fehlgeschlagen: {e}", an_choose: "- wählen -"
   }
@@ -1877,7 +1877,7 @@ class FamilyMissionSettings extends HTMLElement {
     const players = Object.keys(states).filter(id => id.startsWith('media_player.')).sort();
     const chosen = Array.isArray(st.announce_players) ? st.announce_players : [];
     chosen.forEach(p => { if (!players.includes(p)) players.push(p); });
-    const events = Array.isArray(st.announce_events) ? st.announce_events : ['adhoc', 'waste', 'trigger'];
+    const events = Array.isArray(st.announce_events) ? st.announce_events : ['adhoc', 'waste', 'trigger', 'goal'];
     const names = (st.announce_names && typeof st.announce_names === 'object') ? st.announce_names : {};
     const nameRows = (this._adults || []).map(a => `
               <label class="kid-field">${esc(a.name)}
@@ -1911,7 +1911,7 @@ class FamilyMissionSettings extends HTMLElement {
             </div>
             <div class="family-box">
               <h4>${this.localize('an_events')}</h4>
-              ${['adhoc', 'waste', 'trigger'].map(k => `<label class="parent-check"><input type="checkbox" class="an-event" value="${k}" ${events.includes(k) ? 'checked' : ''}> ${this.localize('an_ev_' + k)}</label>`).join('')}
+              ${['adhoc', 'waste', 'trigger', 'goal'].map(k => `<label class="parent-check"><input type="checkbox" class="an-event" value="${k}" ${events.includes(k) ? 'checked' : ''}> ${this.localize('an_ev_' + k)}</label>`).join('')}
               <label class="parent-check"><input type="checkbox" id="an-night" ${st.announce_night === true ? 'checked' : ''}> ${this.localize('an_night')}</label>
             </div>
             ${nameRows ? `<div class="family-box"><h4>${this.localize('an_names')}</h4><div class="kid-fields">${nameRows}</div></div>` : ''}

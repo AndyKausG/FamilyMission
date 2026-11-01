@@ -416,7 +416,7 @@ Optional (setting `waste_enabled`, default off). Needs the HACS integration [Was
 ### Voice announcement
 Optional (setting `announce_enabled`, default off). Speaks via `tts.speak` (`announce_tts` = a `tts.*` entity, `announce_players` = `media_player.*` list).
 
-* **When** (`announce_events`, default all): `adhoc` – a parent creates a spontaneous bonus ("Papa hat eine Bonusaufgabe erstellt: Einkäufe hochtragen. 3 Punkte." / "… für Clara erstellt …" when it is for one kid), `waste` – waste collection tasks, `trigger` – a bonus task opened by a bonus trigger. Newly created regular tasks are not announced.
+* **When** (`announce_events`, default all): `adhoc` – a parent creates a spontaneous bonus ("Papa hat eine Bonusaufgabe erstellt: Einkäufe hochtragen. 3 Punkte." / "… für Clara erstellt …" when it is for one kid), `waste` – waste collection tasks, `trigger` – a bonus task opened by a bonus trigger, `goal` – a kid's wallet reaches the cost of the savings goal ("Anna hat das Sparziel erreicht: Kino. Jetzt kann eingelöst werden!", once per reach; at night it waits until wake-up). Newly created regular tasks are not announced.
 * **Name:** `announce_names` = `{user_id: "Papa"}`, otherwise the person's name.
 * **Night:** silent in the night mode times unless `announce_night` is on.
 * **Test:** button "Test announcement" in the settings card (websocket `family_mission/test_announce`, uses the unsaved choice). Errors of the speaker are only logged; the task is created anyway.
@@ -942,6 +942,14 @@ Fired when the rocket countdown starts on a tablet (`family_mission/rocket_count
 
 ### family_mission_rocket_launched
 Fired when a tablet reports the finished launch (`family_mission/rocket_launched`, idempotent).
+
+### family_mission_savings_goal_reached
+Fired when a kid's wallet reaches the cost of the chosen savings goal (once per reach; again after the balance dropped below the cost or the goal changed). With the voice announcement on, it waits for the wake-up time at night.
+
+#### Event Data:
+- **kid_id**, **kid_name**: The kid.
+- **reward_id**, **name**, **emoji**, **cost**: The goal reward.
+- **balance**: The wallet balance.
 
 ### family_mission_task_created
 This event is fired whenever a new task is created. It is useful for notifying family members about new tasks or triggering other automations.
