@@ -19,7 +19,7 @@ Suggestions for improvement and bug reports are welcome: [issues](https://github
 * **Own-device view** (`mode: mine`): kids and adults see their own tasks on their own phone, without tiles and PIN. See [My tasks](#my-tasks-own-device-mode-mine).
 * **Monthly goals, family rocket, reports and history protocol** with editable entries.
 * **We parents (new in 2.0)**: the adults' household and planning work as quiet, point-free parent tasks (me / you / take turns, "Can you?" hand-over by push, 🧠 planning reminder, Sunday summary) plus a role-model band on the kids tablet. See [We parents](#we-parents-parent-tasks).
-* **Rocket launch and night mode (new in 2.1)**: reaching the family goal triggers a shared "All aboard the rocket!" countdown with liftoff on the wall tablet (once per goal, push to the adults); at night the tablet sleeps with stars and a clock on tap, and greets the family in the morning. See [Rocket launch and night mode](#rocket-launch-and-night-mode).
+* **Rocket launch and night mode (new in 2.1)**: reaching the family goal triggers a shared "All aboard the rocket!" countdown with liftoff on the wall tablet (once per goal, push to the adults); at night the tablet sleeps with a sleeping buddy and an analogue alarm clock, and greets the family in the morning. See [Rocket launch and night mode](#rocket-launch-and-night-mode).
 * **Bonus triggers**: a bonus task opens by itself when a device state changes (e.g. the dishwasher is done).
 * **In-app help in German, French and English** (the parents guide, searchable, offline). Also available as Markdown: [Deutsch](docs/parents-guide.de.md) · [English](docs/parents-guide.en.md) · [Français](docs/parents-guide.fr.md).
 
@@ -506,12 +506,13 @@ Both features only concern the wall tablet (`family-mission-kids` in family mode
 * A goal reached at night waits for the morning (see night mode).
 
 #### Night mode
-* From `night_sleep` the tablet shows a dark sleep screen ("Gute Nacht, Clara & David 💤", stars, moon, a dim clock): no tasks, no PIN pad, no sounds, no confetti, slow CSS animation only. A tap shows a big clock and "Aufstehen um 06:00" for 5 seconds.
+* From `night_sleep` the tablet shows a dark sleep screen: a sleeping moon buddy with a nightcap (slow breathing, rising "Z z z") next to an analogue alarm clock (hour and minute hand show the time, a coloured hand the wake-up time, an arc the remaining sleep). Texts: "Gute Nacht, Clara & David 💤" until midnight, "Psst … alle schlafen" afterwards, "Gleich ist Morgen!" for the last 30 minutes (the buddy blinks now and then), then "Ich schlafe noch 7 Std. 30 Min." and "Aufstehen um 06:00". No tasks, no PIN pad, no sounds, no confetti, no animation loop (updated once a minute, slow CSS animation only, none with `prefers-reduced-motion`). A tap brightens the screen for 5 seconds and the alarm clock wobbles.
+* When the tablet wakes from standby (page visible again / window focus) the night state is re-checked immediately, so the screen never shows a stale "Gute Nacht" after the wake-up time.
 * It sleeps until the wake-up time of the **following** day: `night_wake_weekday` for Mon-Fri, `night_wake_weekend` for Sat+Sun (so Friday night wakes at the weekend time, Sunday night at the weekday time). Browser local time.
 * A kid session that is still open at bedtime runs out normally (idle `timeout`) and is never cut off in the middle of an input; then the tablet sleeps. After waking up a "Guten Morgen ☀️" banner stays for 30 minutes (tap to dismiss).
 * The backend sends no reminders (`reminder_at`) for kid tasks during the night.
 * Only users **without** a parent role sleep (the shared tablet user, kids with an own login). Admins, managers and parents keep the normal view on their own devices, e.g. to approve something in the evening. So the tablet user must not be an administrator.
-* The time logic is the small pure function `kidsNightState(now, options)` in `family-mission-kids.js` (also `customElements.get('family-mission-kids').nightState`), so it can be tested with a fake clock.
+* The time logic is the small pure function `kidsNightState(now, options)` in `family-mission-kids.js` (returns `sleeping`, `morning`, `wakeAt`, `wakeDate`, `minutesLeft` and `phase` = `evening` / `night` / `soon`) (also `customElements.get('family-mission-kids').nightState`), so it can be tested with a fake clock.
 
 #### Settings (`update_settings`)
 | Key | Default | Meaning |

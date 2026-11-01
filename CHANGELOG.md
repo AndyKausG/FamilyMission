@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0] - 2026-11-01
+
+- **New sleep screen:** the night mode shows a sleeping moon buddy with a nightcap (slow breathing, rising "Z z z"; blinks in the last 30 minutes) and an analogue alarm clock (hands show the time, a coloured hand the wake-up time, an arc the remaining sleep). Texts: "Gute Nacht, Clara & David 💤" / "Psst … alle schlafen" / "Gleich ist Morgen!", plus "Ich schlafe noch 7 Std. 30 Min." and "Aufstehen um 06:00". Dimmed, updated once a minute, no animation loop, calm with `prefers-reduced-motion`; a tap brightens it for 5 seconds and the alarm clock wobbles. `kidsNightState` also returns `wakeDate`, `minutesLeft` and `phase`.
+- **Fix:** Praise is no longer shown (and thus not marked as seen) on parents' devices; it stays open for the kid.
+- **Tests:** tests no longer depend on the real calendar month (two test modules failed from the first day of a month on).
+- **Fix:** A tablet whose timers were throttled in standby re-checks the night state as soon as the page becomes visible or the window gets focus, so it no longer shows "Gute Nacht" after the wake-up time.
+
 ## [2.1.2] - 2026-11-01
 
 - **Fix:** Night mode also put the kids card to sleep on the parents' own devices. Now only users without a parent role (the shared tablet user) see the sleep screen; parents (admin / manager / parent) keep the normal view.

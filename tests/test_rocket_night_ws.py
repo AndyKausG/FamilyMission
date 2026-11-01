@@ -70,7 +70,17 @@ async def clients(hass, hass_ws_client, env, freezer):
         "sam": await hass_ws_client(hass, env["sam"][1]),
     }
     freezer.move_to(NOON)
+    _pin_period(hass)
     return result
+
+
+def _pin_period(hass):
+    """The setup ran at the real date: move the points period to the frozen month (tests must not depend on the calendar)."""
+    from homeassistant.util import dt as dt_util
+    now = dt_util.now()
+    data = hass.data[DOMAIN]["data"]
+    data["current_month"] = now.strftime("%Y-%m")
+    data["current_period_start"] = dt_util.as_utc(now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)).isoformat()
 
 
 async def _call(ws, type_, **kw):

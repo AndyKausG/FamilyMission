@@ -89,7 +89,9 @@ const I18N_KIDS = {
     mode_mine_lbl: "My tasks (own device, no PIN)",
     rk_title: "All aboard the rocket! 🚀", rk_seconds: "seconds", rk_go: "Launch now!", rk_done: "We did it, family! 🎉",
     rk_tap: "Tap to continue", rk_launched: "🚀 launched! {reward}", rk_launched_plain: "🚀 launched!",
-    night_good: "Good night, {names} 💤", night_wake: "Wake up at {time}", morning: "Good morning ☀️"
+    night_good: "Good night, {names} 💤", night_wake: "Wake up at {time}", morning: "Good morning ☀️",
+    night_quiet: "Shh … everyone is asleep", night_soon: "Morning is almost here!",
+    night_left_h: "I'm still sleeping for {h} h", night_left_hm: "I'm still sleeping for {h} h {m} min", night_left_m: "{m} more minutes", night_left_1: "1 more minute"
   },
   de: {
     title: "Familien-Aufgaben", loading: "Lade...",
@@ -161,7 +163,9 @@ const I18N_KIDS = {
     mode_mine_lbl: "Meine Aufgaben (eigenes Gerät, ohne PIN)",
     rk_title: "Alle zur Rakete! 🚀", rk_seconds: "Sekunden", rk_go: "Jetzt starten!", rk_done: "Geschafft, Familie! 🎉",
     rk_tap: "Antippen zum Weitermachen", rk_launched: "🚀 gestartet! {reward}", rk_launched_plain: "🚀 gestartet!",
-    night_good: "Gute Nacht, {names} 💤", night_wake: "Aufstehen um {time}", morning: "Guten Morgen ☀️"
+    night_good: "Gute Nacht, {names} 💤", night_wake: "Aufstehen um {time}", morning: "Guten Morgen ☀️",
+    night_quiet: "Psst … alle schlafen", night_soon: "Gleich ist Morgen!",
+    night_left_h: "Ich schlafe noch {h} Std.", night_left_hm: "Ich schlafe noch {h} Std. {m} Min.", night_left_m: "Noch {m} Minuten", night_left_1: "Noch 1 Minute"
   }
 };
 
@@ -206,7 +210,10 @@ function kidsFmtHHMM(min) {
  * wakes at the weekend time and Sun night at the weekday time. Local time.
  * @param {Date} now - The current (local) time.
  * @param {object} opts - { enabled, sleep, wakeWeekday, wakeWeekend } ("HH:MM" strings).
- * @returns {{sleeping: boolean, morning: boolean, wakeAt: string}} - wakeAt is the next wake-up time.
+ * @returns {{sleeping: boolean, morning: boolean, wakeAt: string, wakeDate: ?Date, minutesLeft: number, phase: string}}
+ *   wakeAt is the next wake-up time. While sleeping: wakeDate is the Date of the wake-up, minutesLeft the whole
+ *   minutes until then and phase "evening" (from bedtime until midnight), "night" (after midnight, more than
+ *   30 minutes left) or "soon" (30 minutes or less left). Otherwise wakeDate is null, minutesLeft 0, phase "".
  */
 function kidsNightState(now, opts) {
   const o = opts || {};
@@ -216,19 +223,87 @@ function kidsNightState(now, opts) {
   const wakeOf = (day) => ((day === 0 || day === 6) ? weMin : wdMin);
   const today = now.getDay();
   const mins = now.getHours() * 60 + now.getMinutes();
-  const res = { sleeping: false, morning: false, wakeAt: kidsFmtHHMM(wakeOf(today)) };
+  const res = { sleeping: false, morning: false, wakeAt: kidsFmtHHMM(wakeOf(today)), wakeDate: null, minutesLeft: 0, phase: '' };
   // A bedtime at or before a wake-up time makes no sense: never sleep around the clock
   if (o.enabled === false || sleepMin <= Math.max(wdMin, weMin)) return res;
+  const at = (dayOffset, minOfDay) => new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, Math.floor(minOfDay / 60), minOfDay % 60, 0, 0);
   if (mins >= sleepMin) {
     res.sleeping = true;
     res.wakeAt = kidsFmtHHMM(wakeOf((today + 1) % 7));
+    res.wakeDate = at(1, wakeOf((today + 1) % 7));
   } else if (mins < wakeOf(today)) {
     res.sleeping = true;
+    res.wakeDate = at(0, wakeOf(today));
   } else if (mins < wakeOf(today) + 30) {
     res.morning = true;       // good-morning banner for 30 minutes after waking up
   }
+  if (res.sleeping) {
+    // whole minutes from the current minute (seconds ignored, so the display ticks once a minute)
+    const nowMin = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), 0, 0);
+    res.minutesLeft = Math.max(0, Math.round((res.wakeDate.getTime() - nowMin.getTime()) / 60000));
+    res.phase = mins >= sleepMin ? 'evening' : (res.minutesLeft > 30 ? 'night' : 'soon');
+  }
   return res;
 }
+
+/** Sleeping buddy of the night screen: a round moon friend with a nightcap (inline SVG, dim colours, no white). */
+const KIDS_SLEEP_BUDDY_SVG = `
+<svg class="sleep-buddy" viewBox="0 0 240 250" aria-hidden="true">
+  <g class="sb-z">
+    <text class="sb-z1" x="204" y="64" font-size="30">Z</text>
+    <text class="sb-z2" x="204" y="64" font-size="22">z</text>
+    <text class="sb-z3" x="204" y="64" font-size="16">z</text>
+  </g>
+  <g class="sb-breath">
+    <circle cx="116" cy="146" r="82" fill="#8a84aa"/>
+    <circle cx="70" cy="178" r="11" fill="#7a7499"/>
+    <circle cx="170" cy="190" r="8" fill="#7a7499"/>
+    <circle cx="160" cy="112" r="6" fill="#7a7499"/>
+    <ellipse cx="78" cy="160" rx="13" ry="8" fill="#b0707e" opacity="0.55"/>
+    <ellipse cx="154" cy="160" rx="13" ry="8" fill="#b0707e" opacity="0.55"/>
+    <g class="sb-eyes-closed" fill="none" stroke="#39345c" stroke-width="5" stroke-linecap="round">
+      <path d="M84 140 Q96 152 108 140"/>
+      <path d="M124 140 Q136 152 148 140"/>
+    </g>
+    <g class="sb-eyes-half">
+      <path d="M84 142 Q96 128 108 142 Z" fill="#39345c"/>
+      <path d="M124 142 Q136 128 148 142 Z" fill="#39345c"/>
+      <path d="M82 142 L110 142 M122 142 L150 142" stroke="#39345c" stroke-width="5" stroke-linecap="round"/>
+    </g>
+    <path d="M104 170 Q116 180 128 170" fill="none" stroke="#39345c" stroke-width="4.5" stroke-linecap="round"/>
+    <path d="M40 112 C46 56 96 30 146 40 C176 46 192 62 196 84 C174 78 156 86 150 112 Z" fill="#4f62a8"/>
+    <path d="M40 112 C46 56 96 30 146 40 C120 52 76 64 40 112 Z" fill="#5d70b8" opacity="0.7"/>
+    <rect x="34" y="104" width="124" height="18" rx="9" fill="#a39cc0"/>
+    <circle cx="198" cy="88" r="12" fill="#c9a24a"/>
+    <path d="M18 196 C60 176 172 176 214 196 L222 244 L10 244 Z" fill="#46528c"/>
+    <path d="M18 196 C60 176 172 176 214 196 L216 210 C172 192 60 192 16 210 Z" fill="#56639e"/>
+    <path d="M60 222 L60 244 M116 222 L116 244 M172 222 L172 244" stroke="#3b4678" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>`;
+
+/** Analogue alarm clock (two bells) of the night screen; hands and the sleep arc are set by _updateSleep. */
+const KIDS_SLEEP_ALARM_SVG = `
+<svg class="sleep-alarm" viewBox="0 0 200 224" aria-hidden="true">
+  <g class="sa-body">
+    <path d="M62 184 L48 212 M138 184 L152 212" stroke="#7d4a56" stroke-width="9" stroke-linecap="round"/>
+    <g transform="rotate(-28 100 120)"><circle cx="100" cy="30" r="26" fill="#8a5160"/><circle cx="100" cy="30" r="15" fill="#6d3d4a"/></g>
+    <g transform="rotate(28 100 120)"><circle cx="100" cy="30" r="26" fill="#8a5160"/><circle cx="100" cy="30" r="15" fill="#6d3d4a"/></g>
+    <path d="M100 38 L100 52" stroke="#7d4a56" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="100" cy="120" r="78" fill="#8a5160"/>
+    <circle cx="100" cy="120" r="66" fill="#1d2238"/>
+    <g stroke="#59628a" stroke-width="3" stroke-linecap="round">
+      <path d="M100 62 L100 70 M100 170 L100 178 M42 120 L50 120 M150 120 L158 120"/>
+    </g>
+    <g stroke="#3f4768" stroke-width="2" stroke-linecap="round">
+      <path d="M129 69.4 L125 76.3 M150.6 91 L143.7 95 M150.6 149 L143.7 145 M129 170.6 L125 163.7 M71 170.6 L75 163.7 M49.4 149 L56.3 145 M49.4 91 L56.3 95 M71 69.4 L75 76.3"/>
+    </g>
+    <path id="sl-arc" d="" fill="none" stroke="#c98f3c" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+    <g id="sl-wh"><path d="M100 120 L100 76" stroke="#d9a244" stroke-width="5" stroke-linecap="round"/><path d="M100 66 L94 80 L106 80 Z" fill="#d9a244"/></g>
+    <g id="sl-hh"><path d="M100 120 L100 86" stroke="#8d97bd" stroke-width="7" stroke-linecap="round"/></g>
+    <g id="sl-mh"><path d="M100 120 L100 70" stroke="#8d97bd" stroke-width="4.5" stroke-linecap="round"/></g>
+    <circle cx="100" cy="120" r="6" fill="#8a5160"/>
+  </g>
+</svg>`;
 
 /** Inline SVG rocket (nose up) used by the rocket launch overlay; no emoji font needed. */
 const KIDS_ROCKET_SVG = `
@@ -303,7 +378,7 @@ class FamilyMissionKids extends HTMLElement {
     this._rocketRun = null;       // running launch overlay state
     this._rocketDoneFor = null;   // rocket period launched on this tablet (until get_data catches up)
     this._asleep = false;         // night mode: sleep screen shown
-    this._peekUntil = 0;          // tap on the sleep screen shows the clock until then
+    this._peekUntil = 0;          // tap on the sleep screen brightens it until then
     this._morningOn = false;      // good-morning banner shown
     this._morningHidden = false;  // banner tapped away
 
@@ -407,6 +482,12 @@ class FamilyMissionKids extends HTMLElement {
       this._fitHandler = () => this._fitHeight();
       window.addEventListener('resize', this._fitHandler);
     }
+    if (!this._wakeHandler) {
+      // A standby tablet throttles timers: re-check the night state the moment it is awake again
+      this._wakeHandler = () => { if (!document.hidden) this._wakeCheck(); };
+      document.addEventListener('visibilitychange', this._wakeHandler);
+      window.addEventListener('focus', this._wakeHandler);
+    }
     requestAnimationFrame(() => this._fitHeight());
   }
 
@@ -458,6 +539,11 @@ class FamilyMissionKids extends HTMLElement {
     if (this._fitHandler) {
       window.removeEventListener('resize', this._fitHandler);
       this._fitHandler = null;
+    }
+    if (this._wakeHandler) {
+      document.removeEventListener('visibilitychange', this._wakeHandler);
+      window.removeEventListener('focus', this._wakeHandler);
+      this._wakeHandler = null;
     }
     if (this._resizeObserver) {
       this._resizeObserver.disconnect();
@@ -757,6 +843,8 @@ class FamilyMissionKids extends HTMLElement {
 
   /** Shows the next unseen praise of the logged-in kid as a friendly overlay (once the view is open). */
   _maybeShowPraise() {
+    // Praise is for the kid: never on a parent's device (it would also mark it as seen)
+    if (this._isParent()) return;
     if (this._praiseId || this._bdayKid || this._celebrating || !this._session || this._view !== 'kid') return;
     const next = this._unseenPraise(this._session.kidId)[0];
     const fx = this.shadowRoot.getElementById('fx');
@@ -1116,14 +1204,22 @@ class FamilyMissionKids extends HTMLElement {
     this._render();
   }
 
+  /**
+   * Brings the sleep screen / normal view in line with the clock (ticker, wake from standby).
+   * @returns {boolean} - True while the tablet sleeps.
+   */
+  _wakeCheck() {
+    if (!this._fetched || this._isMine()) return false;
+    const wasAsleep = this._asleep;
+    if (this._syncNight()) return true;
+    if (wasAsleep) this._render();
+    return false;
+  }
+
   /** 1 second ticker: clock, idle timeout and PIN lock countdown. */
   _tick() {
     // Night mode first: a sleeping tablet does nothing else (low CPU, no idle handling)
-    const wasAsleep = this._asleep;
-    if (this._fetched && !this._isMine()) {
-      if (this._syncNight()) return;
-      if (wasAsleep) this._render();
-    }
+    if (this._wakeCheck()) return;
     this._syncRocket();
     const clock = this.shadowRoot.getElementById('clock');
     if (clock) clock.textContent = new Date().toLocaleTimeString((this._hass && this._hass.language) || [], { hour: '2-digit', minute: '2-digit' });
@@ -1172,7 +1268,7 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'close-bonus') this._closeBonus(el.dataset.task);
     else if (action === 'claim') this._claim(el.dataset.task);
     else if (action === 'complete') this._complete(el.dataset.task);
-    else if (action === 'sleep-tap') { this._peekUntil = Date.now() + 5000; this._syncNight(); }
+    else if (action === 'sleep-tap') { this._peekUntil = Date.now() + 5000; this._syncNight(); this._wiggleAlarm(); }
     else if (action === 'morning-close') { this._morningHidden = true; this._syncMorning(false); }
     else if (action === 'rocket-skip') { if (this._rocketRun && this._rocketRun.phase === 'count') this._rocketLaunch(); }
     else if (action === 'rocket-close') { if (this._rocketRun && this._rocketRun.phase === 'done') this._rocketFinish(); }
@@ -2002,7 +2098,7 @@ class FamilyMissionKids extends HTMLElement {
     const s = this.settings || {};
     // Only the shared tablet user sleeps: parents (admin / manager / parent role) keep the
     // normal view on their own devices, e.g. to approve something in the evening.
-    if (this._isMine() || !this._fetched || this._isParent()) return { sleeping: false, morning: false, wakeAt: '' };
+    if (this._isMine() || !this._fetched || this._isParent()) return { sleeping: false, morning: false, wakeAt: '', wakeDate: null, minutesLeft: 0, phase: '' };
     return kidsNightState(new Date(), {
       enabled: s.night_mode !== false,
       sleep: s.night_sleep,
@@ -2046,25 +2142,24 @@ class FamilyMissionKids extends HTMLElement {
     if (!fx) return;
     this._asleep = true;
     this._peekUntil = 0;
+    this._sleepKey = '';
     this._removeSleep();
     this._removePraiseLayer();
     this._removeBirthdayLayer();
     this._syncMorning(false);
     if (app) app.innerHTML = '';     // nothing to keep alive: no tasks, no PIN pad
-    // a fixed star pattern (no randomness: stable between wake-ups), a few of them twinkle slowly
-    let stars = '';
-    for (let i = 0; i < 46; i++) {
-      const x = (i * 37 + (i * i) % 29) % 100, y = (i * 53 + (i * i * 7) % 31) % 78;
-      const size = 2 + (i % 3);
-      stars += `<i class="sleep-star" style="left:${x}%;top:${y}%;width:${size}px;height:${size}px;animation-delay:-${(i * 1.7) % 9}s;animation-duration:${8 + (i % 5) * 2}s"></i>`;
-    }
     const layer = document.createElement('div');
     layer.className = 'sleep-layer';
     layer.dataset.action = 'sleep-tap';
-    layer.innerHTML = `${stars}<div class="sleep-moon"></div>
-      <div class="sleep-text">${escKids(this.localize('night_good', { names: this._kidNames() }))}</div>
-      <div class="sleep-clock" id="sleep-clock"></div>
-      <div class="sleep-wake" id="sleep-wake"></div>`;
+    layer.innerHTML = `<div class="sleep-art">
+        <div class="sleep-scene">
+          ${KIDS_SLEEP_BUDDY_SVG}
+          ${KIDS_SLEEP_ALARM_SVG}
+        </div>
+        <div class="sleep-text" id="sleep-text"></div>
+        <div class="sleep-left" id="sleep-left"></div>
+        <div class="sleep-wake" id="sleep-wake"></div>
+      </div>`;
     fx.appendChild(layer);
   }
 
@@ -2073,18 +2168,58 @@ class FamilyMissionKids extends HTMLElement {
     if (layer) layer.remove();
   }
 
-  /** Clock, wake-up note and the 5 second "peek" after a tap. */
+  /**
+   * Redraws the sleep screen. Called every second by the ticker, but the DOM is only
+   * touched when the minute, the phase or the tap-brightness changes (about once a minute).
+   */
   _updateSleep(st) {
     const layer = this.shadowRoot.querySelector('.sleep-layer');
-    if (!layer) return;
+    if (!layer || !st.wakeDate) return;
     const peek = Date.now() < (this._peekUntil || 0);
+    const now = new Date();
+    const key = [now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), st.phase, st.wakeAt, peek ? 1 : 0, this._kidNames()].join('|');
+    if (key === this._sleepKey) return;
+    this._sleepKey = key;
     layer.classList.toggle('peek', peek);
-    const text = new Date().toLocaleTimeString((this._hass && this._hass.language) || [], { hour: '2-digit', minute: '2-digit' });
-    const clock = layer.querySelector('#sleep-clock');
-    if (clock && clock.textContent !== text) clock.textContent = text;
-    const wake = layer.querySelector('#sleep-wake');
-    const note = this.localize('night_wake', { time: st.wakeAt });
-    if (wake && wake.textContent !== note) wake.textContent = note;
+    layer.dataset.phase = st.phase;
+
+    // Hands: the 12 hour dial, angles clockwise from 12 o'clock
+    const wd = st.wakeDate;
+    const hourA = (now.getHours() % 12) * 30 + now.getMinutes() * 0.5;
+    const minA = now.getMinutes() * 6;
+    const wakeA = (wd.getHours() % 12) * 30 + wd.getMinutes() * 0.5;
+    const span = Math.min(Math.max(st.minutesLeft, 0), 720) * 0.5;      // remaining sleep as dial angle
+    const rot = (id, a) => { const h = layer.querySelector(id); if (h) h.setAttribute('transform', `rotate(${a.toFixed(2)} 100 120)`); };
+    rot('#sl-hh', hourA); rot('#sl-mh', minA); rot('#sl-wh', wakeA);
+    const arc = layer.querySelector('#sl-arc');
+    if (arc) {
+      const sweep = Math.min(span, 359.9);
+      const pt = (a) => `${(100 + 50 * Math.sin(a * Math.PI / 180)).toFixed(2)} ${(120 - 50 * Math.cos(a * Math.PI / 180)).toFixed(2)}`;
+      arc.setAttribute('d', sweep < 0.5 ? '' : `M ${pt(wakeA - sweep)} A 50 50 0 ${sweep > 180 ? 1 : 0} 1 ${pt(wakeA)}`);
+    }
+
+    const names = this._kidNames();
+    const text = st.phase === 'evening' ? this.localize('night_good', { names })
+      : (st.phase === 'soon' ? this.localize('night_soon') : this.localize('night_quiet'));
+    const left = st.minutesLeft >= 60
+      ? (st.minutesLeft % 60 === 0
+        ? this.localize('night_left_h', { h: st.minutesLeft / 60 })
+        : this.localize('night_left_hm', { h: Math.floor(st.minutesLeft / 60), m: st.minutesLeft % 60 }))
+      : (st.minutesLeft <= 1 ? this.localize('night_left_1') : this.localize('night_left_m', { m: st.minutesLeft }));
+    const set = (id, v) => { const e = layer.querySelector(id); if (e && e.textContent !== v) e.textContent = v; };
+    set('#sleep-text', text);
+    set('#sleep-left', left);
+    set('#sleep-wake', this.localize('night_wake', { time: st.wakeAt }));
+    layer.setAttribute('aria-label', `${text}. ${left}`);
+  }
+
+  /** A short wobble of the alarm clock after a tap (CSS only; none with reduced motion). */
+  _wiggleAlarm() {
+    const el = this.shadowRoot.querySelector('.sleep-alarm');
+    if (!el || this._reducedMotion()) return;
+    el.classList.remove('wiggle');
+    void el.getBoundingClientRect();      // restart the animation
+    el.classList.add('wiggle');
   }
 
   _syncMorning(show) {
@@ -3332,18 +3467,31 @@ class FamilyMissionKids extends HTMLElement {
 
 
       /* ---------- night mode: dark, quiet, nothing bright ---------- */
-      #fx .sleep-layer { position: fixed; inset: 0; z-index: 200; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; text-align: center; padding: 24px;
-        background: radial-gradient(ellipse at 70% 18%, #0a0f24 0%, #03050c 72%); color: #5c6684; cursor: default; }
-      .sleep-star { position: absolute; border-radius: 50%; background: #7d86a8; opacity: 0.4; animation: sleep-twinkle 10s ease-in-out infinite; }
-      @keyframes sleep-twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.55; } }
-      .sleep-moon { position: absolute; top: 9%; right: 12%; width: 76px; height: 76px; border-radius: 50%; box-shadow: -16px 8px 0 0 #8c8566; opacity: 0.7; }
-      .sleep-text { position: relative; font-size: 42px; font-weight: 700; letter-spacing: 0.3px; filter: brightness(0.75) saturate(0.7); }
-      .sleep-clock { position: relative; font-size: 40px; font-weight: 700; color: #3b445f; transition: font-size 0.4s, color 0.4s; }
-      .sleep-wake { position: relative; font-size: 34px; font-weight: 600; color: #7c86a6; opacity: 0; transition: opacity 0.4s; }
-      #fx .sleep-layer.peek .sleep-clock { font-size: min(24vw, 250px); color: #8791b3; line-height: 1; }
-      #fx .sleep-layer.peek .sleep-wake { opacity: 1; }
+      #fx .sleep-layer { position: fixed; inset: 0; z-index: 200; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px;
+        background: radial-gradient(ellipse at 50% 30%, #0b1026 0%, #03050c 75%); color: #5c6684; cursor: default; text-align: center; }
+      .sleep-art { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 100%; filter: brightness(0.82); transition: filter 0.5s; }
+      #fx .sleep-layer.peek .sleep-art { filter: brightness(1.3); }
+      .sleep-scene { display: flex; align-items: flex-end; justify-content: center; gap: clamp(8px, 3vw, 48px); max-width: 100%; }
+      .sleep-buddy { width: clamp(130px, 36vw, 340px); height: auto; overflow: visible; }
+      .sleep-alarm { width: clamp(100px, 28vw, 260px); height: auto; transform-origin: 50% 90%; }
+      .sleep-alarm.wiggle { animation: sleep-wiggle 0.9s ease-in-out 1; }
+      @keyframes sleep-wiggle { 0%, 100% { transform: rotate(0); } 12% { transform: rotate(-7deg); } 28% { transform: rotate(6deg); } 44% { transform: rotate(-5deg); } 60% { transform: rotate(4deg); } 76% { transform: rotate(-2deg); } }
+      .sb-breath { transform-box: fill-box; transform-origin: 50% 100%; animation: sleep-breathe 6s ease-in-out infinite; }
+      @keyframes sleep-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+      .sb-z text { fill: #8c95bd; font-weight: 800; font-family: inherit; opacity: 0; animation: sleep-zzz 9s ease-in infinite; }
+      .sb-z .sb-z2 { animation-delay: 3s; }
+      .sb-z .sb-z3 { animation-delay: 6s; }
+      @keyframes sleep-zzz { 0% { opacity: 0; transform: translate(0, 10px); } 15% { opacity: 0.85; } 70% { opacity: 0.5; } 100% { opacity: 0; transform: translate(26px, -52px); } }
+      .sb-eyes-half { display: none; }
+      #fx .sleep-layer[data-phase="soon"] .sb-eyes-closed { animation: sleep-blink-closed 7s step-end infinite; }
+      #fx .sleep-layer[data-phase="soon"] .sb-eyes-half { display: inline; animation: sleep-blink-half 7s step-end infinite; }
+      @keyframes sleep-blink-closed { 0%, 100% { opacity: 1; } 80% { opacity: 0; } 90% { opacity: 1; } }
+      @keyframes sleep-blink-half { 0%, 100% { opacity: 0; } 80% { opacity: 1; } 90% { opacity: 0; } }
+      .sleep-text { font-size: clamp(26px, 4.6vw, 52px); font-weight: 800; letter-spacing: 0.3px; color: #8892b8; margin-top: 8px; }
+      .sleep-left { font-size: clamp(20px, 3vw, 34px); font-weight: 700; color: #6c7699; }
+      .sleep-wake { font-size: clamp(15px, 1.8vw, 20px); font-weight: 600; color: #4f5877; }
       :host([narrow]) .sleep-text { font-size: 28px; }
-      :host([narrow]) .sleep-moon { width: 52px; height: 52px; box-shadow: -11px 6px 0 0 #8c8566; }
+      :host([narrow]) .sleep-left { font-size: 20px; }
       #fx .morning-banner { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 80; max-width: 92vw; padding: 14px 40px; border-radius: 40px; font-size: 32px; font-weight: 800; text-align: center; color: #5d3a00;
         background: linear-gradient(90deg, #ffe082, #ffcc80); box-shadow: 0 6px 18px rgba(0,0,0,0.25); cursor: pointer; animation: kids-morning 0.6s ease-out; }
       @keyframes kids-morning { from { transform: translate(-50%, -80px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
@@ -3405,9 +3553,13 @@ class FamilyMissionKids extends HTMLElement {
       .family.launched .fam-rocket { transform: translateX(-50%) rotate(45deg); }
 
       @media (prefers-reduced-motion: reduce) {
-        .sleep-star, .rk-num.pop, .rk-flame, .rk-rocket, #fx .morning-banner { animation: none; }
+        .sb-breath, .sb-z text, .sleep-alarm.wiggle, #fx .sleep-layer[data-phase] .sb-eyes-closed, #fx .sleep-layer[data-phase] .sb-eyes-half, .rk-num.pop, .rk-flame, .rk-rocket, #fx .morning-banner { animation: none; }
         .dots.shake, .celebrate-text, .col.has-more::after, .balloon, .bday-card, .praise-card, .praise-sticker, .praise-tag { animation: none; }
         .balloon { display: none; }
+        .sb-z text { opacity: 0.6; transform: none; }
+        .sb-z .sb-z2 { transform: translate(14px, -22px); }
+        .sb-z .sb-z3 { transform: translate(28px, -44px); }
+        #fx .sleep-layer[data-phase] .sb-eyes-half { display: none; }
         .tile, .btn, .key, .back, .sub { transition: none; }
       }
     `;
