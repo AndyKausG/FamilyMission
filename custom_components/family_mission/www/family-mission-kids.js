@@ -55,6 +55,8 @@ const I18N_KIDS = {
     levelup_none: "New adventures are waiting for you!",
     waiting_title: "Waiting for approval", waiting_hint: "Mom or Dad will take a look",
     pending_cheer: "Great! Mom or Dad will take a quick look.",
+    ap_title: "✅ {n} approvals waiting", ap_title_one: "✅ 1 approval waiting", ap_approve: "Approve", ap_not_done: "Not done",
+    ap_toast_ok: "Approved", ap_toast_back: "Back on the list",
     strict_note: "🔍 This week Mom and Dad check everything",
     penalty_line: "−{n} points: {reason}", points_pending: "pending",
     from_time: "from {t}", countdown: "{n} min to go", window_over: "Over for today - new chance tomorrow",
@@ -129,6 +131,8 @@ const I18N_KIDS = {
     levelup_none: "Neue Abenteuer warten auf dich!",
     waiting_title: "Wartet auf Freigabe", waiting_hint: "Mama oder Papa schauen noch drauf",
     pending_cheer: "Super! Mama oder Papa schauen noch drauf.",
+    ap_title: "✅ {n} Freigaben warten", ap_title_one: "✅ 1 Freigabe wartet", ap_approve: "Freigeben", ap_not_done: "Nicht fertig",
+    ap_toast_ok: "Freigegeben", ap_toast_back: "Wieder auf der Liste",
     strict_note: "🔍 Diese Woche schauen Mama und Papa bei allem drüber",
     penalty_line: "−{n} Punkte: {reason}", points_pending: "offen",
     from_time: "ab {t}", countdown: "noch {n} min", window_over: "Heute vorbei – morgen neue Chance",
@@ -1265,6 +1269,8 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'pin-cancel' && this._helperMode()) this._helperCancel();
     else if (action === 'pin-cancel' || action === 'back') this._goHome();
     else if (action === 'toggle-sub') this._toggleSubtask(el.dataset.task, parseInt(el.dataset.idx));
+    else if (action === 'ap-approve') this._apAct(el.dataset.id, true);
+    else if (action === 'ap-not-done') this._apAct(el.dataset.id, false);
     else if (action === 'close-bonus') this._closeBonus(el.dataset.task);
     else if (action === 'claim') this._claim(el.dataset.task);
     else if (action === 'complete') this._complete(el.dataset.task);
@@ -2788,7 +2794,7 @@ class FamilyMissionKids extends HTMLElement {
     this._kids().forEach(k => { persons[k.id] = k; });
 
     const waiting = this._pendingFor(kid.id);
-    const dutyHtml = (duties.length
+    const dutyHtml = (mine && this._isParent() ? this._renderParentApprovals(persons) : '') + (duties.length
       ? duties.map(t => this._renderTask(t, kid, 'duty', persons)).join('')
       : `<div class="empty-state small">🎉 ${escKids(this.localize('no_tasks'))}</div>`)
       + this._renderReplaced(kid) + this._renderWaiting(waiting) + this._renderPrivate(kid)
@@ -2877,6 +2883,51 @@ class FamilyMissionKids extends HTMLElement {
   }
 
   /** "Waiting for approval" list in the kid's own view (points greyed out). */
+  /** Approvals of the kids for a parent on the own device (mode "mine"); no "cheated" here. */
+  _renderParentApprovals(persons) {
+    const list = Object.values(this.pending || {}).sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
+    if (!list.length) return '';
+    const title = list.length === 1 ? this.localize('ap_title_one') : this.localize('ap_title', { n: list.length });
+    return `
+      <div class="waiting parent-appr">
+        <div class="wait-title">${escKids(title)}</div>
+        ${list.map(p => {
+          const names = [p.kid_id].concat(p.helpers || []).map(id => (persons[id] && persons[id].name) || id).join(' & ');
+          const busy = this._apBusy && this._apBusy.has(p.id) ? 'disabled' : '';
+          return `
+          <div class="wait-item ap-item">
+            <div class="wait-name">${escKids(names)}: ${escKids(p.task_name)} <span class="wait-pts">⭐ ${fmtKids(p.points)}</span></div>
+            <div class="ap-actions">
+              <button class="ap-btn ok" data-action="ap-approve" data-id="${escKids(p.id)}" ${busy}>${escKids(this.localize('ap_approve'))}</button>
+              <button class="ap-btn" data-action="ap-not-done" data-id="${escKids(p.id)}" ${busy}>${escKids(this.localize('ap_not_done'))}</button>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  /** Approve / "not done" a kid's completion (same commands as the parents' card). */
+  async _apAct(id, approve) {
+    if (!id) return;
+    this._apBusy = this._apBusy || new Set();
+    if (this._apBusy.has(id)) return;
+    this._apBusy.add(id);
+    this._render();
+    try {
+      const payload = approve
+        ? { type: 'family_mission/approve', pending_id: id }
+        : { type: 'family_mission/reject', pending_id: id, mode: 'not_done' };
+      const res = await this._hass.callWS(payload);
+      if (res && res.success) this._showToast(this.localize(approve ? 'ap_toast_ok' : 'ap_toast_back'));
+      else this._showToast(this.localize('err_generic'));
+    } catch (err) {
+      console.error("FamilyMission Kids: could not handle the approval", err);
+      this._showToast(this.localize('err_generic'));
+    }
+    this._apBusy.delete(id);
+    this._fetchData();
+  }
+
   _renderWaiting(list) {
     if (!list.length) return '';
     return `
@@ -3306,6 +3357,10 @@ class FamilyMissionKids extends HTMLElement {
       .wait-title .count { min-width: 36px; height: 36px; padding: 0 10px; border-radius: 18px; display: inline-grid; place-items: center; font-size: 22px; background: color-mix(in srgb, var(--k-sub) 30%, var(--k-card)); }
       .wait-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 4px; font-size: 24px; font-weight: 700; color: var(--k-sub); border-top: 2px solid var(--k-line); margin-top: 6px; }
       .wait-name { overflow-wrap: anywhere; }
+      .ap-item { flex-wrap: wrap; }
+      .ap-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+      .ap-btn { min-height: 48px; padding: 0 18px; border-radius: 24px; border: 2px solid var(--k-line); background: var(--k-card); color: var(--k-sub); font: inherit; font-size: 20px; font-weight: 800; cursor: pointer; }
+      .ap-btn.ok { background: #2E7D32; border-color: #2E7D32; color: #fff; }
       .wait-pts { flex: none; opacity: 0.6; filter: grayscale(1); font-weight: 800; }
       .wait-hint { font-size: 20px; font-weight: 700; color: var(--k-sub); margin-top: 4px; }
       .private { flex: none; padding: 6px 8px 2px; font-size: 20px; font-weight: 700; color: var(--k-sub); }

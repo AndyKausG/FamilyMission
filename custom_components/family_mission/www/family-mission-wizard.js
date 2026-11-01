@@ -49,6 +49,7 @@ const I18N_WIZARD = {
     next_steps: "Next steps", ns_pin: "Set a PIN for every kid: Settings card, section \"Kids\".",
     ns_tablet: "Put the kids card on the tablet dashboard (see the README, \"Kids mode\").",
     ns_check: "Look through the first week and adjust points or tasks in the task card.",
+    push_to: "Push to: {list}", push_test: "Test push", push_test_ok: "Test push sent to {t}", push_test_none: "No push target for you yet - sign in to the Companion app with your user or choose a target in the settings (Tablet).", push_test_fail: "Test push failed: {e}",
     sel_kids: "Kids", sel_home: "Household",
     parents_intro: "Optional: the chores and mental load of the grown-ups, set up once. Parent tasks carry no points. Anything left undone quietly moves to tomorrow, with no red marks and no reminders. Only 🧠 planning tasks get a gentle heads-up the evening before.",
     n_parents: "{n} parent tasks", ok_parents: "{n} parent tasks were set up.", ok_parents_err: "Parent tasks could not be saved: ",
@@ -93,6 +94,7 @@ const I18N_WIZARD = {
     next_steps: "Nächste Schritte", ns_pin: "PIN für jedes Kind setzen: Einstellungen-Karte, Bereich \"Kinder\".",
     ns_tablet: "Die Kinder-Karte auf das Tablet-Dashboard legen (siehe README, \"Kids mode\").",
     ns_check: "Die erste Woche beobachten und Punkte oder Aufgaben in der Aufgaben-Karte anpassen.",
+    push_to: "Push an: {list}", push_test: "Test-Push", push_test_ok: "Test-Push gesendet an {t}", push_test_none: "Für dich gibt es noch kein Push-Ziel – Companion-App mit deinem Benutzer anmelden oder in den Einstellungen (Tablet) ein Ziel wählen.", push_test_fail: "Test-Push fehlgeschlagen: {e}",
     sel_kids: "Kinder", sel_home: "Haushalt",
     parents_intro: "Optional: Haushalt und Planungsarbeit der Erwachsenen, einmal eingerichtet. Eltern-Aufgaben haben keine Punkte. Was liegen bleibt, rutscht leise auf morgen, ohne Rot und ohne Erinnerung. Nur 🧠 Planungs-Aufgaben bekommen am Vorabend einen sanften Hinweis.",
     n_parents: "{n} Eltern-Aufgaben", ok_parents: "{n} Eltern-Aufgaben wurden eingerichtet.", ok_parents_err: "Eltern-Aufgaben konnten nicht gespeichert werden: ",
@@ -832,11 +834,35 @@ class FamilyMissionWizard extends HTMLElement {
         }
       }
       this._step = 6;
+      await this._loadPushStatus();
     } catch (err) {
       s.error = (err && err.message) || String(err);
     }
     s.applying = false;
     this._render();
+  }
+
+  /** Push targets per adult for the success page (only shown once kid profiles exist). */
+  async _loadPushStatus() {
+    const s = this._s;
+    s.pushAdults = null;
+    try {
+      const data = await this._hass.callWS({ type: 'family_mission/get_data' });
+      if (Object.keys((data.settings && data.settings.kids) || {}).length > 0) s.pushAdults = data.adults || [];
+    } catch (err) { /* the hint is optional */ }
+  }
+
+  async _testPush(out) {
+    let msg;
+    try {
+      const res = await this._hass.callWS({ type: 'family_mission/test_push' });
+      if (res && res.success) msg = this._t('push_test_ok').replace('{t}', (res.targets || []).join(', '));
+      else if (res && res.error === 'no_target') msg = this._t('push_test_none');
+      else msg = this._t('push_test_fail').replace('{e}', ((res && res.errors) || []).join('; '));
+    } catch (err) {
+      msg = this._t('push_test_fail').replace('{e}', (err && err.message) || String(err));
+    }
+    if (out) out.textContent = msg;
   }
 
   // ---------------------------------------------------------------------
@@ -1294,6 +1320,8 @@ class FamilyMissionWizard extends HTMLElement {
       ${r.skipped ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_skipped', { n: r.skipped }))}</p>` : ''}
       ${this._s.parentsResult ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_parents', { n: (this._s.parentsResult.created || 0) + (this._s.parentsResult.updated || 0) || this._parentsCount() }))}</p>` : ''}
       ${this._s.parentsError ? `<div class="err">${wzEsc(this._t('ok_parents_err'))}${wzEsc(this._s.parentsError)}</div>` : ''}
+      ${Array.isArray(this._s.pushAdults) && this._s.pushAdults.length ? `<p class="muted" style="text-align:center">${wzEsc(this._t('push_to', { list: this._s.pushAdults.map(a => `${a.name} ${a.push ? '✓' : '⚠'}`).join(', ') }))}
+        <button class="btn secondary" data-act="push-test">${wzEsc(this._t('push_test'))}</button> <span id="push-test-out"></span></p>` : ''}
       <div class="card" style="border-left-color:var(--success-color,#4caf50)"><h3>${wzEsc(this._t('next_steps'))}</h3>
         <ol><li>${wzEsc(this._t('ns_pin'))}</li><li>${wzEsc(this._t('ns_tablet'))}</li><li>${wzEsc(this._t('ns_check'))}</li>${this._s.parentsResult ? `<li>${wzEsc(this._t('ns_parents'))}</li>` : ''}</ol></div>`;
   }
@@ -1312,6 +1340,7 @@ class FamilyMissionWizard extends HTMLElement {
     const s = this._s;
     if (act === 'close') this.close();
     else if (act === 'help') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
+    else if (act === 'push-test') this._testPush(this.shadowRoot.getElementById('push-test-out'));
     else if (act === 'back' && this._step > 0) this._go(this._step - 1);
     else if (act === 'next' && this._canNext()) this._go(this._step + 1);
     else if (act === 'apply') this._apply();

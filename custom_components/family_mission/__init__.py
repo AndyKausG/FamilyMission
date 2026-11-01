@@ -102,6 +102,11 @@ from .const import (
     WS_TYPE_KID_SET_GOAL,
     WS_TYPE_REDEMPTION_RESOLVE,
     WS_TYPE_SEND_PRAISE,
+    WS_TYPE_TEST_PUSH,
+    DEFAULT_APPROVAL_REMINDER_HOURS,
+    PUSH_WARNING_NO_ADULTS,
+    PUSH_WARNING_NO_TARGETS,
+    NO_PUSH_NOTIFICATION_ID,
     WS_TYPE_KID_PRAISE_SEEN,
     WS_TYPE_MY_PRAISE_SEEN,
     WS_TYPE_PARENTS_CATALOG,
@@ -372,7 +377,12 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
     adult_ids = [a["id"] for a in adults]
     me = _my_participant(hass, connection)
     me = me if me in adult_ids else None
-    response_data["adults"] = [{**a, "push": bool(_push_services(hass, a["id"]))} for a in adults]
+    targets = _push_targets(hass, adults)
+    response_data["adults"] = [
+        {**a, "push": bool(targets[a["id"]]["services"]), "push_targets": targets[a["id"]]["services"]}
+        for a in adults
+    ]
+    response_data["push_warning"] = _push_warning(hass, adults, targets)
     response_data["me"] = me
     response_data["partner"] = parents_catalog.partner_of(adult_ids, me) if me else None
     
@@ -863,6 +873,17 @@ def _sanitize_parent_settings(incoming: dict) -> None:
         }
 
 
+def _reminder_hours(value) -> int:
+    """Hours after which an open approval is nudged once more: int 0..24 (0 = off), default 2."""
+    if isinstance(value, bool):
+        return DEFAULT_APPROVAL_REMINDER_HOURS
+    try:
+        hours = int(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return DEFAULT_APPROVAL_REMINDER_HOURS
+    return max(0, min(24, hours))
+
+
 def _sanitize_tablet_settings(incoming: dict) -> None:
     """Validate the 2.1 settings (night mode, rocket countdown, reward push); bad values fall back to the default."""
     for key in ("night_mode", "reward_push", "approval_push"):
@@ -877,6 +898,8 @@ def _sanitize_tablet_settings(incoming: dict) -> None:
             incoming[key] = parents_catalog.valid_clock(incoming[key], default)
     if "rocket_countdown" in incoming:
         incoming["rocket_countdown"] = rocket_countdown_seconds(incoming["rocket_countdown"])
+    if "approval_reminder_hours" in incoming:
+        incoming["approval_reminder_hours"] = _reminder_hours(incoming["approval_reminder_hours"])
 
 
 @websocket_api.websocket_command({
@@ -1533,13 +1556,13 @@ async def _async_request_approval(
     return pending_id
 
 
-async def _async_push_approval(hass: HomeAssistant, event: dict) -> None:
+async def _async_push_approval(hass: HomeAssistant, event: dict) -> bool:
     """Push a task that waits for approval to every adult (setting ``approval_push``).
 
     Only approve / not-done buttons: "cheated" is deliberately app-only.
     """
     if _get_entry(hass).options.get("approval_push", True) is False:
-        return
+        return False
     de = _lang(hass) == "de"
     names = [event["kid_name"]] + [_participant_name(hass, uid) for uid in event.get("helpers") or []]
     who = " & ".join(names)
@@ -1553,8 +1576,9 @@ async def _async_push_approval(hass: HomeAssistant, event: dict) -> None:
         {"action": f"{ACTION_APPROVE}{pid}", "title": "Freigeben" if de else "Approve"},
         {"action": f"{ACTION_NOT_DONE}{pid}", "title": "Nicht fertig" if de else "Not done"},
     ]
-    for adult in _adults(hass):
-        await _async_push_adult(hass, adult["id"], title, text, actions, tag=f"{DOMAIN}_approval_{pid}")
+    delivered = await _async_push_all_adults(
+        hass, title, text, actions, tag=f"{DOMAIN}_approval_{pid}", warn=True)
+    return delivered
 
 
 def _apply_adjustment(
@@ -1642,6 +1666,7 @@ async def _async_approve_pending(hass: HomeAssistant, pending_id: str) -> dict |
     })
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
+    await _async_clear_push(hass, f"{DOMAIN}_approval_{pending_id}")
     return pending
 
 
@@ -1682,6 +1707,7 @@ async def _async_reject_pending(
     hass.bus.async_fire(EVENT_APPROVAL_RESOLVED, result)
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
+    await _async_clear_push(hass, f"{DOMAIN}_approval_{pending_id}")
     return pending
 
 
@@ -2545,6 +2571,7 @@ async def _async_resolve_redemption(hass: HomeAssistant, redemption_id: str, app
     })
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
+    await _async_clear_push(hass, f"{DOMAIN}_reward_{redemption_id}")
     return record
 
 
@@ -2727,6 +2754,59 @@ async def ws_my_set_goal(hass: HomeAssistant, connection: websocket_api.ActiveCo
 # ---------------------------------------------------------------------------
 # Task reminders (checked by the minute timer)
 # ---------------------------------------------------------------------------
+
+async def _async_check_approval_reminders(hass: HomeAssistant) -> int:
+    """Nudge once (quietly) about approvals that wait longer than ``approval_reminder_hours``.
+
+    Replaces the first push (same tag). Not at night (it follows after waking up),
+    not with ``approval_push`` off or ``approval_reminder_hours`` 0. Returns the count.
+    """
+    if DOMAIN not in hass.data:
+        return 0
+    options = _get_entry(hass).options
+    if options.get("approval_push", True) is False:
+        return 0
+    hours = _reminder_hours(options.get("approval_reminder_hours", DEFAULT_APPROVAL_REMINDER_HOURS))
+    if hours <= 0:
+        return 0
+    now = dt_util.now()
+    if options.get("night_mode", True) is not False and is_night_time(
+        now, options.get("night_sleep"), options.get("night_wake_weekday"), options.get("night_wake_weekend"),
+    ):
+        return 0
+    data = hass.data[DOMAIN]["data"]
+    limit = dt_util.utcnow() - timedelta(hours=hours)
+    due = []
+    for pid, record in (data.get("pending") or {}).items():
+        if not isinstance(record, dict) or record.get("reminded_at"):
+            continue
+        stamp = parse_dt(record.get("timestamp"))
+        if stamp is None:
+            continue
+        if stamp.tzinfo is None:
+            stamp = dt_util.as_utc(stamp)
+        if stamp <= limit:
+            due.append((pid, record))
+    if not due:
+        return 0
+    stamp_now = dt_util.utcnow().isoformat()
+    for _pid, record in due:
+        record["reminded_at"] = stamp_now
+    await hass.data[DOMAIN]["store"].async_save(data)
+    de = _lang(hass) == "de"
+    for pid, record in due:
+        if pid not in (data.get("pending") or {}):    # handled while we were pushing
+            continue
+        names = " & ".join(_participant_name(hass, uid) for uid in [record.get("kid_id"), *(record.get("helpers") or [])] if uid)
+        actions = [
+            {"action": f"{ACTION_APPROVE}{pid}", "title": "Freigeben" if de else "Approve"},
+            {"action": f"{ACTION_NOT_DONE}{pid}", "title": "Nicht fertig" if de else "Not done"},
+        ]
+        await _async_push_all_adults(
+            hass, "⏳ Freigabe wartet noch" if de else "⏳ Approval still waiting",
+            f"{names}: {record.get('task_name') or ''}", actions, tag=f"{DOMAIN}_approval_{pid}")
+    return len(due)
+
 
 async def _async_check_reminders(hass: HomeAssistant) -> int:
     """Remind once per day about open tasks whose ``reminder_at`` has passed. Returns the count."""
@@ -3415,15 +3495,21 @@ def _adults(hass: HomeAssistant) -> list[dict]:
 
 
 def _push_services(hass: HomeAssistant, uid: str) -> list[str]:
-    """notify services (without the ``notify.`` prefix) that reach an adult.
+    """notify services (without the ``notify.`` prefix) that reach an adult."""
+    return _push_resolve(hass, uid)[0]
 
-    ``parent_notify[uid]`` of the settings wins; otherwise the companion app
-    devices of the user (``mobile_app`` entries) whose notify service exists.
+
+def _push_resolve(hass: HomeAssistant, uid: str) -> tuple[list[str], str]:
+    """``(services, source)`` of an adult; source is ``manual`` | ``auto``.
+
+    ``parent_notify[uid]`` of the settings wins (``manual``, even when the
+    service does not exist yet); otherwise the companion app devices of the
+    user (``mobile_app`` entries) whose notify service exists (``auto``).
     """
     options = _get_entry(hass).options
     configured = normalize_reminder_target((options.get("parent_notify") or {}).get(uid))
     if configured:
-        return [configured.split(".", 1)[1]]
+        return [configured.split(".", 1)[1]], "manual"
     services: list[str] = []
     for config_entry in hass.config_entries.async_entries("mobile_app"):
         if config_entry.data.get("user_id") != uid:
@@ -3434,7 +3520,81 @@ def _push_services(hass: HomeAssistant, uid: str) -> list[str]:
         service = f"mobile_app_{slugify(device)}"
         if service not in services and hass.services.has_service("notify", service):
             services.append(service)
-    return services
+    return services, "auto"
+
+
+def _push_targets(hass: HomeAssistant, adults: list[dict] | None = None) -> dict[str, dict]:
+    """Resolved push targets per adult id: ``{"services": ["mobile_app_x"], "source": "manual" | "auto"}``."""
+    result = {}
+    for adult in adults if adults is not None else _adults(hass):
+        services, source = _push_resolve(hass, adult["id"])
+        result[adult["id"]] = {"services": [f"notify.{name}" for name in services], "source": source}
+    return result
+
+
+def _push_warning(hass: HomeAssistant, adults: list[dict], targets: dict[str, dict]) -> str | None:
+    """Why approvals could stay unseen: ``no_adults`` | ``no_targets``; ``None`` without kid profiles or when reachable."""
+    if not _get_entry(hass).options.get("kids"):
+        return None
+    if not adults:
+        return PUSH_WARNING_NO_ADULTS
+    if not any(t["services"] for t in targets.values()):
+        return PUSH_WARNING_NO_TARGETS
+    return None
+
+
+def _no_push_notice(hass: HomeAssistant) -> None:
+    """Tell the HA user that no approval push can reach anybody."""
+    if _lang(hass) == "de":
+        title = "FamilyMission: Freigaben erreichen niemanden"
+        message = (
+            "Eine Aufgabe wartet auf Freigabe, aber es konnte keine Push-Nachricht zugestellt werden. "
+            "Bitte eine Person mit einem Home-Assistant-Benutzer verknüpfen, die Companion-App mit "
+            "diesem Benutzer anmelden oder in den FamilyMission-Einstellungen (Tablet) ein Push-Ziel wählen."
+        )
+    else:
+        title = "FamilyMission: approvals reach nobody"
+        message = (
+            "A task is waiting for approval, but no push could be delivered. Please link a person "
+            "to a Home Assistant user, sign in to the Companion app with that user, or choose a push "
+            "target in the FamilyMission settings (Tablet)."
+        )
+    persistent_notification.async_create(hass, message, title=title, notification_id=NO_PUSH_NOTIFICATION_ID)
+
+
+async def _async_clear_push(hass: HomeAssistant, tag: str) -> None:
+    """Remove a handled push (Companion app ``clear_notification`` by tag) from every adult's devices.
+
+    Several parents get the same push: once one of them handled it, it must
+    disappear for all. Errors are only logged.
+    """
+    for adult in _adults(hass):
+        for service in _push_services(hass, adult["id"]):
+            try:
+                await hass.services.async_call(
+                    "notify", service, {"message": "clear_notification", "data": {"tag": tag}}, blocking=True)
+            except Exception as err:  # unknown service, offline device ...
+                _LOGGER.warning("Clearing push %s on notify.%s failed: %s", tag, service, err)
+
+
+async def _async_push_all_adults(
+    hass: HomeAssistant, title: str, message: str, actions: list | None = None, tag: str | None = None,
+    warn: bool = False,
+) -> bool:
+    """Push to every adult. True if at least one push was delivered.
+
+    Delivered: dismisses the "nobody reachable" notice. Not delivered and
+    ``warn``: raises it.
+    """
+    delivered = False
+    for adult in _adults(hass):
+        if await _async_push_adult(hass, adult["id"], title, message, actions, tag=tag):
+            delivered = True
+    if delivered:
+        persistent_notification.async_dismiss(hass, NO_PUSH_NOTIFICATION_ID)
+    elif warn:
+        _no_push_notice(hass)
+    return delivered
 
 
 async def _async_push_adult(
@@ -3927,6 +4087,41 @@ async def ws_handover_ask(hass: HomeAssistant, connection: websocket_api.ActiveC
     connection.send_result(msg["id"], {"success": True, "to": target, "pushed": pushed})
 
 
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_TEST_PUSH,
+    vol.Optional("user_id"): vol.Any(None, str),
+})
+@websocket_api.async_response
+async def ws_test_push(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Send a test push to an adult (default: the caller; an administrator may pick any adult)."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    uid = msg.get("user_id") or connection.user.id
+    if uid != connection.user.id and _role(hass, connection.user) != ROLE_ADMIN:
+        connection.send_error(msg["id"], "unauthorized", "Permission required")
+        return
+    if uid not in [a["id"] for a in _adults(hass)]:
+        connection.send_result(msg["id"], {"success": False, "error": "no_target"})
+        return
+    services = _push_services(hass, uid)
+    if not services:
+        connection.send_result(msg["id"], {"success": False, "error": "no_target"})
+        return
+    text = "🔔 FamilyMission: Test – Push kommt an" if _lang(hass) == "de" else "🔔 FamilyMission: test - push arrives"
+    targets, errors = [], []
+    for service in services:
+        try:
+            await hass.services.async_call(
+                "notify", service, {"title": "FamilyMission", "message": text}, blocking=True)
+            targets.append(f"notify.{service}")
+        except Exception as err:  # unknown service, offline device ...
+            _LOGGER.warning("Test push to %s via notify.%s failed: %s", uid, service, err)
+            errors.append(f"notify.{service}: {err}")
+    if targets:
+        persistent_notification.async_dismiss(hass, NO_PUSH_NOTIFICATION_ID)
+    connection.send_result(msg["id"], {"success": bool(targets), "targets": targets, "errors": errors})
+
+
 async def _async_answer_handover(hass: HomeAssistant, task_id: str, accept: bool, by: str | None = None) -> dict | None:
     """Answer an open handover request.
 
@@ -4395,6 +4590,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Remove expired ad-hoc bonus tasks (at least every minute)."""
         await _async_remove_expired_adhoc(hass)
         await _async_check_reminders(hass)
+        await _async_check_approval_reminders(hass)
         await _async_check_planning_reminders(hass)
         await _async_check_weekly_summary(hass)
 
@@ -4926,6 +5122,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_kid_set_goal)
     websocket_api.async_register_command(hass, ws_redemption_resolve)
     websocket_api.async_register_command(hass, ws_send_praise)
+    websocket_api.async_register_command(hass, ws_test_push)
     websocket_api.async_register_command(hass, ws_kid_praise_seen)
     websocket_api.async_register_command(hass, ws_my_praise_seen)
     websocket_api.async_register_command(hass, ws_parents_catalog)

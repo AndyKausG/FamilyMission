@@ -103,6 +103,7 @@ WS_TYPE_HANDOVER_ANSWER = "family_mission/handover_answer"
 WS_TYPE_WEEKLY_SUMMARY = "family_mission/weekly_summary"
 WS_TYPE_ROCKET_COUNTDOWN = "family_mission/rocket_countdown"
 WS_TYPE_ROCKET_LAUNCHED = "family_mission/rocket_launched"
+WS_TYPE_TEST_PUSH = "family_mission/test_push"
 
 # Service Names
 SERVICE_RESET_MONTHLY_POINTS = "reset_monthly_points"
@@ -118,3 +119,9 @@ SERVICE_REMOVE_TEMPLATE_BY_NAME = "remove_template_by_name"
 SERVICE_EDIT_TEMPLATE_BY_NAME = "edit_template_by_name"
 SERVICE_ADJUST_POINTS = "adjust_points"
 SERVICE_IMPORT_FROM_TASK_ORGANIZER = "import_from_task_organizer"
+
+# Approval push safety (2.3)
+DEFAULT_APPROVAL_REMINDER_HOURS = 2
+PUSH_WARNING_NO_ADULTS = "no_adults"
+PUSH_WARNING_NO_TARGETS = "no_targets"
+NO_PUSH_NOTIFICATION_ID = "family_mission_no_push"

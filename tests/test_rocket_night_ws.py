@@ -129,7 +129,8 @@ async def _rocket(admin):
 
 
 def _pushes(env):
-    return len(env["calls"]["anna"]), len(env["calls"]["ben"])
+    """Real pushes only (``clear_notification`` messages are not counted)."""
+    return tuple(len([c for c in env["calls"][w] if c.data["message"] != "clear_notification"]) for w in ("anna", "ben"))
 
 
 # ---------------------------------------------------------------------------

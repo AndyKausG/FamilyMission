@@ -655,8 +655,8 @@ async def test_get_data_has_adults_me_and_partner(hass, clients, env):
     res = (await _call(anna, "family_mission/get_data"))["result"]
     assert res["me"] == env["anna"][0].id and res["partner"] == env["ben"][0].id
     assert res["adults"] == [
-        {"id": env["anna"][0].id, "name": "Anna", "push": True},
-        {"id": env["ben"][0].id, "name": "Ben", "push": True},
+        {"id": env["anna"][0].id, "name": "Anna", "push": True, "push_targets": ["notify.anna_push"]},
+        {"id": env["ben"][0].id, "name": "Ben", "push": True, "push_targets": ["notify.mobile_app_ben_phone"]},
     ]
     res = (await _call(ben, "family_mission/get_data"))["result"]
     assert res["me"] == env["ben"][0].id and res["partner"] == env["anna"][0].id
