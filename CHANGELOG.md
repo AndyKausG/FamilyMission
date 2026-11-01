@@ -6,6 +6,7 @@
 - **Logo in the UI:** the file also exports `window.FamilyMissionBrand.iconSvg(size)` / `logoSvg(width, dark)` (inline SVG, unique gradient ids). Used discreetly in the parents' hub (header), the help (header; logo with lettering and version in "About FamilyMission", light/dark), the quick-start wizard (header, large icon on the success page) and as a footer in the settings card. Not on the kids' tablet. Without the helper the cards keep their emoji.
 - **Version:** `get_data` now returns `version` (from `manifest.json`).
 - **Docs:** README section "Icons (fm:)".
+- **Docs:** README: overview with screenshots, recommended dashboard.
 - **Tests:** new `tests/test_frontend_assets.py`.
 
 ## [2.3.0] - 2026-11-01

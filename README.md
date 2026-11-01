@@ -8,11 +8,37 @@ FamilyMission turns household chores into **family missions**: small tasks with 
 
 Suggestions for improvement and bug reports are welcome: [issues](https://github.com/AndyKausG/FamilyMission/issues).
 
+**Quick links:** [Installation](#installation) · [Recommended dashboard](#recommended-dashboard) · [Kids mode](#kids-mode) · [Parents card](#parents-card-family-mission-parents) · [Parents guide](#parents-guide-in-app-help) · [Migration from TaskOrganizer](#migration-from-taskorganizer)
+
+## What is FamilyMission?
+
+FamilyMission is a motivating family system for kids (about 6-12) that runs inside Home Assistant: the kids tick off their missions on a wall tablet, the parents run everything from the parents' hub on their phone. The guiding principle is **set up once, then just tick off**: the quick-start wizard proposes an age-appropriate setup, and after that the daily routine is a few taps. Instead of ranking siblings against each other, the whole family fills **one shared family goal**, which ends in a countdown and a rocket launch on the tablet. The adults' own household and planning work lives in the same system as quiet **parent tasks without points** ("We parents"), so the kids see that Mom and Dad have missions, too. At night the tablet turns into a sleep buddy with an alarm clock.
+
+<p align="center">
+  <img src="docs/screenshots/tablet-home.png" alt="Wall tablet home screen: one tile per kid, family rocket, role-model band and bonus board" width="640"><br>
+  <em>The wall tablet: one tile per kid, the family rocket, the role-model band and the bonus board.</em>
+</p>
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/parents-today.png" alt="Parents' hub, tab Today" width="260"><br><em>Parents' hub: today at a glance</em></td>
+    <td align="center" valign="top"><img src="docs/screenshots/parents-tasks.png" alt="Parent tasks: me, you, take turns" width="260"><br><em>Parent tasks: me / you / take turns</em></td>
+    <td align="center" valign="top"><img src="docs/screenshots/wizard-parents.png" alt="Quick-start wizard, step We parents" width="260"><br><em>Quick start: step "We parents"</em></td>
+  </tr>
+</table>
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/tablet-rocket.png" alt="Rocket countdown on the wall tablet" width="400"><br><em>Family goal reached: the rocket countdown</em></td>
+    <td align="center" valign="top"><img src="docs/screenshots/tablet-night.png" alt="Night mode: sleep buddy with alarm clock" width="400"><br><em>Night mode: sleep buddy with alarm clock</em></td>
+  </tr>
+</table>
+
 ## Features
 
 * **Family missions**: tasks with intervals, complexity points, subtasks (progress in %), one-time and recurring tasks, templates, categories (`basis` duty, `bonus`, `auftrag`) and a minimum age.
 * **Kids' wall tablet with PIN**: one big tile per kid with a progress ring, PIN pad, personal task and bonus view, confetti and sounds, auto-return to the home screen. See [Kids mode](#kids-mode).
-* **Parents card and roles**: approvals, "not done" / "cheated", bonus points and deductions, undo, praise, and a role model (admin, manager, parent). See [Parents role](#parents-role).
+* **Parents' hub and roles**: one phone card with the tabs Today / Kids / More: approvals, "not done" / "cheated", bonus points and deductions, undo, praise, parent tasks, task list, shop and settings, plus a role model (admin, manager, parent). See [Parents card](#parents-card-family-mission-parents) and [Parents role](#parents-role).
 * **Reward shop**: a per-kid wallet that survives the monthly reset, configurable rewards, a savings goal, redemptions that parents approve from a push notification. See [Reward shop](#reward-shop).
 * **Praise**: a sticker and a friendly message instead of points. See [Praise](#praise).
 * **Quick-start wizard**: proposes an age-appropriate setup (tasks, rotation, goals) from a built-in catalog and creates everything in one click. See [Kids mode quick-start wizard](#kids-mode-quick-start-wizard).
@@ -22,20 +48,10 @@ Suggestions for improvement and bug reports are welcome: [issues](https://github
 * **Monthly goals, family rocket, reports and history protocol** with editable entries.
 * **We parents (new in 2.0)**: the adults' household and planning work as quiet, point-free parent tasks (me / you / take turns, "Can you?" hand-over by push, 🧠 planning reminder, Sunday summary) plus a role-model band on the kids tablet. See [We parents](#we-parents-parent-tasks).
 * **Rocket launch and night mode (new in 2.1)**: reaching the family goal triggers a shared "All aboard the rocket!" countdown with liftoff on the wall tablet (once per goal, push to the adults); at night the tablet sleeps with a sleeping buddy and an analogue alarm clock, and greets the family in the morning. See [Rocket launch and night mode](#rocket-launch-and-night-mode).
+* **Push safety**: approvals must not sit unseen. The settings card shows the push target per adult with a "Test push" button, the hub warns when nobody can be reached, and one quiet reminder follows after a few hours. See [Parent approval](#parent-approval).
 * **Bonus triggers**: a bonus task opens by itself when a device state changes (e.g. the dishwasher is done).
+* **Icon set `fm:`** and a ready-made [recommended dashboard](#recommended-dashboard).
 * **In-app help in German, French and English** (the parents guide, searchable, offline). Also available as Markdown: [Deutsch](docs/parents-guide.de.md) · [English](docs/parents-guide.en.md) · [Français](docs/parents-guide.fr.md).
-
-## Screenshots
-
-<!-- Replace the placeholders with real screenshots (docs/images/...). -->
-
-| Kids card (wall tablet) | Parents card | Reward shop |
-| :---: | :---: | :---: |
-| _screenshot placeholder_ | _screenshot placeholder_ | _screenshot placeholder_ |
-
-| Task list | Settings and quick-start wizard | Reports |
-| :---: | :---: | :---: |
-| _screenshot placeholder_ | _screenshot placeholder_ | _screenshot placeholder_ |
 
 ## Installation
 
@@ -52,6 +68,64 @@ Suggestions for improvement and bug reports are welcome: [issues](https://github
 4. Restart Home Assistant and add the integration as described above.
 
 The cards are registered as Lovelace resources automatically (only FamilyMission's own files, `/family_mission_frontend/family-mission-*.js`; the resources of other integrations are never touched). A browser refresh may be needed after the first start.
+
+## Recommended dashboard
+
+A ready-made dashboard with a **Kids** view for the wall tablet and a **Parents** view for the phones. Create a new dashboard (**Settings > Dashboards > Add dashboard**), open it, choose the three-dot menu > **Edit dashboard** > three-dot menu > **Raw configuration editor** and paste the YAML below.
+
+```yaml
+title: Familie
+views:
+  - title: Kinder
+    path: kinder
+    icon: fm:rocket
+    type: panel
+    cards:
+      - type: custom:family-mission-kids
+        title: Familien-Aufgaben
+        timeout: 90
+        sound: true
+        show_family_goal: true
+        show_bonus_board: true
+  - title: Eltern
+    path: eltern
+    icon: fm:parents
+    type: sections
+    max_columns: 2
+    visible:
+      - user: 0123456789abcdef0123456789abcdef
+    sections:
+      - type: grid
+        cards:
+          - type: custom:family-mission-parents
+            title: Eltern
+            grid_options:
+              columns: full
+            tasks_card:
+              sort_by: due_date
+              filter_by: '!paused'
+              items_per_page: 10
+              show_search: true
+              show_add: true
+              show_edit: true
+              show_delete: true
+            settings_card:
+              show_advanced: false
+      - type: grid
+        cards:
+          - type: heading
+            heading: Protokoll & Auswertung
+          - type: custom:family-mission-protocol
+            title: Protokoll
+          - type: custom:family-mission-stats
+```
+
+Notes:
+
+* **Replace the placeholder user id** `0123456789abcdef0123456789abcdef` under `visible` with the id of each parent (Settings > People > the person > show the user id). Add one `- user:` line per parent. Without `visible` the kids could open the Parents view.
+* **The tablet user must be neither an administrator nor in the parents role.** Otherwise the tablet keeps the normal view at night and does not go to sleep (see [Night mode](#night-mode)), and it could approve its own tasks. Make this dashboard the default dashboard of the tablet user (profile > dashboard setting) and open the `kinder` view.
+* The icons `fm:rocket` and `fm:parents` come from the [icon set `fm:`](#icons-fm), which is registered automatically.
+* The same dashboard with comments is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 
 ## Migration from TaskOrganizer
 
@@ -109,7 +183,7 @@ views:
 The app icon and the logo are shown discreetly in the parents' hub, the help, the quick-start wizard and at the bottom of the settings card (not on the kids' tablet).
 
 ## Dashboard Cards
-The integration ships these cards for the Lovelace dashboard (`custom:family-mission-card`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help`). A complete example dashboard with a kids view and a parents view is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
+The integration ships these cards for the Lovelace dashboard (`custom:family-mission-card`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help`). The ready-to-paste [recommended dashboard](#recommended-dashboard) with a kids view and a parents view is the quickest start; a commented variant is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 
 ### 1. Household Tasks (`family-mission-card`)
 The main card for viewing and completing tasks.
@@ -202,21 +276,38 @@ mode: family               # "family" = shared tablet with tiles and PIN (Defaul
 ```
 On a phone (card width below 700 px, measured on the card itself, not on the screen) the card switches to a compact layout: two kid tiles per row, one column in the kid view (own tasks first, bonus below), an icon-only back button and a full-width "Done!" button below the subtasks. The tablet layout is unchanged. On a tall panel the tiles keep their natural height (at most about 380 px) and the family rocket and the bonus board follow directly below.
 
-Use it in a dashboard view of type `panel` (full screen). A complete example with a parents view is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
+Use it in a dashboard view of type `panel` (full screen), see the [recommended dashboard](#recommended-dashboard) or [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
+
+<p align="center">
+  <img src="docs/screenshots/tablet-home.png" alt="Kids card: home screen" width="640"><br>
+  <em>Home screen: kid tiles with progress rings, family rocket, role-model band, bonus board.</em>
+</p>
+<p align="center">
+  <img src="docs/screenshots/tablet-kid.png" alt="Kids card: kid view with tasks, steps and bonus" width="640"><br>
+  <em>Kid view: own tasks with steps, and the bonus tasks.</em>
+</p>
 
 ### 6. Parents (family-mission-parents)
-Approvals, bonus points and deductions for the parents and the **parents hub** "We parents" (three tabs), designed for phones. See [Parent approval](#parent-approval) and [We parents](#we-parents-parent-tasks).
+The **parents' hub** for phones in three tabs (Today / Kids / More): approvals, bonus points and deductions, praise, parent tasks, task list, reward shop and settings. See [Parents card](#parents-card-family-mission-parents), [Parent approval](#parent-approval) and [We parents](#we-parents-parent-tasks).
+
+### 7. Help (family-mission-help)
+The searchable parents guide as a card (`type: custom:family-mission-help`, optional `anchor`), see [Parents guide](#parents-guide-in-app-help).
 
 ## Kids mode
 Kids mode turns FamilyMission into a motivating family system for kids (designed for ages 6-12): immediate visual rewards, personal progress instead of ranking siblings, one cooperative family goal and optional "first duties, then bonus".
 
-**Typical setup:** one wall tablet (e.g. an Android tablet with Fully Kiosk Browser) that is permanently logged in as a single Home Assistant user (e.g. "Tablet", not an admin) and shows the kids card. The parents use their own admin users on their phones.
+**Typical setup:** one wall tablet (e.g. an Android tablet with Fully Kiosk Browser) that is permanently logged in as a single Home Assistant user (e.g. "Tablet", neither an admin nor in the parents role, otherwise night mode does not sleep) and shows the kids card. The parents use their own admin users on their phones.
 
 ### Parents guide (in-app help)
 A practical guide for parents (basic idea, 10-minute setup, ramp-up weeks, daily routine, approvals, choosing rewards, praising, goals, We parents, phasing out, FAQ) in German, French and English:
 
 * In Home Assistant: the **❓ Hilfe** buttons of the parents card, the Kids section of the settings card and the quick-start wizard open it as a full-screen overlay at the matching chapter (table of contents, collapsible chapters, search, works offline; language from your Home Assistant profile, fallback English). It can also be placed as a card: `type: custom:family-mission-help` (optional `anchor: ramp` to open a chapter).
 * As documents: [Deutsch](docs/parents-guide.de.md) · [Français](docs/parents-guide.fr.md) · [English](docs/parents-guide.en.md).
+
+<p align="center">
+  <img src="docs/screenshots/help.png" alt="In-app help: the parents guide" width="260"><br>
+  <em>The in-app parents guide.</em>
+</p>
 
 ### Kids do not need a Home Assistant user
 Kids are `person` entities. The *participant ID* used for points, history and assignees is the `user_id` attribute of the person if there is one, otherwise the entity id (e.g. `person.anna`). Existing data that is keyed by user id keeps working unchanged. All cards (task list, protocol, reports, settings) and the services (`assignees`, `complete_task_by_name`) understand both kinds of IDs.
@@ -234,7 +325,7 @@ Kids are `person` entities. The *participant ID* used for points, history and as
 
 `min_age` (0-18) hides a task from kids who are too young (age = current year - birth year). Tasks created before this feature behave like `basis` tasks with `min_age` 0. The example templates in [`examples/kids/vorlagen.yaml`](examples/kids/vorlagen.yaml) already contain both fields; bonus automations are in [`examples/kids/automationen.yaml`](examples/kids/automationen.yaml).
 4. Or skip steps 2-3 and let the [quick-start wizard](#kids-mode-quick-start-wizard) propose and create tasks, goals and profiles for you.
-5. Add the kids card to a full-screen (`panel`) dashboard view, see [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
+5. Add the kids card to a full-screen (`panel`) dashboard view, see the [recommended dashboard](#recommended-dashboard).
 
 ### Kids mode quick-start wizard
 Creating 40 tasks per family by hand is tedious and it is hard to know how many points a good goal is. The wizard proposes a complete, age-appropriate setup and creates everything in one click. Open the **settings card**, expand **Kids** and press **🚀 Kids mode quick start** (administrators only; works on a phone, too).
@@ -361,6 +452,11 @@ action:
 
 * **Push to the adults (2.3):** as soon as a task waits for approval, FamilyMission itself pushes all adults who have a push target (same resolution as for the reward push: `parent_notify`, otherwise the Companion app): title "✅ <kid> ist fertig" / "✅ <kid> is done" (for a task done together all names, "✅ Clara & David sind fertig"), text "<task> (<points> ⭐)", the actions `FM_APPROVE_<id>` ("Freigeben" / "Approve") and `FM_NOTDONE_<id>` ("Nicht fertig" / "Not done") and the tag `family_mission_approval_<id>`. "Cheated" is deliberately only in the app. A second tap or an already handled approval is ignored silently. Switch off with the setting `approval_push` (default `true`; settings card, section "Tablet").
 * **Push safety (2.3):** approvals must not sit unseen. `get_data.adults[]` additionally has `push_targets` (e.g. `["notify.mobile_app_anna_phone"]`; `push` stays) and `get_data.push_warning` is `"no_adults"` / `"no_targets"` (only while kid profiles exist and nobody can be reached), otherwise `null`. The settings card (section "Tablet") lists the target per adult (automatic / chosen) with a "Test push" button; the parents' hub shows a yellow hint with "Set up". Websocket `family_mission/test_push` `{user_id?}` (parents' roles; default the caller, an administrator may pick any adult) sends "🔔 FamilyMission: Test – Push kommt an" and answers `{success, targets, errors}` or `{success: false, error: "no_target"}`. If a new approval could not be pushed to anybody (no target or every call failed), a persistent notification `family_mission_no_push` is created (link the person to a user, sign in to the Companion app with that user, or choose a target); it is dismissed after the next successful push or test push. If an approval is still open after `approval_reminder_hours` (default 2, 0 = off), all adults get **one** quiet reminder ("⏳ Freigabe wartet noch" / "⏳ Approval still waiting", same actions, same tag so it replaces the first push); not at night (with `night_mode`; it follows after waking up) and not with `approval_push` off. As soon as an approval (or redemption) is handled anywhere (app, push action, "not done", "cheated"), a Companion `clear_notification` with the tag `family_mission_approval_<id>` / `family_mission_reward_<id>` removes the push for all adults. The "My tasks" view of a parent (`mode: mine`) and the parents' hub show "✅ N approvals waiting".
+<p align="center">
+  <img src="docs/screenshots/settings-tablet.png" alt="Settings, section Tablet, with push targets per adult and Test push" width="260"><br>
+  <em>Settings, section "Tablet": push target per adult with "Test push" and the reminder time.</em>
+</p>
+
 * **Quick-start catalog (2.3):** the room tasks `room_blitz`, `room_blitz_small` and `room_deep` are created with `requires_approval: true`. Re-running the wizard with "update earlier tasks" sets the flag only on wizard tasks that never had the key (created before 2.3); once the parents saved the task, their choice is kept.
 
 Actionable notification (the companion app fires `mobile_app_notification_action`; FamilyMission handles the actions `FM_APPROVE_<id>`, `FM_NOTDONE_<id>`, `FM_CHEAT_<id>` itself):
@@ -468,7 +564,26 @@ The websocket command `family_mission/adjust_points` (admin, manager or parent) 
 **Family goal:** `family_points` (in `get_data`, used by the family rocket) is computed from this period's history entries of type `task`; birthday bonus, bonus points and deductions do not count.
 
 ### Parents card (`family-mission-parents`)
-A phone-friendly dashboard for parents (administrators and users with the parents role, see "Parents role"): open approvals with the buttons Approve / Not done / Cheated (with a confirmation that shows the deduction), quick +1 +5 -1 -5 per kid with a reason sheet, the **❤️ Loben** button ([praise](#praise)), the **➕ Spontan-Bonus** button ([spontaneous bonus](#spontaneous-bonus)), strict mode indicator and the latest history entries per kid, where task entries have a **↩️ Rückgängig** button ([undo](#undo-parents)). Non-admins only see a short note.
+A phone-friendly hub for parents (administrators and users with the parents role, see [Parents role](#parents-role); other users only see a short note), in three tabs:
+
+* **Today:** a yellow push hint while nobody can be reached (see [Parent approval](#parent-approval)), one compact row per kid (today's progress, wallet, open approvals), open approvals with the buttons Approve / Not done / Cheated (with a confirmation that shows the deduction), your own parent tasks, and quick +1 +5 -1 -5 per kid with a reason sheet.
+* **Kids:** per kid the **❤️ Loben** button ([praise](#praise)), the **➕ Spontan-Bonus** button ([spontaneous bonus](#spontaneous-bonus)), the strict mode indicator and the latest history entries, where task entries have a **↩️ Rückgängig** button ([undo](#undo-parents)).
+* **More:** [parent tasks](#we-parents-parent-tasks) (me / you / take turns), the task list, the [reward shop](#reward-shop) and, for administrators and managers, the settings, plus the in-app help.
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/parents-today.png" alt="Parents' hub, tab Today" width="260"><br><em>Today</em></td>
+    <td align="center" valign="top"><img src="docs/screenshots/parents-kids.png" alt="Parents' hub, tab Kids" width="260"><br><em>Kids</em></td>
+    <td align="center" valign="top"><img src="docs/screenshots/parents-tasks.png" alt="More, parent tasks: me, you, take turns" width="260"><br><em>More: parent tasks</em></td>
+  </tr>
+</table>
+
+**Dark mode:** the hub follows the Home Assistant theme.
+
+<p align="center">
+  <img src="docs/screenshots/parents-today-dark.png" alt="Parents' hub in dark mode" width="260"><br>
+  <em>Dark mode</em>
+</p>
 
 ```yaml
 type: custom:family-mission-parents
@@ -486,12 +601,12 @@ settings_card:         # same options as custom:family-mission-settings
   show_advanced: false
 ```
 
-`tasks_card` and `settings_card` are optional; without them the embedded task list and settings use their defaults. A separate task list or settings card on the same dashboard is then no longer needed.
+`tasks_card` and `settings_card` are optional; without them the embedded task list and settings use their defaults. A separate task list or settings card on the same dashboard is then no longer needed. Restrict the view that holds this card to the parents with `visible` (see [Recommended dashboard](#recommended-dashboard)).
 
 ### We parents (parent tasks)
 New in 2.0. The household and planning work of the adults, set up once and then just ticked off. **No points, no ranking, no red.** Parent tasks live in the normal task list (`parent_task: true`, `category: basis`, `complexity: 0`, `generated_by: parents`) and never count for points, wallet, family goal or monthly goal; a completion writes a history entry of type `parent` with `points: 0` and `minutes`.
 
-* **Set up:** the last-but-one step of the [quick-start wizard](#kids-mode-quick-start-wizard) (optional) or the parents card. A catalog of 28 templates in four groups (daily, weekly, monthly/rare, kids and family) with a small preselection.
+* **Set up:** the step "Wir Eltern" of the [quick-start wizard](#kids-mode-quick-start-wizard) (optional) or More > parent tasks in the parents' hub. A catalog of 28 templates in four groups (daily, weekly, monthly/rare, kids and family) with a small preselection.
 * **Who:** per task *me*, *you* (the partner) or *take turns*. Responsibility switches to the other adult after each completion (relative to the responsible person, nobody keeps score). With more than two adults the picker asks once who "I" and "partner" are.
 * **Quiet carry-over:** what is left at midnight silently moves to today (`carried_since` is set). No history entry, no push, no red display.
 * **🧠 Planning tasks** (`planning: true`, e.g. meal plan, shopping list, calendar check) get one reminder the evening before they are due ("Morgen dran: Essensplan (ca. 20 Min.)"), by default at 18:00. Nothing else reminds.
@@ -499,6 +614,11 @@ New in 2.0. The household and planning work of the adults, set up once and then 
 * **Sunday summary:** on Sunday at 19:00 every adult with a push target gets a neutral note ("Diese Woche: Anna 6,5 Std. · Ben 4 Std. Liegengeblieben: Bäder, Fenster.").
 * **Role-model band:** the kids tablet (family mode, not `mode: mine`) shows a quiet line "👪 Auch Mama und Papa haben heute N Missionen" with progress dots and no points whenever parent tasks are due or were done today. Parent tasks never appear in kid lists or on the bonus board.
 * **Own device:** with `mode: mine` an adult sees their own parent tasks (no points, "~N Min.", 🧠 badge); ticking uses the normal `my_complete_task`, which the backend redirects to `parent_task_done`.
+
+<p align="center">
+  <img src="docs/screenshots/wizard-parents.png" alt="Quick-start wizard, step We parents" width="260"><br>
+  <em>Quick start: choose parent tasks and who does them.</em>
+</p>
 
 #### Websocket commands
 | Command | Payload / result |
@@ -528,6 +648,13 @@ All of them are in the settings card, section **Wir Eltern**; none is required.
 ### Rocket launch and night mode
 
 Both features only concern the wall tablet (`family-mission-kids` in family mode); the own-device view (`mode: mine`) is never affected.
+
+<table align="center">
+  <tr>
+    <td align="center" valign="top"><img src="docs/screenshots/tablet-rocket.png" alt="Rocket countdown" width="400"><br><em>Rocket countdown</em></td>
+    <td align="center" valign="top"><img src="docs/screenshots/tablet-night.png" alt="Night mode with sleep buddy and alarm clock" width="400"><br><em>Night mode</em></td>
+  </tr>
+</table>
 
 #### Rocket launch (family goal reached)
 * As soon as the approved task points of the family reach the family goal (`family_goal.points`), the backend remembers it once per period (`rocket` in `get_data`: `period`, `reached_at`, `launched_at`), fires `family_mission_rocket_ready` and pushes all adults: "🚀 Familienziel erreicht! Belohnung: <reward> – jetzt gemeinsam einplanen." Taking points back later does not undo it; the next period (monthly reset) can launch again.
