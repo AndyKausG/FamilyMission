@@ -201,6 +201,7 @@ Gebt die frei gewordene Aufmerksamkeit an eine neue Gewohnheit weiter, aber imme
 - **Krankheit / Ferien.** Pausiert Aufgaben im Task-Editor (Pause bis Datum) oder nutzt „Heute aussetzen“ für einzelne Tage. Am Geburtstag sind Pflichten automatisch frei. Passt bei langen Pausen das Monatsziel an.
 - **Geschwister unterschiedlich alt.** Aufgaben haben ein Mindestalter, jedes Kind hat ein eigenes Ziel. Haltet den Aufwand pro Minute vergleichbar, nicht die Zahl der Aufgaben. Ältere können Jüngeren mit „Zusammen“ helfen.
 - **Tablet zeigt eine alte Version.** Das ist der Browser-Cache. Seite neu laden (im Fully Kiosk Browser: Cache leeren und neu laden), in der Companion-App den Frontend-Cache leeren. Nach einem Update von FamilyMission erscheint die neue Version nach einem Neustart von Home Assistant und einem Neuladen.
+- **Ein neuer Bonus erscheint nicht?** Logo antippen: Das kleine Raketen-Symbol neben dem Titel (Kinder-Tablet: Startseite bzw. Kopfzeile bei „Meine Aufgaben“, Eltern-Hub: Kopfzeile) lädt alles sofort neu und bestätigt mit „Aktualisiert ✓“. Normalerweise passiert das von selbst: nach einem Verbindungsabbruch, beim Aufwachen des Tablets und alle 5 Minuten. Hilft es nicht, prüft die Verbindung zu Home Assistant („Keine Verbindung“) und ladet die Seite neu.
 
 <a id="about"></a>
 

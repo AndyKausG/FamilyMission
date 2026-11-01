@@ -201,6 +201,7 @@ Pass the attention that frees up to a new habit, but only one at a time (see ram
 - **Illness / holidays.** Pause tasks in the task editor (pause until a date) or use “Skip today” for single days. On the birthday, duties are automatically off. For long breaks, adjust the monthly goal.
 - **Siblings of different ages.** Tasks have a minimum age, every child has their own goal. Keep the effort per minute comparable, not the number of tasks. Older kids can help younger ones with “Together”.
 - **Tablet shows an old version.** That is the browser cache. Reload the page (in Fully Kiosk Browser: clear the cache and reload), in the companion app clear the frontend cache. After a FamilyMission update, the new version appears after a Home Assistant restart and a reload.
+- **A new bonus does not show up?** Tap the logo: the small rocket icon next to the title (kids tablet: home screen, or the header with “My tasks”; parents' hub: header) reloads everything at once and confirms with “Updated ✓”. Normally this happens by itself: after a lost connection, when the tablet wakes up and every 5 minutes. If it does not help, check the connection to Home Assistant (“No connection”) and reload the page.
 
 <a id="about"></a>
 

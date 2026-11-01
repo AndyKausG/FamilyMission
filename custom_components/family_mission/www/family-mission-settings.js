@@ -58,7 +58,7 @@ const I18N_SETTINGS = {
     birthday_title: "Birthday", birthday_bonus_points: "Birthday bonus (points, 0 = off)",
     team_title: "Teamwork", team_bonus: "Team bonus per kid when doing a task together (points, 0 = off)",
     birthday_duty_free: "Duty-free birthday: skip the kid's own due tasks",
-    family_goal: "Family goal", family_goal_points: "Points per month (all kids together)", family_goal_reward: "Reward", family_goal_reward_ph: "e.g. Ice cream trip",
+    family_goal: "Family goal", family_goal_points: "Points per month (all kids together)", family_goal_reward: "Reward", family_goal_reward_ph: "e.g. Ice cream trip", fg_suggest: "Suggestion: {n} (80 % of the kids' monthly goals)", fg_last: "last month: {n} task points", fg_take: "Use {n}",
 claim_minutes: "Bonus reservation (minutes)",
     category_lbl: "Category (kids mode)", cat_basis: "Basis (assigned duty)", cat_bonus: "Bonus (open for all)", cat_auftrag: "Order (one-time)",
     min_age_lbl: "Minimum age (0 = any)", min_age_short: "age {age}+", approval_lbl: "Requires parent approval", routine_lbl: "Bonus only after the kid's due duties", together_lbl: "Doing it together allowed",
@@ -156,7 +156,7 @@ claim_minutes: "Bonus reservation (minutes)",
     birthday_title: "Geburtstag", birthday_bonus_points: "Geburtstags-Bonus (Punkte, 0 = aus)",
     team_title: "Teamarbeit", team_bonus: "Team-Bonus pro Kind bei gemeinsam erledigten Aufgaben (Punkte, 0 = aus)",
     birthday_duty_free: "Pflichtfreier Geburtstag: eigene fällige Aufgaben überspringen",
-    family_goal: "Familienziel", family_goal_points: "Punkte pro Monat (alle Kinder zusammen)", family_goal_reward: "Belohnung", family_goal_reward_ph: "z.B. Eis essen gehen",
+    family_goal: "Familienziel", family_goal_points: "Punkte pro Monat (alle Kinder zusammen)", family_goal_reward: "Belohnung", family_goal_reward_ph: "z.B. Eis essen gehen", fg_suggest: "Vorschlag: {n} (80 % der Monatsziele der Kinder)", fg_last: "letzter Monat: {n} Aufgabenpunkte", fg_take: "{n} übernehmen",
 claim_minutes: "Bonus-Reservierung (Minuten)",
     category_lbl: "Kategorie (Kindermodus)", cat_basis: "Basis (feste Pflicht)", cat_bonus: "Bonus (offen für alle)", cat_auftrag: "Auftrag (einmalig)",
     min_age_lbl: "Mindestalter (0 = egal)", min_age_short: "ab {age}", approval_lbl: "Freigabe durch Eltern nötig", routine_lbl: "Bonus erst nach den fälligen Pflichten", together_lbl: "Zusammen erledigen erlaubt",
@@ -1227,6 +1227,7 @@ class FamilyMissionSettings extends HTMLElement {
         .subtask-list { display: flex; flex-direction: column; gap: 6px; }
         .form-select { width: 100%; box-sizing: border-box; height: 56px; padding: 0 12px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-family: inherit; font-size: 16px; }
         .kids-note { font-size: 13px; color: var(--secondary-text-color); margin: 0; }
+        .btn-fg-take { margin-left: 6px; padding: 4px 10px; border-radius: 14px; border: 1px solid var(--primary-color, #03a9f4); background: transparent; color: var(--primary-color, #03a9f4); font-size: 13px; cursor: pointer; }
         .kid-row { border: 1px solid var(--divider-color); border-left-width: 6px; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: var(--card-background-color); }
         .kid-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 500; font-size: 14px; color: var(--primary-text-color); }
         .kid-head .kid-avatar-preview { font-size: 24px; margin-right: 8px; }
@@ -1272,6 +1273,41 @@ class FamilyMissionSettings extends HTMLElement {
   _goalValue(uid) {
     if (this._goalDrafts[uid] !== undefined) return this._goalDrafts[uid];
     return this.settings.point_goals?.[uid] || '';
+  }
+
+  /**
+   * Suggestion for the family goal: 80 % of the kids' monthly goals (rounded to 10, like the
+   * quick-start wizard) and the task points all kids reached last month (what the rocket counts).
+   * @returns {{suggest: number|null, last: number|null}}
+   */
+  _familySuggestion() {
+    const kidIds = Object.keys(this.users || {}).filter(uid => this._kidDraft(uid).enabled);
+    const total = kidIds.reduce((sum, uid) => sum + (parseFloat(this._goalValue(uid)) || 0), 0);
+    const suggest = total > 0 ? Math.max(10, Math.round(total * 0.8 / 10) * 10) : null;
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const to = new Date(now.getFullYear(), now.getMonth(), 1);
+    let last = 0;
+    let seen = false;
+    for (const h of this.history || []) {
+      if (!h || h.type !== 'task' || !kidIds.includes(h.user_id)) continue;
+      const t = new Date(h.timestamp);
+      if (isNaN(t.getTime()) || t < from || t >= to) continue;
+      last += parseFloat(h.points) || 0;
+      seen = true;
+    }
+    return { suggest, last: seen ? Math.round(last) : null };
+  }
+
+  /** HTML of the suggestion line below the family goal points (empty without data). */
+  _familySuggestionHtml() {
+    const { suggest, last } = this._familySuggestion();
+    const parts = [];
+    if (suggest !== null) parts.push(this.localize('fg_suggest').replace('{n}', suggest));
+    if (last !== null) parts.push(this.localize('fg_last').replace('{n}', last));
+    if (!parts.length) return '';
+    const take = suggest !== null ? suggest : last;
+    return `<span>${parts.join(' · ')}</span> <button type="button" class="btn-fg-take" id="fg-take" data-val="${take}" ${this._canManage() ? '' : 'disabled'}>${this.localize('fg_take').replace('{n}', take)}</button>`;
   }
 
   /**
@@ -1364,6 +1400,7 @@ class FamilyMissionSettings extends HTMLElement {
                 <label class="kid-field">${this.localize('family_goal_points')}
                   <input type="number" id="fg-points" min="0" placeholder="0" value="${esc(fgPointsVal)}">
                 </label>
+                <p class="kids-note fg-suggest" id="fg-suggest" style="grid-column:1 / -1">${this._familySuggestionHtml()}</p>
                 <label class="kid-field">${this.localize('family_goal_reward')}
                   <input type="text" id="fg-reward" maxlength="80" placeholder="${this.localize('family_goal_reward_ph')}" value="${esc(fgRewardVal)}">
                 </label>
@@ -2090,6 +2127,20 @@ class FamilyMissionSettings extends HTMLElement {
       if (el) el.addEventListener('input', (ev) => { this._familyDraft[key] = ev.target.value; });
     };
     fam('fg-points', 'points');
+    const bindTake = () => {
+      const take = root.getElementById('fg-take');
+      if (take) take.addEventListener('click', () => {
+        const input = root.getElementById('fg-points');
+        if (input) input.value = take.dataset.val;
+        this._familyDraft.points = take.dataset.val;
+      });
+    };
+    bindTake();
+    // Keep the suggestion in line with the monthly goals typed above
+    root.querySelectorAll('.user-goal-input').forEach(el => el.addEventListener('input', () => {
+      const box = root.getElementById('fg-suggest');
+      if (box) { box.innerHTML = this._familySuggestionHtml(); bindTake(); }
+    }));
     fam('fg-reward', 'reward');
     fam('claim-minutes', 'claim');
     fam('cheat-factor', 'cheat_factor');

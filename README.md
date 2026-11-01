@@ -278,6 +278,8 @@ mode: family               # "family" = shared tablet with tiles and PIN (Defaul
 ```
 On a phone (card width below 700 px, measured on the card itself, not on the screen) the card switches to a compact layout: two kid tiles per row, one column in the kid view (own tasks first, bonus below), an icon-only back button and a full-width "Done!" button below the subtasks. The tablet layout is unchanged. On a tall panel the tiles keep their natural height (at most about 380 px) and the family rocket and the bonus board follow directly below.
 
+**Automatic reload:** the card reloads its data after the connection to Home Assistant was re-established (tablet standby, Wi-Fi drop, restart), when the page becomes visible again and every 5 minutes (not while the tablet sleeps). To reload by hand, tap the small rocket logo left of the title (on the home screen, or in the header with `mode: mine`): it turns once and "Aktualisiert ✓" appears.
+
 Use it in a dashboard view of type `panel` (full screen), see the [recommended dashboard](#recommended-dashboard) or [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 
 <p align="center">
@@ -583,7 +585,7 @@ The websocket command `family_mission/adjust_points` (admin, manager or parent) 
 
 **Privacy:** deductions and strict mode are never shown on the kids card home screen, only in the kid's own view after the PIN (a neutral line like "-4 points: Cheated: Set the table" and a small note while strict mode is active).
 
-**Family goal:** `family_points` (in `get_data`, used by the family rocket) is computed from this period's history entries of type `task`; birthday bonus, bonus points and deductions do not count.
+**Family goal:** `family_points` (in `get_data`, used by the family rocket) is computed from this period's history entries of type `task`; birthday bonus, bonus points and deductions do not count. **Choosing the points:** the settings card suggests 80 % of the kids' monthly goals (rounded to 10, like the quick-start wizard) and shows last month's task points of all kids; one tap takes the suggestion. Rule of thumb: reachable when everybody joins in normally, even with a few bad days.
 
 ### Parents card (`family-mission-parents`)
 A phone-friendly hub for parents (administrators and users with the parents role, see [Parents role](#parents-role); other users only see a short note), in three tabs:
@@ -591,6 +593,8 @@ A phone-friendly hub for parents (administrators and users with the parents role
 * **Today:** a yellow push hint while nobody can be reached (see [Parent approval](#parent-approval)), one compact row per kid (today's progress, wallet, open approvals), open approvals with the buttons Approve / Not done / Cheated (with a confirmation that shows the deduction), your own parent tasks, and quick +1 +5 -1 -5 per kid with a reason sheet.
 * **Kids:** per kid the **❤️ Loben** button ([praise](#praise)), the **➕ Spontan-Bonus** button ([spontaneous bonus](#spontaneous-bonus)), the strict mode indicator and the latest history entries, where task entries have a **↩️ Rückgängig** button ([undo](#undo-parents)).
 * **More:** [parent tasks](#we-parents-parent-tasks) (me / you / take turns), the task list, the [reward shop](#reward-shop) and, for administrators and managers, the settings, plus the in-app help.
+
+The card reloads automatically after a reconnect, when the page becomes visible again and every 5 minutes. A new spontaneous bonus or approval does not show up yet? Tap the rocket logo in the header: it reloads at once and confirms with "Aktualisiert ✓".
 
 <table align="center">
   <tr>
