@@ -39,6 +39,7 @@ HANDOVER_ACCEPTED = "accepted"
 
 DEFAULT_PLANNING_REMINDER_TIME = "18:00"
 DEFAULT_WEEKLY_SUMMARY_TIME = "19:00"
+DEFAULT_PARENT_DIGEST_TIME = "07:00"
 SUNDAY = 6
 
 MIN_MINUTES = 1
@@ -202,6 +203,82 @@ def rollover(due_day: date | None, carried_since: str | None, today: date) -> tu
     if due_day is None or due_day >= today:
         return None
     return (carried_since or due_day.isoformat(), today)
+
+
+# ---------------------------------------------------------------------------
+# Task list: due dates, groups, digest (2.6)
+# ---------------------------------------------------------------------------
+
+STATE_OVERDUE = "overdue"
+STATE_TODAY = "today"
+STATE_UPCOMING = "upcoming"
+STATE_SOMEDAY = "someday"
+STATE_HIDDEN = "hidden"
+
+
+def valid_date(value: Any) -> date | None:
+    """A strict ``YYYY-MM-DD`` string as a date, ``None`` for anything else."""
+    if isinstance(value, str) and len(value) == 10:
+        try:
+            return date.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
+def valid_due_time(value: Any) -> str | None:
+    """``"HH:MM"`` of a due time, ``None`` for anything else (no default: no time means no time)."""
+    if isinstance(value, str) and value and valid_clock(value, "") == value:
+        return value
+    return None
+
+
+def list_state(
+    due_day: date | None, interval: int, someday: bool, today: date, paused_until: date | None = None,
+) -> str:
+    """Where a parents' task shows up in the list.
+
+    ``overdue`` | ``today`` | ``upcoming`` (future, one-time) | ``someday`` | ``hidden``.
+    Recurring tasks in the future are not listed (they are not due yet); one-time
+    tasks with a date are listed in the future as well. A paused task is hidden.
+    """
+    if paused_until is not None and paused_until >= today:
+        return STATE_HIDDEN
+    if someday or due_day is None:
+        return STATE_SOMEDAY if interval == 0 else STATE_HIDDEN
+    if due_day < today:
+        return STATE_OVERDUE
+    if due_day == today:
+        return STATE_TODAY
+    return STATE_UPCOMING if interval == 0 else STATE_HIDDEN
+
+
+def digest_counts(states: Iterable[str]) -> tuple[int, int]:
+    """``(today, overdue)`` of a list of ``list_state`` values."""
+    states = list(states)
+    return states.count(STATE_TODAY), states.count(STATE_OVERDUE)
+
+
+def digest_texts(today_count: int, overdue_count: int, lang: str = "de") -> tuple[str, str]:
+    """``(title, message)`` of the morning digest: "Heute: 3 Aufgaben, 1 überfällig"."""
+    if lang == "de":
+        noun = "Aufgabe" if today_count == 1 else "Aufgaben"
+        text = f"Heute: {today_count} {noun}"
+        if overdue_count:
+            text += f", {overdue_count} überfällig"
+        return "Deine Aufgaben heute", text
+    noun = "task" if today_count == 1 else "tasks"
+    text = f"Today: {today_count} {noun}"
+    if overdue_count:
+        text += f", {overdue_count} overdue"
+    return "Your tasks today", text
+
+
+def due_time_texts(task_name: str, due_time: str, lang: str = "de") -> tuple[str, str]:
+    """``(title, message)`` of the push at the due time of a task."""
+    if lang == "de":
+        return "Jetzt dran", f"{task_name} (um {due_time} Uhr)"
+    return "Due now", f"{task_name} (at {due_time})"
 
 
 # ---------------------------------------------------------------------------

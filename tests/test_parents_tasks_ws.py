@@ -240,7 +240,7 @@ async def test_parent_task_set_and_add(hass, clients, env):
     assert res["result"]["success"] is False
 
     res = await _call(anna, "family_mission/parent_task_add", name="  Hausarzt anrufen ", minutes=10, planning=True,
-                      interval=0, mode="alternate")
+                      interval=0, mode="alternate", due_date="2026-10-29")
     own = _data(hass)["tasks"][res["result"]["task_id"]]
     assert own["name"] == "Hausarzt anrufen" and own["interval"] == 0 and own["planning"] is True
     assert own["parent_task"] and own["complexity"] == 0 and "parent_key" not in own

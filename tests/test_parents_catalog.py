@@ -154,3 +154,44 @@ def test_push_texts():
     title, text, take, decline = pc.handover_ask_texts("Anna", "Einkauf", "de")
     assert "Anna" in text and "Einkauf" in text and (take, decline) == ("Mach ich", "Geht nicht")
     assert pc.handover_decline_texts("Ben", "Einkauf", "de")[1] == "Ben kann gerade nicht: Einkauf"
+
+
+# ---------------------------------------------------------------------------
+# task list: dates, groups, digest (2.6)
+# ---------------------------------------------------------------------------
+
+def test_valid_date_and_due_time():
+    assert pc.valid_date("2026-11-04") == date(2026, 11, 4)
+    for bad in ("2026-13-01", "26-11-04", "2026-11-4", "", None, 5, "2026-11-04T10:00"):
+        assert pc.valid_date(bad) is None
+    assert pc.valid_due_time("07:30") == "07:30"
+    for bad in ("24:00", "7:30", "07:60", "", None, "abc", 730):
+        assert pc.valid_due_time(bad) is None
+
+
+def test_list_state_one_time_and_recurring():
+    t = TODAY
+    assert pc.list_state(t - timedelta(days=2), 0, False, t) == pc.STATE_OVERDUE
+    assert pc.list_state(t, 0, False, t) == pc.STATE_TODAY
+    assert pc.list_state(t + timedelta(days=3), 0, False, t) == pc.STATE_UPCOMING
+    assert pc.list_state(None, 0, True, t) == pc.STATE_SOMEDAY
+    assert pc.list_state(None, 0, False, t) == pc.STATE_SOMEDAY
+    # recurring tasks are only listed once they are due
+    assert pc.list_state(t, 7, False, t) == pc.STATE_TODAY
+    assert pc.list_state(t + timedelta(days=1), 7, False, t) == pc.STATE_HIDDEN
+    assert pc.list_state(t - timedelta(days=1), 7, False, t) == pc.STATE_OVERDUE
+    assert pc.list_state(None, 7, False, t) == pc.STATE_HIDDEN
+    # paused tasks are never listed
+    assert pc.list_state(t, 0, False, t, paused_until=t) == pc.STATE_HIDDEN
+    assert pc.list_state(t, 0, False, t, paused_until=t - timedelta(days=1)) == pc.STATE_TODAY
+
+
+def test_digest_counts_and_texts():
+    states = [pc.STATE_TODAY, pc.STATE_TODAY, pc.STATE_OVERDUE, pc.STATE_SOMEDAY, pc.STATE_UPCOMING, pc.STATE_HIDDEN]
+    assert pc.digest_counts(states) == (2, 1)
+    assert pc.digest_texts(2, 1, "de")[1] == "Heute: 2 Aufgaben, 1 überfällig"
+    assert pc.digest_texts(1, 0, "de")[1] == "Heute: 1 Aufgabe"
+    assert pc.digest_texts(3, 2, "en")[1] == "Today: 3 tasks, 2 overdue"
+    assert pc.digest_texts(1, 0, "en")[1] == "Today: 1 task"
+    assert "07:30" in pc.due_time_texts("Arzt", "07:30", "de")[1]
+    assert "07:30" in pc.due_time_texts("Doctor", "07:30", "en")[1]

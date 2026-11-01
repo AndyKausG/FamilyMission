@@ -119,6 +119,7 @@ from .const import (
     WS_TYPE_PARENT_TASK_SET,
     WS_TYPE_PARENT_TASK_ADD,
     WS_TYPE_PARENT_TASK_DONE,
+    WS_TYPE_PARENT_TASK_POSTPONE,
     WS_TYPE_HANDOVER_ASK,
     WS_TYPE_HANDOVER_ANSWER,
     WS_TYPE_WEEKLY_SUMMARY,
@@ -862,12 +863,13 @@ _PROTECTED_SETTING_KEYS = (
 
 def _sanitize_parent_settings(incoming: dict) -> None:
     """Keep only well-formed values of the parents' settings (anything else is dropped)."""
-    for key in ("role_model_band", "weekly_summary", "planning_reminders"):
+    for key in ("role_model_band", "weekly_summary", "planning_reminders", "parent_digest_enabled"):
         if key in incoming and not isinstance(incoming[key], bool):
             del incoming[key]
     for key, default in (
         ("weekly_summary_time", parents_catalog.DEFAULT_WEEKLY_SUMMARY_TIME),
         ("planning_reminder_time", parents_catalog.DEFAULT_PLANNING_REMINDER_TIME),
+        ("parent_digest_time", parents_catalog.DEFAULT_PARENT_DIGEST_TIME),
     ):
         if key in incoming:
             incoming[key] = parents_catalog.valid_clock(incoming[key], default)
@@ -1916,6 +1918,8 @@ def _restore_task_after_undo(data: dict, task_id: str, source: dict | None) -> N
     """
     source = source or {}
     due = source.get("previous_due_date") or dt_util.utcnow().isoformat()
+    if source.get("parent_undo") and (source.get("task_snapshot") or {}).get("someday") and not source.get("previous_due_date"):
+        due = None  # a task without a date stays "someday"
     paused = source.get("previous_paused_until")
     task = data["tasks"].get(task_id)
     if task is None:
@@ -3694,10 +3698,15 @@ def _check_parent_actor(hass: HomeAssistant, connection, msg: dict) -> bool:
 
 
 def _build_parent_task(
-    name: str, interval: int, minutes: int, planning: bool, due_day: date, assign: dict,
-    parent_key: str | None = None,
+    name: str, interval: int, minutes: int, planning: bool, due_day: date | None, assign: dict,
+    parent_key: str | None = None, due_time: str | None = None, dated: bool = False,
 ) -> dict:
-    """A new parents' task: no points, category basis, owned by one adult."""
+    """A new parents' task: no points, category basis, owned by one adult.
+
+    ``due_day=None`` makes a "someday" task (only valid for one-time tasks, never rolled over,
+    never open). ``dated`` marks a one-time task with an explicit date: it stays overdue
+    until done instead of being carried over silently.
+    """
     task = {
         "id": str(uuid.uuid4()),
         "name": name,
@@ -3716,7 +3725,7 @@ def _build_parent_task(
         "reminder_at": None,
         "reminder_target": "",
         "icon": "mdi:head-lightbulb-outline" if planning else "mdi:home-heart",
-        "due_date": _day_start_iso(due_day),
+        "due_date": _day_start_iso(due_day) if due_day is not None else None,
         "paused_until": None,
         "override_overdue_days": None,
         "subtasks": [],
@@ -3730,7 +3739,44 @@ def _build_parent_task(
         task["parent_pair"] = list(assign["parent_pair"])
     if parent_key:
         task["parent_key"] = parent_key
+    if due_day is None:
+        task["someday"] = True
+    elif dated:
+        task["dated"] = True
+    if due_time and due_day is not None:
+        task["due_time"] = due_time
     return task
+
+
+def _parse_due_fields(msg: dict) -> tuple[date | None, str | None]:
+    """``(due_day, due_time)`` of a parents' command; raises ``_ParentError`` for malformed values."""
+    due_day = None
+    if msg.get("due_date"):
+        due_day = parents_catalog.valid_date(msg["due_date"])
+        if due_day is None:
+            raise _ParentError("invalid_date", "Date must be YYYY-MM-DD")
+    due_time = None
+    if msg.get("due_time"):
+        due_time = parents_catalog.valid_due_time(msg["due_time"])
+        if due_time is None:
+            raise _ParentError("invalid_time", "Time must be HH:MM")
+    return due_day, due_time
+
+
+def _set_parent_due(task: dict, due_day: date | None) -> None:
+    """Move a parents' task to ``due_day`` (``None`` = someday, one-time tasks only)."""
+    task.pop("carried_since", None)
+    task.pop("due_reminded_for", None)
+    if due_day is None:
+        task["due_date"] = None
+        task["someday"] = True
+        task.pop("dated", None)
+        task.pop("due_time", None)
+        return
+    task["due_date"] = _day_start_iso(due_day)
+    task.pop("someday", None)
+    if task.get("interval", parents_catalog.DEFAULT_INTERVAL) == 0:
+        task["dated"] = True
 
 
 def _assign_mode(task: dict, assign: dict) -> None:
@@ -3873,12 +3919,14 @@ async def ws_parents_apply(hass: HomeAssistant, connection: websocket_api.Active
     vol.Optional("mode"): vol.In(parents_catalog.MODES),
     vol.Optional("planning"): bool,
     vol.Optional("minutes"): vol.All(int, vol.Range(min=parents_catalog.MIN_MINUTES, max=parents_catalog.MAX_MINUTES)),
+    vol.Optional("due_date"): vol.Any(None, str),
+    vol.Optional("due_time"): vol.Any(None, str),
     vol.Optional("me"): str,
     vol.Optional("partner"): str,
 })
 @websocket_api.async_response
 async def ws_parent_task_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
-    """Change mode, planning flag or duration of a parents' task (admin / manager / parent)."""
+    """Change mode, planning flag, duration, due date or due time of a parents' task (admin / manager / parent)."""
     if not _check_role(hass, connection, msg, _DAILY_ROLES):
         return
     data = hass.data[DOMAIN]["data"]
@@ -3888,9 +3936,22 @@ async def ws_parent_task_set(hass: HomeAssistant, connection: websocket_api.Acti
         return
     try:
         me, partner, _adults_list = _parent_context(hass, connection, msg)
+        due_day, due_time = _parse_due_fields(msg)
+        if "due_date" in msg and due_day is None and task.get("interval", parents_catalog.DEFAULT_INTERVAL) != 0:
+            raise _ParentError("invalid_date", "A recurring task needs a date")
     except _ParentError as err:
         connection.send_error(msg["id"], err.code, err.message)
         return
+    if "due_date" in msg:
+        _set_parent_due(task, due_day)
+    if "due_time" in msg or "due_date" in msg:
+        new_time = due_time if "due_time" in msg else task.get("due_time")
+        if new_time and task.get("due_date"):
+            if new_time != task.get("due_time"):
+                task.pop("due_reminded_for", None)
+            task["due_time"] = new_time
+        else:
+            task.pop("due_time", None)
     if "mode" in msg:
         if not me:
             connection.send_error(msg["id"], "no_adult", "No adult found (a person with a Home Assistant user)")
@@ -3916,6 +3977,8 @@ async def ws_parent_task_set(hass: HomeAssistant, connection: websocket_api.Acti
     vol.Optional("interval", default=parents_catalog.DEFAULT_INTERVAL): vol.All(
         int, vol.Range(min=0, max=parents_catalog.MAX_INTERVAL)),
     vol.Optional("mode", default=parents_catalog.MODE_ME): vol.In(parents_catalog.MODES),
+    vol.Optional("due_date"): vol.Any(None, str),
+    vol.Optional("due_time"): vol.Any(None, str),
     vol.Optional("me"): str,
     vol.Optional("partner"): str,
 })
@@ -3930,15 +3993,20 @@ async def ws_parent_task_add(hass: HomeAssistant, connection: websocket_api.Acti
         return
     try:
         me, partner, _adults_list = _parent_context(hass, connection, msg)
+        due_day, due_time = _parse_due_fields(msg)
     except _ParentError as err:
         connection.send_error(msg["id"], err.code, err.message)
         return
     if not me:
         connection.send_error(msg["id"], "no_adult", "No adult found (a person with a Home Assistant user)")
         return
+    one_time = msg["interval"] == 0
+    # One-time without a date = "someday"; recurring without a date starts today
+    start = due_day if due_day is not None else (None if one_time else dt_util.now().date())
     task = _build_parent_task(
-        name, msg["interval"], msg["minutes"], msg["planning"], dt_util.now().date(),
+        name, msg["interval"], msg["minutes"], msg["planning"], start,
         parents_catalog.resolve_mode(msg["mode"], me, partner),
+        due_time=due_time, dated=one_time and due_day is not None,
     )
     data = hass.data[DOMAIN]["data"]
     data["tasks"][task["id"]] = task
@@ -3946,6 +4014,27 @@ async def ws_parent_task_add(hass: HomeAssistant, connection: websocket_api.Acti
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     connection.send_result(msg["id"], {"success": True, "task_id": task["id"]})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENT_TASK_POSTPONE,
+    vol.Required("task_id"): str,
+})
+@websocket_api.async_response
+async def ws_parent_task_postpone(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Postpone a parents' task to tomorrow (admin / manager / parent). Someday and overdue tasks get tomorrow as date."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(msg["task_id"])
+    if not _is_parent_task(task):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    tomorrow = dt_util.now().date() + timedelta(days=1)
+    _set_parent_due(task, tomorrow)
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    connection.send_result(msg["id"], {"success": True, "due_date": tomorrow.isoformat()})
 
 
 def _parent_undo_info(task: dict) -> dict:
@@ -3989,6 +4078,7 @@ async def _async_parent_done(hass: HomeAssistant, task_id: str, uid: str | None)
     task.pop("claimed_until", None)
     task.pop("carried_since", None)
     task.pop("planning_reminded_for", None)
+    task.pop("due_reminded_for", None)
 
     # The handover was for this time only: back to whoever it belonged to
     original = task.pop("handover_original", None)
@@ -4552,8 +4642,8 @@ async def _async_rollover_parent_tasks(hass: HomeAssistant) -> int:
     today = dt_util.now().date()
     count = 0
     for task in data["tasks"].values():
-        if not _is_parent_task(task):
-            continue
+        if not _is_parent_task(task) or task.get("dated"):
+            continue  # a one-time task with a date stays overdue instead of being carried over
         paused = _local_day_of(task.get("paused_until"))
         if paused is not None and paused >= today:
             continue
@@ -4601,6 +4691,87 @@ async def _async_check_planning_reminders(hass: HomeAssistant) -> int:
         title, text = parents_catalog.planning_reminder_texts(task.get("name") or "", int(task.get("minutes") or 0), lang)
         for uid in _assignee_ids(task)[:1]:
             await _async_push_adult(hass, uid, title, text, tag=f"{DOMAIN}_planning_{task['id']}")
+    return len(due)
+
+
+def _parent_night(hass: HomeAssistant) -> bool:
+    """True inside the night mode window (nothing audible then)."""
+    options = _get_entry(hass).options
+    return options.get("night_mode", True) is not False and is_night_time(
+        dt_util.now(), options.get("night_sleep"), options.get("night_wake_weekday"), options.get("night_wake_weekend"),
+    )
+
+
+def _parent_list_state(task: dict, today: date) -> str:
+    """``parents_catalog.list_state`` of a stored parents' task."""
+    return parents_catalog.list_state(
+        _local_day_of(task.get("due_date")), task.get("interval", parents_catalog.DEFAULT_INTERVAL),
+        bool(task.get("someday")), today, _local_day_of(task.get("paused_until")),
+    )
+
+
+async def _async_check_parent_digest(hass: HomeAssistant) -> int:
+    """Morning digest ("Today: N tasks, M overdue") once per day and adult. Off by default; not at night."""
+    if DOMAIN not in hass.data:
+        return 0
+    options = _get_entry(hass).options
+    if options.get("parent_digest_enabled") is not True:
+        return 0
+    now = dt_util.now()
+    at = parents_catalog.valid_clock(options.get("parent_digest_time"), parents_catalog.DEFAULT_PARENT_DIGEST_TIME)
+    data = hass.data[DOMAIN]["data"]
+    today = now.date()
+    if not parents_catalog.clock_reached(now.strftime("%H:%M"), at) or data.get("parent_digest_sent") == today.isoformat():
+        return 0
+    if _parent_night(hass):
+        return 0  # still asleep: tried again every minute until the night ends
+    data["parent_digest_sent"] = today.isoformat()
+    await hass.data[DOMAIN]["store"].async_save(data)
+    lang = _lang(hass)
+    sent = 0
+    for adult in _adults(hass):
+        states = [
+            _parent_list_state(t, today) for t in data["tasks"].values()
+            if _is_parent_task(t) and adult["id"] in _assignee_ids(t)
+        ]
+        n_today, n_overdue = parents_catalog.digest_counts(states)
+        if n_today + n_overdue == 0:
+            continue
+        title, text = parents_catalog.digest_texts(n_today, n_overdue, lang)
+        await _async_push_adult(hass, adult["id"], title, text, tag=f"{DOMAIN}_parent_digest")
+        sent += 1
+    return sent
+
+
+async def _async_check_parent_due_times(hass: HomeAssistant) -> int:
+    """Push the responsible adult once when the due time of a parents' task is reached (not at night)."""
+    if DOMAIN not in hass.data:
+        return 0
+    now = dt_util.now()
+    today = now.date()
+    clock = now.strftime("%H:%M")
+    data = hass.data[DOMAIN]["data"]
+    due = []
+    for task in data["tasks"].values():
+        if not _is_parent_task(task) or not task.get("due_time"):
+            continue
+        if _local_day_of(task.get("due_date")) != today or task.get("due_reminded_for") == today.isoformat():
+            continue
+        if _parent_list_state(task, today) != parents_catalog.STATE_TODAY:
+            continue
+        if not parents_catalog.clock_reached(clock, parents_catalog.valid_clock(task["due_time"], "00:00")):
+            continue
+        due.append(task)
+    if not due or _parent_night(hass):
+        return 0
+    for task in due:
+        task["due_reminded_for"] = today.isoformat()
+    await hass.data[DOMAIN]["store"].async_save(data)
+    lang = _lang(hass)
+    for task in due:
+        title, text = parents_catalog.due_time_texts(task.get("name") or "", task["due_time"], lang)
+        for uid in _assignee_ids(task)[:1]:
+            await _async_push_adult(hass, uid, title, text, tag=f"{DOMAIN}_due_{task['id']}")
     return len(due)
 
 
@@ -4960,6 +5131,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_check_reminders(hass)
         await _async_check_approval_reminders(hass)
         await _async_check_planning_reminders(hass)
+        await _async_check_parent_digest(hass)
+        await _async_check_parent_due_times(hass)
         await _async_check_weekly_summary(hass)
         await _async_check_waste(hass)
         await _async_check_savings_goals(hass)
@@ -5502,6 +5675,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_parent_task_set)
     websocket_api.async_register_command(hass, ws_parent_task_add)
     websocket_api.async_register_command(hass, ws_parent_task_done)
+    websocket_api.async_register_command(hass, ws_parent_task_postpone)
     websocket_api.async_register_command(hass, ws_handover_ask)
     websocket_api.async_register_command(hass, ws_handover_answer)
     websocket_api.async_register_command(hass, ws_weekly_summary)

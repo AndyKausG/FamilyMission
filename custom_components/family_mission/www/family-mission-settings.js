@@ -74,7 +74,8 @@ claim_minutes: "Bonus reservation (minutes)",
     pe_band: "Show role-model band on the tablet", pe_band_d: "Quiet line on the kids tablet: \"Mom and Dad also have N missions today\" (no points, no names).",
     pe_label: "Wording for the band (optional)", pe_label_ph: "Mom and Dad",
     pe_summary: "Sunday summary", pe_summary_d: "A neutral weekly note to each adult: hours per person and what is still open.", pe_time: "Time",
-    pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. No other parent task sends reminders.",
+    pe_digest: "Morning overview", pe_digest_d: "One push per adult in the morning: \"Today: 3 tasks, 1 overdue\". Only when something is due. Never at night.",
+    pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. Other parent tasks only remind at their own time (if you set one).",
     pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.",
     tb_title: "Tablet", tb_desc: "Night mode and rocket launch for the wall tablet. Everything has a sensible default.",
     tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
@@ -172,7 +173,8 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     pe_band: "Vorbild-Band auf dem Tablet zeigen", pe_band_d: "Ruhige Zeile auf dem Kinder-Tablet: \"Auch Mama und Papa haben heute N Missionen\" (ohne Punkte, ohne Namen).",
     pe_label: "Wortlaut für das Band (optional)", pe_label_ph: "Mama und Papa",
     pe_summary: "Sonntags-Zusammenfassung", pe_summary_d: "Eine neutrale Wochen-Notiz an jeden Erwachsenen: Stunden pro Person und was noch offen ist.", pe_time: "Uhrzeit",
-    pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nie.",
+    pe_digest: "Morgen-Übersicht", pe_digest_d: "Eine Push-Nachricht pro Erwachsenem am Morgen: \"Heute: 3 Aufgaben, 1 überfällig\". Nur wenn etwas ansteht. Nie nachts.",
+    pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nur zu ihrer eigenen Uhrzeit (falls gesetzt).",
     pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.",
     tb_title: "Tablet", tb_desc: "Nachtmodus und Raketenstart für das Wand-Tablet. Alles hat einen sinnvollen Standard.",
     tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
@@ -1633,6 +1635,12 @@ class FamilyMissionSettings extends HTMLElement {
                 <input type="time" id="pe-summary-time" value="${time(st.weekly_summary_time, '19:00')}"></label>
             </div>
             <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-digest" ${st.parent_digest_enabled === true ? 'checked' : ''}> ${this.localize('pe_digest')}</label>
+              <p class="kids-note">${this.localize('pe_digest_d')}</p>
+              <label class="kid-field">${this.localize('pe_time')}
+                <input type="time" id="pe-digest-time" value="${time(st.parent_digest_time, '07:00')}"></label>
+            </div>
+            <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="pe-reminder" ${st.planning_reminders !== false ? 'checked' : ''}> ${this.localize('pe_reminder')}</label>
               <p class="kids-note">${this.localize('pe_reminder_d')}</p>
               <label class="kid-field">${this.localize('pe_time')}
@@ -1659,6 +1667,8 @@ class FamilyMissionSettings extends HTMLElement {
       this.settings.role_model_label = val('pe-label').value.trim();
       this.settings.weekly_summary = !!val('pe-summary').checked;
       this.settings.weekly_summary_time = time('pe-summary-time', '19:00');
+      this.settings.parent_digest_enabled = !!val('pe-digest').checked;
+      this.settings.parent_digest_time = time('pe-digest-time', '07:00');
       this.settings.planning_reminders = !!val('pe-reminder').checked;
       this.settings.planning_reminder_time = time('pe-reminder-time', '18:00');
       const notify = {};

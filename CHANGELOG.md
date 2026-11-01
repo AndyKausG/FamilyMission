@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.6.0] - 2026-11-01
+
+- **Parents' "Meine Aufgaben" as a task list:** a **＋** in the section header opens a quick-add sheet (name, Enter creates; date chips Heute / Morgen / Wochenende / Datum / Irgendwann; "Mehr Optionen": time, repeat, minutes, planning). The list is grouped into Überfällig / Heute / Demnächst / Irgendwann plus the fold "Heute erledigt"; every task has ✓, **→ Morgen** and a due date / time badge.
+- **Parent tasks with a date:** optional `due_date` (`YYYY-MM-DD`) and `due_time` (`HH:MM`) in `parent_task_add` / `parent_task_set` (validated, errors `invalid_date` / `invalid_time`). A one-time task with a date becomes open on that day and stays overdue until done (not carried over silently, flag `dated`); without a date it is a "someday" task (`someday`, `due_date: null`). Recurring tasks and existing parent tasks keep their behaviour. **Note:** `parent_task_add` with `interval: 0` and no date now creates a someday task (before: due today).
+- **New websocket** `family_mission/parent_task_postpone` (moves a parent task to tomorrow; admin / manager / parent).
+- **Morning digest and due-time push:** new settings `parent_digest_enabled` (default off) and `parent_digest_time` (default 07:00, validated), settings card section "Wir Eltern". One push per adult "Heute: N Aufgaben, M überfällig" (only if something is due, once per day). A task with a `due_time` pushes the responsible adult once at that time. Both wait for the end of the night mode.
+- **Docs:** README, help and parents' guide (de/en/fr).
+- **Tests:** new `tests/test_parent_todo_ws.py`, pure tests in `tests/test_parents_catalog.py`.
+
 ## [2.5.0] - 2026-11-01
 
 - **Savings goal announcement:** when a kid's wallet reaches the cost of the chosen savings goal, the voice announcement says "Anna hat das Sparziel erreicht: Kino. Jetzt kann eingelöst werden!" (new announcement kind `goal`, checkbox "Ein Kind erreicht sein Sparziel" in the settings card). Announced once per reach: dropping below the cost (e.g. after redeeming) or changing the goal makes the next reach count again. Goals already reached before the update stay silent. At night the announcement waits until wake-up time (unless `announce_night`).

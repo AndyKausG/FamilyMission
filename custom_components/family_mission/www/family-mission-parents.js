@@ -67,7 +67,11 @@ const I18N_PARENTS = {
     m_help: "Help", m_help_d: "How everything works", embed_missing: "This part is not available. Reload the page.",
     mode_me: "Me", mode_you: "You", mode_alt: "Alternating", pt_minutes_lbl: "Minutes", pt_from_templates: "From templates", pt_own: "Own task",
     pick_kid: "For whom?", picker_apply: "Apply", picker_missing: "The template list could not be loaded.",
-    own_title: "Own parent task", own_name: "Name", own_name_ph: "e.g. Water the plants", own_interval: "Repeats", own_planning: "Planning task", own_who: "Who does it?", own_create: "Add",
+    own_title: "New task", own_name: "Name", own_name_ph: "e.g. Call the dentist", own_interval: "Repeats", own_planning: "Planning task", own_who: "Who does it?", own_create: "Add",
+    pt_add: "Add task", pt_g_overdue: "Overdue", pt_g_today: "Today", pt_g_upcoming: "Coming up", pt_g_someday: "Someday",
+    pt_tomorrow: "Tomorrow", pt_postpone: "→ Tomorrow", toast_pt_postponed: "Moved to tomorrow", pt_overdue_since: "overdue since {day}",
+    qa_when: "When?", qa_today: "Today", qa_tomorrow: "Tomorrow", qa_weekend: "Weekend", qa_date: "Date", qa_someday: "Someday",
+    qa_more: "More options", qa_time: "Time (optional)", qa_need_date: "Please pick a date.",
     int_0: "once", int_1: "daily", int_2: "every 2 days", int_7: "weekly", int_14: "every 2 weeks", int_30: "monthly", int_91: "quarterly", int_182: "every 6 months", int_365: "yearly",
     toast_pt_done: "Done", toast_asked: "Asked", toast_ho_yes: "Great, it is yours", toast_ho_no: "Answered", toast_pt_saved: "Saved", toast_pt_deleted: "Deleted",
     toast_skipped: "Skipped for today", toast_applied: "Parent tasks saved", toast_kid_done: "Done",
@@ -128,7 +132,11 @@ const I18N_PARENTS = {
     m_help: "Hilfe", m_help_d: "So funktioniert alles", embed_missing: "Dieser Bereich ist nicht verfügbar. Bitte die Seite neu laden.",
     mode_me: "Ich", mode_you: "Du", mode_alt: "Abwechselnd", pt_minutes_lbl: "Minuten", pt_from_templates: "Aus Vorlagen", pt_own: "Eigene Aufgabe",
     pick_kid: "Für wen?", picker_apply: "Übernehmen", picker_missing: "Die Vorlagenliste konnte nicht geladen werden.",
-    own_title: "Eigene Eltern-Aufgabe", own_name: "Name", own_name_ph: "z. B. Pflanzen gießen", own_interval: "Wiederholung", own_planning: "Planungsaufgabe", own_who: "Wer macht es?", own_create: "Hinzufügen",
+    own_title: "Neue Aufgabe", own_name: "Name", own_name_ph: "z. B. Zahnarzt anrufen", own_interval: "Wiederholung", own_planning: "Planungsaufgabe", own_who: "Wer macht es?", own_create: "Hinzufügen",
+    pt_add: "Aufgabe hinzufügen", pt_g_overdue: "Überfällig", pt_g_today: "Heute", pt_g_upcoming: "Demnächst", pt_g_someday: "Irgendwann",
+    pt_tomorrow: "Morgen", pt_postpone: "→ Morgen", toast_pt_postponed: "Auf morgen verschoben", pt_overdue_since: "überfällig seit {day}",
+    qa_when: "Wann?", qa_today: "Heute", qa_tomorrow: "Morgen", qa_weekend: "Wochenende", qa_date: "Datum", qa_someday: "Irgendwann",
+    qa_more: "Mehr Optionen", qa_time: "Uhrzeit (optional)", qa_need_date: "Bitte ein Datum wählen.",
     int_0: "einmalig", int_1: "täglich", int_2: "alle 2 Tage", int_7: "wöchentlich", int_14: "alle 2 Wochen", int_30: "monatlich", int_91: "vierteljährlich", int_182: "halbjährlich", int_365: "jährlich",
     toast_pt_done: "Erledigt", toast_asked: "Nachgefragt", toast_ho_yes: "Super, die Aufgabe gehört dir", toast_ho_no: "Antwort gesendet", toast_pt_saved: "Gespeichert", toast_pt_deleted: "Gelöscht",
     toast_skipped: "Für heute ausgesetzt", toast_applied: "Eltern-Aufgaben gespeichert", toast_kid_done: "Erledigt",
@@ -245,6 +253,9 @@ class FamilyMissionParents extends HTMLElement {
     this.shadowRoot.addEventListener('input', (ev) => this._onInput(ev));
     this.shadowRoot.addEventListener('toggle', (ev) => this._onToggle(ev), true);
     this.shadowRoot.addEventListener('change', (ev) => this._onChange(ev));
+    this.shadowRoot.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' && ev.target && ev.target.id === 'own-name' && this._own && this._own.name.trim()) { ev.preventDefault(); this._submitOwn(); }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -536,6 +547,8 @@ class FamilyMissionParents extends HTMLElement {
       if (n >= 1 && n <= 600) this._ptSet(el.dataset.ptMin, { minutes: n });
       else this._render();
     } else if (el.id === 'own-int' && this._own) this._own.interval = parseInt(el.value);
+    else if (el.id === 'own-date' && this._own) { this._own.date = el.value; this._own.when = 'custom'; this._renderLayer(); }
+    else if (el.id === 'own-time' && this._own) this._own.time = el.value;
     else if (el.id === 'own-plan' && this._own) this._own.planning = el.checked;
   }
 
@@ -603,6 +616,8 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'pt-new') this._openOwn();
     else if (action === 'own-mode' && this._own) { this._own.mode = el.dataset.mode; this._renderLayer(); }
     else if (action === 'own-create') this._submitOwn();
+    else if (action === 'own-when' && this._own) { this._own.when = el.dataset.when; if (el.dataset.when === 'custom' && !this._own.date) this._own.date = this._addDays(this._todayKey(), 2); this._renderLayer(); }
+    else if (action === 'pt-postpone') this._ptPostpone(el.dataset.id);
     else if (action === 'kt-done') this._ktDone(el.dataset.id, el.dataset.kid);
     else if (action === 'kt-skip') this._ktSkip(el.dataset.id);
     else if (action === 'skip-all') this._skipAll(el.dataset.kid);
@@ -1081,6 +1096,8 @@ class FamilyMissionParents extends HTMLElement {
 
   _ptDone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_done', task_id: id }, this.localize('toast_pt_done')); }
 
+  _ptPostpone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_postpone', task_id: id }, this.localize('toast_pt_postponed')); }
+
   _ptAsk(id) { return this._call('pt:' + id, { type: 'family_mission/handover_ask', task_id: id }, this.localize('toast_asked')); }
 
   _hoAnswer(id, accept) {
@@ -1151,16 +1168,49 @@ class FamilyMissionParents extends HTMLElement {
   // ---- own parent task sheet ---------------------------------------------------
 
   _openOwn() {
-    this._own = { name: '', minutes: 20, interval: 7, planning: false, mode: 'me' };
+    this._own = { name: '', minutes: 20, interval: 0, planning: false, mode: 'me', when: 'today', date: '', time: '' };
     this._renderLayer();
     const input = this.shadowRoot.getElementById('own-name');
     if (input) input.focus();
   }
 
+  /** YYYY-MM-DD key of a local date. */
+  _keyOf(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  /** The key ``n`` days after the key ``key`` (local calendar days, DST safe). */
+  _addDays(key, n) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key || '');
+    if (!m) return null;
+    return this._keyOf(new Date(+m[1], +m[2] - 1, +m[3] + n));
+  }
+
+  /** Date chosen in the quick-add sheet as YYYY-MM-DD, '' for "someday" or an unfinished custom date. */
+  _ownDate(o) {
+    const today = this._todayKey();
+    if (o.when === 'today') return today;
+    if (o.when === 'tomorrow') return this._addDays(today, 1);
+    if (o.when === 'weekend') {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
+      const dow = new Date(+m[1], +m[2] - 1, +m[3]).getDay();   // 0 = Sunday
+      return dow === 0 ? today : this._addDays(today, (6 - dow) % 7);
+    }
+    if (o.when === 'custom') return /^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? o.date : '';
+    return '';
+  }
+
   async _submitOwn() {
     const o = this._own;
     if (!o || !o.name.trim()) return;
+    const due = this._ownDate(o);
+    if (o.when === 'custom' && !due) { this._toast(this.localize('qa_need_date')); return; }
     const payload = { type: 'family_mission/parent_task_add', name: o.name.trim().slice(0, 60), planning: !!o.planning, interval: o.interval, mode: this.partner ? o.mode : 'me' };
+    if (due) {
+      payload.due_date = due;
+      if (/^\d{2}:\d{2}$/.test(o.time || '')) payload.due_time = o.time;
+    }
     const minutes = parseInt(o.minutes);
     if (minutes >= 1 && minutes <= 600) payload.minutes = minutes;
     if (this.me) payload.me = this.me;
@@ -1251,26 +1301,38 @@ class FamilyMissionParents extends HTMLElement {
     const o = this._own;
     const intervals = [0, 1, 2, 7, 14, 30, 91, 182, 365].map(n =>
       `<option value="${n}" ${o.interval === n ? 'selected' : ''}>${escParents(this.localize('int_' + n))}</option>`).join('');
+    const chips = [['today', 'qa_today'], ['tomorrow', 'qa_tomorrow'], ['weekend', 'qa_weekend'], ['custom', 'qa_date'], ['none', 'qa_someday']].map(([id, key]) =>
+      `<button class="chip ${o.when === id ? 'on' : ''}" data-action="own-when" data-when="${id}" aria-pressed="${o.when === id}">${id === 'custom' ? '📅 ' : ''}${escParents(this.localize(key))}</button>`).join('');
     return `
       <div class="scrim" data-action="dialog-close"></div>
       <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('own_title'))}" style="--kc:#7E57C2">
         <div class="grab"></div>
         <h3>➕ ${escParents(this.localize('own_title'))}</h3>
         <label class="lbl" for="own-name">${escParents(this.localize('own_name'))}</label>
-        <input id="own-name" class="txt" type="text" maxlength="60" autocomplete="off" placeholder="${escParents(this.localize('own_name_ph'))}" value="${escParents(o.name)}">
-        <div class="row">
-          <label class="lbl inline" for="own-min">${escParents(this.localize('adhoc_minutes'))}</label>
-          <span class="inl"><input id="own-min" class="txt num" type="number" min="1" max="600" inputmode="numeric" value="${escParents(o.minutes)}"> ${escParents(this.localize('adhoc_min_unit'))}</span>
-        </div>
-        <div class="row">
-          <label class="lbl inline" for="own-int">${escParents(this.localize('own_interval'))}</label>
-          <select id="own-int" class="txt">${intervals}</select>
-        </div>
-        <div class="row">
-          <label class="lbl inline" for="own-plan">🧠 ${escParents(this.localize('own_planning'))}</label>
-          <input id="own-plan" type="checkbox" class="chk" ${o.planning ? 'checked' : ''}>
-        </div>
+        <input id="own-name" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" placeholder="${escParents(this.localize('own_name_ph'))}" value="${escParents(o.name)}">
+        <div class="lbl">${escParents(this.localize('qa_when'))}</div>
+        <div class="chips">${chips}</div>
+        ${o.when === 'custom' ? `<input id="own-date" class="txt" type="date" min="${escParents(this._todayKey())}" value="${escParents(o.date)}" aria-label="${escParents(this.localize('qa_date'))}">` : ''}
         ${this.partner ? `<div class="lbl">${escParents(this.localize('own_who'))}</div>${this._modeSegment(o.mode, 'data-action="own-mode"')}` : ''}
+        <details class="fold" data-det="own-more" ${this._open.has('det:own-more') ? 'open' : ''}>
+          <summary>${escParents(this.localize('qa_more'))}</summary>
+          ${o.when !== 'none' ? `<div class="row">
+            <label class="lbl inline" for="own-time">${escParents(this.localize('qa_time'))}</label>
+            <input id="own-time" class="txt" type="time" value="${escParents(o.time)}">
+          </div>` : ''}
+          <div class="row">
+            <label class="lbl inline" for="own-int">${escParents(this.localize('own_interval'))}</label>
+            <select id="own-int" class="txt">${intervals}</select>
+          </div>
+          <div class="row">
+            <label class="lbl inline" for="own-min">${escParents(this.localize('adhoc_minutes'))}</label>
+            <span class="inl"><input id="own-min" class="txt num" type="number" min="1" max="600" inputmode="numeric" value="${escParents(o.minutes)}"> ${escParents(this.localize('adhoc_min_unit'))}</span>
+          </div>
+          <div class="row">
+            <label class="lbl inline" for="own-plan">🧠 ${escParents(this.localize('own_planning'))}</label>
+            <input id="own-plan" type="checkbox" class="chk" ${o.planning ? 'checked' : ''}>
+          </div>
+        </details>
         <div class="dialog-actions">
           <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
           <button class="btn ok solid" id="own-create" data-action="own-create" ${o.name.trim() ? '' : 'disabled'}>${escParents(this.localize('own_create'))}</button>
@@ -1466,9 +1528,38 @@ class FamilyMissionParents extends HTMLElement {
     }).join('');
   }
 
-  /** "~20 Min.", the planning badge and the quiet carried-over hint of a parent task. */
+  /** Where a parent task shows up: overdue | today | upcoming | someday | hidden (mirrors parents_catalog.list_state). */
+  _ptBucket(t) {
+    const today = this._todayKey();
+    const paused = this._dateKey(t.paused_until);
+    if (paused && today <= paused) return 'hidden';
+    const due = this._dateKey(t.due_date);
+    const once = (t.interval === 0);
+    if (t.someday || !due) return once ? 'someday' : 'hidden';
+    if (due < today) return 'overdue';
+    if (due === today) return 'today';
+    return once ? 'upcoming' : 'hidden';
+  }
+
+  /** "Morgen", a short weekday within a week, otherwise the date (for future dates). */
+  _dueLabel(key) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key || '');
+    if (!m) return key || '';
+    if (key === this._addDays(this._todayKey(), 1)) return this.localize('pt_tomorrow');
+    const d = new Date(+m[1], +m[2] - 1, +m[3]);
+    const lang = (this._hass && this._hass.language) || undefined;
+    const ahead = Math.round((d.getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
+    return ahead < 7 ? d.toLocaleDateString(lang, { weekday: 'short' }) : d.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' });
+  }
+
+  /** "~20 Min.", the planning badge, due date / time and the quiet carried-over hint of a parent task. */
   _parentBadges(t) {
     const out = [];
+    const bucket = this._ptBucket(t);
+    const due = this._dateKey(t.due_date);
+    if (bucket === 'overdue' && t.dated) out.push(`<span class="badge late">⚠ ${escParents(this.localize('pt_overdue_since', { day: this._dayLabel(due) }))}</span>`);
+    else if (bucket === 'upcoming') out.push(`<span class="badge due">📅 ${escParents(this._dueLabel(due))}${t.due_time ? ' ' + escParents(t.due_time) : ''}</span>`);
+    else if (t.due_time && (bucket === 'today' || bucket === 'overdue')) out.push(`<span class="badge due">🕐 ${escParents(t.due_time)}</span>`);
     if (t.planning) out.push(`<span class="badge plan" title="${escParents(this.localize('pt_planning'))}">🧠 ${escParents(this.localize('pt_planning'))}</span>`);
     if (t.minutes) out.push(`<span class="badge">${escParents(this.localize('pt_minutes', { n: t.minutes }))}</span>`);
     if (t.carried_since) out.push(`<span class="badge carried">↷ ${escParents(this.localize('pt_since', { day: this._dayLabel(t.carried_since) }))}</span>`);
@@ -1485,29 +1576,47 @@ class FamilyMissionParents extends HTMLElement {
     return days < 7 ? d.toLocaleDateString(lang, { weekday: 'short' }) : d.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' });
   }
 
-  /** A parent task with the big tick button; ``mine`` adds the "Kannst du?" button. */
+  /** A parent task with the big tick button; ``mine`` adds the "Kannst du?" button, every task gets "→ Morgen". */
   _renderParentTask(t, mine) {
     const busy = this._busy.has('pt:' + t.id) ? 'disabled' : '';
     const h = t.handover;
     const asked = !!(h && h.state === 'asked' && mine && h.from === this.me);
     const canAsk = mine && this.partner && this.me && !asked;
+    const due = this._dateKey(t.due_date);
+    const canPostpone = due !== this._addDays(this._todayKey(), 1);
     return `
       <article class="ptask">
         <div class="pt-name">${escParents(t.name)}</div>
         ${this._parentBadges(t)}
         <div class="pt-actions">
           <button class="btn ok pt-done" data-action="pt-done" data-id="${escParents(t.id)}" ${busy}>✓ ${escParents(this.localize('pt_done'))}</button>
+          ${canPostpone ? `<button class="btn neutral pt-ask pt-later" data-action="pt-postpone" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_postpone'))}</button>` : ''}
           ${asked ? `<span class="pt-asked">${escParents(this.localize('pt_asked', { name: this._adultName(h.to) }))}</span>` : ''}
           ${canAsk ? `<button class="btn neutral pt-ask" data-action="pt-ask" data-id="${escParents(t.id)}" ${busy}>🙋 ${escParents(this.localize('pt_ask'))}</button>` : ''}
         </div>
       </article>`;
   }
 
+  /** The tasks of one adult (or of all) as groups Überfällig / Heute / Demnächst / Irgendwann. */
+  _renderPtGroups(list, mine) {
+    const order = ['overdue', 'today', 'upcoming', 'someday'];
+    const groups = {};
+    for (const t of list) (groups[this._ptBucket(t)] = groups[this._ptBucket(t)] || []).push(t);
+    const dueKey = (t) => (this._dateKey(t.due_date) || '9999') + (t.due_time || '');
+    const present = order.filter(g => (groups[g] || []).length);
+    return present.map(g => {
+      const items = groups[g].slice().sort((a, b) => dueKey(a).localeCompare(dueKey(b)));
+      const head = (present.length === 1 && g === 'today') ? '' : `<h3 class="sub pt-group ${g}">${escParents(this.localize('pt_g_' + g))}</h3>`;
+      return head + items.map(t => this._renderParentTask(t, mine)).join('');
+    }).join('');
+  }
+
   _renderOwnTasks() {
-    const all = this._parentTasksToday();
+    const all = this._parentTasksAll().filter(t => this._ptBucket(t) !== 'hidden');
     const done = this._parentDoneToday();
     const hasAny = this._parentTasksAll().length > 0;
     const incoming = this._incomingHandovers();
+    const isOpenBucket = (t) => ['overdue', 'today'].includes(this._ptBucket(t));
     let inner = '';
     // Not a task: only a pointer to the approvals section (no history, nothing to complete)
     const nWait = this._pendingList().length;
@@ -1530,11 +1639,11 @@ class FamilyMissionParents extends HTMLElement {
       if (this.me) {
         const mine = all.filter(t => (t.assignees || []).includes(this.me));
         const theirs = all.filter(t => !(t.assignees || []).includes(this.me));
-        inner += mine.length ? mine.map(t => this._renderParentTask(t, true)).join('')
-          : `<div class="empty">🎉 ${escParents(this.localize('pt_all_done'))}</div>`;
+        if (!mine.some(isOpenBucket)) inner += `<div class="empty">🎉 ${escParents(this.localize('pt_all_done'))}</div>`;
+        inner += this._renderPtGroups(mine, true);
         if (theirs.length) {
           const label = this.localize('pt_partner', { name: this.partner ? this._adultName(this.partner) : this.localize('pt_other'), n: theirs.length });
-          inner += `<details class="fold" data-det="partner" ${this._open.has('det:partner') ? 'open' : ''}><summary>${escParents(label)}</summary>${theirs.map(t => this._renderParentTask(t, false)).join('')}</details>`;
+          inner += `<details class="fold" data-det="partner" ${this._open.has('det:partner') ? 'open' : ''}><summary>${escParents(label)}</summary>${this._renderPtGroups(theirs, false)}</details>`;
         }
       } else {
         // The caller is not an adult with a person: show everything grouped by the responsible adult.
@@ -1544,8 +1653,8 @@ class FamilyMissionParents extends HTMLElement {
           (groups[key] = groups[key] || []).push(t);
         }
         const keys = Object.keys(groups).sort((a, b) => this._adultName(a).localeCompare(this._adultName(b)));
-        inner += keys.map(k => `<h3 class="sub">${escParents(k ? this._adultName(k) : '—')}</h3>${groups[k].map(t => this._renderParentTask(t, false)).join('')}`).join('');
-        if (!all.length) inner += `<div class="empty">🎉 ${escParents(this.localize('pt_all_done'))}</div>`;
+        inner += keys.map(k => `<h3 class="sub">${escParents(k ? this._adultName(k) : '—')}</h3>${this._renderPtGroups(groups[k], false)}`).join('');
+        if (!all.some(isOpenBucket)) inner += `<div class="empty">🎉 ${escParents(this.localize('pt_all_done'))}</div>`;
       }
       if (done.length) {
         inner += `<details class="fold" data-det="done" ${this._open.has('det:done') ? 'open' : ''}><summary>${escParents(this.localize('pt_done_today', { n: done.length }))}</summary>
@@ -1553,7 +1662,7 @@ class FamilyMissionParents extends HTMLElement {
             <button class="undo" data-action="undo" data-id="${escParents(h.id)}">↩️ ${escParents(this.localize('undo'))}</button></div>`).join('')}</details>`;
       }
     }
-    return `<section><h2>${escParents(this.localize('own_tasks'))}</h2>${inner}</section>`;
+    return `<section><h2><span class="h2-t">${escParents(this.localize('own_tasks'))}</span><button class="h2-add" data-action="pt-new" aria-label="${escParents(this.localize('pt_add'))}" title="${escParents(this.localize('pt_add'))}">＋</button></h2>${inner}</section>`;
   }
 
   _renderQuick() {
@@ -1976,6 +2085,13 @@ class FamilyMissionParents extends HTMLElement {
       .badges { display: flex; flex-wrap: wrap; gap: 6px; }
       .badge { padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; background: var(--secondary-background-color, #f0f0f0); color: var(--p-sub); }
       .badge.plan { background: color-mix(in srgb, #7E57C2 16%, transparent); color: var(--primary-text-color); }
+      .badge.late { background: color-mix(in srgb, var(--p-danger) 16%, transparent); color: var(--primary-text-color); }
+      .badge.due { background: color-mix(in srgb, var(--primary-color, #03a9f4) 14%, transparent); color: var(--primary-text-color); }
+      .h2-t { flex: 1; min-width: 0; }
+      .h2-add { flex: none; width: 44px; height: 44px; margin: -8px -4px -8px 0; border-radius: 22px; border: 2px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 24px; font-weight: 700; line-height: 1; touch-action: manipulation; }
+      h3.pt-group { margin: 12px 0 8px; font-size: 14px; }
+      h3.pt-group.overdue { color: var(--p-danger); }
+      .pt-later { flex: 0 1 auto; min-height: 60px; padding: 0 14px; }
       .badge.carried { background: transparent; border: 1px solid var(--p-line); font-weight: 500; }
       .pt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
       .pt-done { flex: 1 1 160px; min-height: 60px; font-size: 20px; }
