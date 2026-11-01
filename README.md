@@ -1,6 +1,6 @@
 # FamilyMission for Home Assistant
 
-<p align="center"><img src="custom_components/family_mission/brand/logo.png" alt="FamilyMission" width="420"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/custom_components/family_mission/brand/logo.png" alt="FamilyMission" width="420"></p>
 
 > **Credits:** FamilyMission is based on [**TaskOrganizer**](https://github.com/patrickvonwiegen/TaskOrganizer) by Patrick von Wiegen (MIT license). It continues as a project of its own, maintained by [AndyKausG](https://github.com/AndyKausG), and can be installed **next to** TaskOrganizer without any conflict.
 
@@ -15,22 +15,22 @@ Suggestions for improvement and bug reports are welcome: [issues](https://github
 FamilyMission is a motivating family system for kids (about 6-12) that runs inside Home Assistant: the kids tick off their missions on a wall tablet, the parents run everything from the parents' hub on their phone. The guiding principle is **set up once, then just tick off**: the quick-start wizard proposes an age-appropriate setup, and after that the daily routine is a few taps. Instead of ranking siblings against each other, the whole family fills **one shared family goal**, which ends in a countdown and a rocket launch on the tablet. The adults' own household and planning work lives in the same system as quiet **parent tasks without points** ("We parents"), so the kids see that Mom and Dad have missions, too. At night the tablet turns into a sleep buddy with an alarm clock.
 
 <p align="center">
-  <img src="docs/screenshots/tablet-home.png" alt="Wall tablet home screen: one tile per kid, family rocket, role-model band and bonus board" width="640"><br>
+  <img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/tablet-home.png" alt="Wall tablet home screen: one tile per kid, family rocket, role-model band and bonus board" width="640"><br>
   <em>The wall tablet: one tile per kid, the family rocket, the role-model band and the bonus board.</em>
 </p>
 
 <table align="center">
   <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/parents-today.png" alt="Parents' hub, tab Today" width="260"><br><em>Parents' hub: today at a glance</em></td>
-    <td align="center" valign="top"><img src="docs/screenshots/parents-tasks.png" alt="Parent tasks: me, you, take turns" width="260"><br><em>Parent tasks: me / you / take turns</em></td>
-    <td align="center" valign="top"><img src="docs/screenshots/wizard-parents.png" alt="Quick-start wizard, step We parents" width="260"><br><em>Quick start: step "We parents"</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/parents-today.png" alt="Parents' hub, tab Today" width="260"><br><em>Parents' hub: today at a glance</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/parents-tasks.png" alt="Parent tasks: me, you, take turns" width="260"><br><em>Parent tasks: me / you / take turns</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/wizard-parents.png" alt="Quick-start wizard, step We parents" width="260"><br><em>Quick start: step "We parents"</em></td>
   </tr>
 </table>
 
 <table align="center">
   <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/tablet-rocket.png" alt="Rocket countdown on the wall tablet" width="400"><br><em>Family goal reached: the rocket countdown</em></td>
-    <td align="center" valign="top"><img src="docs/screenshots/tablet-night.png" alt="Night mode: sleep buddy with alarm clock" width="400"><br><em>Night mode: sleep buddy with alarm clock</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/tablet-rocket.png" alt="Rocket countdown on the wall tablet" width="400"><br><em>Family goal reached: the rocket countdown</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/tablet-night.png" alt="Night mode: sleep buddy with alarm clock" width="400"><br><em>Night mode: sleep buddy with alarm clock</em></td>
   </tr>
 </table>
 
@@ -283,11 +283,11 @@ On a phone (card width below 700 px, measured on the card itself, not on the scr
 Use it in a dashboard view of type `panel` (full screen), see the [recommended dashboard](#recommended-dashboard) or [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 
 <p align="center">
-  <img src="docs/screenshots/tablet-home.png" alt="Kids card: home screen" width="640"><br>
+  <img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/tablet-home.png" alt="Kids card: home screen" width="640"><br>
   <em>Home screen: kid tiles with progress rings, family rocket, role-model band, bonus board.</em>
 </p>
 <p align="center">
-  <img src="docs/screenshots/tablet-kid.png" alt="Kids card: kid view with tasks, steps and bonus" width="640"><br>
+  <img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/tablet-kid.png" alt="Kids card: kid view with tasks, steps and bonus" width="640"><br>
   <em>Kid view: own tasks with steps, and the bonus tasks.</em>
 </p>
 
@@ -309,7 +309,7 @@ A practical guide for parents (basic idea, 10-minute setup, ramp-up weeks, daily
 * As documents: [Deutsch](docs/parents-guide.de.md) · [Français](docs/parents-guide.fr.md) · [English](docs/parents-guide.en.md).
 
 <p align="center">
-  <img src="docs/screenshots/help.png" alt="In-app help: the parents guide" width="260"><br>
+  <img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/help.png" alt="In-app help: the parents guide" width="260"><br>
   <em>The in-app parents guide.</em>
 </p>
 
@@ -477,7 +477,7 @@ action:
 * **Push to the adults (2.3):** as soon as a task waits for approval, FamilyMission itself pushes all adults who have a push target (same resolution as for the reward push: `parent_notify`, otherwise the Companion app): title "✅ <kid> ist fertig" / "✅ <kid> is done" (for a task done together all names, "✅ Clara & David sind fertig"), text "<task> (<points> ⭐)", the actions `FM_APPROVE_<id>` ("Freigeben" / "Approve") and `FM_NOTDONE_<id>` ("Nicht fertig" / "Not done") and the tag `family_mission_approval_<id>`. "Cheated" is deliberately only in the app. A second tap or an already handled approval is ignored silently. Switch off with the setting `approval_push` (default `true`; settings card, section "Tablet").
 * **Push safety (2.3):** approvals must not sit unseen. `get_data.adults[]` additionally has `push_targets` (e.g. `["notify.mobile_app_anna_phone"]`; `push` stays) and `get_data.push_warning` is `"no_adults"` / `"no_targets"` (only while kid profiles exist and nobody can be reached), otherwise `null`. The settings card (section "Tablet") lists the target per adult (automatic / chosen) with a "Test push" button; the parents' hub shows a yellow hint with "Set up". Websocket `family_mission/test_push` `{user_id?}` (parents' roles; default the caller, an administrator may pick any adult) sends "🔔 FamilyMission: Test – Push kommt an" and answers `{success, targets, errors}` or `{success: false, error: "no_target"}`. If a new approval could not be pushed to anybody (no target or every call failed), a persistent notification `family_mission_no_push` is created (link the person to a user, sign in to the Companion app with that user, or choose a target); it is dismissed after the next successful push or test push. If an approval is still open after `approval_reminder_hours` (default 2, 0 = off), all adults get **one** quiet reminder ("⏳ Freigabe wartet noch" / "⏳ Approval still waiting", same actions, same tag so it replaces the first push); not at night (with `night_mode`; it follows after waking up) and not with `approval_push` off. As soon as an approval (or redemption) is handled anywhere (app, push action, "not done", "cheated"), a Companion `clear_notification` with the tag `family_mission_approval_<id>` / `family_mission_reward_<id>` removes the push for all adults. The "My tasks" view of a parent (`mode: mine`) and the parents' hub show "✅ N approvals waiting".
 <p align="center">
-  <img src="docs/screenshots/settings-tablet.png" alt="Settings, section Tablet, with push targets per adult and Test push" width="260"><br>
+  <img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/settings-tablet.png" alt="Settings, section Tablet, with push targets per adult and Test push" width="260"><br>
   <em>Settings, section "Tablet": push target per adult with "Test push" and the reminder time.</em>
 </p>
 
@@ -598,16 +598,16 @@ The card reloads automatically after a reconnect, when the page becomes visible 
 
 <table align="center">
   <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/parents-today.png" alt="Parents' hub, tab Today" width="260"><br><em>Today</em></td>
-    <td align="center" valign="top"><img src="docs/screenshots/parents-kids.png" alt="Parents' hub, tab Kids" width="260"><br><em>Kids</em></td>
-    <td align="center" valign="top"><img src="docs/screenshots/parents-tasks.png" alt="More, parent tasks: me, you, take turns" width="260"><br><em>More: parent tasks</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/parents-today.png" alt="Parents' hub, tab Today" width="260"><br><em>Today</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/parents-kids.png" alt="Parents' hub, tab Kids" width="260"><br><em>Kids</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/parents-tasks.png" alt="More, parent tasks: me, you, take turns" width="260"><br><em>More: parent tasks</em></td>
   </tr>
 </table>
 
 **Dark mode:** the hub follows the Home Assistant theme.
 
 <p align="center">
-  <img src="docs/screenshots/parents-today-dark.png" alt="Parents' hub in dark mode" width="260"><br>
+  <img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/parents-today-dark.png" alt="Parents' hub in dark mode" width="260"><br>
   <em>Dark mode</em>
 </p>
 
@@ -642,7 +642,7 @@ New in 2.0. The household and planning work of the adults, set up once and then 
 * **Own device:** with `mode: mine` an adult sees their own parent tasks (no points, "~N Min.", 🧠 badge); ticking uses the normal `my_complete_task`, which the backend redirects to `parent_task_done`.
 
 <p align="center">
-  <img src="docs/screenshots/wizard-parents.png" alt="Quick-start wizard, step We parents" width="260"><br>
+  <img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/wizard-parents.png" alt="Quick-start wizard, step We parents" width="260"><br>
   <em>Quick start: choose parent tasks and who does them.</em>
 </p>
 
@@ -677,8 +677,8 @@ Both features only concern the wall tablet (`family-mission-kids` in family mode
 
 <table align="center">
   <tr>
-    <td align="center" valign="top"><img src="docs/screenshots/tablet-rocket.png" alt="Rocket countdown" width="400"><br><em>Rocket countdown</em></td>
-    <td align="center" valign="top"><img src="docs/screenshots/tablet-night.png" alt="Night mode with sleep buddy and alarm clock" width="400"><br><em>Night mode</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/tablet-rocket.png" alt="Rocket countdown" width="400"><br><em>Rocket countdown</em></td>
+    <td align="center" valign="top"><img src="https://raw.githubusercontent.com/AndyKausG/FamilyMission/main/docs/screenshots/tablet-night.png" alt="Night mode with sleep buddy and alarm clock" width="400"><br><em>Night mode</em></td>
   </tr>
 </table>
 
