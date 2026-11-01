@@ -29,6 +29,7 @@ const I18N_KIDS = {
     adult_bonus_title: "Open bonus tasks", adult_bonus_hint: "Done it yourself? Takes it off the bonus board (no points).",
     adult_bonus_done: "✅ I did it", adult_bonus_thanks: "Thanks! Taken off the bonus board.",
     no_tasks: "All done! You are awesome!",
+    refresh_label: "Refresh", refresh_done: "Updated ✓", refresh_fail: "No connection",
     role_model_default: "Mom and Dad", role_model_one: "👪 {who} have 1 mission today too", role_model_many: "👪 {who} have {n} missions today too",
     role_model_done: "{d} of {n} done", parent_min: "~{n} min.", parent_planning: "Planning", parent_done_toast: "Done, thank you!",
     tasks_open_one: "1 task open", tasks_open: "{n} tasks open", all_done_badge: "All done!",
@@ -105,6 +106,7 @@ const I18N_KIDS = {
     adult_bonus_title: "Offene Bonus-Aufgaben", adult_bonus_hint: "Selbst erledigt? Nimmt die Aufgabe vom Bonus-Brett (ohne Punkte).",
     adult_bonus_done: "✅ Hab ich erledigt", adult_bonus_thanks: "Danke! Vom Bonus-Brett genommen.",
     no_tasks: "Alles erledigt! Du bist spitze!",
+    refresh_label: "Aktualisieren", refresh_done: "Aktualisiert ✓", refresh_fail: "Keine Verbindung",
     role_model_default: "Mama und Papa", role_model_one: "👪 Auch {who} haben heute 1 Mission", role_model_many: "👪 Auch {who} haben heute {n} Missionen",
     role_model_done: "{d} von {n} geschafft", parent_min: "ca. {n} Min.", parent_planning: "Planung", parent_done_toast: "Erledigt, danke!",
     tasks_open_one: "1 Aufgabe offen", tasks_open: "{n} Aufgaben offen", all_done_badge: "Alles geschafft!",
@@ -382,6 +384,11 @@ class FamilyMissionKids extends HTMLElement {
     this._rocketRun = null;       // running launch overlay state
     this._rocketDoneFor = null;   // rocket period launched on this tablet (until get_data catches up)
     this._asleep = false;         // night mode: sleep screen shown
+    this._readyConn = null;       // connection whose "ready" (reconnected) event we listen to
+    this._readyHandler = null;
+    this._lastFetchAt = 0;        // time of the last get_data request (throttle + safety-net refresh)
+    this._inflight = 0;           // get_data requests in flight
+    this._refreshing = false;     // manual refresh (logo tap) in progress
     this._peekUntil = 0;          // tap on the sleep screen brightens it until then
     this._morningOn = false;      // good-morning banner shown
     this._morningHidden = false;  // banner tapped away
@@ -480,6 +487,7 @@ class FamilyMissionKids extends HTMLElement {
 
   connectedCallback() {
     if (this._hass && !this._unsubEvents) this._subscribeToUpdates();
+    this._bindConnection();
     if (!this._tickTimer) this._tickTimer = setInterval(() => this._tick(), 1000);
     this._observeSize();
     if (!this._fitHandler) {
@@ -488,7 +496,8 @@ class FamilyMissionKids extends HTMLElement {
     }
     if (!this._wakeHandler) {
       // A standby tablet throttles timers: re-check the night state the moment it is awake again
-      this._wakeHandler = () => { if (!document.hidden) this._wakeCheck(); };
+      // and pick up changes missed while the screen was off or the websocket was down
+      this._wakeHandler = () => { if (!document.hidden) { this._wakeCheck(); this._autoRefresh(); } };
       document.addEventListener('visibilitychange', this._wakeHandler);
       window.addEventListener('focus', this._wakeHandler);
     }
@@ -538,6 +547,7 @@ class FamilyMissionKids extends HTMLElement {
       this._unsubEvents.then(unsub => unsub());
       this._unsubEvents = null;
     }
+    this._unbindConnection();
     clearInterval(this._tickTimer);
     this._tickTimer = null;
     if (this._fitHandler) {
@@ -592,16 +602,84 @@ class FamilyMissionKids extends HTMLElement {
       this._fetchData();
       this._render();
     }
+    if (this._readyConn && hass.connection !== this._readyConn && this._unsubEvents) {
+      // The Home Assistant frontend replaced its connection (reload): follow it
+      const old = this._unsubEvents;
+      this._unsubEvents = null;
+      Promise.resolve(old).then(unsub => unsub()).catch(() => {});
+    }
     if (!this._unsubEvents) this._subscribeToUpdates();
+    this._bindConnection();
     if (!this._tickTimer && this.isConnected) this._tickTimer = setInterval(() => this._tick(), 1000);
   }
 
   /**
+   * Reloads the data after the websocket reconnected: events fired while it was
+   * down are lost, so a missed change (e.g. a new bonus) would stay invisible.
+   * The connection object can change (frontend reload), so it is followed in `set hass`.
+   */
+  _bindConnection() {
+    const conn = this._hass && this._hass.connection;
+    if (conn === this._readyConn) return;
+    this._unbindConnection();
+    if (!conn || typeof conn.addEventListener !== 'function' || !this.isConnected) return;
+    this._readyHandler = () => { if (!this._busy) this._fetchData(); };
+    conn.addEventListener('ready', this._readyHandler);
+    this._readyConn = conn;
+  }
+
+  _unbindConnection() {
+    if (this._readyConn && this._readyHandler && typeof this._readyConn.removeEventListener === 'function') {
+      this._readyConn.removeEventListener('ready', this._readyHandler);
+    }
+    this._readyConn = null;
+    this._readyHandler = null;
+  }
+
+  /**
+   * Quiet background refresh (wake from standby, window focus, 5 minute safety net).
+   * Throttled to one request per 10 s; skipped while the tablet sleeps, the page
+   * is hidden, an action/celebration/rocket launch is running or a field is being typed in.
+   */
+  _autoRefresh() {
+    if (!this._hass || !this._dataLoaded || document.hidden || this._asleep) return;
+    if (this._busy || this._celebrating || this._rocketRun || this._inflight) return;
+    if (Date.now() - this._lastFetchAt < 10000) return;
+    const active = this.shadowRoot.activeElement;
+    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return;
+    this._fetchData();
+  }
+
+  /** Logo tap: reload now and confirm with a spin and a toast. */
+  async _manualRefresh() {
+    if (this._refreshing) return;
+    this._refreshing = true;
+    const ok = await this._fetchData();
+    this._refreshing = false;
+    const btn = this.shadowRoot.querySelector('.refresh-btn');
+    if (ok && btn) {
+      btn.classList.add('spin');
+      btn.addEventListener('animationend', () => btn.classList.remove('spin'), { once: true });
+    }
+    this._showToast(this.localize(ok ? 'refresh_done' : 'refresh_fail'));
+  }
+
+  /** Small rocket icon button that reloads the data (empty without the icon script). */
+  _refreshButton() {
+    const brand = window.FamilyMissionBrand;
+    if (!brand || typeof brand.iconSvg !== 'function') return '';
+    return `<button class="refresh-btn" data-action="refresh" aria-label="${escKids(this.localize('refresh_label'))}" title="${escKids(this.localize('refresh_label'))}">${brand.iconSvg(28)}</button>`;
+  }
+
+  /**
    * Fetches tasks, points and settings from the backend.
+   * @returns {Promise<boolean>} - Resolves true when the data arrived (never rejects).
    */
   _fetchData() {
-    if (!this._hass) return;
-    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
+    if (!this._hass) return Promise.resolve(false);
+    this._lastFetchAt = Date.now();
+    this._inflight++;
+    return this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
       this.tasks = data.tasks || {};
       this.points = data.points || {};
       this.settings = data.settings || {};
@@ -617,7 +695,9 @@ class FamilyMissionKids extends HTMLElement {
       this._fetched = true;
       this._render();
       this._syncRocket();
-    }).catch((err) => console.error("FamilyMission Kids: could not load data", err));
+      return true;
+    }).catch((err) => { console.error("FamilyMission Kids: could not load data", err); return false; })
+      .finally(() => { this._inflight = Math.max(0, this._inflight - 1); });
   }
 
   // ---------------------------------------------------------------------------
@@ -1224,6 +1304,8 @@ class FamilyMissionKids extends HTMLElement {
   _tick() {
     // Night mode first: a sleeping tablet does nothing else (low CPU, no idle handling)
     if (this._wakeCheck()) return;
+    // Safety net: reload every 5 minutes in case an event got lost
+    if (Date.now() - this._lastFetchAt >= 300000) this._autoRefresh();
     this._syncRocket();
     const clock = this.shadowRoot.getElementById('clock');
     if (clock) clock.textContent = new Date().toLocaleTimeString((this._hass && this._hass.language) || [], { hour: '2-digit', minute: '2-digit' });
@@ -1264,6 +1346,7 @@ class FamilyMissionKids extends HTMLElement {
     const action = el.dataset.action;
 
     if (action === 'open-kid') this._openKid(el.dataset.kid);
+    else if (action === 'refresh') this._manualRefresh();
     else if (action === 'pin-digit') this._pinPress(el.dataset.digit);
     else if (action === 'pin-delete') this._pinDelete();
     else if (action === 'pin-cancel' && this._helperMode()) this._helperCancel();
@@ -2696,7 +2779,7 @@ class FamilyMissionKids extends HTMLElement {
     return `
       <div class="root home">
         <header class="top">
-          <div class="title">${escKids(title)}</div>
+          <div class="top-l">${this._refreshButton()}<div class="title">${escKids(title)}</div></div>
           <div class="clock" id="clock">${escKids(now)}</div>
         </header>
         ${banners}
@@ -2806,6 +2889,7 @@ class FamilyMissionKids extends HTMLElement {
     return `
       <div class="root kidview ${kid.isBirthday ? 'bday' : ''} ${adult ? 'adult' : ''} ${adult && !this._allBonus().length ? 'solo' : ''}" style="--kc:${kid.color}">
         <header class="kv-head">
+          ${mine ? this._refreshButton() : ''}
           ${!mine || this._shop ? `<button class="back" data-action="${this._shop ? 'shop-close' : 'back'}" aria-label="${escKids(this.localize('back'))}"><span class="back-arrow">⬅</span><span class="back-label"> ${escKids(this.localize('back'))}</span></button>` : ''}
           <div class="kv-who">
             <div class="ring-wrap small">
@@ -3089,6 +3173,12 @@ class FamilyMissionKids extends HTMLElement {
 
       /* ---------- home ---------- */
       .top { display: flex; align-items: center; justify-content: space-between; min-height: 56px; }
+      .top-l { display: flex; align-items: center; gap: 12px; min-width: 0; }
+      .refresh-btn { flex: none; width: 48px; height: 48px; min-width: 44px; min-height: 44px; padding: 0; border-radius: 50%; background: transparent; display: inline-flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+      .refresh-btn:active { background: color-mix(in srgb, var(--k-sub) 20%, transparent); }
+      .refresh-btn:focus-visible { outline: 3px solid var(--kc, var(--k-sub)); outline-offset: 2px; }
+      .refresh-btn.spin svg { animation: refresh-spin 0.7s ease-in-out; }
+      @keyframes refresh-spin { to { transform: rotate(360deg); } }
       .title { font-size: 38px; font-weight: 800; letter-spacing: 0.2px; }
       .clock { font-size: 30px; font-weight: 700; color: var(--k-sub); }
       .tiles { flex: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); grid-auto-rows: minmax(240px, 380px); align-content: start; gap: 20px; }
@@ -3616,6 +3706,7 @@ class FamilyMissionKids extends HTMLElement {
         .sb-z .sb-z3 { transform: translate(28px, -44px); }
         #fx .sleep-layer[data-phase] .sb-eyes-half { display: none; }
         .tile, .btn, .key, .back, .sub { transition: none; }
+        .refresh-btn.spin svg { animation: none; }
       }
     `;
   }

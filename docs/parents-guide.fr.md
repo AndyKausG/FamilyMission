@@ -199,6 +199,7 @@ Reportez l'attention libérée sur une nouvelle habitude, mais une seule à la f
 - **Maladie / vacances.** Mettez des tâches en pause dans l'éditeur de tâches (pause jusqu'à une date) ou utilisez « Suspendre aujourd'hui » pour des jours isolés. Le jour d'anniversaire, les obligations sont automatiquement suspendues. Pour de longues pauses, adaptez l'objectif mensuel.
 - **Frères et sœurs d'âges différents.** Les tâches ont un âge minimum, chaque enfant a son propre objectif. Gardez l'effort par minute comparable, pas le nombre de tâches. Les plus grands peuvent aider les plus petits avec « Ensemble ».
 - **La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de FamilyMission, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement.
+- **Un nouveau bonus n'apparaît pas ?** Touchez le logo : la petite icône de fusée à côté du titre (tablette des enfants : écran d'accueil, ou en-tête avec « Mes tâches » ; hub des parents : en-tête) recharge tout immédiatement et confirme par « Aktualisiert ✓ » / « Updated ✓ ». Normalement cela se fait tout seul : après une coupure de connexion, au réveil de la tablette et toutes les 5 minutes. Si cela n'aide pas, vérifiez la connexion à Home Assistant (« No connection ») et rechargez la page.
 
 <a id="about"></a>
 

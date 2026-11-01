@@ -276,6 +276,8 @@ mode: family               # "family" = shared tablet with tiles and PIN (Defaul
 ```
 On a phone (card width below 700 px, measured on the card itself, not on the screen) the card switches to a compact layout: two kid tiles per row, one column in the kid view (own tasks first, bonus below), an icon-only back button and a full-width "Done!" button below the subtasks. The tablet layout is unchanged. On a tall panel the tiles keep their natural height (at most about 380 px) and the family rocket and the bonus board follow directly below.
 
+**Automatic reload:** the card reloads its data after the connection to Home Assistant was re-established (tablet standby, Wi-Fi drop, restart), when the page becomes visible again and every 5 minutes (not while the tablet sleeps). To reload by hand, tap the small rocket logo left of the title (on the home screen, or in the header with `mode: mine`): it turns once and "Aktualisiert ✓" appears.
+
 Use it in a dashboard view of type `panel` (full screen), see the [recommended dashboard](#recommended-dashboard) or [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 
 <p align="center">
@@ -569,6 +571,8 @@ A phone-friendly hub for parents (administrators and users with the parents role
 * **Today:** a yellow push hint while nobody can be reached (see [Parent approval](#parent-approval)), one compact row per kid (today's progress, wallet, open approvals), open approvals with the buttons Approve / Not done / Cheated (with a confirmation that shows the deduction), your own parent tasks, and quick +1 +5 -1 -5 per kid with a reason sheet.
 * **Kids:** per kid the **❤️ Loben** button ([praise](#praise)), the **➕ Spontan-Bonus** button ([spontaneous bonus](#spontaneous-bonus)), the strict mode indicator and the latest history entries, where task entries have a **↩️ Rückgängig** button ([undo](#undo-parents)).
 * **More:** [parent tasks](#we-parents-parent-tasks) (me / you / take turns), the task list, the [reward shop](#reward-shop) and, for administrators and managers, the settings, plus the in-app help.
+
+The card reloads automatically after a reconnect, when the page becomes visible again and every 5 minutes. A new spontaneous bonus or approval does not show up yet? Tap the rocket logo in the header: it reloads at once and confirms with "Aktualisiert ✓".
 
 <table align="center">
   <tr>
