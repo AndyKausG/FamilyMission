@@ -20,11 +20,23 @@ except ImportError:  # pragma: no cover - plain environment
     HAS_HA = False
 
 
+_HA_MARKERS = ("homeassistant", "custom_components.family_mission")
+
+
 def pytest_ignore_collect(collection_path, config):
-    """Skip the HA based tests when the harness is not installed."""
-    if not HAS_HA and collection_path.name in ("test_kids_ws.py", "test_wizard_ws.py", "test_kids_step2_ws.py", "test_parents_role.py", "test_parents_tasks_ws.py", "test_rocket_night_ws.py", "test_approval_push_ws.py", "test_push_safety_ws.py", "test_waste_announce_ws.py"):
-        return True
-    return None
+    """Skip the HA based tests when the harness is not installed.
+
+    A test module counts as HA based when it imports Home Assistant, the harness
+    or the integration package (the pure tests load their module straight from
+    the file instead). No list to maintain for new test files.
+    """
+    if HAS_HA or collection_path.suffix != ".py" or not collection_path.name.startswith("test_"):
+        return None
+    try:
+        source = collection_path.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return True if any(marker in source for marker in _HA_MARKERS) else None
 
 
 if HAS_HA:
