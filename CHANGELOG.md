@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0] - 2026-11-01
+
+- **Approval push:** when a task waits for parent approval, all adults get a push ("✅ Clara ist fertig" / "✅ Clara is done", for a task done together "Clara & David", text "<task> (<points> ⭐)") with the actions "Freigeben" / "Nicht fertig" (`FM_APPROVE_<id>` / `FM_NOTDONE_<id>`, tag per pending entry). "Cheated" stays app-only; a second tap is ignored. New setting `approval_push` (default on, validated as bool), switch in the settings card, section "Tablet".
+- **Quick-start catalog:** `room_blitz`, `room_blitz_small` and `room_deep` are created with "Requires parent approval". Re-running the wizard sets the flag on earlier wizard tasks only if they never had the key; the parents' own choice is kept. The wizard preview returns `requires_approval` per task and the wizard shows a small "✅ Freigabe" badge.
+- **Docs:** README, help and parents' guide (de/en/fr).
+- **Tests:** new `tests/test_approval_push_ws.py`; the rocket test counts only rocket pushes.
+- **New logo and icon:** rocket in the progress ring (replaces the old TaskOrganizer logo); `brand/` now also has `icon@2x.png`, `logo@2x.png` and dark-mode logos.
+
 ## [2.2.0] - 2026-11-01
 
 - **New sleep screen:** the night mode shows a sleeping moon buddy with a nightcap (slow breathing, rising "Z z z"; blinks in the last 30 minutes) and an analogue alarm clock (hands show the time, a coloured hand the wake-up time, an arc the remaining sleep). Texts: "Gute Nacht, Clara & David 💤" / "Psst … alle schlafen" / "Gleich ist Morgen!", plus "Ich schlafe noch 7 Std. 30 Min." and "Aufstehen um 06:00". Dimmed, updated once a minute, no animation loop, calm with `prefers-reduced-motion`; a tap brightens it for 5 seconds and the alarm clock wobbles. `kidsNightState` also returns `wakeDate`, `minutesLeft` and `phase`.

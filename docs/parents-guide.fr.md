@@ -97,6 +97,8 @@ Certaines tâches demandent votre validation (réglable par tâche, avec des con
 
 **Important :** une déduction uniquement en cas de triche délibérée, **jamais pour un oubli**. Les déductions sont **privées** : elles n'apparaissent que dans la vue personnelle de l'enfant, jamais sur l'écran d'accueil ni devant les frères et sœurs. La **phase stricte** (par défaut : 7 jours, chaque tâche demande une validation) **se termine automatiquement**.
 
+**Notification de validation :** quand une tâche attend une validation, tous les adultes reçoivent une notification (« ✅ Clara a fini », « Clara & David ont fini » pour une tâche faite à plusieurs) avec les boutons **Valider** et **Pas fini**, directement depuis l'écran verrouillé. « Triché » n'existe volontairement que dans l'application. Une fois traitée (où que ce soit), un second appui ne fait rien. Désactivable avec `approval_push` (réglages, section « Tablette »).
+
 > 💡 Discussion plutôt que punition : parlez calmement et brièvement de ce qui s'est passé et de la façon de mieux faire. La déduction n'est que l'occasion de cette discussion.
 
 <a id="rewards"></a>

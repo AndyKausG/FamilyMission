@@ -97,6 +97,8 @@ Some tasks need your approval (set per task, plus optional spot checks per kid).
 
 **Important:** a deduction only for deliberate cheating, **never for forgetting**. Deductions are **private**: they only appear in the kid's own view, never on the home screen or in front of siblings. The **strict phase** (default: 7 days, every task needs approval) **ends automatically**.
 
+**Approval push:** when a task waits for approval, all adults get a push message (“✅ Clara is done”, “Clara & David are done” for a task done together) with the buttons **Approve** and **Not done**, straight from the lock screen. “Cheated” is deliberately only in the app. Once handled (wherever), a second tap does nothing. Can be switched off with `approval_push` (settings, “Tablet” section).
+
 > 💡 Talk instead of punishing: briefly and calmly discuss what happened and how it can go better. The deduction is only the occasion for the conversation.
 
 <a id="rewards"></a>

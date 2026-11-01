@@ -855,7 +855,7 @@ def _sanitize_parent_settings(incoming: dict) -> None:
 
 def _sanitize_tablet_settings(incoming: dict) -> None:
     """Validate the 2.1 settings (night mode, rocket countdown, reward push); bad values fall back to the default."""
-    for key in ("night_mode", "reward_push"):
+    for key in ("night_mode", "reward_push", "approval_push"):
         if key in incoming and not isinstance(incoming[key], bool):
             incoming[key] = True
     for key, default in (
@@ -1519,7 +1519,32 @@ async def _async_request_approval(
     hass.bus.async_fire(EVENT_APPROVAL_REQUESTED, event)
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
+    await _async_push_approval(hass, event)
     return pending_id
+
+
+async def _async_push_approval(hass: HomeAssistant, event: dict) -> None:
+    """Push a task that waits for approval to every adult (setting ``approval_push``).
+
+    Only approve / not-done buttons: "cheated" is deliberately app-only.
+    """
+    if _get_entry(hass).options.get("approval_push", True) is False:
+        return
+    de = _lang(hass) == "de"
+    names = [event["kid_name"]] + [_participant_name(hass, uid) for uid in event.get("helpers") or []]
+    who = " & ".join(names)
+    if len(names) > 1:
+        title = f"✅ {who} sind fertig" if de else f"✅ {who} are done"
+    else:
+        title = f"✅ {who} ist fertig" if de else f"✅ {who} is done"
+    text = f"{event['task_name']} ({event['points']:g} ⭐)"
+    pid = event["pending_id"]
+    actions = [
+        {"action": f"{ACTION_APPROVE}{pid}", "title": "Freigeben" if de else "Approve"},
+        {"action": f"{ACTION_NOT_DONE}{pid}", "title": "Nicht fertig" if de else "Not done"},
+    ]
+    for adult in _adults(hass):
+        await _async_push_adult(hass, adult["id"], title, text, actions, tag=f"{DOMAIN}_approval_{pid}")
 
 
 def _apply_adjustment(
@@ -2895,6 +2920,10 @@ def _wizard_update_task(task: dict, item: dict) -> None:
     task["min_age"] = normalize_min_age(item["min_age"])
     task["allow_together"] = bool(item.get("allow_together", default_allow_together(item["category"])))
     task["interval"] = item["interval"]
+    # Only a task that never had the flag (created before 2.3) gets the catalog value: once the
+    # parents saved the task, the key exists and their choice is kept.
+    if "requires_approval" not in task and item.get("requires_approval"):
+        task["requires_approval"] = True
     task["available_from"] = normalize_time(item.get("available_from"))
     task["available_until"] = normalize_time(item.get("available_until"))
     if item.get("replaced_by_key"):
@@ -3113,6 +3142,7 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
             "subtasks": copy.deepcopy(item["subtasks"]),
             "wizard_key": item["wizard_key"],
             "generated_by": kids_catalog.GENERATED_BY,
+            "requires_approval": bool(item.get("requires_approval", False)),
         }
         if item.get("replaced_by_key"):
             task["replaced_by_key"] = item["replaced_by_key"]

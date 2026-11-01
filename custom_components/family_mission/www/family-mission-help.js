@@ -83,6 +83,7 @@ const HELP_CONTENT = {
           "**Geschummelt:** nur bei **bewusstem** Schummeln (abgehakt, aber nicht gemacht). Es gibt einen Abzug in Höhe der Aufgabenpunkte (einstellbar) und eine strenge Phase."
         ],
         "**Wichtig:** Abzug nur bei bewusstem Schummeln, **nie bei Vergessen**. Abzüge sind **privat**: Sie erscheinen nur in der eigenen Ansicht des Kindes, nie auf der Startseite oder vor den Geschwistern. Die **strenge Phase** (Standard: 7 Tage, jede Aufgabe braucht eine Freigabe) **endet automatisch**.",
+        "**Freigabe-Push:** Wartet eine Aufgabe auf Freigabe, bekommen alle Erwachsenen eine Push-Nachricht („✅ Clara ist fertig“, bei Zusammen-Erledigung „Clara & David sind fertig“) mit den Knöpfen **Freigeben** und **Nicht fertig**, direkt vom Sperrbildschirm aus. „Geschummelt“ gibt es bewusst nur in der App. Ist die Freigabe erledigt (egal wo), passiert beim zweiten Tippen nichts. Abschaltbar mit `approval_push` (Einstellungen, Bereich „Tablet“).",
         { tip: "Gespräch statt Strafe: Sprecht kurz und ruhig darüber, was passiert ist und wie es besser klappt. Der Abzug ist nur der Anlass für das Gespräch." }
       ] },
       { id: "rewards", icon: "🎁", title: "Belohnungen richtig wählen", blocks: [
@@ -240,6 +241,7 @@ const HELP_CONTENT = {
           "**Triché :** seulement en cas de triche **délibérée** (coché mais pas fait). Il y a une déduction égale aux points de la tâche (réglable) et une phase stricte."
         ],
         "**Important :** une déduction uniquement en cas de triche délibérée, **jamais pour un oubli**. Les déductions sont **privées** : elles n'apparaissent que dans la vue personnelle de l'enfant, jamais sur l'écran d'accueil ni devant les frères et sœurs. La **phase stricte** (par défaut : 7 jours, chaque tâche demande une validation) **se termine automatiquement**.",
+        "**Notification de validation :** quand une tâche attend une validation, tous les adultes reçoivent une notification (« ✅ Clara a fini », « Clara & David ont fini » pour une tâche faite à plusieurs) avec les boutons **Valider** et **Pas fini**, directement depuis l'écran verrouillé. « Triché » n'existe volontairement que dans l'application. Une fois traitée (où que ce soit), un second appui ne fait rien. Désactivable avec `approval_push` (réglages, section « Tablette »).",
         { tip: "Discussion plutôt que punition : parlez calmement et brièvement de ce qui s'est passé et de la façon de mieux faire. La déduction n'est que l'occasion de cette discussion." }
       ] },
       { id: "rewards", icon: "🎁", title: "Bien choisir les récompenses", blocks: [
@@ -397,6 +399,7 @@ const HELP_CONTENT = {
           "**Cheated:** only for **deliberate** cheating (ticked but not done). There is a deduction equal to the task points (adjustable) and a strict phase."
         ],
         "**Important:** a deduction only for deliberate cheating, **never for forgetting**. Deductions are **private**: they only appear in the kid's own view, never on the home screen or in front of siblings. The **strict phase** (default: 7 days, every task needs approval) **ends automatically**.",
+        "**Approval push:** when a task waits for approval, all adults get a push message (“✅ Clara is done”, “Clara & David are done” for a task done together) with the buttons **Approve** and **Not done**, straight from the lock screen. “Cheated” is deliberately only in the app. Once handled (wherever), a second tap does nothing. Can be switched off with `approval_push` (settings, “Tablet” section).",
         { tip: "Talk instead of punishing: briefly and calmly discuss what happened and how it can go better. The deduction is only the occasion for the conversation." }
       ] },
       { id: "rewards", icon: "🎁", title: "Choosing rewards well", blocks: [

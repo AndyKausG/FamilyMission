@@ -26,6 +26,7 @@ const I18N_WIZARD = {
     start_date: "Start date", start_hint: "Rotations start on this day, one kid per day. Goals are prorated if it is not the 1st of a month.",
     household_day: "Household day", household_day_hint: "Weekly and bi-weekly duties (e.g. thorough room clean) are first due on this weekday instead of the start date.",
     full_goal_from: "from {d}: {g} pts",
+    approval_badge: "✅ Approval",
     tasks_intro: "Proposal per kid: a gentle start with core routines that fits the recommended daily load. Switch more tasks on later, change points with − / +. The load bar shows minutes per day compared to the recommendation.",
     suggest_btn: "Apply recommendation",
     min_day: "~{n} min/day", recommended: "recommended max. {n}", over_load: "Too much for age {age}: {name} would need ~{n} min/day (recommended max. {r}). Switch off a few tasks.",
@@ -69,6 +70,7 @@ const I18N_WIZARD = {
     start_date: "Startdatum", start_hint: "Die Rotationen starten an diesem Tag, pro Tag ein Kind. Die Ziele werden anteilig gekürzt, wenn es nicht der 1. eines Monats ist.",
     household_day: "Haushaltstag", household_day_hint: "Wöchentliche und zweiwöchentliche Pflichten (z. B. Zimmer gründlich) sind zum ersten Mal an diesem Wochentag fällig statt am Startdatum.",
     full_goal_from: "ab {d}: {g} Pkt",
+    approval_badge: "✅ Freigabe",
     tasks_intro: "Vorschlag pro Kind: sanfter Start mit Kern-Routinen, passend zur empfohlenen Tageslast. Weitere Aufgaben später zuschalten, Punkte mit − / + ändern. Der Balken zeigt die Minuten pro Tag im Vergleich zur Empfehlung.",
     suggest_btn: "Empfehlung übernehmen",
     min_day: "~{n} Min/Tag", recommended: "empfohlen max. {n}", over_load: "Zu viel für {age} Jahre: {name} bräuchte ~{n} Min/Tag (empfohlen max. {r}). Schalte einige Aufgaben ab.",
@@ -1171,7 +1173,7 @@ class FamilyMissionWizard extends HTMLElement {
         if (t.mode === 'rotation' && t.selected) {
           info += ` · ${wzEsc(this._t('nr_of', { i: t.rotation_index + 1, n: t.rotation_size }))} · ${wzEsc(this._t('from_date', { d: this._fmtDate(t.due_date) }))}`;
         }
-        return this._taskRow(t, `${info} · ${t.minutes} min`);
+        return this._taskRow(t, `${info} · ${t.minutes} min${t.requires_approval ? ' · ' + wzEsc(this._t('approval_badge')) : ''}`);
       }).join('');
       return `
         <div class="card" style="border-left-color:${wzEsc(k.color || '#999')}">

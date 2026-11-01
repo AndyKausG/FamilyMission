@@ -78,6 +78,7 @@ claim_minutes: "Bonus reservation (minutes)",
     pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.",
     tb_title: "Tablet", tb_desc: "Night mode and rocket launch for the wall tablet. Everything has a sensible default.",
     tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
+    tb_approval_push: "Push to the parents when a task waits for approval",
     tb_night: "Night mode (tablet sleeps)", tb_night_d: "At bedtime the tablet shows a dark sleep screen with stars. Tapping shows the clock for 5 seconds. An open kid session runs out normally first. No reminders are sent at night.",
     tb_sleep: "Bedtime", tb_wake_wd: "Wake up Mon-Fri", tb_wake_we: "Wake up Sat + Sun",
     tb_rocket: "Rocket countdown (seconds)", tb_rocket_d: "How long the family counts down before the rocket launches (15-180, default 60)."
@@ -156,6 +157,7 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.",
     tb_title: "Tablet", tb_desc: "Nachtmodus und Raketenstart für das Wand-Tablet. Alles hat einen sinnvollen Standard.",
     tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
+    tb_approval_push: "Push an die Eltern, wenn eine Aufgabe auf Freigabe wartet",
     tb_night: "Nachtmodus (Tablet schläft)", tb_night_d: "Zur Schlafenszeit zeigt das Tablet einen dunklen Schlafbildschirm mit Sternen. Antippen zeigt 5 Sekunden die Uhr. Eine offene Kind-Sitzung läuft vorher normal aus. Nachts werden keine Erinnerungen gesendet.",
     tb_sleep: "Schlafenszeit", tb_wake_wd: "Aufstehen Mo-Fr", tb_wake_we: "Aufstehen Sa + So",
     tb_rocket: "Raketen-Countdown (Sekunden)", tb_rocket_d: "So lange zählt die Familie herunter, bevor die Rakete startet (15-180, Standard 60)."
@@ -1621,6 +1623,7 @@ class FamilyMissionSettings extends HTMLElement {
             </div>
             <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="tb-reward-push" ${st.reward_push !== false ? 'checked' : ''}> ${this.localize('tb_reward_push')}</label>
+              <label class="parent-check"><input type="checkbox" id="tb-approval-push" ${st.approval_push !== false ? 'checked' : ''}> ${this.localize('tb_approval_push')}</label>
             </div>
           </div>
         </div>`;
@@ -1635,6 +1638,7 @@ class FamilyMissionSettings extends HTMLElement {
       const val = (id) => root.getElementById(id);
       this.settings.night_mode = !!val('tb-night').checked;
       this.settings.reward_push = !!val('tb-reward-push').checked;
+      this.settings.approval_push = !!val('tb-approval-push').checked;
       this.settings.night_sleep = val('tb-sleep').value;
       this.settings.night_wake_weekday = val('tb-wake-wd').value;
       this.settings.night_wake_weekend = val('tb-wake-we').value;

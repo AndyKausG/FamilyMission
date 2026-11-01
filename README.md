@@ -1,5 +1,7 @@
 # FamilyMission for Home Assistant
 
+<p align="center"><img src="custom_components/family_mission/brand/logo.png" alt="FamilyMission" width="420"></p>
+
 > **Credits:** FamilyMission is based on [**TaskOrganizer**](https://github.com/patrickvonwiegen/TaskOrganizer) by Patrick von Wiegen (MIT license). It continues as a project of its own, maintained by [AndyKausG](https://github.com/AndyKausG), and can be installed **next to** TaskOrganizer without any conflict.
 
 FamilyMission turns household chores into **family missions**: small tasks with points, time windows and instant feedback. Kids tick off their missions on a wall tablet (with a PIN, no Home Assistant account needed), collect points in a wallet, spend them in a reward shop and fill a cooperative family goal together. Parents approve, praise and adjust everything from their phone.
@@ -333,6 +335,9 @@ action:
   * **Cheated:** no points, a deduction of `round(task points x cheat_penalty_factor)` (default 1.0, 0-2) with the reason "Cheated: <task>", and strict mode for `cheat_strict_days` days (default 7, 0 = off).
 * Approving twice (card and push) is harmless: the second attempt finds nothing to do. Event `family_mission_approval_resolved` (`pending_id`, `result`, ...) is fired afterwards, e.g. to clear a notification.
 
+* **Push to the adults (2.3):** as soon as a task waits for approval, FamilyMission itself pushes all adults who have a push target (same resolution as for the reward push: `parent_notify`, otherwise the Companion app): title "✅ <kid> ist fertig" / "✅ <kid> is done" (for a task done together all names, "✅ Clara & David sind fertig"), text "<task> (<points> ⭐)", the actions `FM_APPROVE_<id>` ("Freigeben" / "Approve") and `FM_NOTDONE_<id>` ("Nicht fertig" / "Not done") and the tag `family_mission_approval_<id>`. "Cheated" is deliberately only in the app. A second tap or an already handled approval is ignored silently. Switch off with the setting `approval_push` (default `true`; settings card, section "Tablet").
+* **Quick-start catalog (2.3):** the room tasks `room_blitz`, `room_blitz_small` and `room_deep` are created with `requires_approval: true`. Re-running the wizard with "update earlier tasks" sets the flag only on wizard tasks that never had the key (created before 2.3); once the parents saved the task, their choice is kept.
+
 Actionable notification (the companion app fires `mobile_app_notification_action`; FamilyMission handles the actions `FM_APPROVE_<id>`, `FM_NOTDONE_<id>`, `FM_CHEAT_<id>` itself):
 
 ```yaml
@@ -522,6 +527,7 @@ Both features only concern the wall tablet (`family-mission-kids` in family mode
 | `night_wake_weekday` | `"06:00"` | Wake-up time Mon-Fri. |
 | `night_wake_weekend` | `"08:00"` | Wake-up time Sat+Sun. |
 | `rocket_countdown` | `60` | Length of the rocket countdown in seconds (15-180). |
+| `approval_push` | `true` | Push to the adults when a task waits for parent approval (see [Parent approval](#parent-approval)). |
 | `reward_push` | `true` | Push to the adults when a kid requests a redemption (see [Reward shop](#reward-shop)). |
 
 The first five are in the settings card, section **Tablet**; invalid values fall back to the default.
