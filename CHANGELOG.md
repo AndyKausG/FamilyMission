@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.3.3] - 2026-11-01
+
+- **Family goal suggestion:** below "Points per month" in the settings card (Kids) a line shows a suggestion (80 % of the kids' monthly goals, rounded to 10, like the quick-start wizard) and the task points all kids reached last month (what the rocket counts), with a button to take the suggestion. It follows the monthly goals as they are typed.
+
 ## [2.3.2] - 2026-11-01
 
 - **Automatic reload:** the kids card and the parents card reload their data after the websocket reconnected (`connection` event `ready`: tablet standby, Wi-Fi drop, Home Assistant restart), when the page becomes visible or the window gets focus (at most every 10 s) and as a safety net every 5 minutes (not while the tablet sleeps or the page is hidden; in the kids card counted by the existing 1 s ticker). Previously a missed `family_mission_updated` event (e.g. a new spontaneous bonus) stayed invisible until a manual page reload. The listeners are removed on disconnect and follow a replaced `hass.connection` (frontend reload). A background reload is skipped while an action, celebration or rocket launch is running or a field is being typed in; scroll positions are kept as before.

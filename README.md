@@ -563,7 +563,7 @@ The websocket command `family_mission/adjust_points` (admin, manager or parent) 
 
 **Privacy:** deductions and strict mode are never shown on the kids card home screen, only in the kid's own view after the PIN (a neutral line like "-4 points: Cheated: Set the table" and a small note while strict mode is active).
 
-**Family goal:** `family_points` (in `get_data`, used by the family rocket) is computed from this period's history entries of type `task`; birthday bonus, bonus points and deductions do not count.
+**Family goal:** `family_points` (in `get_data`, used by the family rocket) is computed from this period's history entries of type `task`; birthday bonus, bonus points and deductions do not count. **Choosing the points:** the settings card suggests 80 % of the kids' monthly goals (rounded to 10, like the quick-start wizard) and shows last month's task points of all kids; one tap takes the suggestion. Rule of thumb: reachable when everybody joins in normally, even with a few bad days.
 
 ### Parents card (`family-mission-parents`)
 A phone-friendly hub for parents (administrators and users with the parents role, see [Parents role](#parents-role); other users only see a short note), in three tabs:
