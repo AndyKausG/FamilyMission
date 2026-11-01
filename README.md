@@ -510,6 +510,7 @@ Both features only concern the wall tablet (`family-mission-kids` in family mode
 * It sleeps until the wake-up time of the **following** day: `night_wake_weekday` for Mon-Fri, `night_wake_weekend` for Sat+Sun (so Friday night wakes at the weekend time, Sunday night at the weekday time). Browser local time.
 * A kid session that is still open at bedtime runs out normally (idle `timeout`) and is never cut off in the middle of an input; then the tablet sleeps. After waking up a "Guten Morgen ☀️" banner stays for 30 minutes (tap to dismiss).
 * The backend sends no reminders (`reminder_at`) for kid tasks during the night.
+* Only users **without** a parent role sleep (the shared tablet user, kids with an own login). Admins, managers and parents keep the normal view on their own devices, e.g. to approve something in the evening. So the tablet user must not be an administrator.
 * The time logic is the small pure function `kidsNightState(now, options)` in `family-mission-kids.js` (also `customElements.get('family-mission-kids').nightState`), so it can be tested with a fake clock.
 
 #### Settings (`update_settings`)
