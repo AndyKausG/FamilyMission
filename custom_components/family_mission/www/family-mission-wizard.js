@@ -52,7 +52,7 @@ const I18N_WIZARD = {
     push_to: "Push to: {list}", push_test: "Test push", push_test_ok: "Test push sent to {t}", push_test_none: "No push target for you yet - sign in to the Companion app with your user or choose a target in the settings (Tablet).", push_test_fail: "Test push failed: {e}",
     sel_kids: "Kids", sel_home: "Household",
     parents_intro: "Optional: the chores and mental load of the grown-ups, set up once. Parent tasks carry no points. Anything left undone quietly moves to tomorrow, with no red marks and no reminders. Only 🧠 planning tasks get a gentle heads-up the evening before.",
-    n_parents: "{n} parent tasks", ok_parents: "{n} parent tasks were set up.", ok_parents_err: "Parent tasks could not be saved: ",
+    n_parents: "{n} parent tasks", skip: "Skip", parents_skipped: "Parent tasks: skipped", parents_later: "You can add them any time later: parents' hub → More → Parent tasks.", ok_parents: "{n} parent tasks were set up.", ok_parents_err: "Parent tasks could not be saved: ",
     ns_parents: "Open the parents card to see \"We parents\" and adjust who does what."
   },
   de: {
@@ -97,21 +97,21 @@ const I18N_WIZARD = {
     push_to: "Push an: {list}", push_test: "Test-Push", push_test_ok: "Test-Push gesendet an {t}", push_test_none: "Für dich gibt es noch kein Push-Ziel – Companion-App mit deinem Benutzer anmelden oder in den Einstellungen (Tablet) ein Ziel wählen.", push_test_fail: "Test-Push fehlgeschlagen: {e}",
     sel_kids: "Kinder", sel_home: "Haushalt",
     parents_intro: "Optional: Haushalt und Planungsarbeit der Erwachsenen, einmal eingerichtet. Eltern-Aufgaben haben keine Punkte. Was liegen bleibt, rutscht leise auf morgen, ohne Rot und ohne Erinnerung. Nur 🧠 Planungs-Aufgaben bekommen am Vorabend einen sanften Hinweis.",
-    n_parents: "{n} Eltern-Aufgaben", ok_parents: "{n} Eltern-Aufgaben wurden eingerichtet.", ok_parents_err: "Eltern-Aufgaben konnten nicht gespeichert werden: ",
+    n_parents: "{n} Eltern-Aufgaben", skip: "Überspringen", parents_skipped: "Eltern-Aufgaben: übersprungen", parents_later: "Kann jederzeit später nachgeholt werden: Eltern-Zentrale → Mehr → Eltern-Aufgaben.", ok_parents: "{n} Eltern-Aufgaben wurden eingerichtet.", ok_parents_err: "Eltern-Aufgaben konnten nicht gespeichert werden: ",
     ns_parents: "In der Eltern-Karte seht ihr \"Wir Eltern\" und könnt die Verteilung anpassen."
   }
 };
 
 const I18N_PARENTS_PICKER = {
   en: {
-    loading: "Loading…", error: "Something went wrong: ", already: "set up",
+    loading: "Loading…", error: "Something went wrong: ", already: "set up", clear_new: "Deselect all",
     me_label: "I am", partner_label: "Partner", me: "Me", you: "You", alternate: "Take turns", min: "~{n} min",
     planning: "Planning (mental load)",
     g_daily: "Every day", g_weekly: "Every week", g_monthly: "Monthly and rarely", g_kids: "Kids and family",
     none: "No templates available."
   },
   de: {
-    loading: "Lade…", error: "Es ist ein Fehler aufgetreten: ", already: "eingerichtet",
+    loading: "Lade…", error: "Es ist ein Fehler aufgetreten: ", already: "eingerichtet", clear_new: "Alle abwählen",
     me_label: "Ich bin", partner_label: "Partner", me: "Ich", you: "Du", alternate: "Abwechselnd", min: "~{n} Min.",
     planning: "Planung (Mental Load)",
     g_daily: "Jeden Tag", g_weekly: "Jede Woche", g_monthly: "Monatlich und selten", g_kids: "Kinder und Familie",
@@ -434,6 +434,19 @@ class FamilyMissionParentsPicker extends HTMLElement {
 
   _changed() { this.dispatchEvent(new CustomEvent('fm-parents-changed', { detail: { count: this.selectedCount() }, bubbles: true, composed: true })); }
 
+  /** Unticks every template that is not set up yet (existing parent tasks stay as they are). */
+  clearNew() {
+    const existing = (this._data && this._data.existing) || {};
+    Object.keys(this._sel).forEach(k => { if (!existing[k]) delete this._sel[k]; });
+    this._render(); this._changed();
+  }
+
+  /** Number of newly chosen templates (not set up yet). */
+  newCount() {
+    const existing = (this._data && this._data.existing) || {};
+    return Object.keys(this._sel).filter(k => !existing[k]).length;
+  }
+
   /** Number of checked templates (includes already existing ones). */
   selectedCount() { return Object.keys(this._sel).length; }
 
@@ -460,6 +473,8 @@ class FamilyMissionParentsPicker extends HTMLElement {
       :host { display: block; }
       * { box-sizing: border-box; }
       .muted { color: var(--secondary-text-color, #727272); font-size: 13px; }
+      .clear-row { display: flex; justify-content: flex-end; margin-bottom: 2px; }
+      .link { background: none; border: none; padding: 6px 4px; color: var(--primary-color, #03a9f4); font-size: 14px; font-family: inherit; cursor: pointer; text-decoration: underline; }
       .who { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
       .who label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary-text-color, #727272); flex: 1 1 140px; min-width: 0; }
       .who select { height: 40px; padding: 4px 10px; border: 1px solid var(--divider-color, #ccc); border-radius: 8px; background: var(--primary-background-color, #fff); color: var(--primary-text-color, #212121); font-size: 15px; font-family: inherit; width: 100%; }
@@ -509,7 +524,8 @@ class FamilyMissionParentsPicker extends HTMLElement {
       }).join('');
       return `<h4>${wzEsc(this._t('g_' + g))}</h4>${rows}`;
     }).join('');
-    root.innerHTML = `${this._styles()}${who}${body || `<p class="muted">${wzEsc(this._t('none'))}</p>`}`;
+    const clear = this.newCount() ? `<div class="clear-row"><button type="button" class="link" data-act="clear">${wzEsc(this._t('clear_new'))}</button></div>` : '';
+    root.innerHTML = `${this._styles()}${who}${clear}${body || `<p class="muted">${wzEsc(this._t('none'))}</p>`}`;
     root.querySelectorAll('[data-act]').forEach(el => {
       const act = el.dataset.act;
       if (act === 'pick') el.addEventListener('change', () => {
@@ -517,6 +533,7 @@ class FamilyMissionParentsPicker extends HTMLElement {
         this._render(); this._changed();
       });
       else if (act === 'mode') el.addEventListener('click', () => { this._sel[el.dataset.k] = el.dataset.v; this._render(); });
+      else if (act === 'clear') el.addEventListener('click', () => this.clearNew());
       else if (act === 'me') el.addEventListener('change', () => {
         this._me = el.value;
         if (this._partner === this._me) this._partner = this._otherAdult(this._me);
@@ -563,6 +580,7 @@ class FamilyMissionWizard extends HTMLElement {
     this._step = 0;
     this._s = null;
     this._picker = null;
+    this._skipParents = false;
     this._error = '';
     this._loading = true;
     this._render();
@@ -1056,6 +1074,7 @@ class FamilyMissionWizard extends HTMLElement {
       const last = this._step === 5;
       foot.innerHTML = `
         <button class="btn secondary" data-act="back" ${this._step === 0 ? 'disabled' : ''}>${wzEsc(this._t('back'))}</button>
+        ${this._step === 4 ? `<button class="btn secondary" data-act="skip-parents">${wzEsc(this._t('skip'))}</button>` : ''}
         <button class="btn primary" data-act="${last ? 'apply' : 'next'}" ${this._canNext() && !(s && s.applying) ? '' : 'disabled'}>${wzEsc(last ? this._t('create') : this._t('next'))}${s && s.applying ? ' …' : ''}</button>`;
     }
   }
@@ -1266,10 +1285,11 @@ class FamilyMissionWizard extends HTMLElement {
 
   /** Placeholder for the persistent parents picker (keeps its state across re-renders). */
   _htmlParents() {
-    return `<p class="muted">${wzEsc(this._t('parents_intro'))}</p><div id="parents-host"></div>`;
+    return `<p class="muted">${wzEsc(this._t('parents_intro'))} ${wzEsc(this._t('parents_later'))}</p><div id="parents-host"></div>`;
   }
 
-  _parentsCount() { return this._picker ? this._picker.selectedCount() : 0; }
+  /** Parent templates that will be applied (0 when the step was skipped). */
+  _parentsCount() { return this._picker && !this._skipParents ? this._picker.selectedCount() : 0; }
 
   _mountParents() {
     const host = this.shadowRoot.getElementById('parents-host');
@@ -1299,6 +1319,7 @@ class FamilyMissionWizard extends HTMLElement {
         ${triggers ? `<div class="big"><b>${triggers}</b>${wzEsc(this._t('n_triggers', { n: '' }).trim())}</div>` : ''}
         ${this._parentsCount() ? `<div class="big"><b>${this._parentsCount()}</b>${wzEsc(this._t('n_parents', { n: '' }).trim())}</div>` : ''}
       </div>
+      ${this._skipParents ? `<p class="muted">${wzEsc(this._t('parents_skipped'))}</p>` : ''}
       <div class="card" style="border-left-color:var(--primary-color,#03a9f4)">
         ${p.kids.map(k => `<div class="row"><span class="avatar">${wzEsc(k.avatar || '🙂')}</span><div class="grow">${wzEsc(this._t('kid_goal_line', { name: k.name, g: this._effectiveGoal(k) }))}${p.prorated && this._effectiveGoal(k) > 0 ? ` <span class="muted">(${wzEsc(this._t('full_goal_from', { d: this._fmtDayMonth(p.full_goals_from), g: this._fullGoal(k) }))})</span>` : ''}</div></div>`).join('')}
         <div class="row"><span class="avatar">🏆</span><div class="grow"><b>${wzEsc(this._t('family_line', { g: s.familyPoints || 0 }))}</b>${s.familyReward ? `<br><span class="muted">${wzEsc(this._t('reward_line', { r: s.familyReward }))}</span>` : ''}</div></div>
@@ -1344,7 +1365,8 @@ class FamilyMissionWizard extends HTMLElement {
     else if (act === 'help') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
     else if (act === 'push-test') this._testPush(this.shadowRoot.getElementById('push-test-out'));
     else if (act === 'back' && this._step > 0) this._go(this._step - 1);
-    else if (act === 'next' && this._canNext()) this._go(this._step + 1);
+    else if (act === 'skip-parents' && this._step === 4) { this._skipParents = true; this._go(5); }
+    else if (act === 'next' && this._canNext()) { if (this._step === 4) this._skipParents = false; this._go(this._step + 1); }
     else if (act === 'apply') this._apply();
     else if (act === 'kid-avatar') { s.kids[el.dataset.pid].avatar = el.dataset.v; this._renderBody(); }
     else if (act === 'kid-color') { s.kids[el.dataset.pid].color = el.dataset.v; this._renderBody(); }

@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.4.1] - 2026-11-01
+
+- **Quick start, step "We parents":** new "Skip" button (goes on without creating or changing parent tasks; the summary says "Parent tasks: skipped") and a "Deselect all" link (unticks the templates that are not set up yet; existing parent tasks are never removed). The step mentions that parent tasks can be added later under parents' hub → More → Parent tasks.
+
 ## [2.4.0] - 2026-11-01
 
 - **Waste collection bonus:** optional connector to the HACS integration *Waste Collection Schedule* (no hard dependency). Its calendar entities (entity registry platform `waste_collection_schedule`) are read with `calendar.get_events` (at most every 30 minutes). The evening before a collection an ad-hoc bonus "Mülltonnen rausstellen" / "Put the bins out" opens (subtasks: empty the bins in the flat, one per bin, check for room), on the evening of the collection day "Mülltonnen reinholen" / "Bring the bins in". Only waste types released for kids count (`waste_types`, new types are off). New settings `waste_enabled` (default off), `waste_calendars`, `waste_types`, `waste_min_age` (6), `waste_points_per_bin` (1, × bins, max. 10), `waste_approval` (on), `waste_out_time` / `waste_out_until` (17:00 / 07:00), `waste_in_time` / `waste_in_until` (16:00 / 21:00); all validated. Each task is created once (`waste_done`). New module `waste.py`, new websocket `family_mission/waste_sources`, settings card section "Müllabfuhr / Waste collection".
