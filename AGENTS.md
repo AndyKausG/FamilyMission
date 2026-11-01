@@ -39,8 +39,8 @@ python -m venv ~/venv
   otherwise the auth token is expired.
 - Timers do not fire by themselves in tests; call the check functions directly
   (e.g. `_async_check_waste(hass)`) or use `async_fire_time_changed`.
-- Without the harness only the pure tests are meant to run; HA-based test files are
-  skipped via the ignore list in `tests/conftest.py` (not complete yet - add new files).
+- Without the harness only the pure tests run: `tests/conftest.py` skips every test file
+  that mentions `homeassistant` or `custom_components.family_mission` (no list to maintain).
 - JS: at least `node --check custom_components/family_mission/www/*.js`. For UI changes a
   headless render with Playwright and a fake `hass` object is worth it.
 
