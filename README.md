@@ -111,8 +111,7 @@ views:
               show_add: true
               show_edit: true
               show_delete: true
-            settings_card:
-              show_advanced: false
+            settings_card: {}
       - type: grid
         cards:
           - type: heading
@@ -253,13 +252,16 @@ show_user_select: true # Allows selecting a specific user
 ```
 
 ### 4. Settings (family-mission-settings)
-Allows customization of colors, data export, and factory resets.
+The family's control centre in four tabs: **Familie** (kids incl. medication, parents and roles, family goal), **Aufgaben & Punkte** (templates, approval and consequences, birthday, teamwork, bonus reservation, bonus triggers, waste collection, expiry of missed duties), **Benachrichtigungen** (push target per adult with test, approval / reward push, summaries and reminders, voice announcement) and **Tablet & Geräte** (night mode, rocket countdown, role-model band). The last tab is remembered per browser. Edits are collected and saved with the sticky **Speichern** bar that appears as soon as something changed; templates, bonus triggers and the actions in the small **Erweitert** fold at the bottom (import / export, archive monthly points, factory reset; shown to managers) take effect immediately and are marked so.
+
+The colour / transparency adjustments, the global overdue threshold and the monthly goals of non-kid persons from the old TaskOrganizer card are gone from the UI; stored values stay untouched (the kids tablet and the household card use their defaults when no colours are stored).
 
 
 **YAML Configuration:**
 ```yaml
 type: custom:family-mission-settings
-show_advanced: false    # Unlocks the reset and factory reset area (Default: false)
+title: Einstellungen    # Optional
+# card_height / card_width are optional; show_advanced from older versions is accepted and ignored
 ```
 
 ### 5. Kids (family-mission-kids)
@@ -318,7 +320,7 @@ Kids are `person` entities. The *participant ID* used for points, history and as
 
 ### Setup
 1. Create a `person` entity per kid (no user account required).
-2. Open the **settings card** and expand **Kids**: enable a person as a kid, choose an emoji avatar and colour, set the birth year and an optional 4-digit PIN. The monthly point goal of each kid is edited there, too (it is the same `point_goals` setting as before). Also set the **family goal** (points per month for all kids together and the reward text), the bonus reservation time and whether bonus tasks require finished duties. Only administrators can change kid profiles and PINs.
+2. Open the **settings card** and open the tab **Familie**: enable a person as a kid, choose an emoji avatar and colour, set the birth year and an optional 4-digit PIN. The monthly point goal of each kid is edited there, too (it is the same `point_goals` setting as before). Also set the **family goal** (points per month for all kids together and the reward text), the bonus reservation time and whether bonus tasks require finished duties. Only administrators can change kid profiles and PINs.
 3. Give every task or template a **category** and a **minimum age** (task editor, template editor, or the `category` / `min_age` fields of the services):
 
 | Category | Meaning |
@@ -392,7 +394,7 @@ On every task with `allow_together` the kids card offers a second button **👫 
 The **➕ Spontan-Bonus** button of the parents card opens a sheet to create a one-time bonus task in a few taps: name (required, up to 60 characters), icon chip (🛒 🍞 🧺 🧹 📦 🐕 ⭐), estimated minutes (5 / 10 / 15 / 30, suggesting 2 / 3 / 4 / 6 points, editable 1-10), target ("All kids" or one kid) with a minimum age, and an expiry ("No expiry" or "Today until HH:MM"). The admin-only websocket command `family_mission/add_adhoc_bonus` (`name`, `points`, optional `icon`, `minutes`, `kid_id`, `min_age`, `expires_at` as ISO date/time) creates a task with `interval: 0`, category `bonus`, `adhoc: true` and `expires_at`, and fires `family_mission_task_created` and [`family_mission_bonus_opened`](#family_mission_bonus_opened), so existing tablet announcements work. Errors: `unauthorized`, `invalid_name`, `invalid_icon`, `unknown_person`, `invalid_expiry`. A kid-targeted task uses the normal assignee rule. Expired ad-hoc tasks are removed automatically (checked every minute) without points or history; the kids card hides them as soon as they expire and shows "bis 18:00" on the bonus board.
 
 ### Missed duties
-With `expire_missed` (default on; settings card, Kids section) a duty that was not done does not stay overdue forever: at local midnight (and at startup when a midnight was missed; once per day) every kid-assigned `basis` task that is still due from an earlier day moves to its next occurrence - daily duties (and rotation turns of daily rotations) right away, weekly or longer ones (`interval >= 7`) after a grace period of 2 days. No points are awarded or deducted; each expiry writes a history entry of type `missed` (0 points) that only the parents card and the protocol card show. Bonus tasks never expire this way (ad-hoc bonus tasks use `expires_at`).
+With `expire_missed` (default on; settings card, tab Aufgaben & Punkte) a duty that was not done does not stay overdue forever: at local midnight (and at startup when a midnight was missed; once per day) every kid-assigned `basis` task that is still due from an earlier day moves to its next occurrence - daily duties (and rotation turns of daily rotations) right away, weekly or longer ones (`interval >= 7`) after a grace period of 2 days. No points are awarded or deducted; each expiry writes a history entry of type `missed` (0 points) that only the parents card and the protocol card show. Bonus tasks never expire this way (ad-hoc bonus tasks use `expires_at`).
 
 ### Weekdays and rotation (new in 2.6)
 Two optional scheduling fields on **tasks and templates** (task dialog of the household card and template dialog of the settings card: weekday chips Mo-So and the switch "Im Wechsel"). Both are validated in `add_task` / `edit_task` / `add_template` / `edit_template`; invalid values fall back to "not set". Existing tasks keep their behaviour.
@@ -405,7 +407,7 @@ Two optional scheduling fields on **tasks and templates** (task dialog of the ho
 ### Bonus triggers
 A bonus task can open itself when a Home Assistant entity changes to a state, without writing an automation: the dishwasher program is finished, the dryer is done, the robot vacuum starts. A trigger consists of the bonus task (referenced by its `wizard_key` or `task_id`), an `entity_id` and the target state `to_state`; they are stored in the setting `bonus_triggers`.
 
-* Create them in the wizard (step 2) or in the settings card, section **Bonus-Auslöser / Bonus triggers**: choose the bonus task, search an entity (domains `sensor`, `binary_sensor`, `vacuum`, `select`, `input_boolean`, `switch`) and enter the state; the state is suggested from the `options` of enum sensors and the current state.
+* Create them in the wizard (step 2) or in the settings card, tab **Aufgaben & Punkte**, section **Bonus-Auslöser / Bonus triggers**: choose the bonus task, search an entity (domains `sensor`, `binary_sensor`, `vacuum`, `select`, `input_boolean`, `switch`) and enter the state; the state is suggested from the `options` of enum sensors and the current state.
 * When the entity **changes** to exactly that state (string comparison, `on` / `off` for binary sensors), the task is set due immediately (like `set_task_due_by_name`) and the event [`family_mission_bonus_opened`](#family_mission_bonus_opened) is fired. The first state after a restart and the recovery from `unknown` / `unavailable` do not trigger. If the task is already open, nothing happens (no second announcement).
 * The listeners are registered when the integration starts, re-registered whenever the settings change and removed when it is unloaded.
 
@@ -419,7 +421,7 @@ Optional (setting `waste_enabled`, default off). Needs the HACS integration [Was
   * "Mülltonnen reinholen" / "Bring the bins in" from `waste_in_time` (16:00) until `waste_in_until` (21:00) on the collection day.
   * Points `waste_points_per_bin` (1-5, default 1) × bins (max. 10), minimum age `waste_min_age` (default 6), parent approval `waste_approval` (default on), doing it together is allowed (team bonus).
   * Each task is created once (memory `waste_done`, also across restarts) and removed when it expires. The calendars are read at most every 30 minutes.
-* **Settings card:** section **Müllabfuhr / Waste collection** with the found calendars, the waste types of the next 6 weeks and the next collections (websocket `family_mission/waste_sources`).
+* **Settings card:** tab **Aufgaben & Punkte**, section **Müllabfuhr / Waste collection** with the found calendars, the waste types of the next 6 weeks and the next collections (websocket `family_mission/waste_sources`).
 
 ### Voice announcement
 Optional (setting `announce_enabled`, default off). Speaks via `tts.speak` (`announce_tts` = a `tts.*` entity, `announce_players` = `media_player.*` list).
@@ -476,7 +478,7 @@ All of these return `{"success": true, ...}` or `{"success": false, "error": <co
 | `family_mission/delete_kid_profile` | **Admin or manager.** `participant_id`. |
 
 ### Birthday
-Give a kid a **birthday** (settings card -> Kids, or wizard step 1). The age is then exact (it changes on the birthday, not on January 1st; a Feb 29 birthday is celebrated on Feb 28 in common years); without a birthday the birth year is used as before. On the birthday (checked at startup and daily at 00:02, once per birthday):
+Give a kid a **birthday** (settings card -> tab Familie, or wizard step 1). The age is then exact (it changes on the birthday, not on January 1st; a Feb 29 birthday is celebrated on Feb 28 in common years); without a birthday the birth year is used as before. On the birthday (checked at startup and daily at 00:02, once per birthday):
 
 * **Party mode** in the kids card: 👑 and floating balloons on the tile, a banner on the home screen, and after the PIN a birthday overlay with confetti and the "Happy Birthday" melody (WebAudio, respects the `sound` option).
 * **Duty-free birthday** (`birthday_duty_free`, default on): the kid's own recurring basis tasks that are due are moved to their next occurrence without points or history. Tasks shared with other kids are not touched.
@@ -664,8 +666,7 @@ tasks_card:            # same options as custom:family-mission-card
   show_add: true
   show_edit: true
   show_delete: true
-settings_card:         # same options as custom:family-mission-settings
-  show_advanced: false
+settings_card: {}      # same options as custom:family-mission-settings (title, card_height, card_width)
 ```
 
 `tasks_card` and `settings_card` are optional; without them the embedded task list and settings use their defaults. A separate task list or settings card on the same dashboard is then no longer needed. Restrict the view that holds this card to the parents with `visible` (see [Recommended dashboard](#recommended-dashboard)).
@@ -714,7 +715,7 @@ New in 2.0. The household and planning work of the adults, set up once and then 
 | `parent_digest_enabled` / `parent_digest_time` | `false` / `"07:00"` | Morning digest "Heute: N Aufgaben, M überfällig" per adult, once a day, and its time. |
 | `parent_notify` | `{}` | Optional push target per adult (`{user_id: "notify.xyz"}`). Without an entry FamilyMission uses the `mobile_app` notify service of that user's device, if it exists. Send errors are only logged. |
 
-All of them are in the settings card, section **Wir Eltern**; none is required.
+All of them are in the settings card, tabs **Benachrichtigungen** (summary, digest, planning reminder, absence suggestion, push target) and **Tablet & Geräte** (role-model band); none is required.
 
 ### Rocket launch and night mode
 
@@ -754,7 +755,7 @@ Both features only concern the wall tablet (`family-mission-kids` in family mode
 | `approval_reminder_hours` | `2` | Hours after which an open approval gets one quiet reminder push (integer 0-24, `0` = off; not at night). |
 | `reward_push` | `true` | Push to the adults when a kid requests a redemption (see [Reward shop](#reward-shop)). |
 
-The first five are in the settings card, section **Tablet**; invalid values fall back to the default.
+The first five are in the settings card, tab **Tablet & Geräte** (night mode, rocket countdown) and tab **Benachrichtigungen** (push settings); invalid values fall back to the default.
 
 #### Websocket commands
 | Command | Description |
@@ -812,7 +813,7 @@ By default every parent action needs a Home Assistant administrator. With the **
 Without kid profiles nothing changes: every Home Assistant user may manage tasks, templates, settings and history as before. Note that the button entities (`button.family_mission_reset_month`, `button.family_mission_factory_reset`) and the services are not covered by these checks; hide or disable the factory reset button if non-admin users can reach entity controls.
 
 ### Settings of step 2
-`cheat_penalty_factor` (0-2), `cheat_strict_days` (0-30), `birthday_bonus_points` (0-50), `team_bonus` (0-3), `birthday_duty_free`, `expire_missed` and the per-kid spot-check rate are in the settings card (Kids). `update_settings` cannot overwrite kid profiles, pending approvals, history or points.
+`cheat_penalty_factor` (0-2), `cheat_strict_days` (0-30), `birthday_bonus_points` (0-50), `team_bonus` (0-3), `birthday_duty_free`, `expire_missed` and the per-kid spot-check rate are in the settings card (tabs Familie / Aufgaben & Punkte). `update_settings` cannot overwrite kid profiles, pending approvals, history or points.
 
 ### Security notes
 * PINs are stored as salted SHA-256 hashes. The hashes are never sent to the frontend (`family_mission/get_data` only reports `has_pin`) and never appear in the attributes of `sensor.family_mission_settings`.
@@ -1093,7 +1094,6 @@ action:
 ## Installation & Data Storage
 All data is stored in the internal Home Assistant storage at `.storage/family_mission.storage`.
 
-Colors and overdue thresholds can be defined globally within the settings card.
 
 ## Releases
 Releases are created automatically by `.github/workflows/release.yml`: when a push to `main` changes `version` in `custom_components/family_mission/manifest.json`, a GitHub release `vX.Y.Z` is created with the matching `CHANGELOG.md` section as text. HACS then shows version numbers instead of commit ids and offers the update.

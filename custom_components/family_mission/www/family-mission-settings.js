@@ -5,8 +5,13 @@
  */
 const I18N_SETTINGS = {
   en: { 
-    title: "Settings", colors: "Colors (Done, Due, Overdue)", c_done: "Done", c_due: "Due", c_overdue: "Overdue", 
-    days_overdue: "Overdue after (Days)", save: "Save Settings", advanced: "ADVANCED SETTINGS", cancel: "Cancel",
+    title: "Settings", save: "Save Settings", advanced: "Advanced", cancel: "Cancel",
+    tab_family: "Family", tab_tasks: "Tasks & points", tab_notify: "Notifications", tab_device: "Tablet & devices",
+    dirty_msg: "Unsaved changes", discard: "Discard", discard_confirm: "Discard all unsaved changes?",
+    immediate_note: "⚡ Saved immediately", adv_note: "These actions take effect immediately and are not part of the Save button.",
+    h_push: "Push messages", h_remind: "Summaries & reminders", night_title: "Night mode", rocket_title: "Rocket launch",
+    band_title: "Role-model band", claim_title: "Bonus reservation", expire_title: "Missed duties",
+    kid_profiles_note: "Kid profiles, PINs and medication are stored with Save.",
     archive_btn: "Archive and reset monthly points now", factory_btn: "🔥 Factory reset (Delete everything)", 
     success: "Settings saved!", confirm_reset: "Do you really want to reset all points? Data will be archived.", 
     confirm_factory: "WARNING: This permanently deletes ALL tasks, points, and history!",
@@ -16,15 +21,12 @@ const I18N_SETTINGS = {
     add_template: "Add Template", edit_template: "Edit Template", template_name: "Template Name",
     confirm_delete_template: "Do you really want to delete this template? It cannot be recovered.",
     template_saved: "Template saved!", template_deleted: "Template deleted!", no_templates: "No templates found. Create a new one!",
-    point_goals: "Monthly Point Goals",
-    goal_lbl: "Goal for {user}",
     template_name_placeholder: "e.g. Take out trash",
     subtasks: "Subtasks", 
     add_subtask: "Add Subtask", 
     confirm: "Add", 
     subtask_placeholder: "Subtask title...",
     edit_template_hover: "Edit template", delete_template_hover: "Delete template",
-    save_hover: "Saves the current color and day settings.",
     export_hover: "Downloads all current tasks as a JSON file.",
     import_hover: "Opens a dialog to select a JSON file for importing tasks.", 
     desc_lbl: "Description (optional)", area_lbl: "Area", points_lbl: "Points (1-10)", icon_lbl: "Icon",
@@ -36,13 +38,9 @@ const I18N_SETTINGS = {
     cancel: "Cancel", save: "Save",
     export_tasks_cb: "Tasks", export_templates_cb: "Templates", export_history_cb: "History & Points", export_settings_cb: "Settings",
     no_desc: "No description", onetime: "One-time",
-    show_advanced_lbl: "Show Advanced Settings",
     height_lbl: "Height",
     width_lbl: "Width",
     title_lbl: "Title",
-    color_done_lbl: "Color Done", color_due_lbl: "Color Due", color_overdue_lbl: "Color Overdue",
-    transparency_lbl: "Transparency", color_adjustments: "Color Adjustments",
-    set_default: "Set Default",
     import_tasks_title: "Import Tasks", metadata_title: "Import Overview", tasks_lbl: "Tasks", 
     templates_lbl: "Templates", history_lbl: "History Entries", settings_included: "Settings", 
     yes: "Yes", no: "No", start_import: "Start Import", confirm_reload: "Confirm & Reload",
@@ -79,15 +77,13 @@ claim_minutes: "Bonus reservation (minutes)",
     wizard_missing: "The wizard could not be loaded. Reload the page (Ctrl+F5) and try again.",
     triggers_title: "Bonus triggers", triggers_desc: "Open a bonus task automatically when an entity changes to a state, e.g. when the dishwasher is finished. Fires the event family_mission_bonus_opened.",
     trig_task: "Bonus task", trig_pick_task: "— choose a bonus task —", trig_add: "Add trigger", trig_remove: "Remove trigger", trig_none: "No triggers yet.", trig_no_bonus: "No bonus task yet. Create a task without assignee and category \"Bonus\" (or let the quick start create them).",
-    trig_when: "when {entity} becomes \"{state}\"", trig_error: "Could not save the triggers: ",
-    pe_title: "We parents", pe_desc: "Optional. Everything here has a sensible default; nothing is required.",
+    trig_when: "when {entity} becomes \"{state}\"", trig_error: "Could not save the triggers: ", 
     pe_band: "Show role-model band on the tablet", pe_band_d: "Quiet line on the kids tablet: \"Mom and Dad also have N missions today\" (no points, no names).",
     pe_label: "Wording for the band (optional)", pe_label_ph: "Mom and Dad",
     pe_summary: "Sunday summary", pe_summary_d: "A neutral weekly note to each adult: hours per person and what is still open.", pe_time: "Time",
     pe_digest: "Morning overview", pe_digest_d: "One push per adult in the morning: \"Today: 3 tasks, 1 overdue\". Only when something is due. Never at night.",
     pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. Other parent tasks only remind at their own time (if you set one).",
-    pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.",
-    tb_title: "Tablet", tb_desc: "Night mode and rocket launch for the wall tablet. Everything has a sensible default.",
+    pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.", 
     tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
     tb_approval_push: "Push to the parents when a task waits for approval",
     tb_push_status: "Who gets the push?", tb_push_auto: "✓ Push to {t} (automatic)", tb_push_manual: "✓ Push to {t}",
@@ -114,8 +110,13 @@ claim_minutes: "Bonus reservation (minutes)",
     an_test_none: "Choose an engine and at least one speaker.", an_test_fail: "Announcement failed: {e}", an_choose: "- choose -"
   },
   de: { 
-    title: "Einstellungen", colors: "Farben (Erledigt, Fällig, Überfällig)", c_done: "Erledigt", c_due: "Fällig", c_overdue: "Überfällig", 
-    days_overdue: "Überfällig nach (Tagen)", save: "Einstellungen speichern", advanced: "ERWEITERTE EINSTELLUNGEN", cancel: "Abbrechen",
+    title: "Einstellungen", save: "Einstellungen speichern", advanced: "Erweitert", cancel: "Abbrechen",
+    tab_family: "Familie", tab_tasks: "Aufgaben & Punkte", tab_notify: "Benachrichtigungen", tab_device: "Tablet & Geräte",
+    dirty_msg: "Ungespeicherte Änderungen", discard: "Verwerfen", discard_confirm: "Alle ungespeicherten Änderungen verwerfen?",
+    immediate_note: "⚡ Wird sofort gespeichert", adv_note: "Diese Aktionen wirken sofort und gehören nicht zum Speichern-Button.",
+    h_push: "Push-Nachrichten", h_remind: "Zusammenfassungen & Erinnerungen", night_title: "Nachtmodus", rocket_title: "Raketenstart",
+    band_title: "Vorbild-Band", claim_title: "Bonus-Reservierung", expire_title: "Verpasste Pflichten",
+    kid_profiles_note: "Kinderprofile, PINs und Medikamente werden mit Speichern abgelegt.",
     archive_btn: "Monats-Punkte archivieren und zurücksetzen", factory_btn: "🔥 Werkseinstellungen setzen (Alles löschen)", 
     success: "Einstellungen erfolgreich gespeichert!", confirm_reset: "Möchtest du alle monatlichen Punkte wirklich auf 0 setzen? Die Daten werden archiviert.", 
     confirm_factory: "ACHTUNG: Dies löscht unwiderruflich ALLE Aufgaben, Punkte und die Historie!", 
@@ -125,15 +126,12 @@ claim_minutes: "Bonus reservation (minutes)",
     add_template: "Vorlage hinzufügen", edit_template: "Vorlage bearbeiten", template_name: "Name der Vorlage",
     confirm_delete_template: "Möchtest du diese Vorlage wirklich löschen? Sie kann nicht wiederhergestellt werden.",
     template_saved: "Vorlage gespeichert!", template_deleted: "Vorlage gelöscht!", no_templates: "Keine Vorlagen vorhanden. Erstelle eine neue!",
-    point_goals: "Monatliche Punktziele",
-    goal_lbl: "Ziel für {user}",
     template_name_placeholder: "z.B. Müll rausbringen",
     subtasks: "Unteraufgaben", 
     add_subtask: "Unteraufgabe hinzufügen", 
     confirm: "Hinzufügen", 
     subtask_placeholder: "Titel der Unteraufgabe...",
     edit_template_hover: "Vorlage bearbeiten", delete_template_hover: "Vorlage löschen",
-    save_hover: "Speichert die aktuellen Farb- und Tageseinstellungen.",
     export_hover: "Lädt alle aktuellen Aufgaben als JSON-Datei herunter.",
     import_hover: "Öffnet einen Dialog zur Auswahl einer JSON-Datei für den Import von Aufgaben.", 
     desc_lbl: "Beschreibung (optional)", area_lbl: "Bereich", points_lbl: "Punkte (1-10)", icon_lbl: "Icon",
@@ -145,13 +143,9 @@ claim_minutes: "Bonus reservation (minutes)",
     cancel: "Abbrechen", save: "Speichern",
     export_tasks_cb: "Aufgaben", export_templates_cb: "Vorlagen", export_history_cb: "Protokoll & Historie", export_settings_cb: "Einstellungen",
     no_desc: "Keine Beschreibung", onetime: "Einmalig",
-    show_advanced_lbl: "Erweiterte Einstellungen anzeigen",
     height_lbl: "Höhe",
     width_lbl: "Breite",
     title_lbl: "Titel",
-    color_done_lbl: "Farbe Erledigt", color_due_lbl: "Farbe Fällig", color_overdue_lbl: "Farbe Überfällig",
-    transparency_lbl: "Transparenz", color_adjustments: "Farbanpassungen",
-    set_default: "Standard setzen",
     import_tasks_title: "Aufgaben importieren", metadata_title: "Import Übersicht", tasks_lbl: "Aufgaben", 
     templates_lbl: "Vorlagen", history_lbl: "Historien-Einträge", settings_included: "Einstellungen", 
     yes: "Ja", no: "Nein", start_import: "Import starten", confirm_reload: "Bestätigen & Neuladen",
@@ -188,15 +182,13 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     wizard_missing: "Der Assistent konnte nicht geladen werden. Seite neu laden (Strg+F5) und erneut versuchen.",
     triggers_title: "Bonus-Auslöser / Bonus triggers", triggers_desc: "Öffnet eine Bonus-Aufgabe automatisch, wenn eine Entität einen Zustand annimmt, z.B. wenn die Spülmaschine fertig ist. Löst das Ereignis family_mission_bonus_opened aus.",
     trig_task: "Bonus-Aufgabe", trig_pick_task: "— Bonus-Aufgabe wählen —", trig_add: "Auslöser hinzufügen", trig_remove: "Auslöser entfernen", trig_none: "Noch keine Auslöser.", trig_no_bonus: "Noch keine Bonus-Aufgabe vorhanden. Lege eine Aufgabe ohne Bearbeiter mit Kategorie „Bonus“ an (oder lass sie vom Schnellstart anlegen).",
-    trig_when: "wenn {entity} auf \"{state}\" wechselt", trig_error: "Auslöser konnten nicht gespeichert werden: ",
-    pe_title: "Wir Eltern", pe_desc: "Optional. Alles hat einen sinnvollen Standard, nichts ist Pflicht.",
+    trig_when: "wenn {entity} auf \"{state}\" wechselt", trig_error: "Auslöser konnten nicht gespeichert werden: ", 
     pe_band: "Vorbild-Band auf dem Tablet zeigen", pe_band_d: "Ruhige Zeile auf dem Kinder-Tablet: \"Auch Mama und Papa haben heute N Missionen\" (ohne Punkte, ohne Namen).",
     pe_label: "Wortlaut für das Band (optional)", pe_label_ph: "Mama und Papa",
     pe_summary: "Sonntags-Zusammenfassung", pe_summary_d: "Eine neutrale Wochen-Notiz an jeden Erwachsenen: Stunden pro Person und was noch offen ist.", pe_time: "Uhrzeit",
     pe_digest: "Morgen-Übersicht", pe_digest_d: "Eine Push-Nachricht pro Erwachsenem am Morgen: \"Heute: 3 Aufgaben, 1 überfällig\". Nur wenn etwas ansteht. Nie nachts.",
     pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nur zu ihrer eigenen Uhrzeit (falls gesetzt).",
-    pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.",
-    tb_title: "Tablet", tb_desc: "Nachtmodus und Raketenstart für das Wand-Tablet. Alles hat einen sinnvollen Standard.",
+    pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.", 
     tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
     tb_approval_push: "Push an die Eltern, wenn eine Aufgabe auf Freigabe wartet",
     tb_push_status: "Wer bekommt den Push?", tb_push_auto: "✓ Push an {t} (automatisch)", tb_push_manual: "✓ Push an {t}",
@@ -321,10 +313,10 @@ class FamilyMissionSettings extends HTMLElement {
     constructor() {
     super(); 
     this.attachShadow({ mode: 'open' });
-    this._themeView = 'light';
-    
-    // Global properties
-    this.settings = { color_done: '#4CAF50', color_due: '#FFC107', color_overdue: '#F44336', overdue_days: 5 };
+
+    // Global properties. The colour / overdue keys of the old TaskOrganizer UI are no longer edited here;
+    // stored values stay untouched and are sent back unchanged on save.
+    this.settings = {};
     this.tasks = {};
     this.users = {};
     this.templates = {};
@@ -336,8 +328,9 @@ class FamilyMissionSettings extends HTMLElement {
     this.current_period_start = null;
     this._subtasks = [];
     this._dataLoaded = false; 
-    this._advancedOpen = false; 
-    this._ieOpen = false; 
+    this._tab = FamilyMissionSettings._storedTab();
+    this._dirty = false;
+    this._open = {};
     this._templatesOpen = false;
     this._templateModalOpen = false;
     this._importModalOpen = false;
@@ -348,21 +341,27 @@ class FamilyMissionSettings extends HTMLElement {
     this._kidDrafts = {};
     this._goalDrafts = {};
     this._familyDraft = {};
-    this._kidsOpen = false;
     this._myRole = null;
     this._haUsers = [];
     this._parentsDraft = null;
-    this._trigOpen = false;
-    this._peOpen = false;
-    this._tbOpen = false;
-    this._wsOpen = false;
-    this._anOpen = false;
     this._wasteSrc = null;
     this._adults = [];
     this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '' };
     this._wizard = null;
     this._unsubEvents = null;
     this.addEventListener('click', (ev) => this._handleClick(ev));
+  }
+
+  /** Tabs of the card in display order. */
+  static get TABS() { return ['family', 'tasks', 'notify', 'device']; }
+
+  /** Last used tab from localStorage (the storage may be blocked, so every access is guarded). */
+  static _storedTab() {
+    try {
+      const v = window.localStorage.getItem('family_mission_settings_tab');
+      if (FamilyMissionSettings.TABS.includes(v)) return v;
+    } catch (e) { /* storage unavailable */ }
+    return 'family';
   }
 
   /**
@@ -399,8 +398,7 @@ class FamilyMissionSettings extends HTMLElement {
   static getStubConfig(hass) { 
     return { 
       type: "custom:family-mission-settings", 
-      title: this._localize(hass, 'title'),
-      show_advanced: false 
+      title: this._localize(hass, 'title')
     }; 
   }
 
@@ -553,8 +551,11 @@ class FamilyMissionSettings extends HTMLElement {
    */
   _fetchData() { 
     this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => { 
-      if (data.settings && Object.keys(data.settings).length > 0) { 
-        this.settings = { ...this.settings, ...data.settings }; 
+      if (data.settings && Object.keys(data.settings).length > 0) {
+        // Unsaved edits of the form fields survive a background refresh (e.g. after adding a trigger)
+        const keep = this._dirty ? { ...this.settings } : {};
+        for (const k of ['kids', 'bonus_triggers', 'wizard', 'parents', 'parents_manage']) delete keep[k];
+        this.settings = { ...this.settings, ...data.settings, ...keep };
       } 
       this.tasks = data.tasks || {};
       this.templates = data.templates || {};
@@ -690,25 +691,17 @@ class FamilyMissionSettings extends HTMLElement {
    * Gathers modified settings from the UI and saves them via websocket.
    */
   async _saveSettings() { 
-    const pointGoals = {};
+    // Monthly goals are edited per kid only; goals stored for other persons stay as they are.
+    const pointGoals = { ...(this.settings.point_goals || {}) };
     this.shadowRoot.querySelectorAll('.user-goal-input').forEach(input => {
       const val = parseInt(input.value);
-      if (!isNaN(val) && val > 0) pointGoals[input.dataset.uid] = val;
-    });
-
-    // We merge the currently visible values into this.settings first
-    ['done', 'due', 'overdue'].forEach(status => {
-      const cInput = this.shadowRoot.getElementById(`c-${status}`);
-      if (cInput) this.settings[`color_${status}_${this._themeView}`] = cInput.value;
-      const tInput = this.shadowRoot.getElementById(`t-${status}`);
-      if (tInput) this.settings[`transparency_${status}_${this._themeView}`] = parseInt(tInput.value);
+      if (!isNaN(val) && val > 0) pointGoals[input.dataset.uid] = val; else delete pointGoals[input.dataset.uid];
     });
 
     // Read ALL form values before the first await: saving a kid profile fires an
     // update event which re-renders the card and would reset unsaved inputs.
     const newSettings = { 
       ...this.settings,
-      overdue_days: parseInt(this.shadowRoot.getElementById('num-overdue').value),
       point_goals: pointGoals,
       // A manually entered goal replaces the prorated start-month goal: it is also the full goal
       point_goals_full: this._fullGoals(pointGoals)
@@ -757,9 +750,66 @@ class FamilyMissionSettings extends HTMLElement {
       this._parentsDraft = null;
       this._goalDrafts = {};
       this._familyDraft = {};
+      this._dirty = false;
       alert(this.localize('success')); 
       this._fetchData(); 
     }); 
+  }
+
+  /** Marks the form as changed: the sticky save bar appears. */
+  _markDirty() {
+    this._dirty = true;
+    const bar = this.shadowRoot && this.shadowRoot.getElementById('save-bar');
+    if (bar) bar.hidden = false;
+  }
+
+  /** Throws away all unsaved edits and reloads the stored settings. */
+  _discardChanges() {
+    if (!confirm(this.localize('discard_confirm'))) return;
+    this._kidDrafts = {};
+    this._goalDrafts = {};
+    this._familyDraft = {};
+    this._parentsDraft = null;
+    this._dirty = false;
+    this.settings = {};
+    this._fetchData();
+  }
+
+  /**
+   * Switches to a tab without re-rendering (all panels stay in the DOM, so every field is still read on save).
+   * @param {string} tab - Tab id.
+   */
+  _switchTab(tab) {
+    if (!FamilyMissionSettings.TABS.includes(tab)) return;
+    this._tab = tab;
+    try { window.localStorage.setItem('family_mission_settings_tab', tab); } catch (e) { /* storage unavailable */ }
+    const root = this.shadowRoot;
+    root.querySelectorAll('.tab-btn').forEach(b => {
+      const on = b.dataset.tab === tab;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+      if (on && b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    root.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.dataset.panel !== tab; });
+  }
+
+  /**
+   * Opens / closes a collapsible section in place.
+   * @param {string} id - Section id (data-sec).
+   */
+  _toggleSec(id) {
+    this._open[id] = !this._open[id];
+    const root = this.shadowRoot;
+    const head = root.querySelector(`.sec-head[data-sec="${id}"]`);
+    const body = root.querySelector(`.sec-body[data-sec="${id}"]`);
+    if (body) body.classList.toggle('open', !!this._open[id]);
+    if (head) {
+      head.setAttribute('aria-expanded', String(!!this._open[id]));
+      const icon = head.querySelector('ha-icon');
+      if (icon) icon.setAttribute('icon', this._open[id] ? 'mdi:chevron-up' : 'mdi:chevron-right');
+    }
+    if (id === 'waste' && this._open[id] && !this._wasteSrc) this._loadWasteSources();
   }
   
   /**
@@ -785,21 +835,13 @@ class FamilyMissionSettings extends HTMLElement {
   }
   
   /**
-   * Toggles the visibility of the advanced settings section.
-   */
-  _toggleAdvanced() { 
-    this._advancedOpen = !this._advancedOpen; 
-    this._render(); 
-  }
-
-  /**
    * Central click handler for the settings card.
    */
   _handleClick(ev) {
     const path = ev.composedPath();
     const target = path.find(el =>
-        (el.id && (el.id.startsWith('btn-') || el.id.startsWith('toggle-') || el.id === 'theme-toggle' || el.id.endsWith('-toggle'))) ||
-        (el.classList && (el.classList.contains('action-btn') || el.classList.contains('subtask-check') || el.classList.contains('kid-emoji-pick') || el.classList.contains('wd-chip')))
+        (el.id && (el.id.startsWith('btn-') || el.id.startsWith('toggle-'))) ||
+        (el.classList && (el.classList.contains('action-btn') || el.classList.contains('tab-btn') || el.classList.contains('sec-head') || el.classList.contains('subtask-check') || el.classList.contains('kid-emoji-pick') || el.classList.contains('wd-chip')))
     );
 
     if (!target) return;
@@ -807,33 +849,10 @@ class FamilyMissionSettings extends HTMLElement {
     
     const id = target.id;
     if (id === 'btn-save') this._saveSettings();
-    else if (id === 'theme-toggle') {
-      this._themeView = target.checked ? 'dark' : 'light';
-      this._render();
-    }
-    else if (id === 'btn-default-colors') {
-      ['done', 'due', 'overdue'].forEach(status => {
-        delete this.settings[`color_${status}_light`];
-        delete this.settings[`transparency_${status}_light`];
-        delete this.settings[`color_${status}_dark`];
-        delete this.settings[`transparency_${status}_dark`];
-        delete this.settings[`color_${status}`];
-      });
-      this._render();
-    }
-    else if (id === 'color-toggle') { this._colorOpen = !this._colorOpen; this._render(); }
-    else if (id === 'overdue-toggle') { this._overdueOpen = !this._overdueOpen; this._render(); }
-    else if (id === 'ie-toggle') { this._ieOpen = !this._ieOpen; this._render(); }
-    else if (id === 'templates-toggle') { this._templatesOpen = !this._templatesOpen; this._render(); }
-    else if (id === 'adv-toggle') { this._advancedOpen = !this._advancedOpen; this._render(); }
-    else if (id === 'goals-toggle') { this._goalsOpen = !this._goalsOpen; this._render(); }
-    else if (id === 'kids-toggle') { this._kidsOpen = !this._kidsOpen; this._render(); }
-    else if (id === 'pe-toggle') { this._peOpen = !this._peOpen; this._render(); }
-    else if (id === 'tb-toggle') { this._tbOpen = !this._tbOpen; this._render(); }
-    else if (id === 'ws-toggle') { this._wsOpen = !this._wsOpen; if (this._wsOpen && !this._wasteSrc) this._loadWasteSources(); this._render(); }
-    else if (id === 'ws-reload') this._loadWasteSources();
-    else if (id === 'an-toggle') { this._anOpen = !this._anOpen; this._render(); }
-    else if (id === 'trig-toggle') { this._trigOpen = !this._trigOpen; this._render(); }
+    else if (id === 'btn-discard') this._discardChanges();
+    else if (target.classList.contains('tab-btn')) this._switchTab(target.dataset.tab);
+    else if (target.classList.contains('sec-head')) this._toggleSec(target.dataset.sec);
+    else if (id === 'btn-ws-reload') this._loadWasteSources();
     else if (id === 'btn-wizard-open') this._openWizard();
     else if (id === 'btn-help-open') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
     else if (id === 'btn-trig-add') this._addTrigger();
@@ -846,6 +865,7 @@ class FamilyMissionSettings extends HTMLElement {
     else if (target.classList.contains('kid-emoji-pick')) {
       if (this._canManage()) {
         this._kidDraft(target.dataset.uid).avatar = target.dataset.emoji;
+        this._markDirty();
         this._render();
       }
     }
@@ -934,22 +954,6 @@ class FamilyMissionSettings extends HTMLElement {
   _toggleSubtaskStatus(index) {
     this._subtasks[index].done = !this._subtasks[index].done;
     this._renderModalSubtasks();
-  }
-
-  /**
-   * Toggles the visibility of the import/export section.
-   */
-  _toggleIE() { 
-    this._ieOpen = !this._ieOpen; 
-    this._render(); 
-  }
-
-  /**
-   * Toggles the template management section.
-   */
-  _toggleTemplates() {
-    this._templatesOpen = !this._templatesOpen;
-    this._render();
   }
 
   /**
@@ -1223,12 +1227,29 @@ class FamilyMissionSettings extends HTMLElement {
     return `
       <style> 
         :host { display: block; width: ${width}; margin: 0 auto; } * { box-sizing: border-box; } 
-        ha-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: ${height}; overflow-y: auto; } 
+        ha-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: ${height}; overflow-y: ${this._config.card_height ? 'auto' : 'visible'}; max-width: 100%; } 
         .header { font-size: 20px; font-weight: bold; margin-bottom: 10px; } 
         .fm-footer { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; font-size: 12px; color: var(--secondary-text-color); opacity: 0.7; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--card-background-color); border-radius: 8px; border: 1px solid var(--divider-color); box-shadow: var(--ha-card-box-shadow, 0 2px 2px rgba(0,0,0,0.1)); margin-bottom: 8px; } 
         .setting-label { font-weight: bold; font-size: 14px; color: var(--primary-text-color); } 
         .section-card { background: var(--card-background-color); border-radius: 8px; border: 1px solid var(--divider-color); box-shadow: var(--ha-card-box-shadow, 0 2px 2px rgba(0,0,0,0.1)); margin-bottom: 12px; padding: 12px; width: 100%; box-sizing: border-box; }
+        .tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--divider-color); scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+        .tab-btn { flex: 0 0 auto; min-height: 44px; padding: 0 14px; border: none; border-bottom: 3px solid transparent; background: transparent; color: var(--secondary-text-color); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+        .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-btn:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -2px; }
+        .tab-panel { display: flex; flex-direction: column; min-width: 0; }
+        .tab-panel[hidden] { display: none; }
+        .sec-static { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+        .sec-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--primary-text-color); }
+        .sec-inner { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; min-width: 0; }
+        .sec-flow { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; cursor: pointer; }
+        .sec-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--secondary-background-color); color: var(--secondary-text-color); }
+        .save-bar { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; margin: 0 -4px; border-radius: 10px; background: var(--card-background-color); border: 1px solid var(--primary-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.25); }
+        .save-bar[hidden] { display: none; }
+        .save-bar .save-msg { flex: 1 1 140px; font-weight: 500; font-size: 14px; color: var(--primary-text-color); }
+        .save-bar .btn { width: auto; flex: 0 0 auto; padding: 10px 18px; margin: 0; }
+        .btn-discard { background: var(--secondary-background-color); color: var(--primary-text-color); }
         .section-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
         .section-title { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px; color: var(--primary-text-color); }
         .section-content { display: none; margin-top: 16px; flex-direction: column; gap: 10px; }
@@ -1455,22 +1476,50 @@ class FamilyMissionSettings extends HTMLElement {
       </div>`;
   }
 
+  /** HTML escape for attribute / text values. */
+  _esc(v) {
+    return String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
   /**
-   * Renders the collapsible "Kids" section (kid profiles + family goal).
+   * Wraps a settings block in a card. Collapsible blocks (long ones) start closed and toggle in place.
+   * @param {string} id - Section id.
+   * @param {string} title - Heading.
+   * @param {string} body - Inner HTML.
+   * @param {object} [opt] - { collapsible, badge } (badge: small note next to the heading).
    * @returns {string} - The HTML.
    */
-  _renderKidsSection() {
+  _section(id, title, body, opt = {}) {
+    const badge = opt.badge ? `<span class="sec-badge">${opt.badge}</span>` : '';
+    if (!opt.collapsible) {
+      return `
+        <div class="section-card" data-card="${id}">
+          <div class="sec-static"><h3 class="sec-title">${title}</h3>${badge}</div>
+          <div class="sec-inner">${body}</div>
+        </div>`;
+    }
+    const open = !!this._open[id];
+    return `
+        <div class="section-card" data-card="${id}">
+          <div class="sec-head" data-sec="${id}" role="button" tabindex="0" aria-expanded="${open}">
+            <div class="section-title">
+              <ha-icon icon="${open ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
+              <span>${title}</span>
+            </div>${badge}
+          </div>
+          <div class="sec-body section-content ${open ? 'open' : ''}" data-sec="${id}">${body}</div>
+        </div>`;
+  }
+
+  /**
+   * Kid profiles (incl. medication editor): the "Kids" block of the Family tab.
+   * @returns {string} - The HTML.
+   */
+  _renderKidsBody() {
     const isAdmin = this._canManage();
     const dis = isAdmin ? '' : 'disabled';
     const emojis = ['🦊', '🐼', '🦁', '🐯', '🐸', '🐵', '🦄', '🐶', '🐱', '🐰', '🐻', '🐧', '🚀'];
-    const fg = this.settings.family_goal || {};
-    const fd = this._familyDraft;
-    const fgPointsVal = fd.points !== undefined ? fd.points : (fg.points || '');
-    const fgRewardVal = fd.reward !== undefined ? fd.reward : (fg.reward || '');
-    const fgMode = (fd.fg_mode !== undefined ? fd.fg_mode : fg.mode) === 'percent' ? 'percent' : 'points';
-    const fgPercentVal = fd.fg_percent !== undefined ? fd.fg_percent : (fg.percent || 75);
-    const claimVal = fd.claim !== undefined ? fd.claim : (this.settings.claim_minutes || 10);
-    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const esc = (v) => this._esc(v);
 
     const rows = Object.entries(this.users).map(([uid, name]) => {
       const d = this._kidDraft(uid);
@@ -1524,15 +1573,8 @@ class FamilyMissionSettings extends HTMLElement {
     }).join('');
 
     return `
-        <div class="section-card">
-          <div class="section-header" id="kids-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._kidsOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('kids_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._kidsOpen ? 'open' : ''}" id="kids-content">
             <p class="kids-note">${this.localize('kids_desc')}</p>
+            <p class="kids-note">${this.localize('kid_profiles_note')}</p>
             ${window.FamilyMissionHelp ? `<button class="btn btn-help" id="btn-help-open">❓ ${this.localize('help_btn')}</button>` : ''}
             ${isAdmin ? '' : `<p class="kids-note" style="color: var(--warning-color, #FFA000);">${this.localize('kids_admin_only')}</p>`}
             ${isAdmin ? `
@@ -1540,10 +1582,20 @@ class FamilyMissionSettings extends HTMLElement {
                 <button class="btn btn-wizard" id="btn-wizard-open">${this.localize('wizard_btn')}</button>
                 <p class="kids-note">${this.localize('wizard_hint')}</p>
               </div>` : ''}
-            ${rows}
-            ${this._renderParentsSection()}
-            <div class="family-box">
-              <h4>${this.localize('family_goal')}</h4>
+            ${rows}`;
+  }
+
+  /** Family goal (points or percent) and reward. */
+  _renderFamilyGoalBody() {
+    const dis = this._canManage() ? '' : 'disabled';
+    const fg = this.settings.family_goal || {};
+    const fd = this._familyDraft;
+    const esc = (v) => this._esc(v);
+    const fgPointsVal = fd.points !== undefined ? fd.points : (fg.points || '');
+    const fgRewardVal = fd.reward !== undefined ? fd.reward : (fg.reward || '');
+    const fgMode = (fd.fg_mode !== undefined ? fd.fg_mode : fg.mode) === 'percent' ? 'percent' : 'points';
+    const fgPercentVal = fd.fg_percent !== undefined ? fd.fg_percent : (fg.percent || 75);
+    return `
               <div class="kid-fields">
                 <label class="kid-field">${this.localize('fg_mode')}
                   <select id="fg-mode" ${dis}>
@@ -1562,46 +1614,70 @@ class FamilyMissionSettings extends HTMLElement {
                 <label class="kid-field">${this.localize('family_goal_reward')}
                   <input type="text" id="fg-reward" maxlength="80" placeholder="${this.localize('family_goal_reward_ph')}" value="${esc(fgRewardVal)}">
                 </label>
-                <label class="kid-field">${this.localize('claim_minutes')}
-                  <input type="number" id="claim-minutes" min="1" max="240" value="${esc(claimVal)}">
-                </label>
-              </div>
-              <ha-formfield label="${this.localize('expire_missed')}">
-                <ha-switch id="expire-missed" ${(fd.expire_missed !== undefined ? fd.expire_missed : this.settings.expire_missed !== false) ? 'checked' : ''}></ha-switch>
-              </ha-formfield>
-            </div>
-            <div class="family-box">
-              <h4>${this.localize('approval_title')}</h4>
+              </div>`;
+  }
+
+  /** Numeric value of a task-and-points option: the draft first, then the stored setting, then the default. */
+  _optVal(draftKey, settingKey, def) {
+    const fd = this._familyDraft;
+    if (fd[draftKey] !== undefined) return this._esc(fd[draftKey]);
+    return this._esc(this.settings[settingKey] !== undefined ? this.settings[settingKey] : def);
+  }
+
+  /** Approval and consequences. */
+  _renderApprovalBody() {
+    return `
               <div class="kid-fields">
                 <label class="kid-field">${this.localize('cheat_penalty_factor')}
-                  <input type="number" id="cheat-factor" min="0" max="2" step="0.5" value="${esc(fd.cheat_factor !== undefined ? fd.cheat_factor : (this.settings.cheat_penalty_factor !== undefined ? this.settings.cheat_penalty_factor : 1))}">
+                  <input type="number" id="cheat-factor" min="0" max="2" step="0.5" value="${this._optVal('cheat_factor', 'cheat_penalty_factor', 1)}">
                 </label>
                 <label class="kid-field">${this.localize('cheat_strict_days')}
-                  <input type="number" id="cheat-days" min="0" max="30" step="1" value="${esc(fd.cheat_days !== undefined ? fd.cheat_days : (this.settings.cheat_strict_days !== undefined ? this.settings.cheat_strict_days : 7))}">
+                  <input type="number" id="cheat-days" min="0" max="30" step="1" value="${this._optVal('cheat_days', 'cheat_strict_days', 7)}">
                 </label>
-              </div>
-            </div>
-            <div class="family-box">
-              <h4>👫 ${this.localize('team_title')}</h4>
+              </div>`;
+  }
+
+  /** Teamwork bonus. */
+  _renderTeamBody() {
+    return `
               <div class="kid-fields">
                 <label class="kid-field">${this.localize('team_bonus')}
-                  <input type="number" id="team-bonus" min="0" max="3" step="1" value="${esc(fd.team_bonus !== undefined ? fd.team_bonus : (this.settings.team_bonus !== undefined ? this.settings.team_bonus : 1))}">
+                  <input type="number" id="team-bonus" min="0" max="3" step="1" value="${this._optVal('team_bonus', 'team_bonus', 1)}">
                 </label>
-              </div>
-            </div>
-            <div class="family-box">
-              <h4>🎂 ${this.localize('birthday_title')}</h4>
+              </div>`;
+  }
+
+  /** Birthday bonus and duty-free birthday. */
+  _renderBirthdayBody() {
+    const fd = this._familyDraft;
+    return `
               <div class="kid-fields">
                 <label class="kid-field">${this.localize('birthday_bonus_points')}
-                  <input type="number" id="bday-bonus" min="0" max="50" step="1" value="${esc(fd.bday_bonus !== undefined ? fd.bday_bonus : (this.settings.birthday_bonus_points !== undefined ? this.settings.birthday_bonus_points : 10))}">
+                  <input type="number" id="bday-bonus" min="0" max="50" step="1" value="${this._optVal('bday_bonus', 'birthday_bonus_points', 10)}">
                 </label>
               </div>
               <ha-formfield label="${this.localize('birthday_duty_free')}">
                 <ha-switch id="bday-free" ${(fd.bday_free !== undefined ? fd.bday_free : this.settings.birthday_duty_free !== false) ? 'checked' : ''}></ha-switch>
-              </ha-formfield>
-            </div>
-          </div>
-        </div>`;
+              </ha-formfield>`;
+  }
+
+  /** Bonus reservation time. */
+  _renderClaimBody() {
+    return `
+              <div class="kid-fields">
+                <label class="kid-field">${this.localize('claim_minutes')}
+                  <input type="number" id="claim-minutes" min="1" max="240" value="${this._optVal('claim', 'claim_minutes', 10)}">
+                </label>
+              </div>`;
+  }
+
+  /** Expire option for missed duties. */
+  _renderExpireBody() {
+    const fd = this._familyDraft;
+    return `
+              <ha-formfield label="${this.localize('expire_missed')}">
+                <ha-switch id="expire-missed" ${(fd.expire_missed !== undefined ? fd.expire_missed : this.settings.expire_missed !== false) ? 'checked' : ''}></ha-switch>
+              </ha-formfield>`;
   }
 
   /**
@@ -1624,13 +1700,10 @@ class FamilyMissionSettings extends HTMLElement {
         </div>`;
     }).join('');
     return `
-            <div class="family-box" id="parents-box">
-              <h4>${this.localize('parents_title')}</h4>
               <p class="kids-note">${this.localize('parents_desc')}</p>
               <p class="kids-note" style="color: var(--warning-color, #FFA000);">⚠️ ${this.localize('parents_warn')}</p>
               ${canEdit ? '' : `<p class="kids-note">${this.localize('parents_admin_only')}</p>`}
-              ${rows || `<p class="kids-note">${this.localize('parents_none')}</p>`}
-            </div>`;
+              ${rows || `<p class="kids-note">${this.localize('parents_none')}</p>`}`;
   }
 
   /**
@@ -1716,15 +1789,7 @@ class FamilyMissionSettings extends HTMLElement {
         </div>`;
     }).join('');
     const d = this._trigDraft;
-    return `
-        <div class="section-card">
-          <div class="section-header" id="trig-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._trigOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('triggers_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._trigOpen ? 'open' : ''}" id="trig-content">
+    const body = `
             <p class="kids-note">${this.localize('triggers_desc')}</p>
             ${rows || `<p class="kids-note">${this.localize('trig_none')}</p>`}
             ${isAdmin ? `
@@ -1738,9 +1803,10 @@ class FamilyMissionSettings extends HTMLElement {
                 ${this._bonusTasks().length ? '' : `<p class="kids-note">${this.localize('trig_no_bonus')}</p>`}
                 <family-mission-trigger-picker id="trig-picker"></family-mission-trigger-picker>
                 <button class="btn btn-save" id="btn-trig-add" style="margin-top: 0;" ${d.task && d.entity_id && d.to_state ? '' : 'disabled'}>${this.localize('trig_add')}</button>
-              </div>` : ''}
-          </div>
-        </div>`;
+              </div>` : ''}`;
+    // Triggers are stored by their own command at once: the inputs never mark the form as changed
+    return this._section('trig', this.localize('triggers_title'), `<div data-nodirty="1" class="sec-flow">${body}</div>`,
+      { collapsible: true, badge: this.localize('immediate_note') });
   }
 
   /** Notify services (notify.xyz) offered as push targets; the current value is always included. */
@@ -1751,39 +1817,51 @@ class FamilyMissionSettings extends HTMLElement {
     return list.sort();
   }
 
-  /**
-   * Renders the "We parents" section: role-model band, Sunday summary,
-   * planning reminder and the optional push target per adult.
-   * @returns {string} - The HTML.
-   */
-  _renderParentsCentralSection() {
-    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  /** Push messages: target per adult (with test), approval / reward push, approval reminder. */
+  _renderPushBody() {
     const st = this.settings || {};
+    const esc = (v) => this._esc(v);
+    const hours = st.approval_reminder_hours === undefined ? 2 : Math.max(0, Math.min(24, parseInt(st.approval_reminder_hours) || 0));
     const notify = st.parent_notify || {};
-    const time = (v, def) => (/^\d{2}:\d{2}$/.test(v || '') ? v : def);
-    const adults = (this._adults || []).map(a => `
-      <label class="kid-field">${esc(a.name)}
-        <select class="form-select pe-push" data-uid="${esc(a.id)}" style="height: 36px; font-size: 14px;">
-          <option value="">${this.localize('pe_auto')}</option>
-          ${this._notifyTargets(notify[a.id]).map(n => `<option value="${esc(n)}" ${notify[a.id] === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}
-        </select>
-      </label>`).join('');
+    const rows = (this._adults || []).map(a => {
+      const manual = notify[a.id];
+      const targets = manual ? [manual] : (a.push_targets || []);
+      const text = targets.length
+        ? this.localize(manual ? 'tb_push_manual' : 'tb_push_auto').replace('{t}', targets.join(', '))
+        : this.localize('tb_push_none');
+      return `<div class="tb-push-row" data-uid="${esc(a.id)}" style="margin:6px 0">
+        <div><strong>${esc(a.name)}</strong>: <span class="tb-push-text" style="${targets.length ? '' : 'color: var(--warning-color, #b26a00);'}">${esc(text)}</span></div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px">
+          <select class="form-select tb-push" data-uid="${esc(a.id)}" style="height: 36px; font-size: 14px;">
+            <option value="">${this.localize('pe_auto')}</option>
+            ${this._notifyTargets(manual).map(n => `<option value="${esc(n)}" ${manual === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}
+          </select>
+          <button type="button" class="tb-test-push" data-uid="${esc(a.id)}">${this.localize('tb_test')}</button>
+          <span class="tb-test-result kids-note"></span>
+        </div></div>`;
+    }).join('');
     return `
-        <div class="section-card">
-          <div class="section-header" id="pe-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._peOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('pe_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._peOpen ? 'open' : ''}" id="pe-content">
-            <p class="kids-note">${this.localize('pe_desc')}</p>
             <div class="family-box">
-              <label class="parent-check"><input type="checkbox" id="pe-band" ${st.role_model_band !== false ? 'checked' : ''}> ${this.localize('pe_band')}</label>
-              <p class="kids-note">${this.localize('pe_band_d')}</p>
-              <label class="kid-field">${this.localize('pe_label')}
-                <input type="text" id="pe-label" maxlength="40" placeholder="${esc(this.localize('pe_label_ph'))}" value="${esc(st.role_model_label || '')}"></label>
+              <h4>${this.localize('pe_push')}</h4>
+              <p class="kids-note">${this.localize('pe_push_d')}</p>
+              ${rows || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
+              <p class="kids-note">${this.localize('tb_test_hint')}</p>
             </div>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="tb-reward-push" ${st.reward_push !== false ? 'checked' : ''}> ${this.localize('tb_reward_push')}</label>
+              <label class="parent-check"><input type="checkbox" id="tb-approval-push" ${st.approval_push !== false ? 'checked' : ''}> ${this.localize('tb_approval_push')}</label>
+              <label class="kid-field">${this.localize('tb_reminder')}
+                <input type="number" id="tb-reminder-hours" min="0" max="24" step="1" value="${hours}"></label>
+              <p class="kids-note">${this.localize('tb_reminder_d')}</p>
+            </div>`;
+  }
+
+  /** Summaries and reminders: weekly summary, morning overview, planning reminder, absence suggestion. */
+  _renderRemindersBody() {
+    const esc = (v) => this._esc(v);
+    const st = this.settings || {};
+    const time = (v, def) => (/^\d{2}:\d{2}$/.test(v || '') ? v : def);
+    return `
             <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="pe-summary" ${st.weekly_summary !== false ? 'checked' : ''}> ${this.localize('pe_summary')}</label>
               <p class="kids-note">${this.localize('pe_summary_d')}</p>
@@ -1807,118 +1885,101 @@ class FamilyMissionSettings extends HTMLElement {
               <p class="kids-note">${this.localize('pe_abs_d')}</p>
               <label class="kid-field">${this.localize('pe_abs_hours')}
                 <input type="number" id="pe-abs-hours" min="6" max="168" value="${esc(st.absence_suggest_hours || 24)}"></label>
-            </div>
-            <div class="family-box">
-              <h4>${this.localize('pe_push')}</h4>
-              <p class="kids-note">${this.localize('pe_push_d')}</p>
-              ${adults || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
-            </div>
-          </div>
-        </div>`;
+            </div>`;
   }
 
-  /** Keeps the "We parents" inputs in this.settings (saved with the normal save button). */
+  /** Keeps the tablet / notification inputs in this.settings (saved with the Save bar). */
   _bindParentsCentralInputs() {
     const root = this.shadowRoot;
-    const box = root.getElementById('pe-content');
-    if (!box) return;
     const sync = () => {
-      const val = (id) => root.getElementById(id);
-      const time = (id, def) => (/^\d{2}:\d{2}$/.test(val(id).value) ? val(id).value : def);
-      this.settings.role_model_band = !!val('pe-band').checked;
-      this.settings.role_model_label = val('pe-label').value.trim();
-      this.settings.weekly_summary = !!val('pe-summary').checked;
-      this.settings.weekly_summary_time = time('pe-summary-time', '19:00');
-      this.settings.parent_digest_enabled = !!val('pe-digest').checked;
-      this.settings.parent_digest_time = time('pe-digest-time', '07:00');
-      this.settings.planning_reminders = !!val('pe-reminder').checked;
-      this.settings.planning_reminder_time = time('pe-reminder-time', '18:00');
-      this.settings.absence_suggest_enabled = !!val('pe-abs').checked;
-      const hours = parseInt(val('pe-abs-hours').value);
-      this.settings.absence_suggest_hours = hours >= 6 && hours <= 168 ? hours : 24;
-      const notify = {};
-      root.querySelectorAll('.pe-push').forEach(el => { if (el.value) notify[el.dataset.uid] = el.value; });
-      this.settings.parent_notify = notify;
-      root.querySelectorAll('.tb-push').forEach(el => { el.value = notify[el.dataset.uid] || ''; });
+      const el = (id) => root.getElementById(id);
+      const time = (id, def) => (el(id) && /^\d{2}:\d{2}$/.test(el(id).value) ? el(id).value : def);
+      if (el('pe-band')) {
+        this.settings.role_model_band = !!el('pe-band').checked;
+        this.settings.role_model_label = el('pe-label').value.trim();
+      }
+      if (el('pe-summary')) {
+        this.settings.weekly_summary = !!el('pe-summary').checked;
+        this.settings.weekly_summary_time = time('pe-summary-time', '19:00');
+        this.settings.parent_digest_enabled = !!el('pe-digest').checked;
+        this.settings.parent_digest_time = time('pe-digest-time', '07:00');
+        this.settings.planning_reminders = !!el('pe-reminder').checked;
+        this.settings.planning_reminder_time = time('pe-reminder-time', '18:00');
+        this.settings.absence_suggest_enabled = !!el('pe-abs').checked;
+        const hours = parseInt(el('pe-abs-hours').value);
+        this.settings.absence_suggest_hours = hours >= 6 && hours <= 168 ? hours : 24;
+      }
+      if (el('tb-night')) {
+        this.settings.night_mode = !!el('tb-night').checked;
+        this.settings.night_sleep = el('tb-sleep').value;
+        this.settings.night_wake_weekday = el('tb-wake-wd').value;
+        this.settings.night_wake_weekend = el('tb-wake-we').value;
+        const n = parseInt(el('tb-rocket').value);
+        this.settings.rocket_countdown = Math.max(15, Math.min(180, isNaN(n) ? 60 : n));
+      }
+      if (el('tb-reward-push')) {
+        this.settings.reward_push = !!el('tb-reward-push').checked;
+        this.settings.approval_push = !!el('tb-approval-push').checked;
+        const h = parseInt(el('tb-reminder-hours').value);
+        this.settings.approval_reminder_hours = Math.max(0, Math.min(24, isNaN(h) ? 2 : h));
+        const notify = {};
+        root.querySelectorAll('.tb-push').forEach(s => { if (s.value) notify[s.dataset.uid] = s.value; });
+        this.settings.parent_notify = notify;
+      }
     };
-    box.addEventListener('input', sync);
-    box.addEventListener('change', sync);
+    ['notify', 'device'].forEach(tab => {
+      const box = root.querySelector(`.tab-panel[data-panel="${tab}"]`);
+      if (!box) return;
+      box.addEventListener('input', sync);
+      box.addEventListener('change', sync);
+    });
+    root.querySelectorAll('.tb-test-push').forEach(btn => btn.addEventListener('click', async () => {
+      const out = btn.parentElement.querySelector('.tb-test-result');
+      let msg;
+      try {
+        const res = await this._hass.callWS({ type: 'family_mission/test_push', user_id: btn.dataset.uid });
+        if (res && res.success) msg = this.localize('tb_test_ok').replace('{t}', (res.targets || []).join(', '));
+        else if (res && res.error === 'no_target') msg = this.localize('tb_test_none');
+        else msg = this.localize('tb_test_fail').replace('{e}', ((res && res.errors) || []).join('; '));
+      } catch (err) {
+        msg = this.localize('tb_test_fail').replace('{e}', (err && err.message) || String(err));
+      }
+      if (out) out.textContent = msg;
+      this._showToast(msg);
+    }));
   }
 
-  /**
-   * Renders the "Tablet" section: night mode (bedtime, wake-up times) and the
-   * rocket countdown length. Saved with the normal save button.
-   * @returns {string} - The HTML.
-   */
-  _renderTabletSection() {
+  /** Night mode (bedtime, wake-up times). */
+  _renderNightBody() {
     const st = this.settings || {};
     const valid = (v, def) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(v || '') ? v : def);
-    // 15 minute steps; a stored value that is not on the grid stays selectable
-    const timeSelect = (id, value) => {
-      const opts = [];
-      for (let m = 0; m < 1440; m += 15) {
-        opts.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
-      }
-      if (!opts.includes(value)) { opts.push(value); opts.sort(); }
-      return `<select class="form-select" id="${id}" style="height: 36px; font-size: 14px;">${opts.map(o => `<option value="${o}" ${o === value ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
-    };
-    const countdown = Math.max(15, Math.min(180, parseInt(st.rocket_countdown) || 60));
-    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-    const hours = st.approval_reminder_hours === undefined ? 2 : Math.max(0, Math.min(24, parseInt(st.approval_reminder_hours) || 0));
-    const notify = st.parent_notify || {};
-    const rows = (this._adults || []).map(a => {
-      const manual = notify[a.id];
-      const targets = manual ? [manual] : (a.push_targets || []);
-      const text = targets.length
-        ? this.localize(manual ? 'tb_push_manual' : 'tb_push_auto').replace('{t}', targets.join(', '))
-        : this.localize('tb_push_none');
-      return `<div class="tb-push-row" data-uid="${esc(a.id)}" style="margin:6px 0">
-        <div><strong>${esc(a.name)}</strong>: <span class="tb-push-text" style="${targets.length ? '' : 'color: var(--warning-color, #b26a00);'}">${esc(text)}</span></div>
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px">
-          <select class="form-select tb-push" data-uid="${esc(a.id)}" style="height: 36px; font-size: 14px;">
-            <option value="">${this.localize('pe_auto')}</option>
-            ${this._notifyTargets(manual).map(n => `<option value="${esc(n)}" ${manual === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}
-          </select>
-          <button type="button" class="tb-test-push" data-uid="${esc(a.id)}">${this.localize('tb_test')}</button>
-          <span class="tb-test-result kids-note"></span>
-        </div></div>`;
-    }).join('');
     return `
-        <div class="section-card">
-          <div class="section-header" id="tb-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._tbOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('tb_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._tbOpen ? 'open' : ''}" id="tb-content">
-            <p class="kids-note">${this.localize('tb_desc')}</p>
-            <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="tb-night" ${st.night_mode !== false ? 'checked' : ''}> ${this.localize('tb_night')}</label>
               <p class="kids-note">${this.localize('tb_night_d')}</p>
               <div class="kid-fields">
-                <label class="kid-field">${this.localize('tb_sleep')}${timeSelect('tb-sleep', valid(st.night_sleep, '20:30'))}</label>
-                <label class="kid-field">${this.localize('tb_wake_wd')}${timeSelect('tb-wake-wd', valid(st.night_wake_weekday, '06:00'))}</label>
-                <label class="kid-field">${this.localize('tb_wake_we')}${timeSelect('tb-wake-we', valid(st.night_wake_weekend, '08:00'))}</label>
-              </div>
-            </div>
-            <div class="family-box">
+                <label class="kid-field">${this.localize('tb_sleep')}${this._timeSel('tb-sleep', valid(st.night_sleep, '20:30'))}</label>
+                <label class="kid-field">${this.localize('tb_wake_wd')}${this._timeSel('tb-wake-wd', valid(st.night_wake_weekday, '06:00'))}</label>
+                <label class="kid-field">${this.localize('tb_wake_we')}${this._timeSel('tb-wake-we', valid(st.night_wake_weekend, '08:00'))}</label>
+              </div>`;
+  }
+
+  /** Rocket countdown length. */
+  _renderRocketBody() {
+    const countdown = Math.max(15, Math.min(180, parseInt((this.settings || {}).rocket_countdown) || 60));
+    return `
               <label class="kid-field">${this.localize('tb_rocket')}
                 <input type="number" id="tb-rocket" min="15" max="180" step="5" value="${countdown}"></label>
-              <p class="kids-note">${this.localize('tb_rocket_d')}</p>
-            </div>
-            <div class="family-box">
-              <label class="parent-check"><input type="checkbox" id="tb-reward-push" ${st.reward_push !== false ? 'checked' : ''}> ${this.localize('tb_reward_push')}</label>
-              <label class="parent-check"><input type="checkbox" id="tb-approval-push" ${st.approval_push !== false ? 'checked' : ''}> ${this.localize('tb_approval_push')}</label>
-              <h4>${this.localize('tb_push_status')}</h4>
-              ${rows || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
-              <p class="kids-note">${this.localize('tb_test_hint')}</p>
-              <label class="kid-field">${this.localize('tb_reminder')}
-                <input type="number" id="tb-reminder-hours" min="0" max="24" step="1" value="${hours}"></label>
-              <p class="kids-note">${this.localize('tb_reminder_d')}</p>
-            </div>
-          </div>
-        </div>`;
+              <p class="kids-note">${this.localize('tb_rocket_d')}</p>`;
+  }
+
+  /** Role-model band on the tablet. */
+  _renderBandBody() {
+    const st = this.settings || {};
+    return `
+              <label class="parent-check"><input type="checkbox" id="pe-band" ${st.role_model_band !== false ? 'checked' : ''}> ${this.localize('pe_band')}</label>
+              <p class="kids-note">${this.localize('pe_band_d')}</p>
+              <label class="kid-field">${this.localize('pe_label')}
+                <input type="text" id="pe-label" maxlength="40" placeholder="${this._esc(this.localize('pe_label_ph'))}" value="${this._esc(st.role_model_label || '')}"></label>`;
   }
 
   /** 15 minute time select; a stored value that is not on the grid stays selectable. */
@@ -1978,7 +2039,7 @@ class FamilyMissionSettings extends HTMLElement {
               ${typeRows}
               <p class="kids-note">${this.localize('ws_types_d')}</p>
               ${next ? `<h4>${this.localize('ws_next')}</h4><ul class="kids-note" style="margin:0; padding-left:18px">${next}</ul>` : ''}
-              <button type="button" id="ws-reload">${this.localize('ws_reload')}</button>
+              <button type="button" id="btn-ws-reload">${this.localize('ws_reload')}</button>
             </div>
             <div class="family-box">
               <div class="kid-fields">
@@ -1996,19 +2057,10 @@ class FamilyMissionSettings extends HTMLElement {
               </div>
             </div>`;
     }
-    return `
-        <div class="section-card">
-          <div class="section-header" id="ws-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._wsOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('ws_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._wsOpen ? 'open' : ''}" id="ws-content">
+    return this._section('waste', this.localize('ws_title'), `<div id="ws-content" class="sec-flow">
             <p class="kids-note">${this.localize('ws_desc')}</p>
             ${body}
-          </div>
-        </div>`;
+          </div>`, { collapsible: true });
   }
 
   /** Keeps the "Waste collection" inputs in this.settings (saved with the normal save button). */
@@ -2057,15 +2109,7 @@ class FamilyMissionSettings extends HTMLElement {
     const nameRows = (this._adults || []).map(a => `
               <label class="kid-field">${esc(a.name)}
                 <input type="text" class="an-name" data-uid="${esc(a.id)}" maxlength="30" placeholder="${esc(a.name)}" value="${esc(names[a.id] || '')}"></label>`).join('');
-    return `
-        <div class="section-card">
-          <div class="section-header" id="an-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._anOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('an_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._anOpen ? 'open' : ''}" id="an-content">
+    return this._section('announce', this.localize('an_title'), `<div id="an-content" class="sec-flow">
             <p class="kids-note">${this.localize('an_desc')}</p>
             <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="an-enabled" ${st.announce_enabled === true ? 'checked' : ''}> ${this.localize('an_enabled')}</label>
@@ -2090,8 +2134,7 @@ class FamilyMissionSettings extends HTMLElement {
               <label class="parent-check"><input type="checkbox" id="an-night" ${st.announce_night === true ? 'checked' : ''}> ${this.localize('an_night')}</label>
             </div>
             ${nameRows ? `<div class="family-box"><h4>${this.localize('an_names')}</h4><div class="kid-fields">${nameRows}</div></div>` : ''}
-          </div>
-        </div>`;
+</div>`, { collapsible: true });
   }
 
   /** Keeps the "Voice announcement" inputs in this.settings; the test uses the unsaved choice. */
@@ -2128,47 +2171,6 @@ class FamilyMissionSettings extends HTMLElement {
       if (out) out.textContent = msg;
       this._showToast(msg);
     });
-  }
-
-  /** Keeps the "Tablet" inputs in this.settings (saved with the normal save button). */
-  _bindTabletInputs() {
-    const root = this.shadowRoot;
-    const box = root.getElementById('tb-content');
-    if (!box) return;
-    const sync = () => {
-      const val = (id) => root.getElementById(id);
-      this.settings.night_mode = !!val('tb-night').checked;
-      this.settings.reward_push = !!val('tb-reward-push').checked;
-      this.settings.approval_push = !!val('tb-approval-push').checked;
-      this.settings.night_sleep = val('tb-sleep').value;
-      this.settings.night_wake_weekday = val('tb-wake-wd').value;
-      this.settings.night_wake_weekend = val('tb-wake-we').value;
-      const n = parseInt(val('tb-rocket').value);
-      this.settings.rocket_countdown = Math.max(15, Math.min(180, isNaN(n) ? 60 : n));
-      const h = parseInt(val('tb-reminder-hours').value);
-      this.settings.approval_reminder_hours = Math.max(0, Math.min(24, isNaN(h) ? 2 : h));
-      const notify = {};
-      root.querySelectorAll('.tb-push').forEach(el => { if (el.value) notify[el.dataset.uid] = el.value; });
-      this.settings.parent_notify = notify;
-      // keep the select of the "We parents" section in step
-      root.querySelectorAll('.pe-push').forEach(el => { el.value = notify[el.dataset.uid] || ''; });
-    };
-    box.addEventListener('input', sync);
-    box.addEventListener('change', sync);
-    box.querySelectorAll('.tb-test-push').forEach(btn => btn.addEventListener('click', async () => {
-      const out = btn.parentElement.querySelector('.tb-test-result');
-      let msg;
-      try {
-        const res = await this._hass.callWS({ type: 'family_mission/test_push', user_id: btn.dataset.uid });
-        if (res && res.success) msg = this.localize('tb_test_ok').replace('{t}', (res.targets || []).join(', '));
-        else if (res && res.error === 'no_target') msg = this.localize('tb_test_none');
-        else msg = this.localize('tb_test_fail').replace('{e}', ((res && res.errors) || []).join('; '));
-      } catch (err) {
-        msg = this.localize('tb_test_fail').replace('{e}', (err && err.message) || String(err));
-      }
-      if (out) out.textContent = msg;
-      this._showToast(msg);
-    }));
   }
 
   /**
@@ -2248,7 +2250,7 @@ class FamilyMissionSettings extends HTMLElement {
       const c = entry(el);
       if (!c) return;
       fn(c, ev, el);
-      if (rerender) this._render();
+      if (rerender) { this._markDirty(); this._render(); }
     }));
     on('.care-emoji', 'input', (c, ev) => { c.emoji = ev.target.value; });
     on('.care-label', 'input', (c, ev) => { c.label = ev.target.value; });
@@ -2276,6 +2278,7 @@ class FamilyMissionSettings extends HTMLElement {
       d.care = d.care || [];
       d.care.push({ id: '', label: '', emoji: '💊', anchor: 'morning', time: '08:00', weekdays: [0, 1, 2, 3, 4, 5, 6],
         deadline: '10:00', notify_parents: true, decline_alert: { enabled: false, count: 3, days: 7 } });
+      this._markDirty();
       this._render();
     }));
   }
@@ -2356,6 +2359,7 @@ class FamilyMissionSettings extends HTMLElement {
         const input = root.getElementById('fg-points');
         if (input) input.value = take.dataset.val;
         this._familyDraft.points = take.dataset.val;
+        this._markDirty();
       });
     };
     bindTake();
@@ -2384,99 +2388,15 @@ class FamilyMissionSettings extends HTMLElement {
       return;
     }
     
-    if (this._themeView === undefined) this._themeView = 'light';
     const displayTitle = this._config.title || this.localize('title');
-    const showAdvanced = this._config.show_advanced === true;
     const template = this._editingTemplateId ? this.templates[this._editingTemplateId] : null;
+    const canManage = this._canManage();
+    const tabs = [
+      ['family', 'tab_family'], ['tasks', 'tab_tasks'], ['notify', 'tab_notify'], ['device', 'tab_device']
+    ];
 
-    let html = this._getStyles();
-    
-    // Add Main Layout
-    html += `
-      <ha-card>
-        <div class="header">${displayTitle}</div>
-        
-        <div class="section-card">
-          <div class="section-header" id="color-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._colorOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('color_adjustments')}</span>
-            </div>
-            <div style="display: ${this._colorOpen ? 'flex' : 'none'}; align-items: center; gap: 8px;" @click="ev => ev.stopPropagation()">
-              <ha-icon icon="mdi:weather-sunny" style="color: ${this._themeView === 'light' ? 'var(--primary-color)' : 'var(--disabled-text-color)'};"></ha-icon>
-              <ha-switch id="theme-toggle" ${this._themeView === 'dark' ? 'checked' : ''}></ha-switch>
-              <ha-icon icon="mdi:weather-night" style="color: ${this._themeView === 'dark' ? 'var(--primary-color)' : 'var(--disabled-text-color)'};"></ha-icon>
-            </div>
-          </div>
-          
-          <div class="section-content ${this._colorOpen ? 'open' : ''}">
-            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-              ${['done', 'due', 'overdue'].map(status => {
-                const colorKey = `color_${status}_${this._themeView}`;
-                const transpKey = `transparency_${status}_${this._themeView}`;
-                
-                const colorVal = this.settings[colorKey] || this.settings[`color_${status}`] || (status==='done'?'#4CAF50':status==='due'?'#FFC107':'#F44336');
-                const transpVal = this.settings[transpKey] !== undefined ? this.settings[transpKey] : 8;
-                
-                return `
-                <div style="display: grid; grid-template-columns: 35px 80px 1fr 35px; align-items: center; gap: 8px;">
-                  <input type="color" id="c-${status}" value="${colorVal}" title="${this.localize(`color_${status}_lbl`)}" style="justify-self: center;">
-                  <span style="font-size: 14px;">${this.localize(`c_${status}`)}</span>
-                  <input type="range" min="0" max="100" value="${transpVal}" class="transparency-slider" id="t-${status}" style="width: 100%; cursor: pointer;">
-                  <span style="font-size: 13px; color: var(--secondary-text-color); text-align: right;" id="tl-${status}">${transpVal}%</span>
-                </div>
-                `;
-              }).join('')}
-            </div>
-            
-            <div style="display: flex; justify-content: flex-end; margin-top: -8px;">
-              <ha-button appearance="plain" id="btn-default-colors">${this.localize('set_default')}</ha-button>
-            </div>
-          </div>
-        </div>
-        
-        <div class="section-card" style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 500; font-size: 14px; color: var(--primary-text-color);">${this.localize('days_overdue')}</span>
-          <input type="number" id="num-overdue" min="1" value="${this.settings.overdue_days}">
-        </div>
-        
-        <div class="section-card">
-          <div class="section-header" id="ie-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._ieOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('import_export')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._ieOpen ? 'open' : ''}">
-            <div style="display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
-              <ha-formfield label="${this.localize('export_tasks_cb')}">
-                <ha-checkbox id="cb-export-tasks" checked></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_templates_cb')}">
-                <ha-checkbox id="cb-export-templates" checked></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_history_cb')}">
-                <ha-checkbox id="cb-export-history"></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_settings_cb')}">
-                <ha-checkbox id="cb-export-settings" checked></ha-checkbox>
-              </ha-formfield>
-            </div>
-            <div style="display: flex; gap: 10px; width: 100%;">
-              <button class="btn btn-export" id="btn-export" title="${this.localize('export_hover')}">${this.localize('export_btn')}</button>
-              <button class="btn btn-import" id="btn-import-trigger" title="${this.localize('import_hover')}">${this.localize('import_btn')}</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-card">
-          <div class="section-header" id="templates-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._templatesOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('templates')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._templatesOpen ? 'open' : ''}" id="templates-content">
+    // Template list (collapsible: long)
+    const templatesHtml = `
             <div class="templates-header">
               <p class="templates-desc">${this.localize('templates_desc')}</p>
               <button class="icon-button add-button" id="btn-add-template" title="${this.localize('add_template')}">
@@ -2515,57 +2435,89 @@ class FamilyMissionSettings extends HTMLElement {
                 </div>
               `}).join('') : `<div class="no-templates-msg">${this.localize('no_templates')}</div>`}
             </div>
-          </div>
+`;
+
+    // Import / export and the destructive actions: small "Advanced" fold at the bottom (managers only)
+    const advancedHtml = canManage ? this._section('adv', this.localize('advanced'), `
+            <p class="kids-note">${this.localize('adv_note')}</p>
+            <h4>${this.localize('import_export')}</h4>
+            <div style="display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
+              <ha-formfield label="${this.localize('export_tasks_cb')}">
+                <ha-checkbox id="cb-export-tasks" checked></ha-checkbox>
+              </ha-formfield>
+              <ha-formfield label="${this.localize('export_templates_cb')}">
+                <ha-checkbox id="cb-export-templates" checked></ha-checkbox>
+              </ha-formfield>
+              <ha-formfield label="${this.localize('export_history_cb')}">
+                <ha-checkbox id="cb-export-history"></ha-checkbox>
+              </ha-formfield>
+              <ha-formfield label="${this.localize('export_settings_cb')}">
+                <ha-checkbox id="cb-export-settings" checked></ha-checkbox>
+              </ha-formfield>
+            </div>
+            <div style="display: flex; gap: 10px; width: 100%;">
+              <button class="btn btn-export" id="btn-export" title="${this.localize('export_hover')}">${this.localize('export_btn')}</button>
+              <button class="btn btn-import" id="btn-import-trigger" title="${this.localize('import_hover')}">${this.localize('import_btn')}</button>
+            </div>
+            <button class="btn btn-reset" id="btn-reset" title="${this.localize('confirm_reset')}">${this.localize('archive_btn')}</button>
+            <button class="btn btn-factory" id="btn-factory" title="${this.localize('confirm_factory')}">${this.localize('factory_btn')}</button>
+          `, { collapsible: true, badge: this.localize('immediate_note') }) : '';
+
+    const panels = {
+      family: [
+        this._section('kids', this.localize('kids_title'), this._renderKidsBody()),
+        this._section('parents', this.localize('parents_title'), this._renderParentsSection()),
+        this._section('fgoal', this.localize('family_goal'), this._renderFamilyGoalBody())
+      ],
+      tasks: [
+        this._section('templates', this.localize('templates'), templatesHtml, { collapsible: true, badge: this.localize('immediate_note') }),
+        this._section('approval', this.localize('approval_title'), this._renderApprovalBody()),
+        this._section('birthday', '🎂 ' + this.localize('birthday_title'), this._renderBirthdayBody()),
+        this._section('team', '👫 ' + this.localize('team_title'), this._renderTeamBody()),
+        this._section('claim', this.localize('claim_title'), this._renderClaimBody()),
+        this._section('expire', this.localize('expire_title'), this._renderExpireBody()),
+        this._renderTriggersSection(),
+        canManage ? this._renderWasteSection() : ''
+      ],
+      notify: [
+        this._section('push', this.localize('h_push'), this._renderPushBody()),
+        this._section('remind', this.localize('h_remind'), this._renderRemindersBody()),
+        canManage ? this._renderAnnounceSection() : ''
+      ],
+      device: [
+        this._section('night', '🌙 ' + this.localize('night_title'), this._renderNightBody()),
+        this._section('rocket', '🚀 ' + this.localize('rocket_title'), this._renderRocketBody()),
+        this._section('band', this.localize('band_title'), this._renderBandBody())
+      ]
+    };
+
+    let html = this._getStyles();
+    
+    // Add Main Layout
+    html += `
+      <ha-card>
+        <div class="header">${displayTitle}</div>
+
+        <div class="tabs" role="tablist">
+          ${tabs.map(([id, key]) => `<button type="button" class="tab-btn ${this._tab === id ? 'active' : ''}" role="tab" id="tab-${id}" data-tab="${id}"
+            aria-selected="${this._tab === id}" aria-controls="panel-${id}" tabindex="${this._tab === id ? 0 : -1}">${this.localize(key)}</button>`).join('')}
         </div>
 
-        <div class="section-card">
-          <div class="section-header" id="goals-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._goalsOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('point_goals')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._goalsOpen ? 'open' : ''}" id="goals-content">
-            ${Object.entries(this.users).filter(([uid]) => !this._kidDraft(uid).enabled).map(([uid, name]) => `
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 500; font-size: 14px; color: var(--primary-text-color);">${name}</span>
-                <input type="number" class="user-goal-input" data-uid="${uid}" 
-                       value="${this._goalValue(uid)}" placeholder="0">
-              </div>
-            `).join('')}
-          </div>
+        <div class="tab-panels">
+          ${tabs.map(([id]) => `<div class="tab-panel" role="tabpanel" id="panel-${id}" data-panel="${id}" aria-labelledby="tab-${id}" ${this._tab === id ? '' : 'hidden'}>
+            ${panels[id].join('')}
+          </div>`).join('')}
         </div>
 
-        ${this._renderKidsSection()}
-
-        ${this._renderTriggersSection()}
-
-        ${this._renderParentsCentralSection()}
-
-        ${this._renderTabletSection()}
-
-        ${this._canManage() ? this._renderWasteSection() : ''}
-
-        ${this._canManage() ? this._renderAnnounceSection() : ''}
-
-        ${showAdvanced ? `
-          <div class="section-card">
-            <div class="section-header" id="adv-toggle">
-              <div class="section-title">
-                <ha-icon icon="${this._advancedOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-                <span>${this.localize('advanced')}</span>
-              </div>
-            </div>
-            <div class="section-content ${this._advancedOpen ? 'open' : ''}">
-              <button class="btn btn-reset" id="btn-reset" title="${this.localize('confirm_reset')}">${this.localize('archive_btn')}</button>
-              <button class="btn btn-factory" id="btn-factory" title="${this.localize('confirm_factory')}">${this.localize('factory_btn')}</button>
-            </div>
-          </div>
-        ` : ''}
-        
-        <button class="btn btn-save" id="btn-save" title="${this.localize('save_hover')}" style="margin-top: 12px;">${this.localize('save')}</button>
+        ${advancedHtml}
 
         ${this._renderFooter()}
+
+        <div class="save-bar" id="save-bar" ${this._dirty ? '' : 'hidden'}>
+          <span class="save-msg">${this.localize('dirty_msg')}</span>
+          <button type="button" class="btn btn-discard" id="btn-discard">${this.localize('discard')}</button>
+          <button type="button" class="btn btn-save" id="btn-save">${this.localize('save')}</button>
+        </div>
       </ha-card>
 
       <div id="template-modal" class="modal ${this._templateModalOpen ? 'open' : ''}">
@@ -2748,27 +2700,25 @@ class FamilyMissionSettings extends HTMLElement {
       importFileInput.addEventListener('change', (ev) => this._handleImportFileChange(ev));
     }
 
-    // Bind slider events
-    this.shadowRoot.querySelectorAll('.transparency-slider').forEach(el => {
-      el.addEventListener('input', (ev) => {
-        const status = ev.target.id.substring(2);
-        this.shadowRoot.getElementById(`tl-${status}`).innerText = `${ev.target.value}%`;
-        this.settings[`transparency_${status}_${this._themeView}`] = parseInt(ev.target.value);
-      });
-    });
-    this.shadowRoot.querySelectorAll('input[type="color"]').forEach(el => {
-      el.addEventListener('input', (ev) => {
-        const status = ev.target.id.substring(2);
-        this.settings[`color_${status}_${this._themeView}`] = ev.target.value;
-      });
-    });
-
     this._bindKidInputs();
     this._bindTriggerInputs();
     this._bindParentsCentralInputs();
-    this._bindTabletInputs();
     this._bindWasteInputs();
     this._bindAnnounceInputs();
+
+    this.shadowRoot.querySelectorAll('.sec-head').forEach(h => h.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); this._toggleSec(h.dataset.sec); }
+    }));
+
+    // Dirty tracking: any edit inside the panels shows the sticky save bar (immediate-save blocks opt out)
+    const markDirty = (ev) => {
+      const path = ev.composedPath ? ev.composedPath() : [];
+      if (path.some(el => el.dataset && el.dataset.nodirty)) return;
+      this._markDirty();
+    };
+    const panelBox = this.shadowRoot.querySelector('.tab-panels');
+    panelBox.addEventListener('input', markDirty);
+    panelBox.addEventListener('change', markDirty);
 
     if (this._templateModalOpen) {
       this._syncTemplateSchedule();
@@ -2817,9 +2767,6 @@ class FamilyMissionSettingsEditor extends HTMLElement {
           <ha-input label="${this.localize('height_lbl')}" placeholder="400px" value="${this._config.card_height || ''}" configValue="card_height" style="flex:1"></ha-input>
           <ha-input label="${this.localize('width_lbl')}" placeholder="100%" value="${this._config.card_width || ''}" configValue="card_width" style="flex:1"></ha-input>
         </div>
-        <ha-formfield label="${this.localize('show_advanced_lbl')}">
-          <ha-checkbox ${this._config.show_advanced === true ? 'checked' : ''} configValue="show_advanced"></ha-checkbox>
-        </ha-formfield>
       </div>
       <style>
         .card-config ha-input { display: block; margin-bottom: 8px; }
@@ -2828,8 +2775,7 @@ class FamilyMissionSettingsEditor extends HTMLElement {
 
     this._rendered = true;
     this.querySelectorAll('ha-input').forEach(el => el.addEventListener('input', ev => this._valueChanged(ev)));
-    this.querySelectorAll('ha-checkbox').forEach(el => el.addEventListener('change', ev => this._valueChanged(ev)));
-    this._updateUI();
+        this._updateUI();
   }
 
   _updateUI() {
@@ -2837,9 +2783,7 @@ class FamilyMissionSettingsEditor extends HTMLElement {
     this.querySelectorAll('[configValue]').forEach(el => {
         const key = el.getAttribute('configValue');
         const value = this._config[key];
-        if (el.tagName === 'HA-CHECKBOX') {
-            el.checked = value === true;
-        } else if (value !== undefined) {
+        if (value !== undefined) {
             el.value = value;
         }
     });
@@ -2851,10 +2795,6 @@ class FamilyMissionSettingsEditor extends HTMLElement {
     const target = ev.target;
     const configValue = target.configValue || target.getAttribute('configValue');
     let newValue = target.value;
-
-    if (target.tagName === 'HA-CHECKBOX') {
-      newValue = target.checked;
-    }
 
     if (this._config[configValue] === newValue) return;
 
