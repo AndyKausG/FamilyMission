@@ -10,7 +10,7 @@ from datetime import timedelta
 from datetime import date, datetime
 import voluptuous as vol
 
-from homeassistant.components import persistent_notification, websocket_api
+from homeassistant.components import frontend, persistent_notification, websocket_api
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
@@ -23,6 +23,7 @@ from homeassistant.helpers.event import (
     async_track_time_interval,
 )
 from homeassistant.helpers.storage import Store
+from homeassistant.loader import async_get_integration
 from homeassistant.util import dt as dt_util, slugify
 
 from .migration import async_auto_migrate, async_import_now, notify_migrated
@@ -383,6 +384,7 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
         for a in adults
     ]
     response_data["push_warning"] = _push_warning(hass, adults, targets)
+    response_data["version"] = hass.data[DOMAIN].get("version", "")
     response_data["me"] = me
     response_data["partner"] = parents_catalog.partner_of(adult_ids, me) if me else None
     
@@ -5146,6 +5148,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         ])
         hass.data[f"{DOMAIN}_static_path"] = True
 
+    # Version from manifest.json (the integration loader reads it without blocking the loop)
+    try:
+        version = str((await async_get_integration(hass, DOMAIN)).version or "")
+    except Exception:  # noqa: BLE001 - the version is cosmetic, never block the setup
+        version = ""
+    hass.data[DOMAIN]["version"] = version
+
+    # The icon set "fm:" is also loaded as an extra module, so the icons work outside of
+    # dashboards too (sidebar, view icons, entity dialogs). The file guards itself against
+    # being evaluated twice (Lovelace resource + extra module).
+    icons_url = f"/family_mission_frontend/family-mission-icons.js?v={version}"
+    if hass.data.get(frontend.DATA_EXTRA_MODULE_URL) is not None:
+        old = hass.data[DOMAIN].pop("icons_url", None)
+        if old and old != icons_url:
+            frontend.remove_extra_js_url(hass, old)
+        frontend.add_extra_js_url(hass, icons_url)
+        hass.data[DOMAIN]["icons_url"] = icons_url
+
     async def register_lovelace_resources(event=None):
         """Register the custom cards in Lovelace resources."""
         lovelace = hass.data.get("lovelace")
@@ -5162,6 +5182,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         cache_buster = f"{entry.version}_{int(time.time())}"
         base_path = "/family_mission_frontend"
         needed_cards = [
+            f"{base_path}/family-mission-icons.js",
             f"{base_path}/family-mission-card.js", 
             f"{base_path}/family-mission-stats.js", 
             f"{base_path}/family-mission-settings.js",
@@ -5205,6 +5226,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
+        icons_url = hass.data[DOMAIN].pop("icons_url", None)
+        if icons_url and hass.data.get(frontend.DATA_EXTRA_MODULE_URL) is not None:
+            frontend.remove_extra_js_url(hass, icons_url)
         unsub = hass.data[DOMAIN].pop("bonus_unsub", None)
         if unsub is not None:
             unsub()

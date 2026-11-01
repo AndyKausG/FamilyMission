@@ -84,7 +84,7 @@ claim_minutes: "Bonus reservation (minutes)",
     tb_test: "Test push", tb_test_ok: "Test push sent to {t}", tb_test_none: "No push target for this person.", tb_test_fail: "Test push failed: {e}",
     tb_test_hint: "The test uses the saved settings - save first after choosing a target.",
     tb_reminder: "Remind after … hours (0 = off)", tb_reminder_d: "If nobody handled an approval, all adults get one quiet reminder after this time (not at night). 0 switches it off.",
-    tb_night: "Night mode (tablet sleeps)", tb_night_d: "At bedtime the tablet shows a dark sleep screen with stars. Tapping shows the clock for 5 seconds. An open kid session runs out normally first. No reminders are sent at night.",
+    tb_night: "Night mode (tablet sleeps)", tb_night_d: "At bedtime the tablet shows a dim sleep screen with a sleeping buddy and an alarm clock showing how long it still sleeps. Only the tablet user sleeps, parents keep the normal view. Tapping shows the clock for 5 seconds. An open kid session runs out normally first. No reminders are sent at night.",
     tb_sleep: "Bedtime", tb_wake_wd: "Wake up Mon-Fri", tb_wake_we: "Wake up Sat + Sun",
     tb_rocket: "Rocket countdown (seconds)", tb_rocket_d: "How long the family counts down before the rocket launches (15-180, default 60)."
   },
@@ -168,7 +168,7 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     tb_test: "Test-Push", tb_test_ok: "Test-Push gesendet an {t}", tb_test_none: "Für diese Person gibt es kein Push-Ziel.", tb_test_fail: "Test-Push fehlgeschlagen: {e}",
     tb_test_hint: "Der Test nutzt die gespeicherten Einstellungen – nach der Zielwahl erst speichern.",
     tb_reminder: "Nachfassen nach … Stunden (0 = aus)", tb_reminder_d: "Hat niemand eine Freigabe bearbeitet, erhalten alle Erwachsenen nach dieser Zeit einen leisen Erinnerungs-Push (nicht nachts). 0 schaltet ab.",
-    tb_night: "Nachtmodus (Tablet schläft)", tb_night_d: "Zur Schlafenszeit zeigt das Tablet einen dunklen Schlafbildschirm mit Sternen. Antippen zeigt 5 Sekunden die Uhr. Eine offene Kind-Sitzung läuft vorher normal aus. Nachts werden keine Erinnerungen gesendet.",
+    tb_night: "Nachtmodus (Tablet schläft)", tb_night_d: "Zur Schlafenszeit zeigt das Tablet einen gedimmten Schlafbildschirm mit schlafendem Buddy und Wecker, der zeigt, wie lange noch geschlafen wird. Nur der Tablet-Benutzer schläft, Eltern sehen weiter die normale Ansicht. Antippen zeigt 5 Sekunden die Uhr. Eine offene Kind-Sitzung läuft vorher normal aus. Nachts werden keine Erinnerungen gesendet.",
     tb_sleep: "Schlafenszeit", tb_wake_wd: "Aufstehen Mo-Fr", tb_wake_we: "Aufstehen Sa + So",
     tb_rocket: "Raketen-Countdown (Sekunden)", tb_rocket_d: "So lange zählt die Familie herunter, bevor die Rakete startet (15-180, Standard 60)."
   }
@@ -487,6 +487,13 @@ class FamilyMissionSettings extends HTMLElement {
     this.users = users;
   }
 
+  /** Small footer with the app icon and the installed version (version from the backend manifest). */
+  _renderFooter() {
+    if (!this._version) return '';
+    const ico = window.FamilyMissionBrand ? window.FamilyMissionBrand.iconSvg(16) : '';
+    return `<div class="fm-footer">${ico}<span>FamilyMission ${this._version}</span></div>`;
+  }
+
   /**
    * Fetches the current settings and tasks from the backend.
    */
@@ -503,6 +510,7 @@ class FamilyMissionSettings extends HTMLElement {
       this.current_month = data.current_month;
       this.current_period_start = data.current_period_start;
       this._myRole = data.my_role || null;
+      this._version = data.version || '';
       this._haUsers = Array.isArray(data.ha_users) ? data.ha_users : [];
       this._adults = Array.isArray(data.adults) ? data.adults : [];
       this._settingsLoaded = true;
@@ -1126,6 +1134,7 @@ class FamilyMissionSettings extends HTMLElement {
         :host { display: block; width: ${width}; margin: 0 auto; } * { box-sizing: border-box; } 
         ha-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: ${height}; overflow-y: auto; } 
         .header { font-size: 20px; font-weight: bold; margin-bottom: 10px; } 
+        .fm-footer { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; font-size: 12px; color: var(--secondary-text-color); opacity: 0.7; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--card-background-color); border-radius: 8px; border: 1px solid var(--divider-color); box-shadow: var(--ha-card-box-shadow, 0 2px 2px rgba(0,0,0,0.1)); margin-bottom: 8px; } 
         .setting-label { font-weight: bold; font-size: 14px; color: var(--primary-text-color); } 
         .section-card { background: var(--card-background-color); border-radius: 8px; border: 1px solid var(--divider-color); box-shadow: var(--ha-card-box-shadow, 0 2px 2px rgba(0,0,0,0.1)); margin-bottom: 12px; padding: 12px; width: 100%; box-sizing: border-box; }
@@ -2034,7 +2043,8 @@ class FamilyMissionSettings extends HTMLElement {
         ` : ''}
         
         <button class="btn btn-save" id="btn-save" title="${this.localize('save_hover')}" style="margin-top: 12px;">${this.localize('save')}</button>
-        
+
+        ${this._renderFooter()}
       </ha-card>
 
       <div id="template-modal" class="modal ${this._templateModalOpen ? 'open' : ''}">

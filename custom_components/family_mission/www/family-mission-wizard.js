@@ -902,7 +902,9 @@ class FamilyMissionWizard extends HTMLElement {
         font-family: var(--paper-font-body1_-_font-family, Roboto, "Segoe UI", sans-serif); color: var(--primary-text-color, #212121); }
       .wz { background: var(--card-background-color, #fff); width: min(1120px, 96vw); height: min(880px, 94vh); border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
       .head { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--divider-color, #e0e0e0); }
-      .head h2 { margin: 0; font-size: 18px; font-weight: 600; flex: 1; min-width: 0; }
+      .head h2 { margin: 0; font-size: 18px; font-weight: 600; flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; }
+      .h-ico { display: inline-flex; flex: none; }
+      .ok svg { margin: 0 auto; }
       .help { flex: none; min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--divider-color, #e0e0e0); background: var(--secondary-background-color, #f0f0f0); color: var(--primary-text-color, #212121); font-size: 13px; font-weight: 600; cursor: pointer; }
       .x { background: transparent; border: none; font-size: 22px; cursor: pointer; color: var(--secondary-text-color, #727272); width: 40px; height: 40px; border-radius: 50%; }
       .x:hover { background: var(--secondary-background-color, #f0f0f0); }
@@ -1004,7 +1006,7 @@ class FamilyMissionWizard extends HTMLElement {
     const finished = this._step === 6;
     this.shadowRoot.innerHTML = `${this._styles()}
       <div class="overlay"><div class="wz" role="dialog" aria-modal="true" aria-label="${wzEsc(this._t('title'))}">
-        <div class="head"><h2>🚀 ${wzEsc(this._t('title'))}</h2>${window.FamilyMissionHelp ? `<button class="help" data-act="help">❓ ${wzEsc(this._t('help'))}</button>` : ''}<button class="x" data-act="close" aria-label="${wzEsc(this._t('close'))}">✕</button></div>
+        <div class="head"><h2>${window.FamilyMissionBrand ? `<span class="h-ico">${window.FamilyMissionBrand.iconSvg(26)}</span>` : '🚀 '}${wzEsc(this._t('title'))}</h2>${window.FamilyMissionHelp ? `<button class="help" data-act="help">❓ ${wzEsc(this._t('help'))}</button>` : ''}<button class="x" data-act="close" aria-label="${wzEsc(this._t('close'))}">✕</button></div>
         ${finished ? '' : `
         <div class="steps">${stepNames.map((n, i) => `<div class="pill ${i === step ? 'active' : i < step ? 'done' : ''}"><b>${i < step ? '✓' : i + 1}</b>${wzEsc(this._t(n))}</div>`).join('')}</div>
         <div class="stepline">${wzEsc(this._t('step_of', { n: step + 1, m: total }))} · ${wzEsc(this._t(stepNames[step]))}</div>
@@ -1312,7 +1314,7 @@ class FamilyMissionWizard extends HTMLElement {
 
   _htmlSuccess() {
     const r = this._s.result.result || this._s.result;
-    return `<div class="ok">🎉</div>
+    return `<div class="ok">${window.FamilyMissionBrand ? window.FamilyMissionBrand.iconSvg(96) : '🎉'}</div>
       <h3 style="text-align:center;font-size:18px">${wzEsc(this._t('ok_title'))}</h3>
       <p style="text-align:center">${wzEsc(this._t('ok_counts', { created: r.created, bonus: r.bonus, templates: r.templates }))}</p>
       ${r.deleted ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_deleted', { n: r.deleted }))}</p>` : ''}
