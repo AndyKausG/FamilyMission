@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.auth.const import GROUP_ID_USER
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
@@ -181,7 +182,7 @@ async def test_reminder_fires_once_and_calls_notify(hass, hass_ws_client, env, f
     freezer.move_to(NOON)
     notified = async_mock_service(hass, "notify", "mobile_app_phone")
     events = []
-    hass.bus.async_listen("family_mission_task_reminder", lambda e: events.append(e.data))
+    hass.bus.async_listen("family_mission_task_reminder", callback(lambda e: events.append(e.data)))
     tid = await _task(admin, name="Müll rausbringen", assignees=[BEN], reminder_at="17:00",
                       reminder_target="notify.mobile_app_phone")
     assert await _async_check_reminders(hass) == 0              # 11:00: too early
@@ -202,7 +203,7 @@ async def test_reminder_skips_done_paused_not_due_expired_window(hass, hass_ws_c
     admin = await hass_ws_client(hass)
     freezer.move_to(NOON)
     events = []
-    hass.bus.async_listen("family_mission_task_reminder", lambda e: events.append(e.data["task_id"]))
+    hass.bus.async_listen("family_mission_task_reminder", callback(lambda e: events.append(e.data["task_id"])))
     done = await _task(admin, reminder_at="08:00", interval=0)
     await _call(admin, "family_mission/complete_task", task_id=done, completed_by=[BEN])   # one-time: deleted
     paused = await _task(admin, reminder_at="08:00", paused_until="2026-10-31T00:00:00+00:00")
@@ -224,7 +225,7 @@ async def test_reminder_invalid_target_is_logged_not_fatal(hass, hass_ws_client,
     tid = await _task(admin, reminder_at="08:00", reminder_target="notify.does_not_exist")
     second = await _task(admin, name="Zweite", reminder_at="08:00", reminder_target="")
     events = []
-    hass.bus.async_listen("family_mission_task_reminder", lambda e: events.append(e.data["task_id"]))
+    hass.bus.async_listen("family_mission_task_reminder", callback(lambda e: events.append(e.data["task_id"])))
     assert await _async_check_reminders(hass) == 2
     await hass.async_block_till_done()
     assert set(events) == {tid, second}

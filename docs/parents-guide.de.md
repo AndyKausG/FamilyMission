@@ -97,6 +97,10 @@ Manche Aufgaben brauchen eure Freigabe (pro Aufgabe einstellbar, dazu optionale 
 
 **Wichtig:** Abzug nur bei bewusstem Schummeln, **nie bei Vergessen**. Abzüge sind **privat**: Sie erscheinen nur in der eigenen Ansicht des Kindes, nie auf der Startseite oder vor den Geschwistern. Die **strenge Phase** (Standard: 7 Tage, jede Aufgabe braucht eine Freigabe) **endet automatisch**.
 
+**Freigabe-Push:** Wartet eine Aufgabe auf Freigabe, bekommen alle Erwachsenen eine Push-Nachricht („✅ Clara ist fertig“, bei Zusammen-Erledigung „Clara & David sind fertig“) mit den Knöpfen **Freigeben** und **Nicht fertig**, direkt vom Sperrbildschirm aus. „Geschummelt“ gibt es bewusst nur in der App. Ist die Freigabe erledigt (egal wo), passiert beim zweiten Tippen nichts. Abschaltbar mit `approval_push` (Einstellungen, Bereich „Tablet“).
+
+**Freigaben bleiben nicht liegen:** In den Einstellungen (Bereich „Tablet“) steht je Erwachsenem, wohin der Push geht (✓ automatisch über die Companion-App oder ein gewähltes Ziel, ⚠ kein Ziel), mit dem Knopf **Test-Push**. Kann niemand erreicht werden, zeigt die Eltern-Zentrale einen gelben Hinweis und Home Assistant eine Benachrichtigung. Wartet eine Freigabe länger als `approval_reminder_hours` (Standard 2 Stunden, 0 = aus), kommt **einmal** eine leise Erinnerung („⏳ Freigabe wartet noch“), nachts erst nach dem Aufwachen. Ist die Freigabe erledigt, verschwindet der Push bei **allen** Eltern.
+
 > 💡 Gespräch statt Strafe: Sprecht kurz und ruhig darüber, was passiert ist und wie es besser klappt. Der Abzug ist nur der Anlass für das Gespräch.
 
 <a id="rewards"></a>

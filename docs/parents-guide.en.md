@@ -97,6 +97,10 @@ Some tasks need your approval (set per task, plus optional spot checks per kid).
 
 **Important:** a deduction only for deliberate cheating, **never for forgetting**. Deductions are **private**: they only appear in the kid's own view, never on the home screen or in front of siblings. The **strict phase** (default: 7 days, every task needs approval) **ends automatically**.
 
+**Approval push:** when a task waits for approval, all adults get a push message (“✅ Clara is done”, “Clara & David are done” for a task done together) with the buttons **Approve** and **Not done**, straight from the lock screen. “Cheated” is deliberately only in the app. Once handled (wherever), a second tap does nothing. Can be switched off with `approval_push` (settings, “Tablet” section).
+
+**Approvals do not sit unseen:** in the settings (“Tablet” section) every adult shows where the push goes (✓ automatically via the Companion app or a chosen target, ⚠ no target) with a **Test push** button. If nobody can be reached, the parents' hub shows a yellow hint and Home Assistant a notification. If an approval waits longer than `approval_reminder_hours` (default 2 hours, 0 = off), there is **one** quiet reminder (“⏳ Approval still waiting”), at night only after waking up. Once the approval is handled, the push disappears for **all** parents.
+
 > 💡 Talk instead of punishing: briefly and calmly discuss what happened and how it can go better. The deduction is only the occasion for the conversation.
 
 <a id="rewards"></a>

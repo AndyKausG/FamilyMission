@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.components import persistent_notification
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -75,7 +76,7 @@ def _data(hass):
 
 def _collect(hass, event):
     seen = []
-    hass.bus.async_listen(event, lambda e: seen.append(e.data))
+    hass.bus.async_listen(event, callback(lambda e: seen.append(e.data)))   # @callback: delivered synchronously, no executor race
     return seen
 
 

@@ -4,6 +4,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -342,7 +343,7 @@ async def test_monthly_reset_resolves_names_without_user(hass, hass_ws_client, s
     task_id = await _add_task(ws, assignees=[ANNA], complexity=3)
     await _make_kid(ws, ANNA, pin="")
     events = []
-    hass.bus.async_listen("family_mission_reset", lambda e: events.append(e))
+    hass.bus.async_listen("family_mission_reset", callback(lambda e: events.append(e)))
     await _call(ws, "family_mission/complete_task", task_id=task_id, completed_by=[ANNA])
     await hass.services.async_call(DOMAIN, "reset_monthly_points", {}, blocking=True)
     await hass.async_block_till_done()

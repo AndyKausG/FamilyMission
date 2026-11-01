@@ -55,6 +55,8 @@ const I18N_PARENTS = {
     own_tasks: "My tasks", pt_planning: "Planning", pt_minutes: "~{n} min.", pt_since: "since {day}",
     pt_done: "Done", pt_asked: "Asked: {name}", pt_ask: "Can you?", pt_none: "No parent tasks yet. Set them up once, then just tick them off.",
     pt_setup: "Set up parent tasks", pt_incoming: "{name} asks: Can you do \"{task}\"?", ho_yes: "I will", ho_no: "Can't",
+    pw_text: "Approvals may stay unseen: nobody can receive push messages yet.", pw_text_adults: "Approvals may stay unseen: no adult with a Home Assistant user was found.",
+    pw_setup: "Set up", pw_waiting: "✅ {n} approvals waiting", pw_waiting_one: "✅ 1 approval waiting",
     pt_all_done: "Nothing left for you today.", pt_partner: "With {name} today ({n})", pt_other: "the others", pt_done_today: "Done today ({n})",
     skip_btn: "Skip", skip_all: "Skip everything today", skip_title: "{name}: skip today", skip_none: "No open tasks today.",
     kid_today: "Today: {done} of {total} done", kid_no_tasks: "No tasks for today.",
@@ -113,6 +115,8 @@ const I18N_PARENTS = {
     own_tasks: "Meine Aufgaben", pt_planning: "Planung", pt_minutes: "~{n} Min.", pt_since: "seit {day}",
     pt_done: "Erledigt", pt_asked: "Gefragt: {name}", pt_ask: "Kannst du?", pt_none: "Noch keine Eltern-Aufgaben. Einmal einrichten, danach nur abhaken.",
     pt_setup: "Eltern-Aufgaben einrichten", pt_incoming: "{name} fragt: Kannst du „{task}“?", ho_yes: "Mach ich", ho_no: "Geht nicht",
+    pw_text: "Freigaben könnten unbemerkt liegen bleiben: Noch kann niemand Push-Nachrichten empfangen.", pw_text_adults: "Freigaben könnten unbemerkt liegen bleiben: Es wurde kein Erwachsener mit Home-Assistant-Benutzer gefunden.",
+    pw_setup: "Einrichten", pw_waiting: "✅ {n} Freigaben warten", pw_waiting_one: "✅ 1 Freigabe wartet",
     pt_all_done: "Heute ist nichts mehr offen.", pt_partner: "Bei {name} heute ({n})", pt_other: "den anderen", pt_done_today: "Heute erledigt ({n})",
     skip_btn: "Aussetzen", skip_all: "Heute alles aussetzen", skip_title: "{name}: heute aussetzen", skip_none: "Heute ist nichts offen.",
     kid_today: "Heute: {done} von {total} erledigt", kid_no_tasks: "Keine Aufgaben für heute.",
@@ -319,6 +323,7 @@ class FamilyMissionParents extends HTMLElement {
       this.redemptions = data.redemptions || {};
       this.tasks = data.tasks || {};
       this.adults = Array.isArray(data.adults) ? data.adults : [];
+      this.pushWarning = data.push_warning || null;
       this.me = data.me || null;
       this.partner = data.partner || null;
       this._fetched = true;
@@ -491,6 +496,11 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'cheated-confirm') { const id = this._confirm; this._confirm = null; this._renderLayer(); this._reject(id, 'cheated'); }
     else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._del = null; this._picker = null; this._renderLayer(); }
     else if (action === 'tab') this._setTab(el.dataset.tab);
+    else if (action === 'goto-approvals') { const sec = this.shadowRoot.getElementById('appr-section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    else if (action === 'pw-setup') {
+      if (this._canManage()) { this._setTab('more'); this._more = 'settings'; this._render(); }
+      else if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'approval');
+    }
     else if (action === 'goto-kid') { this._kidSel = el.dataset.kid; this._setTab('kids'); }
     else if (action === 'kid-select') { this._kidSel = el.dataset.kid; this._render(); }
     else if (action === 'more-open') { this._more = el.dataset.sub; this._render(); }
@@ -1276,7 +1286,15 @@ class FamilyMissionParents extends HTMLElement {
   // ---- tab "Heute" -------------------------------------------------------------
 
   _renderToday() {
-    return `${this._renderKidStatus()}${this._renderWaiting()}${this._renderOwnTasks()}${this._renderQuick()}`;
+    return `${this._renderPushWarning()}${this._renderKidStatus()}${this._renderWaiting()}${this._renderOwnTasks()}${this._renderQuick()}`;
+  }
+
+  /** Yellow hint while no adult can receive the approval push. */
+  _renderPushWarning() {
+    if (!this.pushWarning) return '';
+    const text = this.localize(this.pushWarning === 'no_adults' ? 'pw_text_adults' : 'pw_text');
+    return `<div class="push-warn" role="alert"><span class="pw-text">⚠️ ${escParents(text)}</span>
+      <button class="btn neutral" data-action="pw-setup">${escParents(this.localize('pw_setup'))}</button></div>`;
   }
 
   /** One compact row per kid: today's progress, wallet and open approvals. */
@@ -1314,7 +1332,7 @@ class FamilyMissionParents extends HTMLElement {
     const items = this._approvalItems() + this._redemptionItems();
     if (!items) return '';
     const n = this._pendingList().length + this._pendingRedemptions().length;
-    return `<section><h2>${escParents(this.localize('approvals'))} <span class="count">${n}</span></h2><div class="appr-list">${items}</div></section>`;
+    return `<section id="appr-section"><h2>${escParents(this.localize('approvals'))} <span class="count">${n}</span></h2><div class="appr-list">${items}</div></section>`;
   }
 
   _approvalItems() {
@@ -1405,6 +1423,12 @@ class FamilyMissionParents extends HTMLElement {
     const hasAny = this._parentTasksAll().length > 0;
     const incoming = this._incomingHandovers();
     let inner = '';
+    // Not a task: only a pointer to the approvals section (no history, nothing to complete)
+    const nWait = this._pendingList().length;
+    if (nWait > 0) {
+      const label = nWait === 1 ? this.localize('pw_waiting_one') : this.localize('pw_waiting', { n: nWait });
+      inner += `<button class="ask waiting-link" data-action="goto-approvals">${escParents(label)}</button>`;
+    }
     if (!hasAny) {
       inner = `<div class="empty">${escParents(this.localize('pt_none'))}</div>
         <button class="adhoc-btn" data-action="pt-picker">🧩 ${escParents(this.localize('pt_setup'))}</button>`;
@@ -1852,6 +1876,9 @@ class FamilyMissionParents extends HTMLElement {
       .krow-cnt { color: var(--p-sub); }
       .krow .count.sm { position: absolute; top: -6px; right: -4px; }
       .ptask, .ask { padding: 12px; border-radius: 14px; border: 1px solid var(--p-line); background: var(--card-background-color, #fff); display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; min-width: 0; }
+      .push-warn { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px; margin-bottom: 14px; border-radius: 14px; border: 1px solid #F9A825; background: color-mix(in srgb, #F9A825 18%, var(--card-background-color, #fff)); color: var(--primary-text-color); font-size: 15px; }
+      .push-warn .pw-text { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+      .waiting-link { width: 100%; text-align: left; cursor: pointer; font: inherit; font-size: 17px; font-weight: 700; color: var(--primary-text-color); min-height: 44px; flex-direction: row; align-items: center; }
       .ask { border-color: #7E57C2; background: color-mix(in srgb, #7E57C2 8%, var(--card-background-color, #fff)); }
       .ask-text, .pt-name { font-size: 17px; font-weight: 700; overflow-wrap: anywhere; }
       .badges { display: flex; flex-wrap: wrap; gap: 6px; }

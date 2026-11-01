@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.3.0] - 2026-11-01
+
+- **Approval push:** when a task waits for parent approval, all adults get a push ("✅ Clara ist fertig" / "✅ Clara is done", for a task done together "Clara & David", text "<task> (<points> ⭐)") with the actions "Freigeben" / "Nicht fertig" (`FM_APPROVE_<id>` / `FM_NOTDONE_<id>`, tag per pending entry). "Cheated" stays app-only; a second tap is ignored. New setting `approval_push` (default on, validated as bool), switch in the settings card, section "Tablet".
+- **Push safety:** approvals must not sit unseen. `get_data.adults[]` has `push_targets`, `get_data` has `push_warning` (`no_adults` | `no_targets`); new websocket `family_mission/test_push` `{user_id?}`; settings card "Tablet" lists the target per adult with a "Test push" button and the new setting `approval_reminder_hours` (default 2, 0 = off); parents' hub shows a yellow hint, the quick-start wizard a "Push to: Anna ✓, Ben ⚠" line. If no approval push can be delivered, a persistent notification `family_mission_no_push` is created (dismissed after the next successful push). One quiet reminder ("⏳ Freigabe wartet noch", same tag and actions) after `approval_reminder_hours`, not at night. A handled approval or redemption is removed from all adults' devices (Companion `clear_notification` by tag). "✅ N Freigaben warten" at the top of "My tasks" (parents' hub, kids card `mode: mine` with Approve / Not done). Help (de/en/fr), README and parents' guide updated.
+- **Quick-start catalog:** `room_blitz`, `room_blitz_small` and `room_deep` are created with "Requires parent approval". Re-running the wizard sets the flag on earlier wizard tasks only if they never had the key; the parents' own choice is kept. The wizard preview returns `requires_approval` per task and the wizard shows a small "✅ Freigabe" badge.
+- **Docs:** README, help and parents' guide (de/en/fr).
+- **Tests:** new `tests/test_approval_push_ws.py` and `tests/test_push_safety_ws.py`; the rocket test counts only rocket pushes.
+- **Fix:** the next due date after a completion / skip is now computed in calendar days (same local time); across a DST change it was off by an hour, so a daily task done in the first hour of the 25-hour day stayed due.
+- **Tests:** the suite no longer depends on the real date or time (fixed start time, scheduler independent of the frozen clock, synchronous event listeners).
+- **New logo and icon:** rocket in the progress ring (replaces the old TaskOrganizer logo); `brand/` now also has `icon@2x.png`, `logo@2x.png` and dark-mode logos.
+
 ## [2.2.0] - 2026-11-01
 
 - **New sleep screen:** the night mode shows a sleeping moon buddy with a nightcap (slow breathing, rising "Z z z"; blinks in the last 30 minutes) and an analogue alarm clock (hands show the time, a coloured hand the wake-up time, an arc the remaining sleep). Texts: "Gute Nacht, Clara & David 💤" / "Psst … alle schlafen" / "Gleich ist Morgen!", plus "Ich schlafe noch 7 Std. 30 Min." and "Aufstehen um 06:00". Dimmed, updated once a minute, no animation loop, calm with `prefers-reduced-motion`; a tap brightens it for 5 seconds and the alarm clock wobbles. `kidsNightState` also returns `wakeDate`, `minutesLeft` and `phase`.

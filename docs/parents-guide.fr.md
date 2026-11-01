@@ -97,6 +97,10 @@ Certaines tâches demandent votre validation (réglable par tâche, avec des con
 
 **Important :** une déduction uniquement en cas de triche délibérée, **jamais pour un oubli**. Les déductions sont **privées** : elles n'apparaissent que dans la vue personnelle de l'enfant, jamais sur l'écran d'accueil ni devant les frères et sœurs. La **phase stricte** (par défaut : 7 jours, chaque tâche demande une validation) **se termine automatiquement**.
 
+**Notification de validation :** quand une tâche attend une validation, tous les adultes reçoivent une notification (« ✅ Clara a fini », « Clara & David ont fini » pour une tâche faite à plusieurs) avec les boutons **Valider** et **Pas fini**, directement depuis l'écran verrouillé. « Triché » n'existe volontairement que dans l'application. Une fois traitée (où que ce soit), un second appui ne fait rien. Désactivable avec `approval_push` (réglages, section « Tablette »).
+
+**Les validations ne restent pas oubliées :** dans les réglages (section « Tablette »), chaque adulte voit où va la notification (✓ automatiquement via l'application Companion ou une cible choisie, ⚠ aucune cible) avec le bouton **Test**. Si personne n'est joignable, la centrale des parents affiche un avertissement jaune et Home Assistant une notification. Si une validation attend plus de `approval_reminder_hours` (2 heures par défaut, 0 = désactivé), un rappel discret est envoyé **une seule fois** (« ⏳ Validation en attente »), la nuit seulement après le réveil. Une fois la validation traitée, la notification disparaît chez **tous** les parents.
+
 > 💡 Discussion plutôt que punition : parlez calmement et brièvement de ce qui s'est passé et de la façon de mieux faire. La déduction n'est que l'occasion de cette discussion.
 
 <a id="rewards"></a>

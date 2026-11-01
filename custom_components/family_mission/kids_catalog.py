@@ -87,7 +87,7 @@ def _entry(
     trigger_hint_en: str | None = None,
     available_from: str | None = None, available_until: str | None = None,
     replaced_by: str | None = None, day_offset: int = 0,
-    allow_together: bool | None = None,
+    allow_together: bool | None = None, requires_approval: bool = False,
 ) -> dict:
     # Shareable chores (and everything that is not a personal basis duty) may be done together
     if allow_together is None:
@@ -101,6 +101,7 @@ def _entry(
         "available_from": available_from, "available_until": available_until,
         "replaced_by": replaced_by, "day_offset": day_offset,
         "allow_together": allow_together,
+        "requires_approval": requires_approval,
     }
 
 
@@ -121,11 +122,11 @@ CATALOG: tuple[dict, ...] = (
            3, 10, 8, 1, "basis", MODE_EACH,
            subtasks=[_st("Boden frei", "Clear the floor"),
                      _st("Spielzeug/Sachen in die Kisten", "Toys/things into the boxes"),
-                     _st("Schreibtisch frei", "Clear the desk")], available_from="14:00", available_until="19:30", replaced_by="room_deep"),
+                     _st("Schreibtisch frei", "Clear the desk")], available_from="14:00", available_until="19:30", replaced_by="room_deep", requires_approval=True),
     _entry("room_blitz_small", "Zimmer-Blitz (5 Minuten)", "Room blitz (5 minutes)", "mdi:timer-sand",
            2, 5, 6, 1, "basis", MODE_EACH, max_age=7,
            subtasks=[_st("Boden frei", "Clear the floor"),
-                     _st("Spielzeug in die Kisten", "Toys into the boxes")], available_from="14:00", available_until="19:30", replaced_by="room_deep"),
+                     _st("Spielzeug in die Kisten", "Toys into the boxes")], available_from="14:00", available_until="19:30", replaced_by="room_deep", requires_approval=True),
     # --- rotation basis, shared duties ---------------------------------
     _entry("table_set", "Tisch decken", "Set the table", "mdi:silverware-fork-knife", 2, 5, 6, 1,
            "basis", MODE_ROTATION,
@@ -148,7 +149,7 @@ CATALOG: tuple[dict, ...] = (
     _entry("room_deep", "Zimmer gründlich", "Thorough room clean", "mdi:bed-king", 6, 30, 6, 7,
            "basis", MODE_EACH,
            subtasks=[_st("Boden frei", "Clear the floor"), _st("Regal ordnen", "Tidy the shelf"),
-                     _st("Müll raus", "Take out the trash"), _st("Staubsaugen", "Vacuum", 8)], available_from="09:00", available_until="18:00"),
+                     _st("Müll raus", "Take out the trash"), _st("Staubsaugen", "Vacuum", 8)], available_from="09:00", available_until="18:00", requires_approval=True),
     _entry("own_laundry", "Eigene Wäsche einräumen", "Put away own laundry", "mdi:wardrobe", 3, 10, 6, 7,
            "basis", MODE_EACH, requires="washer", available_from="14:00", available_until="19:30", day_offset=-1),
     _entry("bedding", "Bettwäsche abziehen", "Strip the bedding", "mdi:bed-empty", 3, 10, 8, 14,
@@ -451,6 +452,7 @@ def build_proposal(
             "interval_label": interval_label(interval, lang, entry["mode"] == MODE_ROTATION),
             "category": entry["category"],
             "allow_together": entry["allow_together"],
+            "requires_approval": entry["requires_approval"],
             "available_from": entry["available_from"],
             "available_until": entry["available_until"],
             "replaced_by_key": entry["replaced_by"],

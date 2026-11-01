@@ -78,6 +78,12 @@ claim_minutes: "Bonus reservation (minutes)",
     pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.",
     tb_title: "Tablet", tb_desc: "Night mode and rocket launch for the wall tablet. Everything has a sensible default.",
     tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
+    tb_approval_push: "Push to the parents when a task waits for approval",
+    tb_push_status: "Who gets the push?", tb_push_auto: "✓ Push to {t} (automatic)", tb_push_manual: "✓ Push to {t}",
+    tb_push_none: "⚠ No push target - sign in to the Companion app with this user or choose a target here",
+    tb_test: "Test push", tb_test_ok: "Test push sent to {t}", tb_test_none: "No push target for this person.", tb_test_fail: "Test push failed: {e}",
+    tb_test_hint: "The test uses the saved settings - save first after choosing a target.",
+    tb_reminder: "Remind after … hours (0 = off)", tb_reminder_d: "If nobody handled an approval, all adults get one quiet reminder after this time (not at night). 0 switches it off.",
     tb_night: "Night mode (tablet sleeps)", tb_night_d: "At bedtime the tablet shows a dark sleep screen with stars. Tapping shows the clock for 5 seconds. An open kid session runs out normally first. No reminders are sent at night.",
     tb_sleep: "Bedtime", tb_wake_wd: "Wake up Mon-Fri", tb_wake_we: "Wake up Sat + Sun",
     tb_rocket: "Rocket countdown (seconds)", tb_rocket_d: "How long the family counts down before the rocket launches (15-180, default 60)."
@@ -156,6 +162,12 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.",
     tb_title: "Tablet", tb_desc: "Nachtmodus und Raketenstart für das Wand-Tablet. Alles hat einen sinnvollen Standard.",
     tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
+    tb_approval_push: "Push an die Eltern, wenn eine Aufgabe auf Freigabe wartet",
+    tb_push_status: "Wer bekommt den Push?", tb_push_auto: "✓ Push an {t} (automatisch)", tb_push_manual: "✓ Push an {t}",
+    tb_push_none: "⚠ Kein Push-Ziel – Companion-App mit diesem Benutzer anmelden oder unten ein Ziel wählen",
+    tb_test: "Test-Push", tb_test_ok: "Test-Push gesendet an {t}", tb_test_none: "Für diese Person gibt es kein Push-Ziel.", tb_test_fail: "Test-Push fehlgeschlagen: {e}",
+    tb_test_hint: "Der Test nutzt die gespeicherten Einstellungen – nach der Zielwahl erst speichern.",
+    tb_reminder: "Nachfassen nach … Stunden (0 = aus)", tb_reminder_d: "Hat niemand eine Freigabe bearbeitet, erhalten alle Erwachsenen nach dieser Zeit einen leisen Erinnerungs-Push (nicht nachts). 0 schaltet ab.",
     tb_night: "Nachtmodus (Tablet schläft)", tb_night_d: "Zur Schlafenszeit zeigt das Tablet einen dunklen Schlafbildschirm mit Sternen. Antippen zeigt 5 Sekunden die Uhr. Eine offene Kind-Sitzung läuft vorher normal aus. Nachts werden keine Erinnerungen gesendet.",
     tb_sleep: "Schlafenszeit", tb_wake_wd: "Aufstehen Mo-Fr", tb_wake_we: "Aufstehen Sa + So",
     tb_rocket: "Raketen-Countdown (Sekunden)", tb_rocket_d: "So lange zählt die Familie herunter, bevor die Rakete startet (15-180, Standard 60)."
@@ -1572,6 +1584,7 @@ class FamilyMissionSettings extends HTMLElement {
       const notify = {};
       root.querySelectorAll('.pe-push').forEach(el => { if (el.value) notify[el.dataset.uid] = el.value; });
       this.settings.parent_notify = notify;
+      root.querySelectorAll('.tb-push').forEach(el => { el.value = notify[el.dataset.uid] || ''; });
     };
     box.addEventListener('input', sync);
     box.addEventListener('change', sync);
@@ -1595,6 +1608,26 @@ class FamilyMissionSettings extends HTMLElement {
       return `<select class="form-select" id="${id}" style="height: 36px; font-size: 14px;">${opts.map(o => `<option value="${o}" ${o === value ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
     };
     const countdown = Math.max(15, Math.min(180, parseInt(st.rocket_countdown) || 60));
+    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const hours = st.approval_reminder_hours === undefined ? 2 : Math.max(0, Math.min(24, parseInt(st.approval_reminder_hours) || 0));
+    const notify = st.parent_notify || {};
+    const rows = (this._adults || []).map(a => {
+      const manual = notify[a.id];
+      const targets = manual ? [manual] : (a.push_targets || []);
+      const text = targets.length
+        ? this.localize(manual ? 'tb_push_manual' : 'tb_push_auto').replace('{t}', targets.join(', '))
+        : this.localize('tb_push_none');
+      return `<div class="tb-push-row" data-uid="${esc(a.id)}" style="margin:6px 0">
+        <div><strong>${esc(a.name)}</strong>: <span class="tb-push-text" style="${targets.length ? '' : 'color: var(--warning-color, #b26a00);'}">${esc(text)}</span></div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:4px">
+          <select class="form-select tb-push" data-uid="${esc(a.id)}" style="height: 36px; font-size: 14px;">
+            <option value="">${this.localize('pe_auto')}</option>
+            ${this._notifyTargets(manual).map(n => `<option value="${esc(n)}" ${manual === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}
+          </select>
+          <button type="button" class="tb-test-push" data-uid="${esc(a.id)}">${this.localize('tb_test')}</button>
+          <span class="tb-test-result kids-note"></span>
+        </div></div>`;
+    }).join('');
     return `
         <div class="section-card">
           <div class="section-header" id="tb-toggle">
@@ -1621,6 +1654,13 @@ class FamilyMissionSettings extends HTMLElement {
             </div>
             <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="tb-reward-push" ${st.reward_push !== false ? 'checked' : ''}> ${this.localize('tb_reward_push')}</label>
+              <label class="parent-check"><input type="checkbox" id="tb-approval-push" ${st.approval_push !== false ? 'checked' : ''}> ${this.localize('tb_approval_push')}</label>
+              <h4>${this.localize('tb_push_status')}</h4>
+              ${rows || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
+              <p class="kids-note">${this.localize('tb_test_hint')}</p>
+              <label class="kid-field">${this.localize('tb_reminder')}
+                <input type="number" id="tb-reminder-hours" min="0" max="24" step="1" value="${hours}"></label>
+              <p class="kids-note">${this.localize('tb_reminder_d')}</p>
             </div>
           </div>
         </div>`;
@@ -1635,14 +1675,36 @@ class FamilyMissionSettings extends HTMLElement {
       const val = (id) => root.getElementById(id);
       this.settings.night_mode = !!val('tb-night').checked;
       this.settings.reward_push = !!val('tb-reward-push').checked;
+      this.settings.approval_push = !!val('tb-approval-push').checked;
       this.settings.night_sleep = val('tb-sleep').value;
       this.settings.night_wake_weekday = val('tb-wake-wd').value;
       this.settings.night_wake_weekend = val('tb-wake-we').value;
       const n = parseInt(val('tb-rocket').value);
       this.settings.rocket_countdown = Math.max(15, Math.min(180, isNaN(n) ? 60 : n));
+      const h = parseInt(val('tb-reminder-hours').value);
+      this.settings.approval_reminder_hours = Math.max(0, Math.min(24, isNaN(h) ? 2 : h));
+      const notify = {};
+      root.querySelectorAll('.tb-push').forEach(el => { if (el.value) notify[el.dataset.uid] = el.value; });
+      this.settings.parent_notify = notify;
+      // keep the select of the "We parents" section in step
+      root.querySelectorAll('.pe-push').forEach(el => { el.value = notify[el.dataset.uid] || ''; });
     };
     box.addEventListener('input', sync);
     box.addEventListener('change', sync);
+    box.querySelectorAll('.tb-test-push').forEach(btn => btn.addEventListener('click', async () => {
+      const out = btn.parentElement.querySelector('.tb-test-result');
+      let msg;
+      try {
+        const res = await this._hass.callWS({ type: 'family_mission/test_push', user_id: btn.dataset.uid });
+        if (res && res.success) msg = this.localize('tb_test_ok').replace('{t}', (res.targets || []).join(', '));
+        else if (res && res.error === 'no_target') msg = this.localize('tb_test_none');
+        else msg = this.localize('tb_test_fail').replace('{e}', ((res && res.errors) || []).join('; '));
+      } catch (err) {
+        msg = this.localize('tb_test_fail').replace('{e}', (err && err.message) || String(err));
+      }
+      if (out) out.textContent = msg;
+      this._showToast(msg);
+    }));
   }
 
   /**

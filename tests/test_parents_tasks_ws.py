@@ -3,6 +3,7 @@
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.auth.const import GROUP_ID_USER
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
@@ -105,7 +106,7 @@ def _by_key(hass):
 
 def _collect(hass, event):
     seen = []
-    hass.bus.async_listen(event, lambda e: seen.append(e.data))
+    hass.bus.async_listen(event, callback(lambda e: seen.append(e.data)))   # @callback: delivered synchronously, no executor race
     return seen
 
 
@@ -521,6 +522,8 @@ async def test_rollover_runs_on_startup_and_expire_missed_ignores_parent_tasks(h
     kid_task = (await _call(admin, "family_mission/add_task", name="Kid duty", interval=1, complexity=3,
                             icon="mdi:broom", assignees=[CLARA], category="basis"))["result"]["task_id"]
     dinner = _by_key(hass)["dinner"]["id"]
+    _data(hass)["missed_checked"] = "2026-10-29"                                # the last check ran on the day the duty was created
+    await hass.data[DOMAIN]["store"].async_save(_data(hass))                    # the reload reads the stored data
     freezer.move_to(NOON + timedelta(days=3))
     await hass.config_entries.async_reload(env["entry"].entry_id)               # "restart": catches up
     await hass.async_block_till_done()
@@ -652,8 +655,8 @@ async def test_get_data_has_adults_me_and_partner(hass, clients, env):
     res = (await _call(anna, "family_mission/get_data"))["result"]
     assert res["me"] == env["anna"][0].id and res["partner"] == env["ben"][0].id
     assert res["adults"] == [
-        {"id": env["anna"][0].id, "name": "Anna", "push": True},
-        {"id": env["ben"][0].id, "name": "Ben", "push": True},
+        {"id": env["anna"][0].id, "name": "Anna", "push": True, "push_targets": ["notify.anna_push"]},
+        {"id": env["ben"][0].id, "name": "Ben", "push": True, "push_targets": ["notify.mobile_app_ben_phone"]},
     ]
     res = (await _call(ben, "family_mission/get_data"))["result"]
     assert res["me"] == env["ben"][0].id and res["partner"] == env["anna"][0].id
