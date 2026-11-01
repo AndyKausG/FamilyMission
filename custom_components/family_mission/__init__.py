@@ -104,6 +104,8 @@ from .const import (
     WS_TYPE_REDEMPTION_RESOLVE,
     WS_TYPE_SEND_PRAISE,
     WS_TYPE_TEST_PUSH,
+    WS_TYPE_WASTE_SOURCES,
+    WS_TYPE_TEST_ANNOUNCE,
     DEFAULT_APPROVAL_REMINDER_HOURS,
     PUSH_WARNING_NO_ADULTS,
     PUSH_WARNING_NO_TARGETS,
@@ -132,7 +134,7 @@ from .const import (
     SERVICE_REMOVE_TEMPLATE_BY_NAME,
     SERVICE_EDIT_TEMPLATE_BY_NAME,
 )
-from . import kids_catalog, parents_catalog
+from . import kids_catalog, parents_catalog, waste
 from .kids import (
     DEFAULT_NIGHT_SLEEP,
     DEFAULT_NIGHT_WAKE_WEEKDAY,
@@ -230,6 +232,7 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
     """Called when options are changed via the UI gear icon."""
     # Update the settings in the main data structure
     hass.data[DOMAIN]["data"]["settings"] = dict(entry.options)
+    hass.data[DOMAIN].pop("waste_cache", None)
     async_setup_bonus_triggers(hass)
 
     hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -929,6 +932,8 @@ async def ws_update_settings(hass: HomeAssistant, connection: websocket_api.Acti
         incoming.pop(key, None)
     _sanitize_parent_settings(incoming)
     _sanitize_tablet_settings(incoming)
+    waste.sanitize_waste_input(incoming)
+    _sanitize_announce(incoming)
     new_options.update(incoming)
     
     hass.config_entries.async_update_entry(entry, options=new_options)
@@ -2145,7 +2150,6 @@ async def ws_add_adhoc_bonus(hass: HomeAssistant, connection: websocket_api.Acti
             return
         expires_at = parsed.isoformat()
 
-    data = hass.data[DOMAIN]["data"]
     task_id = str(uuid.uuid4())
     task = {
         "id": task_id,
@@ -2172,17 +2176,25 @@ async def ws_add_adhoc_bonus(hass: HomeAssistant, connection: websocket_api.Acti
     }
     if msg.get("minutes"):
         task["minutes"] = msg["minutes"]
-    data["tasks"][task_id] = task
+    await _async_create_adhoc(hass, task)
+    connection.send_result(msg["id"], {"success": True, "task_id": task_id})
+    await _async_announce(hass, ANNOUNCE_ADHOC, _adhoc_announcement(
+        hass, connection.user, name, msg["points"], assignees[0] if assignees else None))
+
+
+async def _async_create_adhoc(hass: HomeAssistant, task: dict) -> None:
+    """Store a new ad-hoc bonus task and announce it on the event bus."""
+    data = hass.data[DOMAIN]["data"]
+    data["tasks"][task["id"]] = task
     hass.bus.async_fire(EVENT_TASK_CREATED, dict(task))
     hass.bus.async_fire(EVENT_BONUS_OPENED, {
-        "task_id": task_id,
-        "task_name": name,
-        "points": msg["points"],
+        "task_id": task["id"],
+        "task_name": task["name"],
+        "points": task["complexity"],
         "adhoc": True,
     })
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
-    connection.send_result(msg["id"], {"success": True, "task_id": task_id})
 
 
 async def _async_remove_expired_adhoc(hass: HomeAssistant) -> int:
@@ -3380,6 +3392,8 @@ async def _async_open_bonus_task(hass: HomeAssistant, trig: dict) -> None:
         "points": task.get("complexity"),
     })
     hass.bus.async_fire(EVENT_TASK_UPDATED)
+    await _async_announce(hass, ANNOUNCE_TRIGGER, _trigger_announcement(
+        hass, task.get("name") or "", task.get("complexity") or 0))
 
 
 def async_setup_bonus_triggers(hass: HomeAssistant) -> None:
@@ -4124,6 +4138,265 @@ async def ws_test_push(hass: HomeAssistant, connection: websocket_api.ActiveConn
     connection.send_result(msg["id"], {"success": bool(targets), "targets": targets, "errors": errors})
 
 
+# ---------------------------------------------------------------------------
+# 2.4: voice announcements (TTS on media players)
+# ---------------------------------------------------------------------------
+
+ANNOUNCE_ADHOC = "adhoc"
+ANNOUNCE_WASTE = "waste"
+ANNOUNCE_TRIGGER = "trigger"
+ANNOUNCE_KINDS = (ANNOUNCE_ADHOC, ANNOUNCE_WASTE, ANNOUNCE_TRIGGER)
+MAX_ANNOUNCE_NAME = 30
+MAX_ANNOUNCE_PLAYERS = 10
+_TTS_RE = re.compile(r"^tts\.[a-z0-9_]{1,100}$")
+_PLAYER_RE = re.compile(r"^media_player\.[a-z0-9_]{1,100}$")
+
+
+def _announce_settings(options) -> dict:
+    """Announcement settings with valid values (defaults: off, all event kinds, silent at night)."""
+    options = options or {}
+    tts = options.get("announce_tts")
+    players = options.get("announce_players")
+    players = [p for p in (players if isinstance(players, list) else []) if isinstance(p, str) and _PLAYER_RE.match(p)]
+    events = options.get("announce_events")
+    events = list(ANNOUNCE_KINDS) if not isinstance(events, list) else [e for e in ANNOUNCE_KINDS if e in events]
+    names = options.get("announce_names")
+    names = {
+        uid: str(name).strip()[:MAX_ANNOUNCE_NAME]
+        for uid, name in (names.items() if isinstance(names, dict) else [])
+        if isinstance(uid, str) and isinstance(name, str) and name.strip()
+    }
+    return {
+        "announce_enabled": options.get("announce_enabled") is True,
+        "announce_tts": tts if isinstance(tts, str) and _TTS_RE.match(tts) else "",
+        "announce_players": list(dict.fromkeys(players))[:MAX_ANNOUNCE_PLAYERS],
+        "announce_events": events,
+        "announce_night": options.get("announce_night") is True,
+        "announce_names": names,
+    }
+
+
+def _sanitize_announce(incoming: dict) -> None:
+    """Validate the announcement keys of an incoming settings update in place."""
+    clean = _announce_settings(incoming)
+    for key, value in clean.items():
+        if key in incoming:
+            incoming[key] = value
+
+
+async def _async_speak(hass: HomeAssistant, tts: str, players: list[str], message: str) -> str | None:
+    """Speak ``message`` on ``players`` via ``tts.speak``. Returns an error text or None."""
+    try:
+        await hass.services.async_call(
+            "tts", "speak",
+            {"entity_id": tts, "media_player_entity_id": players, "message": message},
+            blocking=True,
+        )
+    except Exception as err:  # unknown entity, offline speaker ...
+        _LOGGER.warning("Announcement via %s on %s failed: %s", tts, players, err)
+        return str(err) or err.__class__.__name__
+    return None
+
+
+async def _async_announce(hass: HomeAssistant, kind: str, message: str) -> bool:
+    """Announce ``message`` if switched on for ``kind`` (not at night unless allowed). True when spoken."""
+    if DOMAIN not in hass.data or not message:
+        return False
+    options = _get_entry(hass).options
+    conf = _announce_settings(options)
+    if not conf["announce_enabled"] or kind not in conf["announce_events"]:
+        return False
+    if not conf["announce_tts"] or not conf["announce_players"]:
+        return False
+    if not conf["announce_night"] and options.get("night_mode", True) is not False and is_night_time(
+        dt_util.now(), options.get("night_sleep"), options.get("night_wake_weekday"), options.get("night_wake_weekend"),
+    ):
+        return False
+    return await _async_speak(hass, conf["announce_tts"], conf["announce_players"], message) is None
+
+
+def _announce_name(hass: HomeAssistant, user) -> str:
+    """Spoken name of an adult: own announcement name ("Papa"), else person / user name."""
+    if user is None:
+        return ""
+    names = _announce_settings(_get_entry(hass).options)["announce_names"]
+    if names.get(user.id):
+        return names[user.id]
+    name = _participant_name(hass, user.id)
+    return (user.name or "") if name == user.id else name
+
+
+def _adhoc_announcement(hass: HomeAssistant, user, task_name: str, points: float, kid_id: str | None) -> str:
+    de = _lang(hass) == "de"
+    who = _announce_name(hass, user) or ("Jemand" if de else "Someone")
+    pts = waste.points_phrase(points, "de" if de else "en")
+    if kid_id:
+        kid = _participant_name(hass, kid_id)
+        if de:
+            return f"{who} hat eine Bonusaufgabe für {kid} erstellt: {task_name}. {pts}."
+        return f"{who} created a bonus task for {kid}: {task_name}. {pts}."
+    if de:
+        return f"{who} hat eine Bonusaufgabe erstellt: {task_name}. {pts}."
+    return f"{who} created a bonus task: {task_name}. {pts}."
+
+
+def _trigger_announcement(hass: HomeAssistant, task_name: str, points: float) -> str:
+    lang = _lang(hass)
+    pts = waste.points_phrase(points, lang)
+    if lang == "de":
+        return f"Neue Bonusaufgabe: {task_name}. {pts}."
+    return f"New bonus task: {task_name}. {pts}."
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_TEST_ANNOUNCE,
+    vol.Optional("tts"): vol.Any(None, str),
+    vol.Optional("players"): vol.Any(None, [str]),
+})
+@websocket_api.async_response
+async def ws_test_announce(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Speak a test announcement (unsaved ``tts`` / ``players`` from the settings form, else the saved ones)."""
+    if not _check_role(hass, connection, msg, _MANAGE_ROLES):
+        return
+    saved = _announce_settings(_get_entry(hass).options)
+    conf = _announce_settings({
+        "announce_tts": msg.get("tts") if msg.get("tts") is not None else saved["announce_tts"],
+        "announce_players": msg.get("players") if msg.get("players") is not None else saved["announce_players"],
+    })
+    if not conf["announce_tts"] or not conf["announce_players"]:
+        connection.send_result(msg["id"], {"success": False, "error": "not_configured"})
+        return
+    text = ("FamilyMission: Test der Durchsage." if _lang(hass) == "de"
+            else "FamilyMission: announcement test.")
+    error = await _async_speak(hass, conf["announce_tts"], conf["announce_players"], text)
+    connection.send_result(msg["id"], {"success": error is None, "error": error})
+
+
+# ---------------------------------------------------------------------------
+# 2.4: waste collection bonus (calendars of "Waste Collection Schedule")
+# ---------------------------------------------------------------------------
+
+WASTE_CACHE_MINUTES = 30
+WASTE_CHECK_DAYS = 3
+WASTE_SOURCE_DAYS = 42
+
+
+def _wcs_calendars(hass: HomeAssistant) -> list[dict]:
+    """Calendar entities of Waste Collection Schedule (``[{entity_id, name}]``)."""
+    from homeassistant.helpers import entity_registry as er
+
+    result = []
+    for ent in er.async_get(hass).entities.values():
+        if ent.platform == waste.WCS_PLATFORM and ent.domain == "calendar" and not ent.disabled:
+            state = hass.states.get(ent.entity_id)
+            name = (state.attributes.get("friendly_name") if state else None) or ent.name or ent.original_name
+            result.append({"entity_id": ent.entity_id, "name": name or ent.entity_id})
+    return sorted(result, key=lambda c: c["entity_id"])
+
+
+def _waste_calendar_ids(hass: HomeAssistant, settings: dict) -> list[str]:
+    """Chosen calendars that still exist (none chosen = all of Waste Collection Schedule)."""
+    available = [c["entity_id"] for c in _wcs_calendars(hass)]
+    chosen = [c for c in settings["waste_calendars"] if c in available]
+    return chosen or available
+
+
+async def _async_calendar_events(hass: HomeAssistant, calendars: list[str], days: int) -> list[dict]:
+    """Events of ``calendars`` from the start of today for ``days`` days (errors -> [])."""
+    if not calendars or not hass.services.has_service("calendar", "get_events"):
+        return []
+    start = dt_util.start_of_local_day()
+    end = start + timedelta(days=days)
+    try:
+        response = await hass.services.async_call(
+            "calendar", "get_events",
+            {"entity_id": calendars, "start_date_time": start.isoformat(), "end_date_time": end.isoformat()},
+            blocking=True, return_response=True,
+        )
+    except Exception as err:  # calendar unavailable ...
+        _LOGGER.warning("Reading the waste calendars %s failed: %s", calendars, err)
+        return []
+    events: list[dict] = []
+    for value in (response or {}).values():
+        if isinstance(value, dict):
+            events.extend(e for e in value.get("events") or [] if isinstance(e, dict))
+    return events
+
+
+async def _async_waste_events(hass: HomeAssistant, calendars: list[str]) -> list[dict]:
+    """Waste events of the next days, read at most every ``WASTE_CACHE_MINUTES`` (and on a new day)."""
+    domain_data = hass.data[DOMAIN]
+    now = dt_util.now()
+    cache = domain_data.get("waste_cache")
+    if (
+        cache and cache["calendars"] == calendars and cache["day"] == now.date()
+        and now - cache["at"] < timedelta(minutes=WASTE_CACHE_MINUTES)
+    ):
+        return cache["events"]
+    events = await _async_calendar_events(hass, calendars, WASTE_CHECK_DAYS)
+    domain_data["waste_cache"] = {"calendars": calendars, "day": now.date(), "at": now, "events": events}
+    return events
+
+
+async def _async_check_waste(hass: HomeAssistant) -> int:
+    """Open the waste bonus tasks that are due now (each job once). Returns the number created."""
+    if DOMAIN not in hass.data or "data" not in hass.data[DOMAIN]:
+        return 0
+    settings = waste.normalize_waste_settings(_get_entry(hass).options)
+    if not settings["waste_enabled"]:
+        return 0
+    calendars = _waste_calendar_ids(hass, settings)
+    if not calendars:
+        return 0
+    events = await _async_waste_events(hass, calendars)
+    now = dt_util.now()
+    data = hass.data[DOMAIN]["data"]
+    done = waste.prune_done(data.get("waste_done"), now.date())
+    existing = {t.get("waste_key") for t in data["tasks"].values() if isinstance(t, dict)}
+    lang = _lang(hass)
+    created = 0
+    for job in waste.due_waste_jobs(events, settings, now):
+        if job["key"] in done or job["key"] in existing:
+            continue
+        done.append(job["key"])
+        data["waste_done"] = done
+        task = waste.build_waste_task(
+            job, settings, lang, str(uuid.uuid4()), dt_util.utcnow().isoformat(),
+            dt_util.as_utc(job["expires_at"]).isoformat(),
+        )
+        await _async_create_adhoc(hass, task)
+        created += 1
+        hass.async_create_task(_async_announce(hass, ANNOUNCE_WASTE, waste.announcement(job, settings, lang)))
+    data["waste_done"] = done
+    return created
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_WASTE_SOURCES,
+})
+@websocket_api.async_response
+async def ws_waste_sources(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Calendars of Waste Collection Schedule and the waste types of the next weeks (settings form)."""
+    if not _check_role(hass, connection, msg, _MANAGE_ROLES):
+        return
+    calendars = _wcs_calendars(hass)
+    settings = waste.normalize_waste_settings(_get_entry(hass).options)
+    ids = _waste_calendar_ids(hass, settings)
+    events = await _async_calendar_events(hass, ids, WASTE_SOURCE_DAYS)
+    by_day = waste.collections_by_day(events)
+    upcoming = [
+        {"date": day.isoformat(), "types": types}
+        for day, types in sorted(by_day.items()) if day >= dt_util.now().date()
+    ][:6]
+    types = sorted(set(waste.known_types(events)) | set(settings["waste_types"]), key=str.lower)
+    connection.send_result(msg["id"], {
+        "available": bool(calendars),
+        "calendars": calendars,
+        "types": types,
+        "upcoming": upcoming,
+    })
+
+
 async def _async_answer_handover(hass: HomeAssistant, task_id: str, accept: bool, by: str | None = None) -> dict | None:
     """Answer an open handover request.
 
@@ -4595,6 +4868,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_check_approval_reminders(hass)
         await _async_check_planning_reminders(hass)
         await _async_check_weekly_summary(hass)
+        await _async_check_waste(hass)
 
     await _async_remove_expired_adhoc(hass)
 
@@ -5125,6 +5399,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_redemption_resolve)
     websocket_api.async_register_command(hass, ws_send_praise)
     websocket_api.async_register_command(hass, ws_test_push)
+    websocket_api.async_register_command(hass, ws_waste_sources)
+    websocket_api.async_register_command(hass, ws_test_announce)
     websocket_api.async_register_command(hass, ws_kid_praise_seen)
     websocket_api.async_register_command(hass, ws_my_praise_seen)
     websocket_api.async_register_command(hass, ws_parents_catalog)

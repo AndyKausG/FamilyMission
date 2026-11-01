@@ -50,6 +50,8 @@ FamilyMission is a motivating family system for kids (about 6-12) that runs insi
 * **Rocket launch and night mode (new in 2.1)**: reaching the family goal triggers a shared "All aboard the rocket!" countdown with liftoff on the wall tablet (once per goal, push to the adults); at night the tablet sleeps with a sleeping buddy and an analogue alarm clock, and greets the family in the morning. See [Rocket launch and night mode](#rocket-launch-and-night-mode).
 * **Push safety**: approvals must not sit unseen. The settings card shows the push target per adult with a "Test push" button, the hub warns when nobody can be reached, and one quiet reminder follows after a few hours. See [Parent approval](#parent-approval).
 * **Bonus triggers**: a bonus task opens by itself when a device state changes (e.g. the dishwasher is done).
+* **Waste collection bonus (new in 2.4)**: with the HACS integration *Waste Collection Schedule* the evening before a collection opens "Put the bins out", the evening of the collection day "Bring the bins in". Per bin released by the parents (glass can stay with you). See [Waste collection](#waste-collection).
+* **Voice announcement (new in 2.4)**: new bonus tasks are spoken on your speakers ("Dad created a bonus task: carry up the shopping. 3 points."). See [Voice announcement](#voice-announcement).
 * **Icon set `fm:`** and a ready-made [recommended dashboard](#recommended-dashboard).
 * **In-app help in German, French and English** (the parents guide, searchable, offline). Also available as Markdown: [Deutsch](docs/parents-guide.de.md) · [English](docs/parents-guide.en.md) · [Français](docs/parents-guide.fr.md).
 
@@ -396,6 +398,26 @@ A bonus task can open itself when a Home Assistant entity changes to a state, wi
 * Create them in the wizard (step 2) or in the settings card, section **Bonus-Auslöser / Bonus triggers**: choose the bonus task, search an entity (domains `sensor`, `binary_sensor`, `vacuum`, `select`, `input_boolean`, `switch`) and enter the state; the state is suggested from the `options` of enum sensors and the current state.
 * When the entity **changes** to exactly that state (string comparison, `on` / `off` for binary sensors), the task is set due immediately (like `set_task_due_by_name`) and the event [`family_mission_bonus_opened`](#family_mission_bonus_opened) is fired. The first state after a restart and the recovery from `unknown` / `unavailable` do not trigger. If the task is already open, nothing happens (no second announcement).
 * The listeners are registered when the integration starts, re-registered whenever the settings change and removed when it is unloaded.
+
+### Waste collection
+Optional (setting `waste_enabled`, default off). Needs the HACS integration [Waste Collection Schedule](https://github.com/mampfes/hacs_waste_collection_schedule) (WCS); FamilyMission has no hard dependency on it.
+
+* **Source:** the `calendar.*` entities of WCS (entity registry platform `waste_collection_schedule`), read with `calendar.get_events`. Every all-day event is one collection, its title (`summary`) the waste type. The WCS sensors are not used (their text is freely templated). `waste_calendars` limits it to some calendars (empty = all).
+* **Which bins:** `waste_types` = `{"Restmüll": {"kids": true}, "Glas": {"kids": false}}`. Only released types count; a new type is off until you tick it. A day with only unreleased bins gives no task.
+* **Tasks:** one ad-hoc bonus task per day and kind, several bins become subtasks.
+  * "Mülltonnen rausstellen" / "Put the bins out" from `waste_out_time` (default 17:00) the evening before until `waste_out_until` (07:00) on the collection day. Subtasks: empty the bins in the flat, one per bin, check there is still room.
+  * "Mülltonnen reinholen" / "Bring the bins in" from `waste_in_time` (16:00) until `waste_in_until` (21:00) on the collection day.
+  * Points `waste_points_per_bin` (1-5, default 1) × bins (max. 10), minimum age `waste_min_age` (default 6), parent approval `waste_approval` (default on), doing it together is allowed (team bonus).
+  * Each task is created once (memory `waste_done`, also across restarts) and removed when it expires. The calendars are read at most every 30 minutes.
+* **Settings card:** section **Müllabfuhr / Waste collection** with the found calendars, the waste types of the next 6 weeks and the next collections (websocket `family_mission/waste_sources`).
+
+### Voice announcement
+Optional (setting `announce_enabled`, default off). Speaks via `tts.speak` (`announce_tts` = a `tts.*` entity, `announce_players` = `media_player.*` list).
+
+* **When** (`announce_events`, default all): `adhoc` – a parent creates a spontaneous bonus ("Papa hat eine Bonusaufgabe erstellt: Einkäufe hochtragen. 3 Punkte." / "… für Clara erstellt …" when it is for one kid), `waste` – waste collection tasks, `trigger` – a bonus task opened by a bonus trigger. Newly created regular tasks are not announced.
+* **Name:** `announce_names` = `{user_id: "Papa"}`, otherwise the person's name.
+* **Night:** silent in the night mode times unless `announce_night` is on.
+* **Test:** button "Test announcement" in the settings card (websocket `family_mission/test_announce`, uses the unsaved choice). Errors of the speaker are only logged; the task is created anyway.
 
 ### How the kids card works
 * **Home screen:** one big tile per kid in a fixed (alphabetical) order, never sorted by points. Each tile shows the avatar inside a progress ring (points this month / personal goal), the points and how many tasks are open. Below: the *family rocket* (sum of all kids' points / family goal with the reward text) and the *bonus board* with all currently open bonus tasks.

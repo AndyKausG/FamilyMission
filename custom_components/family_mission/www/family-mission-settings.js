@@ -86,7 +86,21 @@ claim_minutes: "Bonus reservation (minutes)",
     tb_reminder: "Remind after … hours (0 = off)", tb_reminder_d: "If nobody handled an approval, all adults get one quiet reminder after this time (not at night). 0 switches it off.",
     tb_night: "Night mode (tablet sleeps)", tb_night_d: "At bedtime the tablet shows a dim sleep screen with a sleeping buddy and an alarm clock showing how long it still sleeps. Only the tablet user sleeps, parents keep the normal view. Tapping shows the clock for 5 seconds. An open kid session runs out normally first. No reminders are sent at night.",
     tb_sleep: "Bedtime", tb_wake_wd: "Wake up Mon-Fri", tb_wake_we: "Wake up Sat + Sun",
-    tb_rocket: "Rocket countdown (seconds)", tb_rocket_d: "How long the family counts down before the rocket launches (15-180, default 60)."
+    tb_rocket: "Rocket countdown (seconds)", tb_rocket_d: "How long the family counts down before the rocket launches (15-180, default 60).",
+    ws_title: "Waste collection", ws_desc: "Uses the calendars of the HACS integration \"Waste Collection Schedule\". The evening before a collection a bonus task \"Put the bins out\" opens, on the evening of the collection day one for \"Bring the bins in\".",
+    ws_missing: "Waste Collection Schedule was not found. Install it via HACS and set up your collection address - then this section offers the waste types.",
+    ws_loading: "Reading the waste calendars …", ws_enabled: "Waste collection bonus on",
+    ws_calendars: "Calendars (none ticked = all)", ws_types: "Which bins may the kids handle?", ws_types_none: "No collections found in the next weeks.",
+    ws_types_d: "Untick bins that stay with the parents (e.g. glass). New waste types are off until you tick them.",
+    ws_min_age: "Minimum age", ws_points: "Points per bin", ws_approval: "Parents approve before points are credited",
+    ws_out: "\"Put out\" opens at (evening before)", ws_out_until: "… until (collection day)", ws_in: "\"Bring in\" opens at (collection day)", ws_in_until: "… until",
+    ws_next: "Next collections", ws_reload: "Reload",
+    an_title: "Voice announcement", an_desc: "Speaks new bonus tasks on speakers, e.g. \"Dad created a bonus task: carry up the shopping. 3 points.\"",
+    an_enabled: "Announcements on", an_tts: "Text-to-speech engine", an_tts_none: "No TTS entity found (e.g. Google Translate, Piper, Home Assistant Cloud).",
+    an_players: "Speakers", an_players_none: "No media players found.", an_events: "Announce", an_ev_adhoc: "Bonus task created by a parent",
+    an_ev_waste: "Waste collection tasks", an_ev_trigger: "Bonus tasks opened by a device trigger", an_night: "Also at night (night mode)",
+    an_names: "Spoken name per adult (e.g. \"Dad\")", an_test: "Test announcement", an_test_ok: "Announcement sent.",
+    an_test_none: "Choose an engine and at least one speaker.", an_test_fail: "Announcement failed: {e}", an_choose: "- choose -"
   },
   de: { 
     title: "Einstellungen", colors: "Farben (Erledigt, Fällig, Überfällig)", c_done: "Erledigt", c_due: "Fällig", c_overdue: "Überfällig", 
@@ -170,7 +184,21 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     tb_reminder: "Nachfassen nach … Stunden (0 = aus)", tb_reminder_d: "Hat niemand eine Freigabe bearbeitet, erhalten alle Erwachsenen nach dieser Zeit einen leisen Erinnerungs-Push (nicht nachts). 0 schaltet ab.",
     tb_night: "Nachtmodus (Tablet schläft)", tb_night_d: "Zur Schlafenszeit zeigt das Tablet einen gedimmten Schlafbildschirm mit schlafendem Buddy und Wecker, der zeigt, wie lange noch geschlafen wird. Nur der Tablet-Benutzer schläft, Eltern sehen weiter die normale Ansicht. Antippen zeigt 5 Sekunden die Uhr. Eine offene Kind-Sitzung läuft vorher normal aus. Nachts werden keine Erinnerungen gesendet.",
     tb_sleep: "Schlafenszeit", tb_wake_wd: "Aufstehen Mo-Fr", tb_wake_we: "Aufstehen Sa + So",
-    tb_rocket: "Raketen-Countdown (Sekunden)", tb_rocket_d: "So lange zählt die Familie herunter, bevor die Rakete startet (15-180, Standard 60)."
+    tb_rocket: "Raketen-Countdown (Sekunden)", tb_rocket_d: "So lange zählt die Familie herunter, bevor die Rakete startet (15-180, Standard 60).",
+    ws_title: "Müllabfuhr", ws_desc: "Nutzt die Kalender der HACS-Integration \"Waste Collection Schedule\". Am Abend vor der Leerung öffnet sich die Bonusaufgabe \"Mülltonnen rausstellen\", am Abend des Leerungstags \"Mülltonnen reinholen\".",
+    ws_missing: "Waste Collection Schedule wurde nicht gefunden. Über HACS installieren und die Abholadresse einrichten - danach bietet dieser Bereich die Müllarten an.",
+    ws_loading: "Müllkalender werden gelesen …", ws_enabled: "Müll-Bonus einschalten",
+    ws_calendars: "Kalender (keiner angehakt = alle)", ws_types: "Welche Tonnen dürfen die Kinder übernehmen?", ws_types_none: "In den nächsten Wochen wurden keine Leerungen gefunden.",
+    ws_types_d: "Tonnen, die bei den Eltern bleiben (z.B. Glas), nicht anhaken. Neue Müllarten sind aus, bis ihr sie anhakt.",
+    ws_min_age: "Mindestalter", ws_points: "Punkte pro Tonne", ws_approval: "Eltern bestätigen, bevor Punkte gutgeschrieben werden",
+    ws_out: "\"Rausstellen\" ab (Vorabend)", ws_out_until: "… bis (Leerungstag)", ws_in: "\"Reinholen\" ab (Leerungstag)", ws_in_until: "… bis",
+    ws_next: "Nächste Leerungen", ws_reload: "Neu laden",
+    an_title: "Sprachdurchsage", an_desc: "Sagt neue Bonusaufgaben über Lautsprecher an, z.B. \"Papa hat eine Bonusaufgabe erstellt: Einkäufe hochtragen. 3 Punkte.\"",
+    an_enabled: "Durchsage einschalten", an_tts: "Sprachausgabe (TTS)", an_tts_none: "Keine TTS-Entität gefunden (z.B. Google Translate, Piper, Home Assistant Cloud).",
+    an_players: "Lautsprecher", an_players_none: "Keine Mediaplayer gefunden.", an_events: "Ansagen bei", an_ev_adhoc: "Bonusaufgabe von Eltern erstellt",
+    an_ev_waste: "Müll-Aufgaben", an_ev_trigger: "Bonusaufgabe durch Gerätetrigger geöffnet", an_night: "Auch nachts (Nachtmodus)",
+    an_names: "Gesprochener Name je Erwachsenem (z.B. \"Papa\")", an_test: "Test-Durchsage", an_test_ok: "Durchsage gesendet.",
+    an_test_none: "Sprachausgabe und mindestens einen Lautsprecher wählen.", an_test_fail: "Durchsage fehlgeschlagen: {e}", an_choose: "- wählen -"
   }
 };
 
@@ -304,6 +332,9 @@ class FamilyMissionSettings extends HTMLElement {
     this._trigOpen = false;
     this._peOpen = false;
     this._tbOpen = false;
+    this._wsOpen = false;
+    this._anOpen = false;
+    this._wasteSrc = null;
     this._adults = [];
     this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '' };
     this._wizard = null;
@@ -770,6 +801,9 @@ class FamilyMissionSettings extends HTMLElement {
     else if (id === 'kids-toggle') { this._kidsOpen = !this._kidsOpen; this._render(); }
     else if (id === 'pe-toggle') { this._peOpen = !this._peOpen; this._render(); }
     else if (id === 'tb-toggle') { this._tbOpen = !this._tbOpen; this._render(); }
+    else if (id === 'ws-toggle') { this._wsOpen = !this._wsOpen; if (this._wsOpen && !this._wasteSrc) this._loadWasteSources(); this._render(); }
+    else if (id === 'ws-reload') this._loadWasteSources();
+    else if (id === 'an-toggle') { this._anOpen = !this._anOpen; this._render(); }
     else if (id === 'trig-toggle') { this._trigOpen = !this._trigOpen; this._render(); }
     else if (id === 'btn-wizard-open') this._openWizard();
     else if (id === 'btn-help-open') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
@@ -1675,6 +1709,215 @@ class FamilyMissionSettings extends HTMLElement {
         </div>`;
   }
 
+  /** 15 minute time select; a stored value that is not on the grid stays selectable. */
+  _timeSel(id, value) {
+    const opts = [];
+    for (let m = 0; m < 1440; m += 15) {
+      opts.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
+    }
+    if (!opts.includes(value)) { opts.push(value); opts.sort(); }
+    return `<select class="form-select" id="${id}" style="height: 36px; font-size: 14px;">${opts.map(o => `<option value="${o}" ${o === value ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+  }
+
+  /** Reads the calendars / waste types of Waste Collection Schedule for the waste section. */
+  async _loadWasteSources() {
+    this._wasteSrc = { loading: true };
+    this._render();
+    try {
+      this._wasteSrc = await this._hass.callWS({ type: 'family_mission/waste_sources' });
+    } catch (err) {
+      this._wasteSrc = { available: false, calendars: [], types: [], upcoming: [], error: (err && err.message) || String(err) };
+    }
+    this._render();
+  }
+
+  /**
+   * Renders the "Waste collection" section (calendars of Waste Collection Schedule).
+   * Saved with the normal save button.
+   * @returns {string} - The HTML.
+   */
+  _renderWasteSection() {
+    const st = this.settings || {};
+    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const valid = (v, def) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(v || '') ? v : def);
+    const src = this._wasteSrc;
+    let body;
+    if (!src || src.loading) {
+      body = `<p class="kids-note">${this.localize('ws_loading')}</p>`;
+    } else if (!src.available) {
+      body = `<p class="kids-note" style="color: var(--warning-color, #b26a00);">${this.localize('ws_missing')}</p>`;
+    } else {
+      const chosen = Array.isArray(st.waste_calendars) ? st.waste_calendars : [];
+      const types = (st.waste_types && typeof st.waste_types === 'object') ? st.waste_types : {};
+      const cals = src.calendars.length > 1 ? `
+              <h4>${this.localize('ws_calendars')}</h4>
+              ${src.calendars.map(c => `<label class="parent-check"><input type="checkbox" class="ws-cal" value="${esc(c.entity_id)}" ${chosen.includes(c.entity_id) ? 'checked' : ''}> ${esc(c.name)}</label>`).join('')}` : '';
+      const typeRows = src.types.length
+        ? src.types.map(t => `<label class="parent-check"><input type="checkbox" class="ws-type" value="${esc(t)}" ${types[t] && types[t].kids === true ? 'checked' : ''}> ${esc(t)}</label>`).join('')
+        : `<p class="kids-note">${this.localize('ws_types_none')}</p>`;
+      const next = (src.upcoming || []).map(u => `<li>${esc(u.date)}: ${esc(u.types.join(', '))}</li>`).join('');
+      const minAge = Math.max(0, Math.min(18, parseInt(st.waste_min_age ?? 6)));
+      const pts = Math.max(1, Math.min(5, parseInt(st.waste_points_per_bin) || 1));
+      body = `
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="ws-enabled" ${st.waste_enabled === true ? 'checked' : ''}> ${this.localize('ws_enabled')}</label>
+              ${cals}
+              <h4>${this.localize('ws_types')}</h4>
+              ${typeRows}
+              <p class="kids-note">${this.localize('ws_types_d')}</p>
+              ${next ? `<h4>${this.localize('ws_next')}</h4><ul class="kids-note" style="margin:0; padding-left:18px">${next}</ul>` : ''}
+              <button type="button" id="ws-reload">${this.localize('ws_reload')}</button>
+            </div>
+            <div class="family-box">
+              <div class="kid-fields">
+                <label class="kid-field">${this.localize('ws_min_age')}
+                  <input type="number" id="ws-min-age" min="0" max="18" step="1" value="${isNaN(minAge) ? 6 : minAge}"></label>
+                <label class="kid-field">${this.localize('ws_points')}
+                  <input type="number" id="ws-points" min="1" max="5" step="1" value="${pts}"></label>
+              </div>
+              <label class="parent-check"><input type="checkbox" id="ws-approval" ${st.waste_approval !== false ? 'checked' : ''}> ${this.localize('ws_approval')}</label>
+              <div class="kid-fields">
+                <label class="kid-field">${this.localize('ws_out')}${this._timeSel('ws-out', valid(st.waste_out_time, '17:00'))}</label>
+                <label class="kid-field">${this.localize('ws_out_until')}${this._timeSel('ws-out-until', valid(st.waste_out_until, '07:00'))}</label>
+                <label class="kid-field">${this.localize('ws_in')}${this._timeSel('ws-in', valid(st.waste_in_time, '16:00'))}</label>
+                <label class="kid-field">${this.localize('ws_in_until')}${this._timeSel('ws-in-until', valid(st.waste_in_until, '21:00'))}</label>
+              </div>
+            </div>`;
+    }
+    return `
+        <div class="section-card">
+          <div class="section-header" id="ws-toggle">
+            <div class="section-title">
+              <ha-icon icon="${this._wsOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
+              <span>${this.localize('ws_title')}</span>
+            </div>
+          </div>
+          <div class="section-content ${this._wsOpen ? 'open' : ''}" id="ws-content">
+            <p class="kids-note">${this.localize('ws_desc')}</p>
+            ${body}
+          </div>
+        </div>`;
+  }
+
+  /** Keeps the "Waste collection" inputs in this.settings (saved with the normal save button). */
+  _bindWasteInputs() {
+    const root = this.shadowRoot;
+    const box = root.getElementById('ws-content');
+    if (!box || !root.getElementById('ws-enabled')) return;
+    const sync = () => {
+      const val = (id) => root.getElementById(id);
+      this.settings.waste_enabled = !!val('ws-enabled').checked;
+      this.settings.waste_calendars = [...box.querySelectorAll('.ws-cal')].filter(el => el.checked).map(el => el.value);
+      const types = {};
+      box.querySelectorAll('.ws-type').forEach(el => { types[el.value] = { kids: !!el.checked }; });
+      this.settings.waste_types = types;
+      const age = parseInt(val('ws-min-age').value);
+      this.settings.waste_min_age = Math.max(0, Math.min(18, isNaN(age) ? 6 : age));
+      const pts = parseInt(val('ws-points').value);
+      this.settings.waste_points_per_bin = Math.max(1, Math.min(5, isNaN(pts) ? 1 : pts));
+      this.settings.waste_approval = !!val('ws-approval').checked;
+      this.settings.waste_out_time = val('ws-out').value;
+      this.settings.waste_out_until = val('ws-out-until').value;
+      this.settings.waste_in_time = val('ws-in').value;
+      this.settings.waste_in_until = val('ws-in-until').value;
+    };
+    box.addEventListener('input', sync);
+    box.addEventListener('change', sync);
+  }
+
+  /**
+   * Renders the "Voice announcement" section (tts.speak on media players).
+   * Saved with the normal save button.
+   * @returns {string} - The HTML.
+   */
+  _renderAnnounceSection() {
+    const st = this.settings || {};
+    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const states = (this._hass && this._hass.states) || {};
+    const label = (id) => (states[id] && states[id].attributes && states[id].attributes.friendly_name) || id;
+    const ttsList = Object.keys(states).filter(id => id.startsWith('tts.')).sort();
+    if (st.announce_tts && !ttsList.includes(st.announce_tts)) ttsList.push(st.announce_tts);
+    const players = Object.keys(states).filter(id => id.startsWith('media_player.')).sort();
+    const chosen = Array.isArray(st.announce_players) ? st.announce_players : [];
+    chosen.forEach(p => { if (!players.includes(p)) players.push(p); });
+    const events = Array.isArray(st.announce_events) ? st.announce_events : ['adhoc', 'waste', 'trigger'];
+    const names = (st.announce_names && typeof st.announce_names === 'object') ? st.announce_names : {};
+    const nameRows = (this._adults || []).map(a => `
+              <label class="kid-field">${esc(a.name)}
+                <input type="text" class="an-name" data-uid="${esc(a.id)}" maxlength="30" placeholder="${esc(a.name)}" value="${esc(names[a.id] || '')}"></label>`).join('');
+    return `
+        <div class="section-card">
+          <div class="section-header" id="an-toggle">
+            <div class="section-title">
+              <ha-icon icon="${this._anOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
+              <span>${this.localize('an_title')}</span>
+            </div>
+          </div>
+          <div class="section-content ${this._anOpen ? 'open' : ''}" id="an-content">
+            <p class="kids-note">${this.localize('an_desc')}</p>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="an-enabled" ${st.announce_enabled === true ? 'checked' : ''}> ${this.localize('an_enabled')}</label>
+              <label class="kid-field">${this.localize('an_tts')}
+                <select class="form-select" id="an-tts" style="height: 36px; font-size: 14px;">
+                  <option value="">${this.localize('an_choose')}</option>
+                  ${ttsList.map(id => `<option value="${esc(id)}" ${st.announce_tts === id ? 'selected' : ''}>${esc(label(id))}</option>`).join('')}
+                </select></label>
+              ${ttsList.length ? '' : `<p class="kids-note">${this.localize('an_tts_none')}</p>`}
+              <h4>${this.localize('an_players')}</h4>
+              ${players.length
+                ? players.map(id => `<label class="parent-check"><input type="checkbox" class="an-player" value="${esc(id)}" ${chosen.includes(id) ? 'checked' : ''}> ${esc(label(id))}</label>`).join('')
+                : `<p class="kids-note">${this.localize('an_players_none')}</p>`}
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:6px">
+                <button type="button" id="an-test">${this.localize('an_test')}</button>
+                <span id="an-test-result" class="kids-note"></span>
+              </div>
+            </div>
+            <div class="family-box">
+              <h4>${this.localize('an_events')}</h4>
+              ${['adhoc', 'waste', 'trigger'].map(k => `<label class="parent-check"><input type="checkbox" class="an-event" value="${k}" ${events.includes(k) ? 'checked' : ''}> ${this.localize('an_ev_' + k)}</label>`).join('')}
+              <label class="parent-check"><input type="checkbox" id="an-night" ${st.announce_night === true ? 'checked' : ''}> ${this.localize('an_night')}</label>
+            </div>
+            ${nameRows ? `<div class="family-box"><h4>${this.localize('an_names')}</h4><div class="kid-fields">${nameRows}</div></div>` : ''}
+          </div>
+        </div>`;
+  }
+
+  /** Keeps the "Voice announcement" inputs in this.settings; the test uses the unsaved choice. */
+  _bindAnnounceInputs() {
+    const root = this.shadowRoot;
+    const box = root.getElementById('an-content');
+    if (!box) return;
+    const sync = () => {
+      this.settings.announce_enabled = !!root.getElementById('an-enabled').checked;
+      this.settings.announce_tts = root.getElementById('an-tts').value;
+      this.settings.announce_players = [...box.querySelectorAll('.an-player')].filter(el => el.checked).map(el => el.value);
+      this.settings.announce_events = [...box.querySelectorAll('.an-event')].filter(el => el.checked).map(el => el.value);
+      this.settings.announce_night = !!root.getElementById('an-night').checked;
+      const names = {};
+      box.querySelectorAll('.an-name').forEach(el => { if (el.value.trim()) names[el.dataset.uid] = el.value.trim(); });
+      this.settings.announce_names = names;
+    };
+    box.addEventListener('input', sync);
+    box.addEventListener('change', sync);
+    const btn = root.getElementById('an-test');
+    if (btn) btn.addEventListener('click', async () => {
+      const out = root.getElementById('an-test-result');
+      const tts = root.getElementById('an-tts').value;
+      const players = [...box.querySelectorAll('.an-player')].filter(el => el.checked).map(el => el.value);
+      let msg;
+      try {
+        const res = await this._hass.callWS({ type: 'family_mission/test_announce', tts, players });
+        if (res && res.success) msg = this.localize('an_test_ok');
+        else if (res && res.error === 'not_configured') msg = this.localize('an_test_none');
+        else msg = this.localize('an_test_fail').replace('{e}', (res && res.error) || '?');
+      } catch (err) {
+        msg = this.localize('an_test_fail').replace('{e}', (err && err.message) || String(err));
+      }
+      if (out) out.textContent = msg;
+      this._showToast(msg);
+    });
+  }
+
   /** Keeps the "Tablet" inputs in this.settings (saved with the normal save button). */
   _bindTabletInputs() {
     const root = this.shadowRoot;
@@ -2027,6 +2270,10 @@ class FamilyMissionSettings extends HTMLElement {
 
         ${this._renderTabletSection()}
 
+        ${this._canManage() ? this._renderWasteSection() : ''}
+
+        ${this._canManage() ? this._renderAnnounceSection() : ''}
+
         ${showAdvanced ? `
           <div class="section-card">
             <div class="section-header" id="adv-toggle">
@@ -2223,6 +2470,8 @@ class FamilyMissionSettings extends HTMLElement {
     this._bindTriggerInputs();
     this._bindParentsCentralInputs();
     this._bindTabletInputs();
+    this._bindWasteInputs();
+    this._bindAnnounceInputs();
 
     if (this._templateModalOpen) {
       const iconPicker = this.shadowRoot.getElementById('tmpl-icon');
