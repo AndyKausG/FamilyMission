@@ -291,6 +291,51 @@ def catalog_for_client() -> dict:
     }
 
 
+# Catalog entries offered as quick chips in the "new task" flow (the rest is found by search)
+FLOW_FREQUENT_KEYS = (
+    "morning", "evening", "room_blitz", "table_set", "table_clear", "trash", "plants", "pet_feed",
+)
+
+
+def flow_catalog(lang: str = "de", features: Iterable[str] | None = None) -> list[dict]:
+    """Localized catalog entries with their defaults for the "new task" flow of the parents card.
+
+    Each entry: ``key, name, icon, points, minutes, min_age, interval, category, mode,
+    allow_together, requires_approval, available_from, available_until, frequent, available,
+    subtasks [{title}]``. ``features`` (household features of the wizard) hides the entries that
+    need a feature the household lacks (``available`` False); ``None`` keeps everything available.
+    A catalog subtask that needs a missing feature is left out.
+    """
+    lang = "de" if lang == "de" else "en"
+    feature_set = None if features is None else {f for f in features if isinstance(f, str)}
+    result = []
+    for e in CATALOG:
+        subtasks = []
+        for st in e["subtasks"]:
+            if st.get("requires") and feature_set is not None and st["requires"] not in feature_set:
+                continue
+            subtasks.append({"title": st["title_de"] if lang == "de" else st["title_en"]})
+        result.append({
+            "key": e["key"],
+            "name": _name(e, lang),
+            "icon": e["icon"],
+            "points": e["points"],
+            "minutes": e["minutes"],
+            "min_age": e["min_age"],
+            "interval": e["interval"],
+            "category": e["category"],
+            "mode": e["mode"],
+            "allow_together": e["allow_together"],
+            "requires_approval": e["requires_approval"],
+            "available_from": e["available_from"],
+            "available_until": e["available_until"],
+            "frequent": e["key"] in FLOW_FREQUENT_KEYS,
+            "available": e["requires"] is None or feature_set is None or e["requires"] in feature_set,
+            "subtasks": subtasks,
+        })
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Proposal engine
 # ---------------------------------------------------------------------------

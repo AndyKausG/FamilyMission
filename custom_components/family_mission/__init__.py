@@ -122,6 +122,7 @@ from .const import (
     WS_TYPE_KID_PRAISE_SEEN,
     WS_TYPE_MY_PRAISE_SEEN,
     WS_TYPE_PARENTS_CATALOG,
+    WS_TYPE_KIDS_CATALOG,
     WS_TYPE_PARENTS_APPLY,
     WS_TYPE_PARENT_TASK_SET,
     WS_TYPE_PARENT_TASK_ADD,
@@ -896,6 +897,21 @@ async def ws_complete_task(hass: HomeAssistant, connection: websocket_api.Active
     connection.send_result(msg["id"], {"success": True})
 
 
+def _apply_catalog_key(item: dict, msg: dict) -> None:
+    """Take ``catalog_key`` of an add / edit message (task or template): only keys of the kids catalog are kept.
+
+    The key lets other features recognise a hand-made task (the care step of ``morning`` / ``evening``,
+    the default scope). Unknown values are dropped; an edit without the field keeps the stored key.
+    """
+    if "catalog_key" not in msg:
+        return
+    key = msg["catalog_key"]
+    if isinstance(key, str) and key in kids_catalog.CATALOG_BY_KEY:
+        item["catalog_key"] = key
+    else:
+        item.pop("catalog_key", None)
+
+
 def _apply_schedule(hass: HomeAssistant, item: dict, msg: dict) -> None:
     """Take ``scope`` (home | personal), ``weekdays`` and ``rotation`` of an add / edit message (task or template); invalid values fall back.
 
@@ -905,10 +921,11 @@ def _apply_schedule(hass: HomeAssistant, item: dict, msg: dict) -> None:
     edit without ``rotation["index"]`` keeps the current turn when the members
     are unchanged.
     """
+    _apply_catalog_key(item, msg)
     if msg.get("scope") in kidslib.SCOPES:
         item["scope"] = msg["scope"]
     else:
-        item.setdefault("scope", kidslib.SCOPE_HOME)    # unknown / hand-made tasks are home tasks
+        item.setdefault("scope", kidslib.derive_scope(item))    # from the catalog key; unknown / hand-made tasks are home tasks
     if "weekdays" in msg:
         weekdays = kidslib.normalize_weekdays(msg["weekdays"])
         if weekdays:
@@ -976,6 +993,7 @@ _ROTATION_FIELD = vol.Any(None, dict)
     vol.Optional("weekdays"): _WEEKDAYS_FIELD,
     vol.Optional("rotation"): _ROTATION_FIELD,
     vol.Optional("scope"): vol.Any(None, str),
+    vol.Optional("catalog_key"): vol.Any(None, str),
 })
 @websocket_api.async_response
 async def ws_add_task(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1055,6 +1073,7 @@ async def ws_add_task(hass: HomeAssistant, connection: websocket_api.ActiveConne
     vol.Optional("weekdays"): _WEEKDAYS_FIELD,
     vol.Optional("rotation"): _ROTATION_FIELD,
     vol.Optional("scope"): vol.Any(None, str),
+    vol.Optional("catalog_key"): vol.Any(None, str),
 })
 @websocket_api.async_response
 async def ws_edit_task(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1487,6 +1506,7 @@ async def ws_import_tasks(hass: HomeAssistant, connection: websocket_api.ActiveC
     vol.Optional("weekdays"): _WEEKDAYS_FIELD,
     vol.Optional("rotation"): _ROTATION_FIELD,
     vol.Optional("scope"): vol.Any(None, str),
+    vol.Optional("catalog_key"): vol.Any(None, str),
 })
 @websocket_api.async_response
 async def ws_add_template(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1546,6 +1566,7 @@ async def ws_add_template(hass: HomeAssistant, connection: websocket_api.ActiveC
     vol.Optional("weekdays"): _WEEKDAYS_FIELD,
     vol.Optional("rotation"): _ROTATION_FIELD,
     vol.Optional("scope"): vol.Any(None, str),
+    vol.Optional("catalog_key"): vol.Any(None, str),
 })
 @websocket_api.async_response
 async def ws_edit_template(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1882,15 +1903,22 @@ def _kid_care(settings: dict, kid_id: str) -> list[dict]:
     return kidslib.normalize_care(profile.get("care")) if isinstance(profile, dict) else []
 
 
+def _is_care_mission(task: dict, anchor: str) -> bool:
+    """True for a morning / evening mission: a wizard task of that catalog key or a hand-made task with ``catalog_key``."""
+    if task.get("generated_by") == kids_catalog.GENERATED_BY and kids_catalog.split_key(task.get("wizard_key") or "")[0] == anchor:
+        return True
+    return task.get("catalog_key") == anchor
+
+
 def _care_mission(hass: HomeAssistant, kid_id: str, anchor: str, settings: dict, now: datetime) -> str | None:
-    """Task id of the kid's open morning / evening mission (wizard task of that catalog key), else ``None``."""
+    """Task id of the kid's open morning / evening mission (wizard task or task with that ``catalog_key``), else ``None``."""
     if anchor not in ("morning", "evening"):
         return None
     overdue_days = settings.get("overdue_days", kidslib.DEFAULT_OVERDUE_DAYS)
     for task_id, task in sorted(hass.data[DOMAIN]["data"]["tasks"].items()):
-        if task.get("parent_task") or task.get("generated_by") != kids_catalog.GENERATED_BY:
+        if task.get("parent_task"):
             continue
-        if kids_catalog.split_key(task.get("wizard_key") or "")[0] != anchor:
+        if not _is_care_mission(task, anchor):
             continue
         if kid_id not in kidslib._assignee_list(task):
             continue
@@ -3640,6 +3668,19 @@ async def ws_wizard_catalog(hass: HomeAssistant, connection: websocket_api.Activ
         for t in hass.data[DOMAIN]["data"]["tasks"].values()
     )
     connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_TYPE_KIDS_CATALOG})
+@websocket_api.async_response
+async def ws_kids_catalog(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Localized catalog entries with their defaults for the "new task" flow (admin / manager)."""
+    if not _check_role(hass, connection, msg, _MANAGE_ROLES):
+        return
+    lang = "de" if str(hass.config.language).lower().startswith("de") else "en"
+    wizard = _get_entry(hass).options.get("wizard") or {}
+    features = wizard.get("features") if isinstance(wizard.get("features"), list) else None
+    entries = [{**e, "scope": kidslib.scope_for_key(e["key"])} for e in kids_catalog.flow_catalog(lang, features)]
+    connection.send_result(msg["id"], {"language": lang, "entries": entries})
 
 
 @websocket_api.websocket_command({
@@ -6561,6 +6602,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_my_toggle_step)
     websocket_api.async_register_command(hass, ws_my_close_bonus)
     websocket_api.async_register_command(hass, ws_wizard_catalog)
+    websocket_api.async_register_command(hass, ws_kids_catalog)
     websocket_api.async_register_command(hass, ws_wizard_preview)
     websocket_api.async_register_command(hass, ws_wizard_apply)
     websocket_api.async_register_command(hass, ws_set_bonus_triggers)

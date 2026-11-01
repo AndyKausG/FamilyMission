@@ -90,6 +90,25 @@ const I18N_PARENTS = {
     toast_pt_done: "Done", toast_asked: "Asked", toast_ho_yes: "Great, it is yours", toast_ho_no: "Answered", toast_pt_saved: "Saved", toast_pt_deleted: "Deleted",
     toast_skipped: "Skipped for today", toast_applied: "Parent tasks saved", toast_kid_done: "Done",
     del_title: "Delete task?", del_text: "\"{task}\" is removed for good.", del_confirm: "Yes, delete",
+    nt_btn: "New task", nt_btn_for: "New task for {name}", nt_title: "New task", nt_what: "What needs to be done?", nt_search_ph: "Search or type a name…",
+    nt_frequent: "Frequent", nt_own: "Your templates", nt_none: "No template", nt_free: "\"{name}\" without a template", nt_med: "Medication",
+    nt_all: "Show all", nt_less: "Show fewer", nt_own_tag: "Template", nt_cat_tag: "Suggestion", nt_med_tag: "Care", nt_back: "Back",
+    nt_name: "Name", nt_for: "For whom?", nt_each: "Each kid", nt_rotation: "Taking turns", nt_open: "Together / open",
+    nt_each_d: "Every selected kid gets this task.", nt_rotation_d: "One task, the kids take turns.", nt_open_d: "A bonus for everyone; whoever is first.",
+    nt_when: "When?", nt_daily: "Daily", nt_weekdays: "Weekdays", nt_every: "Every N days", nt_once: "Once", nt_every_l: "Every", nt_days_unit: "days", nt_date: "On",
+    nt_days: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], nt_time: "Time window and reminder (optional)", nt_from: "From", nt_until: "Until", nt_remind: "Remind at",
+    nt_from_tpl: "From the template:", nt_settings: "Settings:", nt_pts: "{n} points", nt_appr: "Approval needed", nt_home: "At home", nt_personal: "Personal",
+    nt_points: "Points", nt_approval: "Parents approve it", nt_together: "May be done together", nt_kind: "Kind", nt_cat_basis: "Duty", nt_cat_bonus: "Bonus", nt_cat_auftrag: "Errand",
+    nt_scope: "Applies to", nt_subs: "Steps", nt_sub_ph: "New step", nt_sub_add: "Add step", nt_sub_del: "Remove step",
+    nt_save: "Create task", nt_save_n: "Create {n} tasks", toast_nt: "Task created", toast_nt_n: "{n} tasks created",
+    nt_need_name: "Please enter a name.", nt_need_kid: "Please pick at least one kid.", nt_need_two: "Taking turns needs at least two kids.",
+    nt_need_days: "Please pick at least one weekday.", nt_need_every: "Please enter 1 to 365 days.", nt_need_date: "Please pick a date.",
+    nt_med_title: "Add medication", nt_med_hint: "Shown to the kid as a step of the morning / evening mission or at a fixed time. Never any points.",
+    nt_c_existing: "Already set up:", nt_c_label: "Name", nt_c_label_ph: "Tablet", nt_c_emoji: "Emoji", nt_c_anchor: "Shown with",
+    nt_c_anchor_morning: "Morning mission", nt_c_anchor_evening: "Evening mission", nt_c_anchor_time: "Fixed time", nt_c_time: "At",
+    nt_c_deadline: "Parents are told if unanswered at", nt_c_default: "Default", nt_c_days: "Days", nt_c_notify: "Tell parents when declined or unanswered",
+    nt_c_more: "More options (alerts, history): Settings > Kids.", nt_c_save: "Save medication", toast_nt_care: "Medication saved",
+    nt_c_max: "At most 6 medications per kid.",
     undo_text_parent: "The task is open again."
   },
   de: {
@@ -169,6 +188,25 @@ const I18N_PARENTS = {
     toast_pt_done: "Erledigt", toast_asked: "Nachgefragt", toast_ho_yes: "Super, die Aufgabe gehört dir", toast_ho_no: "Antwort gesendet", toast_pt_saved: "Gespeichert", toast_pt_deleted: "Gelöscht",
     toast_skipped: "Für heute ausgesetzt", toast_applied: "Eltern-Aufgaben gespeichert", toast_kid_done: "Erledigt",
     del_title: "Aufgabe löschen?", del_text: "„{task}“ wird endgültig entfernt.", del_confirm: "Ja, löschen",
+    nt_btn: "Neue Aufgabe", nt_btn_for: "Neue Aufgabe für {name}", nt_title: "Neue Aufgabe", nt_what: "Was soll erledigt werden?", nt_search_ph: "Suchen oder Namen eingeben…",
+    nt_frequent: "Häufig", nt_own: "Eigene Vorlagen", nt_none: "Ohne Vorlage", nt_free: "„{name}“ ohne Vorlage", nt_med: "Medikament",
+    nt_all: "Alle anzeigen", nt_less: "Weniger anzeigen", nt_own_tag: "Vorlage", nt_cat_tag: "Vorschlag", nt_med_tag: "Gesundheit", nt_back: "Zurück",
+    nt_name: "Name", nt_for: "Für wen?", nt_each: "Jedes Kind", nt_rotation: "Im Wechsel", nt_open: "Gemeinsam / offen",
+    nt_each_d: "Jedes gewählte Kind bekommt die Aufgabe.", nt_rotation_d: "Eine Aufgabe, die Kinder wechseln sich ab.", nt_open_d: "Ein Bonus für alle; wer zuerst kommt.",
+    nt_when: "Wann?", nt_daily: "Täglich", nt_weekdays: "Wochentage", nt_every: "Alle N Tage", nt_once: "Einmal", nt_every_l: "Alle", nt_days_unit: "Tage", nt_date: "Am",
+    nt_days: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"], nt_time: "Zeitfenster und Erinnerung (optional)", nt_from: "Ab", nt_until: "Bis", nt_remind: "Erinnern um",
+    nt_from_tpl: "Aus der Vorlage:", nt_settings: "Einstellungen:", nt_pts: "{n} Punkte", nt_appr: "Freigabe nötig", nt_home: "Zuhause", nt_personal: "Persönlich",
+    nt_points: "Punkte", nt_approval: "Eltern geben frei", nt_together: "Darf gemeinsam erledigt werden", nt_kind: "Art", nt_cat_basis: "Pflicht", nt_cat_bonus: "Bonus", nt_cat_auftrag: "Auftrag",
+    nt_scope: "Gilt für", nt_subs: "Teilschritte", nt_sub_ph: "Neuer Schritt", nt_sub_add: "Schritt hinzufügen", nt_sub_del: "Schritt entfernen",
+    nt_save: "Aufgabe anlegen", nt_save_n: "{n} Aufgaben anlegen", toast_nt: "Aufgabe angelegt", toast_nt_n: "{n} Aufgaben angelegt",
+    nt_need_name: "Bitte einen Namen eingeben.", nt_need_kid: "Bitte mindestens ein Kind wählen.", nt_need_two: "Im Wechsel braucht mindestens zwei Kinder.",
+    nt_need_days: "Bitte mindestens einen Wochentag wählen.", nt_need_every: "Bitte 1 bis 365 Tage eingeben.", nt_need_date: "Bitte ein Datum wählen.",
+    nt_med_title: "Medikament eintragen", nt_med_hint: "Erscheint beim Kind als Schritt der Morgen- / Abend-Mission oder zu einer festen Uhrzeit. Nie Punkte.",
+    nt_c_existing: "Schon eingetragen:", nt_c_label: "Name", nt_c_label_ph: "Tablette", nt_c_emoji: "Emoji", nt_c_anchor: "Erscheint bei",
+    nt_c_anchor_morning: "Morgen-Mission", nt_c_anchor_evening: "Abend-Mission", nt_c_anchor_time: "Feste Uhrzeit", nt_c_time: "Um",
+    nt_c_deadline: "Eltern erfahren es, wenn bis dahin keine Antwort kommt", nt_c_default: "Standard", nt_c_days: "Tage", nt_c_notify: "Eltern benachrichtigen bei „Heute nicht“ oder keiner Antwort",
+    nt_c_more: "Weitere Optionen (Alarm, Verlauf): Einstellungen > Kinder.", nt_c_save: "Medikament speichern", toast_nt_care: "Medikament gespeichert",
+    nt_c_max: "Höchstens 6 Medikamente pro Kind.",
     undo_text_parent: "Die Aufgabe ist wieder offen."
   }
 };
@@ -266,6 +304,9 @@ class FamilyMissionParents extends HTMLElement {
     this._pickKid = null;         // kid chooser purpose: 'praise' | 'skip'
     this._skip = null;            // skip sheet { kidId }
     this._own = null;             // own parent task sheet
+    this._nt = null;              // new task flow state
+    this._flowCatalog = null;     // localized kids catalog (family_mission/kids_catalog)
+    this.templates = {};
     this._del = null;             // parent task id to delete
     this._abs = null;             // absence sheet state
     this.absences = [];
@@ -285,6 +326,12 @@ class FamilyMissionParents extends HTMLElement {
     this.shadowRoot.addEventListener('change', (ev) => this._onChange(ev));
     this.shadowRoot.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter' && ev.target && ev.target.id === 'own-name' && this._own && this._own.name.trim()) { ev.preventDefault(); this._submitOwn(); }
+      if (ev.key === 'Enter' && ev.target && this._nt) {
+        const id = ev.target.id;
+        if (id === 'nt-q' && this._nt.q.trim()) { ev.preventDefault(); this._ntPick('none', ''); }
+        else if (id === 'nt-newsub') { ev.preventDefault(); this._ntAddSub(); this._renderLayer(); const i = this.shadowRoot.getElementById('nt-newsub'); if (i) i.focus(); }
+        else if (id === 'nt-name' && !this._ntProblem()) { ev.preventDefault(); this._ntSave(); }
+      }
     });
   }
 
@@ -446,6 +493,7 @@ class FamilyMissionParents extends HTMLElement {
       this.wallet = data.wallet || {};
       this.redemptions = data.redemptions || {};
       this.tasks = data.tasks || {};
+      this.templates = data.templates || {};
       this.careToday = data.care_today || {};
       this.careLog = Array.isArray(data.care_log) ? data.care_log : [];
       this.absences = Array.isArray(data.absences) ? data.absences : [];
@@ -575,6 +623,7 @@ class FamilyMissionParents extends HTMLElement {
   _onChange(ev) {
     const el = ev.target;
     if (!el || !el.dataset) return;
+    if (this._nt && el.id && el.id.startsWith('nt-') && this._ntInput(el)) return;
     if (el.dataset.ptMin !== undefined) {
       const n = parseInt(el.value);
       if (n >= 1 && n <= 600) this._ptSet(el.dataset.ptMin, { minutes: n });
@@ -591,6 +640,7 @@ class FamilyMissionParents extends HTMLElement {
 
   _onInput(ev) {
     const el = ev.target;
+    if (this._nt && el.id && el.id.startsWith('nt-') && this._ntInput(el)) return;
     if (el.dataset && el.dataset.rw !== undefined && this._rw) {
       const row = this._rw.list[parseInt(el.dataset.rw)];
       if (!row) return;
@@ -630,7 +680,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'not-done') this._reject(el.dataset.id, 'not_done');
     else if (action === 'cheated') { this._confirm = el.dataset.id; this._renderLayer(); }
     else if (action === 'cheated-confirm') { const id = this._confirm; this._confirm = null; this._renderLayer(); this._reject(id, 'cheated'); }
-    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._del = null; this._picker = null; this._abs = null; this._renderLayer(); }
+    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._nt = null; this._del = null; this._picker = null; this._abs = null; this._renderLayer(); }
     else if (action === 'tab') this._setTab(el.dataset.tab);
     else if (action === 'goto-approvals') { const sec = this.shadowRoot.getElementById('appr-section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     else if (action === 'pw-setup') {
@@ -675,6 +725,8 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'undo') { this._undo = el.dataset.id; this._renderLayer(); }
     else if (action === 'undo-confirm') this._doUndo();
     else if (action === 'adhoc-open') this._openAdhoc();
+    else if (action === 'nt-open') this._openNewTask(el.dataset.kid || null);
+    else if (action.startsWith('nt-')) this._ntAction(action, el);
     else if (action.startsWith('adhoc-')) this._adhocAction(action, el);
     else if (action === 'adjust') this._openSheet(el.dataset.kid, parseInt(el.dataset.amount));
     else if (action === 'chip') this._pickChip(el.dataset.text);
@@ -1317,6 +1369,490 @@ class FamilyMissionParents extends HTMLElement {
     this._own = null;
     this._renderLayer();
     await this._call('own', payload, this.localize('toast_pt_saved'));
+  }
+
+  // ---- new task flow ("Neue Aufgabe": template -> for whom / when -> save) ------------
+
+  /** Opens the flow (managers only; daily parents get the spontaneous bonus sheet as before). */
+  _openNewTask(kidId) {
+    if (!this._canManage()) { this._openAdhoc(); return; }
+    const kids = this._kids();
+    this._nt = {
+      step: 1, q: '', showAll: false, tpl: null, newSub: '',
+      kids: kidId ? [kidId] : kids.map(k => k.id),
+      who: 'each', name: '', points: 2, approval: false, together: false, minAge: 0, category: 'basis', scope: 'home',
+      icon: 'mdi:star', catalogKey: null, subtasks: [],
+      when: 'daily', wd: [], every: 2, date: this._todayKey(), from: '', until: '', remind: '',
+      care: null
+    };
+    this._renderLayer();
+    const input = this.shadowRoot.getElementById('nt-q');
+    if (input) input.focus();
+    if (!this._flowCatalog) this._loadFlowCatalog();
+  }
+
+  async _loadFlowCatalog() {
+    if (this._flowCatalogBusy) return;
+    this._flowCatalogBusy = true;
+    try {
+      const res = await this._hass.callWS({ type: 'family_mission/kids_catalog' });
+      this._flowCatalog = Array.isArray(res && res.entries) ? res.entries : [];
+    } catch (err) {
+      console.warn('FamilyMission Parents: catalog could not be loaded', err);
+      this._flowCatalog = [];
+    }
+    this._flowCatalogBusy = false;
+    if (this._nt && this._nt.step === 1) this._renderLayer();
+  }
+
+  _ntNorm(text) { return String(text || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, ''); }
+
+  /** Search hits for step 1: [{src: 'catalog'|'own'|'care', key, name}] (the free text row is added by the renderer). */
+  _ntMatches(q) {
+    const words = this._ntNorm(q).split(/\s+/).filter(Boolean);
+    const hit = (name) => { const n = this._ntNorm(name); return words.every(w => n.includes(w)); };
+    const out = [];
+    const medWords = ['medik', 'tablet', 'pill', 'medic', 'tropfen', 'drops', 'inhal', 'vitamin'];
+    if (!words.length || words.every(w => medWords.some(m => m.includes(w) || w.includes(m)))) {
+      if (this._kids().length) out.push({ src: 'care', key: 'care', name: '💊 ' + this.localize('nt_med') });
+    }
+    for (const t of this._ntOwnTemplates()) if (hit(t.name)) out.push({ src: 'own', key: t.id, name: t.name });
+    for (const e of (this._flowCatalog || [])) if (e.available !== false && hit(e.name)) out.push({ src: 'catalog', key: e.key, name: e.name });
+    return out.slice(0, 40);
+  }
+
+  _ntOwnTemplates() {
+    return Object.values(this.templates || {}).filter(t => t && t.name)
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), (this._hass && this._hass.language) || undefined));
+  }
+
+  /** The markup below the search field: chips without a query, a result list with one. */
+  _ntResultsHtml() {
+    const nt = this._nt;
+    const q = nt.q.trim();
+    const chip = (src, key, label, cls = '') =>
+      `<button class="chip ${cls}" data-action="nt-pick" data-src="${src}" data-key="${escParents(key)}">${escParents(label)}</button>`;
+    if (!q) {
+      const catalog = (this._flowCatalog || []).filter(e => e.available !== false);
+      const frequent = nt.showAll ? catalog : catalog.filter(e => e.frequent);
+      const own = this._ntOwnTemplates();
+      const top = [];
+      if (this._kids().length) top.push(chip('care', 'care', '💊 ' + this.localize('nt_med'), 'care'));
+      top.push(chip('none', '', this.localize('nt_none'), 'none'));
+      return `
+        <div class="chips">${top.join('')}</div>
+        ${frequent.length ? `<div class="lbl">${escParents(this.localize('nt_frequent'))}</div>
+          <div class="chips">${frequent.map(e => chip('catalog', e.key, e.name)).join('')}</div>` : (this._flowCatalog ? '' : `<div class="empty small">${escParents(this.localize('loading'))}</div>`)}
+        ${own.length ? `<div class="lbl">${escParents(this.localize('nt_own'))}</div>
+          <div class="chips">${own.map(t => chip('own', t.id, t.name)).join('')}</div>` : ''}
+        ${catalog.length > frequent.length || nt.showAll ? `<button class="chip" data-action="nt-all">${escParents(this.localize(nt.showAll ? 'nt_less' : 'nt_all'))}</button>` : ''}`;
+    }
+    const rows = this._ntMatches(q).map(m =>
+      `<button class="skip-row" data-action="nt-pick" data-src="${m.src}" data-key="${escParents(m.key)}"><span>${escParents(m.name)}</span><span class="skip-go">${escParents(this.localize(m.src === 'own' ? 'nt_own_tag' : m.src === 'care' ? 'nt_med_tag' : 'nt_cat_tag'))}</span></button>`).join('');
+    return `${rows}
+      <button class="skip-row free" data-action="nt-free"><span>${escParents(this.localize('nt_free', { name: q.slice(0, 60) }))}</span><span class="skip-go">↵</span></button>`;
+  }
+
+  /** Time fields as the form state wants them: "HH:MM" or ''. */
+  _ntTime(value) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(value || '') ? value : ''; }
+
+  /** Takes the defaults of a template (catalog entry, own template) or none and goes to step 2. */
+  _ntPick(src, key) {
+    const nt = this._nt;
+    const kids = this._kids();
+    if (src === 'care') {
+      if (!nt.kids.length) nt.kids = kids.map(k => k.id);
+      nt.care = { label: '', emoji: '💊', anchor: 'morning', time: '08:00', deadline: '', weekdays: [0, 1, 2, 3, 4, 5, 6], notify: true };
+      nt.step = 'care';
+      this._renderLayer();
+      return;
+    }
+    let src_ = null;
+    let mode = 'each';
+    if (src === 'catalog') {
+      const e = (this._flowCatalog || []).find(x => x.key === key);
+      if (!e) return;
+      const open = e.mode === 'open';
+      src_ = {
+        name: e.name, points: e.points, minAge: e.min_age, category: e.category, scope: e.scope,
+        together: !!e.allow_together, approval: !!e.requires_approval, icon: e.icon,
+        from: e.available_from, until: e.available_until, remind: '', catalogKey: e.key,
+        subtasks: (e.subtasks || []).map(s => s.title), weekdays: [],
+        interval: open && e.interval >= 365 ? 0 : e.interval
+      };
+      if (e.mode === 'rotation' && kids.length >= 2) mode = 'rotation';
+      else if (open && kids.length >= 2 && e.category === 'bonus') mode = 'open';
+    } else if (src === 'own') {
+      const t = (this.templates || {})[key];
+      if (!t) return;
+      src_ = {
+        name: t.name, points: t.complexity, minAge: t.min_age, category: t.category, scope: t.scope,
+        together: !!t.allow_together, approval: !!t.requires_approval, icon: t.icon,
+        from: t.available_from, until: t.available_until, remind: t.reminder_at,
+        catalogKey: t.catalog_key || null, subtasks: (t.subtasks || []).map(s => (s && s.title) || String(s || '')).filter(Boolean),
+        weekdays: Array.isArray(t.weekdays) ? t.weekdays : [], interval: Number.isInteger(t.interval) ? t.interval : 7
+      };
+      const known = (t.assignees || []).filter(id => kids.some(k => k.id === id));
+      if (known.length) nt.kids = known;
+    }
+    if (src_) {
+      nt.tpl = { src, key };
+      nt.name = src_.name || '';
+      nt.points = Math.max(1, Math.min(10, parseInt(src_.points) || 2));
+      nt.minAge = Math.max(0, Math.min(18, parseInt(src_.minAge) || 0));
+      nt.category = ['basis', 'bonus', 'auftrag'].includes(src_.category) ? src_.category : 'basis';
+      nt.scope = src_.scope === 'personal' ? 'personal' : 'home';
+      nt.together = !!src_.together;
+      nt.approval = !!src_.approval;
+      nt.icon = /^mdi:[a-z0-9-]{1,60}$/.test(src_.icon || '') ? src_.icon : 'mdi:star';
+      nt.from = this._ntTime(src_.from);
+      nt.until = this._ntTime(src_.until);
+      nt.remind = this._ntTime(src_.remind);
+      nt.catalogKey = src_.catalogKey;
+      nt.subtasks = src_.subtasks.slice(0, 20);
+      const wd = (src_.weekdays || []).filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
+      if (wd.length) { nt.when = 'weekdays'; nt.wd = wd; }
+      else if (src_.interval === 0) { nt.when = 'once'; nt.date = this._todayKey(); }
+      else if (src_.interval === 1) nt.when = 'daily';
+      else { nt.when = 'every'; nt.every = Math.max(1, Math.min(365, src_.interval || 7)); }
+    } else {
+      Object.assign(nt, {
+        tpl: { src: 'none', key: '' }, name: nt.q.trim().slice(0, 60), points: 2, minAge: 0, category: 'basis', scope: 'home',
+        together: false, approval: false, icon: 'mdi:star', from: '', until: '', remind: '', catalogKey: null, subtasks: [],
+        when: 'daily', wd: [], every: 2, date: this._todayKey()
+      });
+    }
+    nt.who = mode;
+    if (mode === 'open') nt.category = 'bonus';
+    nt.step = 2;
+    this._renderLayer();
+    const input = this.shadowRoot.getElementById('nt-name');
+    if (input && !nt.name) input.focus();
+  }
+
+  _ntAction(action, el) {
+    const nt = this._nt;
+    if (!nt) return;
+    if (action === 'nt-pick') { this._ntPick(el.dataset.src, el.dataset.key); return; }
+    if (action === 'nt-free') { this._ntPick('none', ''); return; }
+    if (action === 'nt-all') nt.showAll = !nt.showAll;
+    else if (action === 'nt-back') { nt.step = 1; nt.care = null; }
+    else if (action === 'nt-kid') {
+      const i = nt.kids.indexOf(el.dataset.kid);
+      if (i >= 0) nt.kids.splice(i, 1); else nt.kids.push(el.dataset.kid);
+    }
+    else if (action === 'nt-who') { nt.who = el.dataset.who; if (nt.who === 'open') nt.category = 'bonus'; }
+    else if (action === 'nt-when') nt.when = el.dataset.when;
+    else if (action === 'nt-wd') {
+      const d = parseInt(el.dataset.wd);
+      const i = nt.wd.indexOf(d);
+      if (i >= 0) nt.wd.splice(i, 1); else nt.wd.push(d);
+    }
+    else if (action === 'nt-points') nt.points = Math.max(1, Math.min(10, nt.points + parseInt(el.dataset.delta)));
+    else if (action === 'nt-age') nt.minAge = Math.max(0, Math.min(18, nt.minAge + parseInt(el.dataset.delta)));
+    else if (action === 'nt-cat') nt.category = el.dataset.cat;
+    else if (action === 'nt-scope') nt.scope = el.dataset.scope;
+    else if (action === 'nt-icon') nt.icon = el.dataset.icon;
+    else if (action === 'nt-sub-add') this._ntAddSub();
+    else if (action === 'nt-sub-del') nt.subtasks.splice(parseInt(el.dataset.idx), 1);
+    else if (action === 'nt-c-anchor') { nt.care.anchor = el.dataset.anchor; }
+    else if (action === 'nt-c-wd') {
+      const d = parseInt(el.dataset.wd);
+      const i = nt.care.weekdays.indexOf(d);
+      if (i >= 0) nt.care.weekdays.splice(i, 1); else nt.care.weekdays.push(d);
+    }
+    else if (action === 'nt-create') { this._ntSave(); return; }
+    else if (action === 'nt-c-save') { this._ntSaveCare(); return; }
+    this._renderLayer();
+  }
+
+  _ntAddSub() {
+    const nt = this._nt;
+    const title = (nt.newSub || '').trim().slice(0, 60);
+    if (title && nt.subtasks.length < 20) nt.subtasks.push(title);
+    nt.newSub = '';
+  }
+
+  /** Why the form cannot be saved yet: an i18n key or '' when it can. */
+  _ntProblem() {
+    const nt = this._nt;
+    if (!nt.name.trim()) return 'nt_need_name';
+    if (nt.who !== 'open') {
+      if (!nt.kids.length) return 'nt_need_kid';
+      if (nt.who === 'rotation' && nt.kids.length < 2) return 'nt_need_two';
+    }
+    if (nt.when === 'weekdays' && !nt.wd.length) return 'nt_need_days';
+    if (nt.when === 'every' && !(nt.every >= 1 && nt.every <= 365)) return 'nt_need_every';
+    if (nt.when === 'once' && !/^\d{4}-\d{2}-\d{2}$/.test(nt.date || '')) return 'nt_need_date';
+    return '';
+  }
+
+  /** The websocket payloads (one add_task per kid for "each kid", else one). */
+  _ntPayloads() {
+    const nt = this._nt;
+    const kids = this._kids().filter(k => nt.kids.includes(k.id)).map(k => k.id);
+    const base = {
+      type: 'family_mission/add_task', name: nt.name.trim().slice(0, 60),
+      interval: nt.when === 'once' ? 0 : nt.when === 'every' ? nt.every : 1,
+      complexity: nt.points, icon: nt.icon, category: nt.who === 'open' ? 'bonus' : nt.category,
+      min_age: nt.minAge, requires_approval: !!nt.approval, allow_together: !!nt.together,
+      scope: nt.scope, subtasks: nt.subtasks.map(title => ({ title, done: false }))
+    };
+    if (nt.catalogKey) base.catalog_key = nt.catalogKey;
+    if (nt.when === 'weekdays') base.weekdays = nt.wd.slice().sort((a, b) => a - b);
+    if (nt.when === 'once') base.custom_due_date = nt.date;
+    if (nt.from) base.available_from = nt.from;
+    if (nt.until) base.available_until = nt.until;
+    if (nt.remind) base.reminder_at = nt.remind;
+    if (nt.who === 'open') return [{ ...base, assignees: [] }];
+    if (nt.who === 'rotation') return [{ ...base, assignees: kids, rotation: { members: kids, index: 0, every: 'occurrence' } }];
+    return kids.map(id => ({ ...base, assignees: [id] }));
+  }
+
+  async _ntSave() {
+    const nt = this._nt;
+    if (!nt || this._busy.has('nt')) return;
+    const problem = this._ntProblem();
+    if (problem) { this._toast(this.localize(problem)); return; }
+    const payloads = this._ntPayloads();
+    this._busy.add('nt');
+    let created = 0;
+    try {
+      for (const payload of payloads) {
+        await this._hass.callWS(payload);
+        created++;
+      }
+      this._nt = null;
+      this._renderLayer();
+      this._toast(this.localize(created > 1 ? 'toast_nt_n' : 'toast_nt', { n: created }));
+    } catch (err) {
+      this._toast(this.localize('err') + (err && err.message ? err.message : ''));
+    }
+    this._busy.delete('nt');
+    this._fetchData();
+  }
+
+  /** The care entry of the compact medication sheet appended to the care list of each selected kid. */
+  async _ntSaveCare() {
+    const nt = this._nt;
+    if (!nt || !nt.care || this._busy.has('nt')) return;
+    if (!nt.kids.length) { this._toast(this.localize('nt_need_kid')); return; }
+    const c = nt.care;
+    if (!c.weekdays.length) { this._toast(this.localize('nt_need_days')); return; }
+    const profiles = this.settings.kids || {};
+    const kids = this._kids().filter(k => nt.kids.includes(k.id));
+    if (kids.some(k => ((profiles[k.id] || {}).care || []).length >= 6)) { this._toast(this.localize('nt_c_max')); return; }
+    this._busy.add('nt');
+    try {
+      for (const kid of kids) {
+        const p = profiles[kid.id] || {};
+        const entry = {
+          id: '', label: (c.label || '').trim().slice(0, 30), emoji: (c.emoji || '').trim() || '💊', anchor: c.anchor,
+          time: c.time || '08:00', weekdays: c.weekdays.slice().sort((a, b) => a - b), notify_parents: !!c.notify,
+          decline_alert: { enabled: false, count: 3, days: 7 }
+        };
+        if (c.deadline) entry.deadline = c.deadline;
+        const payload = {
+          type: 'family_mission/set_kid_profile', participant_id: kid.id, avatar: p.avatar || kid.avatar, color: p.color || kid.color,
+          birth_year: p.birth_year === undefined ? null : p.birth_year, care: (p.care || []).concat([entry])
+        };
+        if (p.birthday) payload.birthday = p.birthday;
+        await this._hass.callWS(payload);
+      }
+      this._nt = null;
+      this._renderLayer();
+      this._toast(this.localize('toast_nt_care'));
+    } catch (err) {
+      this._toast(this.localize('err') + (err && err.message ? err.message : ''));
+    }
+    this._busy.delete('nt');
+    this._fetchData();
+  }
+
+  _ntKidChips() {
+    const nt = this._nt;
+    return this._kids().map(k =>
+      `<button class="chip kidchip ${nt.kids.includes(k.id) ? 'on' : ''}" style="--kc:${k.color}" data-action="nt-kid" data-kid="${escParents(k.id)}" aria-pressed="${nt.kids.includes(k.id)}">${this._avatar(k)} ${escParents(k.name)}</button>`).join('');
+  }
+
+  _renderNtSheet() {
+    const nt = this._nt;
+    const L = (k, r) => escParents(this.localize(k, r));
+    if (nt.step === 'care') return this._renderNtCare();
+    if (nt.step === 1) {
+      return `
+        <div class="scrim" data-action="dialog-close"></div>
+        <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${L('nt_title')}" style="--kc:#F9A825">
+          <div class="grab"></div>
+          <h3>➕ ${L('nt_title')}</h3>
+          <label class="lbl" for="nt-q">${L('nt_what')}</label>
+          <input id="nt-q" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="go" placeholder="${L('nt_search_ph')}" value="${escParents(nt.q)}">
+          <div id="nt-results" class="nt-results">${this._ntResultsHtml()}</div>
+          <div class="dialog-actions"><button class="btn neutral" data-action="dialog-close">${L('cancel')}</button></div>
+        </div>`;
+    }
+    const kids = this._kids();
+    const multi = kids.length >= 2;
+    const whoSeg = multi ? `
+      <div class="seg wide" role="group" aria-label="${L('nt_for')}">${[['each', 'nt_each'], ['rotation', 'nt_rotation'], ['open', 'nt_open']].map(([id, key]) =>
+        `<button class="${nt.who === id ? 'on' : ''}" aria-pressed="${nt.who === id}" data-action="nt-who" data-who="${id}">${L(key)}</button>`).join('')}</div>
+      <p class="nt-hint">${L('nt_' + nt.who + '_d')}</p>` : '';
+    const kidRow = nt.who === 'open' ? '' : `<div class="chips">${this._ntKidChips()}</div>`;
+    const days = this.localize('nt_days');
+    const whenSeg = `<div class="chips">${[['daily', 'nt_daily'], ['weekdays', 'nt_weekdays'], ['every', 'nt_every'], ['once', 'nt_once']].map(([id, key]) =>
+      `<button class="chip ${nt.when === id ? 'on' : ''}" aria-pressed="${nt.when === id}" data-action="nt-when" data-when="${id}">${L(key)}</button>`).join('')}</div>`;
+    const whenDetail = nt.when === 'weekdays'
+      ? `<div class="chips" role="group" aria-label="${L('nt_weekdays')}">${days.map((d, i) =>
+        `<button class="chip ico ${nt.wd.includes(i) ? 'on' : ''}" aria-pressed="${nt.wd.includes(i)}" data-action="nt-wd" data-wd="${i}">${escParents(d)}</button>`).join('')}</div>`
+      : nt.when === 'every'
+        ? `<div class="row"><label class="lbl inline" for="nt-every">${L('nt_every_l')}</label><span class="inl"><input id="nt-every" class="txt num" type="number" min="1" max="365" inputmode="numeric" value="${escParents(nt.every)}"> ${L('nt_days_unit')}</span></div>`
+        : nt.when === 'once'
+          ? `<div class="row"><label class="lbl inline" for="nt-date">${L('nt_date')}</label><input id="nt-date" class="txt" type="date" min="${escParents(this._todayKey())}" value="${escParents(nt.date)}"></div>`
+          : '';
+    const catChips = nt.who === 'open' ? '' : `
+      <div class="lbl">${L('nt_kind')}</div>
+      <div class="chips">${['basis', 'bonus', 'auftrag'].map(c =>
+        `<button class="chip ${nt.category === c ? 'on' : ''}" aria-pressed="${nt.category === c}" data-action="nt-cat" data-cat="${c}">${L('nt_cat_' + c)}</button>`).join('')}</div>`;
+    const icons = PARENTS_ADHOC_ICONS.map(([emoji, icon, key]) =>
+      `<button class="chip ico ${nt.icon === icon ? 'on' : ''}" data-action="nt-icon" data-icon="${icon}" title="${L(key)}" aria-label="${L(key)}" aria-pressed="${nt.icon === icon}">${emoji}</button>`).join('');
+    const subs = nt.subtasks.map((title, i) =>
+      `<div class="nt-sub"><span>${escParents(title)}</span><button class="step sm" data-action="nt-sub-del" data-idx="${i}" aria-label="${L('nt_sub_del')}">×</button></div>`).join('');
+    const parts = [`⭐ ${this.localize('nt_pts', { n: nt.points })}`];
+    if (nt.approval) parts.push(`✅ ${this.localize('nt_appr')}`);
+    parts.push(nt.scope === 'personal' ? `🙋 ${this.localize('nt_personal')}` : `🏠 ${this.localize('nt_home')}`);
+    if (nt.category !== 'basis' || nt.who === 'open') parts.push(this.localize(nt.who === 'open' ? 'nt_cat_bonus' : 'nt_cat_' + nt.category));
+    const summaryTitle = this.localize(nt.tpl && nt.tpl.src !== 'none' ? 'nt_from_tpl' : 'nt_settings');
+    const problem = this._ntProblem();
+    const count = nt.who === 'each' ? nt.kids.length : 1;
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${L('nt_title')}" style="--kc:#F9A825">
+        <div class="grab"></div>
+        <h3>➕ ${L('nt_title')}</h3>
+        <label class="lbl" for="nt-name">${L('nt_name')}</label>
+        <input id="nt-name" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" value="${escParents(nt.name)}">
+        ${whoSeg}
+        ${kidRow}
+        <div class="lbl">${L('nt_when')}</div>
+        ${whenSeg}${whenDetail}
+        <div class="lbl">${L('nt_time')}</div>
+        <div class="nt-times">
+          <label class="inl">${L('nt_from')} <select id="nt-from" class="txt time">${parTimeOptions(nt.from, '—')}</select></label>
+          <label class="inl">${L('nt_until')} <select id="nt-until" class="txt time">${parTimeOptions(nt.until, '—')}</select></label>
+          <label class="inl">${L('nt_remind')} <select id="nt-remind" class="txt time">${parTimeOptions(nt.remind, '—')}</select></label>
+        </div>
+        <div class="nt-summary" id="nt-summary"><strong>${escParents(summaryTitle)}</strong> ${escParents(parts.join(' · '))}</div>
+        <details class="fold" data-det="nt-more" ${this._open.has('det:nt-more') ? 'open' : ''}>
+          <summary>${L('qa_more')}</summary>
+          <div class="row"><div class="lbl inline">${L('nt_points')}</div>
+            <div class="stepper"><button class="step" data-action="nt-points" data-delta="-1" aria-label="−" ${nt.points <= 1 ? 'disabled' : ''}>−</button>
+              <span class="val">⭐ ${nt.points}</span>
+              <button class="step" data-action="nt-points" data-delta="1" aria-label="+" ${nt.points >= 10 ? 'disabled' : ''}>+</button></div></div>
+          <div class="row"><label class="lbl inline" for="nt-approval">${L('nt_approval')}</label>
+            <input id="nt-approval" type="checkbox" class="chk" ${nt.approval ? 'checked' : ''}></div>
+          <div class="row"><label class="lbl inline" for="nt-together">${L('nt_together')}</label>
+            <input id="nt-together" type="checkbox" class="chk" ${nt.together ? 'checked' : ''}></div>
+          <div class="row"><div class="lbl inline">${L('adhoc_min_age')}</div>
+            <div class="stepper"><button class="step" data-action="nt-age" data-delta="-1" aria-label="−" ${nt.minAge <= 0 ? 'disabled' : ''}>−</button>
+              <span class="val">${nt.minAge > 0 ? nt.minAge : L('adhoc_age_any')}</span>
+              <button class="step" data-action="nt-age" data-delta="1" aria-label="+" ${nt.minAge >= 18 ? 'disabled' : ''}>+</button></div></div>
+          ${catChips}
+          <div class="lbl">${L('nt_scope')}</div>
+          <div class="chips">${['home', 'personal'].map(s =>
+            `<button class="chip ${nt.scope === s ? 'on' : ''}" aria-pressed="${nt.scope === s}" data-action="nt-scope" data-scope="${s}">${s === 'home' ? '🏠' : '🙋'} ${L('nt_' + (s === 'home' ? 'home' : 'personal'))}</button>`).join('')}</div>
+          <div class="lbl">${L('adhoc_icon')}</div>
+          <div class="chips">${icons}</div>
+          <input id="nt-icon" class="txt" type="text" maxlength="64" autocomplete="off" aria-label="${L('adhoc_icon')}" value="${escParents(nt.icon)}">
+          <div class="lbl">${L('nt_subs')}</div>
+          ${subs}
+          <div class="nt-subadd"><input id="nt-newsub" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" placeholder="${L('nt_sub_ph')}" value="${escParents(nt.newSub)}">
+            <button class="step" data-action="nt-sub-add" aria-label="${L('nt_sub_add')}">+</button></div>
+        </details>
+        <div class="warn" id="nt-problem" ${problem ? '' : 'hidden'}>${problem ? L(problem) : ''}</div>
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="nt-back">‹ ${L('nt_back')}</button>
+          <button class="btn ok solid" id="nt-create" data-action="nt-create" ${problem ? 'disabled' : ''}>${L(count > 1 ? 'nt_save_n' : 'nt_save', { n: count })}</button>
+        </div>
+      </div>`;
+  }
+
+  /** Compact medication sheet: the entry is added to the care list of every selected kid. */
+  _renderNtCare() {
+    const nt = this._nt;
+    const c = nt.care;
+    const L = (k, r) => escParents(this.localize(k, r));
+    const days = this.localize('nt_days');
+    const profiles = this.settings.kids || {};
+    const existing = this._kids().filter(k => nt.kids.includes(k.id) && ((profiles[k.id] || {}).care || []).length).map(k =>
+      `${escParents(k.name)}: ${((profiles[k.id] || {}).care || []).map(e => escParents((e.emoji || '💊') + ' ' + e.label)).join(', ')}`).join('<br>');
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${L('nt_med_title')}" style="--kc:#E53935">
+        <div class="grab"></div>
+        <h3>💊 ${L('nt_med_title')}</h3>
+        <p class="nt-hint">${L('nt_med_hint')}</p>
+        <div class="lbl">${L('nt_for')}</div>
+        <div class="chips">${this._ntKidChips()}</div>
+        ${existing ? `<p class="nt-hint">${L('nt_c_existing')}<br>${existing}</p>` : ''}
+        <label class="lbl" for="nt-c-label">${L('nt_c_label')}</label>
+        <input id="nt-c-label" class="txt" type="text" maxlength="30" autocomplete="off" placeholder="${L('nt_c_label_ph')}" value="${escParents(c.label)}">
+        <div class="row"><label class="lbl inline" for="nt-c-emoji">${L('nt_c_emoji')}</label>
+          <input id="nt-c-emoji" class="txt num" type="text" maxlength="8" value="${escParents(c.emoji)}"></div>
+        <div class="lbl">${L('nt_c_anchor')}</div>
+        <div class="chips">${['morning', 'evening', 'time'].map(a =>
+          `<button class="chip ${c.anchor === a ? 'on' : ''}" aria-pressed="${c.anchor === a}" data-action="nt-c-anchor" data-anchor="${a}">${L('nt_c_anchor_' + a)}</button>`).join('')}</div>
+        ${c.anchor === 'time' ? `<div class="row"><label class="lbl inline" for="nt-c-time">${L('nt_c_time')}</label><select id="nt-c-time" class="txt time">${parTimeOptions(c.time, '08:00')}</select></div>` : ''}
+        <div class="row"><label class="lbl inline" for="nt-c-deadline">${L('nt_c_deadline')}</label><select id="nt-c-deadline" class="txt time">${parTimeOptions(c.deadline, L('nt_c_default'))}</select></div>
+        <div class="lbl">${L('nt_c_days')}</div>
+        <div class="chips" role="group">${days.map((d, i) =>
+          `<button class="chip ico ${c.weekdays.includes(i) ? 'on' : ''}" aria-pressed="${c.weekdays.includes(i)}" data-action="nt-c-wd" data-wd="${i}">${escParents(d)}</button>`).join('')}</div>
+        <div class="row"><label class="lbl inline" for="nt-c-notify">${L('nt_c_notify')}</label>
+          <input id="nt-c-notify" type="checkbox" class="chk" ${c.notify ? 'checked' : ''}></div>
+        <p class="nt-hint">${L('nt_c_more')}</p>
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="nt-back">‹ ${L('nt_back')}</button>
+          <button class="btn ok solid" id="nt-c-save" data-action="nt-c-save" ${nt.kids.length ? '' : 'disabled'}>${L('nt_c_save')}</button>
+        </div>
+      </div>`;
+  }
+
+  /** Typing / selecting in the flow: keeps the state without rebuilding the sheet (focus stays). */
+  _ntInput(el) {
+    const nt = this._nt;
+    if (!nt) return false;
+    const id = el.id;
+    if (id === 'nt-q') {
+      nt.q = el.value;
+      const host = this.shadowRoot.getElementById('nt-results');
+      if (host) host.innerHTML = this._ntResultsHtml();
+    } else if (id === 'nt-name') { nt.name = el.value; this._ntRefresh(); }
+    else if (id === 'nt-every') { nt.every = parseInt(el.value) || 0; this._ntRefresh(); }
+    else if (id === 'nt-date') { nt.date = el.value; this._ntRefresh(); }
+    else if (id === 'nt-from') nt.from = el.value;
+    else if (id === 'nt-until') nt.until = el.value;
+    else if (id === 'nt-remind') nt.remind = el.value;
+    else if (id === 'nt-approval') { nt.approval = el.checked; this._ntRefresh(true); }
+    else if (id === 'nt-together') nt.together = el.checked;
+    else if (id === 'nt-icon') nt.icon = el.value.trim();
+    else if (id === 'nt-newsub') nt.newSub = el.value;
+    else if (id === 'nt-c-label' && nt.care) nt.care.label = el.value;
+    else if (id === 'nt-c-emoji' && nt.care) nt.care.emoji = el.value;
+    else if (id === 'nt-c-time' && nt.care) nt.care.time = el.value || '08:00';
+    else if (id === 'nt-c-deadline' && nt.care) nt.care.deadline = el.value;
+    else if (id === 'nt-c-notify' && nt.care) nt.care.notify = el.checked;
+    else return false;
+    return true;
+  }
+
+  /** Updates the save button, the problem line and (when asked) the summary box. */
+  _ntRefresh(summary) {
+    const nt = this._nt;
+    const problem = this._ntProblem();
+    const btn = this.shadowRoot.getElementById('nt-create');
+    if (btn) btn.disabled = !!problem;
+    const warn = this.shadowRoot.getElementById('nt-problem');
+    if (warn) { warn.hidden = !problem || !nt.name.trim(); warn.textContent = problem ? this.localize(problem) : ''; }
+    if (summary) this._renderLayer();
   }
 
 // ---- absences (vacation, kid away, sick) -------------------------------------
@@ -1968,7 +2504,9 @@ class FamilyMissionParents extends HTMLElement {
 
   _renderQuick() {
     if (!this._kids().length) return '';
-    return `<section><div class="quickrow">
+    const create = this._canManage()
+      ? `<button class="adhoc-btn nt-btn" data-action="nt-open">➕ ${escParents(this.localize('nt_btn'))}</button>` : '';
+    return `<section>${create}<div class="quickrow">
       <button class="qk" data-action="praise-pick">❤️<span>${escParents(this.localize('praise_btn'))}</span></button>
       <button class="qk" data-action="adhoc-open">⭐<span>${escParents(this.localize('adhoc_btn'))}</span></button>
       <button class="qk" data-action="skip-pick">⏸️<span>${escParents(this.localize('skip_btn'))}</span></button>
@@ -2011,6 +2549,7 @@ class FamilyMissionParents extends HTMLElement {
     return `
       <section>
         <div class="chips">${chips}</div>
+        ${this._canManage() ? `<button class="adhoc-btn nt-btn" data-action="nt-open" data-kid="${escParents(kid.id)}">➕ ${escParents(this.localize('nt_btn_for', { name: kid.name }))}</button>` : ''}
         <article class="kid" style="--kc:${kid.color}">
           <div class="kid-top">
             ${this._avatar(kid)}
@@ -2139,6 +2678,7 @@ class FamilyMissionParents extends HTMLElement {
       if (host) host.appendChild(this._picker);
       return;
     }
+    if (this._nt) { layer.innerHTML = this._renderNtSheet(); return; }
     if (this._abs) { layer.innerHTML = this._renderAbsenceSheet(); return; }
     if (this._own) { layer.innerHTML = this._renderOwnSheet(); return; }
     if (this._pickKid) { layer.innerHTML = this._renderPickKidSheet(); return; }
@@ -2325,6 +2865,19 @@ class FamilyMissionParents extends HTMLElement {
       .adhoc-btn { width: 100%; min-height: 52px; margin-bottom: 12px; border-radius: 12px; border: 2px dashed #F9A825; background: color-mix(in srgb, #F9A825 12%, var(--card-background-color, #fff)); color: var(--primary-text-color); font-size: 16px; font-weight: 700; }
       .undo { align-self: flex-start; margin-top: 4px; min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--p-line); background: transparent; color: var(--primary-text-color); font-size: 13px; font-weight: 600; }
       .sheet.adhoc { max-height: 92vh; }
+      .nt-btn { border-style: solid; font-size: 17px; min-height: 56px; }
+      .nt-hint { margin: 4px 0 8px; font-size: 13px; color: var(--p-sub); }
+      .nt-results { margin-top: 8px; }
+      .nt-summary { margin: 12px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--secondary-background-color, #f0f0f0); font-size: 14px; }
+      .nt-times { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+      .nt-times .txt { min-height: 44px; }
+      .nt-sub { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; font-size: 15px; border-bottom: 1px solid var(--p-line); }
+      .nt-subadd { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+      .step.sm { width: 40px; height: 40px; font-size: 20px; flex: none; }
+      .seg.wide { display: flex; width: 100%; }
+      .seg.wide button { flex: 1; padding: 0 6px; }
+      .skip-row.free { border-style: dashed; }
+      .chip.care { border-color: #E53935; }
       .lbl { font-size: 13px; font-weight: 700; color: var(--p-sub); margin: 10px 0 6px; }
       .lbl.inline { margin: 0; font-size: 14px; }
       .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }

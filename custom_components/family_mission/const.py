@@ -115,6 +115,7 @@ WS_TYPE_TEST_ANNOUNCE = "family_mission/test_announce"
 WS_TYPE_ABSENCE_ADD = "family_mission/absence_add"
 WS_TYPE_ABSENCE_END = "family_mission/absence_end"
 WS_TYPE_ABSENCE_DELETE = "family_mission/absence_delete"
+WS_TYPE_KIDS_CATALOG = "family_mission/kids_catalog"
 
 # Service Names
 SERVICE_RESET_MONTHLY_POINTS = "reset_monthly_points"

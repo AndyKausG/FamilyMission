@@ -408,3 +408,23 @@ def test_catalog_allow_together_flags():
     assert all(by_key[k]["allow_together"] for k in shared)
     assert not any(by_key[k]["allow_together"] for k in personal)
     assert all(e["allow_together"] for e in kc.CATALOG if e["category"] != "basis")
+
+
+def test_flow_catalog_localized_defaults():
+    de = {e["key"]: e for e in kc.flow_catalog("de")}
+    en = {e["key"]: e for e in kc.flow_catalog("en")}
+    assert set(de) == {e["key"] for e in kc.CATALOG}
+    assert de["morning"]["name"] == "Morgen-Mission" and en["morning"]["name"] == "Morning mission"
+    assert de["morning"]["subtasks"][0] == {"title": "Anziehen"}
+    assert de["morning"]["frequent"] is True and de["car"]["frequent"] is False
+    assert de["room_blitz"]["requires_approval"] is True and de["trash"]["category"] == "bonus"
+
+
+def test_flow_catalog_features_hide_entries_and_subtasks():
+    entries = {e["key"]: e for e in kc.flow_catalog("en", [])}
+    assert entries["dishwasher_load"]["available"] is False and entries["trash"]["available"] is True
+    assert "Pack school bag" not in [s["title"] for s in entries["evening"]["subtasks"]]
+    entries = {e["key"]: e for e in kc.flow_catalog("en", ["school", "dishwasher"])}
+    assert entries["dishwasher_load"]["available"] is True
+    assert "Pack school bag" in [s["title"] for s in entries["evening"]["subtasks"]]
+    assert all(e["available"] for e in kc.flow_catalog("en"))
