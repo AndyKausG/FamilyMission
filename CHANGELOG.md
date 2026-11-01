@@ -12,6 +12,7 @@
 ## [2.3.3] - 2026-11-01
 
 - **Family goal suggestion:** below "Points per month" in the settings card (Kids) a line shows a suggestion (80 % of the kids' monthly goals, rounded to 10, like the quick-start wizard) and the task points all kids reached last month (what the rocket counts), with a button to take the suggestion. It follows the monthly goals as they are typed.
+- **README:** images use absolute `raw.githubusercontent.com` URLs, so HACS shows the logo and the screenshots too (relative paths only worked on github.com).
 
 ## [2.3.2] - 2026-11-01
 
