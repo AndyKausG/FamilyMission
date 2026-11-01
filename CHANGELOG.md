@@ -20,6 +20,10 @@
 - **Tests:** new `tests/test_absence.py` (pure) and `tests/test_absence_ws.py`.
 - **Docs:** README, help and parents' guide (de/en/fr).
 - **Tests:** new `tests/test_parent_todo_ws.py`, pure tests in `tests/test_parents_catalog.py`; new `tests/test_care_ws.py`, care helpers in `tests/test_kids_helpers.py`; new `tests/test_schedule_ws.py`, weekday / rotation helpers in `tests/test_kids_helpers.py`; new `tests/test_family_goal_percent.py` and `tests/test_family_goal_percent_ws.py`.
+- **New task flow:** parents card Today and Kids tab get a prominent "➕ Neue Aufgabe" (admins / managers; daily parents keep the spontaneous bonus). Step 1: search + chips (frequent catalog entries, own templates, "Ohne Vorlage", "💊 Medikament"; Enter = free text without template). Step 2: for whom (kid chips; with two or more kids "Jedes Kind" = one `add_task` per kid, "Im Wechsel" = one task with `rotation`, "Gemeinsam / offen" = open bonus), when (daily, weekdays, every N days, once on a date), optional time window and reminder, summary box and a "Mehr Optionen" fold (points, approval, together, min age, duty / bonus / errand, scope, icon, steps). "💊 Medikament" opens a compact sheet that appends a care entry to the selected kids via `set_kid_profile`.
+- **New websocket** `family_mission/kids_catalog` (admin / manager): localized catalog entries with their defaults (`kids_catalog.flow_catalog`, pure). Tasks and templates accept `catalog_key` (only keys of the kids catalog are kept; the default `scope` follows it).
+- **Care step on hand-made missions:** a task with `catalog_key` `morning` / `evening` assigned to the kid now carries the medication step like the wizard missions.
+- **Tests:** new `tests/test_task_flow_ws.py`, flow catalog tests in `tests/test_kids_catalog.py`.
 
 ## [2.5.0] - 2026-11-01
 

@@ -437,6 +437,9 @@ Optional (setting `announce_enabled`, default off). Speaks via `tts.speak` (`ann
 * **Bonus tasks are free by default.** Per bonus task you can opt in to "duties first" (`requires_routine`, task/template editor: "Bonus only after the kid's due duties"): such a bonus is shown locked ("Your tasks first!") while the kid has due `basis` tasks open. Only duties inside their time window count (an evening mission from 17:00 does not lock a bonus in the morning). Spontaneous (ad-hoc) bonus tasks are never locked. Points are booked immediately on completion (unless the task needs parent approval).
 * **Reservations:** a claimed bonus task is reserved for `claim_minutes` (default 10) minutes; other kids see who took it. Completing the task clears the reservation.
 
+### New task flow (new in 2.6)
+Parents card (Today and Kids tab) -> **➕ Neue Aufgabe** (admin / manager): search or pick a template (frequent catalog entries, own templates, no template, 💊 medication), then choose kids (*each kid* = one task per kid, *taking turns* = one task with `rotation`, *together / open* = bonus for all), the schedule (daily, weekdays, every N days, once), an optional time window and reminder, and under *More options* points, approval, together, min age, duty / bonus / errand, scope, icon and steps. It uses the existing `add_task`; `catalog_key` (a key of the kids catalog, validated) marks the task so other features recognise it - a `morning` / `evening` task also carries the medication step. `family_mission/kids_catalog` (admin / manager) returns the localized entries with their defaults.
+
 ### Absences (new in 2.6)
 Parents card -> More -> **Abwesenheit**: 🌴 *Familie verreist*, 🎒 *Kind weg* (grandma, class trip) or 🤒 *Krank*, with kids, from / to (inclusive, at most 120 days). Websockets `family_mission/absence_add`, `absence_end`, `absence_delete` (admin / manager / parent); `get_data` returns `absences` (`{id, kind, kids, from, to, personal, care, note}`).
 
