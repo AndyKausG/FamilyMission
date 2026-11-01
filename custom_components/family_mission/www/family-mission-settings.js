@@ -487,6 +487,13 @@ class FamilyMissionSettings extends HTMLElement {
     this.users = users;
   }
 
+  /** Small footer with the app icon and the installed version (version from the backend manifest). */
+  _renderFooter() {
+    if (!this._version) return '';
+    const ico = window.FamilyMissionBrand ? window.FamilyMissionBrand.iconSvg(16) : '';
+    return `<div class="fm-footer">${ico}<span>FamilyMission ${this._version}</span></div>`;
+  }
+
   /**
    * Fetches the current settings and tasks from the backend.
    */
@@ -503,6 +510,7 @@ class FamilyMissionSettings extends HTMLElement {
       this.current_month = data.current_month;
       this.current_period_start = data.current_period_start;
       this._myRole = data.my_role || null;
+      this._version = data.version || '';
       this._haUsers = Array.isArray(data.ha_users) ? data.ha_users : [];
       this._adults = Array.isArray(data.adults) ? data.adults : [];
       this._settingsLoaded = true;
@@ -1126,6 +1134,7 @@ class FamilyMissionSettings extends HTMLElement {
         :host { display: block; width: ${width}; margin: 0 auto; } * { box-sizing: border-box; } 
         ha-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: ${height}; overflow-y: auto; } 
         .header { font-size: 20px; font-weight: bold; margin-bottom: 10px; } 
+        .fm-footer { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; font-size: 12px; color: var(--secondary-text-color); opacity: 0.7; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--card-background-color); border-radius: 8px; border: 1px solid var(--divider-color); box-shadow: var(--ha-card-box-shadow, 0 2px 2px rgba(0,0,0,0.1)); margin-bottom: 8px; } 
         .setting-label { font-weight: bold; font-size: 14px; color: var(--primary-text-color); } 
         .section-card { background: var(--card-background-color); border-radius: 8px; border: 1px solid var(--divider-color); box-shadow: var(--ha-card-box-shadow, 0 2px 2px rgba(0,0,0,0.1)); margin-bottom: 12px; padding: 12px; width: 100%; box-sizing: border-box; }
@@ -2034,7 +2043,8 @@ class FamilyMissionSettings extends HTMLElement {
         ` : ''}
         
         <button class="btn btn-save" id="btn-save" title="${this.localize('save_hover')}" style="margin-top: 12px;">${this.localize('save')}</button>
-        
+
+        ${this._renderFooter()}
       </ha-card>
 
       <div id="template-modal" class="modal ${this._templateModalOpen ? 'open' : ''}">

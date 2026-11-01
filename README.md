@@ -84,6 +84,30 @@ data:
 
 Entity ids of the new sensors differ from the old ones, so update dashboards and automations that reference them.
 
+## Icons (fm:)
+
+FamilyMission ships its own icon set `fm:`. It is registered as a custom icon set when the integration loads (as a dashboard resource and as an extra module), so the icons work everywhere in Home Assistant: dashboard views, sidebar, cards, entity icons and the icon picker (search "fm").
+
+| Icon | Name | Use |
+|------|------|-----|
+| rocket | `fm:rocket` | The FamilyMission rocket: tasks, missions, the kids card |
+| rocket in a ring | `fm:rocket-ring` | Progress ring with rocket: monthly goal and family rocket |
+| sleeping moon | `fm:moon-buddy` | Night mode / sleep screen |
+| parents | `fm:parents` | Parents card, "We parents" |
+
+Example, a dashboard view with the rocket as its icon:
+
+```yaml
+views:
+  - title: FamilyMission
+    path: familymission
+    icon: fm:rocket
+    cards:
+      - type: custom:family-mission-parents
+```
+
+The app icon and the logo are shown discreetly in the parents' hub, the help, the quick-start wizard and at the bottom of the settings card (not on the kids' tablet).
+
 ## Dashboard Cards
 The integration ships these cards for the Lovelace dashboard (`custom:family-mission-card`, `-protocol`, `-stats`, `-settings`, `-kids`, `-parents`, `-help`). A complete example dashboard with a kids view and a parents view is in [`examples/kids/dashboard.yaml`](examples/kids/dashboard.yaml).
 

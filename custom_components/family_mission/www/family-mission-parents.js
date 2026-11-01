@@ -1242,7 +1242,7 @@ class FamilyMissionParents extends HTMLElement {
         if (this._more === 'tasks' || this._more === 'settings') embedKey = this._more;
       } else body = this._renderToday();
     }
-    app.innerHTML = `<ha-card><div class="head"><span class="head-title">${title}</span>${window.FamilyMissionHelp ? `<button class="help-btn" data-action="help" data-anchor="parents">❓ ${escParents(this.localize('help_btn'))}</button>` : ''}</div>${tabs}<div class="body">${body}</div></ha-card>`;
+    app.innerHTML = `<ha-card><div class="head"><span class="head-title">${window.FamilyMissionBrand ? `<span class="head-ico">${window.FamilyMissionBrand.iconSvg(22)}</span>` : ''}${title}</span>${window.FamilyMissionHelp ? `<button class="help-btn" data-action="help" data-anchor="parents">❓ ${escParents(this.localize('help_btn'))}</button>` : ''}</div>${tabs}<div class="body">${body}</div></ha-card>`;
     this._syncEmbed(embedKey);
     // The dialog layer is not rebuilt on data refreshes (it would reset what is typed);
     // it only closes when its approval was handled elsewhere in the meantime.
@@ -1747,7 +1747,8 @@ class FamilyMissionParents extends HTMLElement {
       * { box-sizing: border-box; }
       ha-card { display: block; padding: 16px; }
       .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--primary-text-color); }
-      .head-title { min-width: 0; overflow-wrap: anywhere; }
+      .head-title { min-width: 0; overflow-wrap: anywhere; display: inline-flex; align-items: center; gap: 8px; }
+      .head-ico { display: inline-flex; flex: none; }
       .help-btn { flex: none; min-height: 40px; padding: 0 14px; border-radius: 20px; border: 2px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 14px; font-weight: 700; }
       .body { min-width: 0; display: flex; flex-direction: column; gap: 20px; color: var(--primary-text-color); }
       h2 { margin: 0 0 10px; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; }

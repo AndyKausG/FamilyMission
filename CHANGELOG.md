@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.1] - 2026-11-01
+
+- **Icon set `fm:`:** `www/family-mission-icons.js` registers the custom icon set `fm` (`fm:rocket`, `fm:rocket-ring`, `fm:moon-buddy`, `fm:parents`) via `window.customIcons`, usable as view, sidebar and card icons and in the icon picker. The file is registered as a Lovelace resource and loaded as an extra module (`frontend.add_extra_js_url`, versioned; removed on unload), so the icons also work outside of dashboards. Loading it twice is harmless.
+- **Logo in the UI:** the file also exports `window.FamilyMissionBrand.iconSvg(size)` / `logoSvg(width, dark)` (inline SVG, unique gradient ids). Used discreetly in the parents' hub (header), the help (header; logo with lettering and version in "About FamilyMission", light/dark), the quick-start wizard (header, large icon on the success page) and as a footer in the settings card. Not on the kids' tablet. Without the helper the cards keep their emoji.
+- **Version:** `get_data` now returns `version` (from `manifest.json`).
+- **Docs:** README section "Icons (fm:)".
+- **Tests:** new `tests/test_frontend_assets.py`.
+
 ## [2.3.0] - 2026-11-01
 
 - **Approval push:** when a task waits for parent approval, all adults get a push ("✅ Clara ist fertig" / "✅ Clara is done", for a task done together "Clara & David", text "<task> (<points> ⭐)") with the actions "Freigeben" / "Nicht fertig" (`FM_APPROVE_<id>` / `FM_NOTDONE_<id>`, tag per pending entry). "Cheated" stays app-only; a second tap is ignored. New setting `approval_push` (default on, validated as bool), switch in the settings card, section "Tablet".

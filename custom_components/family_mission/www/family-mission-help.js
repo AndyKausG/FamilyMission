@@ -583,9 +583,12 @@ class FamilyMissionHelp extends HTMLElement {
   }
 
   set hass(hass) {
+    const dark = this._isDark();
     const changed = !this._hass || this._hass.language !== (hass && hass.language);
     this._hass = hass;
     if (changed && this._built) this._build();
+    else if (this._built && dark !== this._isDark()) this._renderList();
+    this._loadVersion();
   }
 
   connectedCallback() {
@@ -607,6 +610,31 @@ class FamilyMissionHelp extends HTMLElement {
 
   close() {
     if (this.parentNode) this.parentNode.removeChild(this);
+  }
+
+  /** Dark theme? Home Assistant's theme setting first, then the system preference. */
+  _isDark() {
+    const t = this._hass && this._hass.themes;
+    if (t && typeof t.darkMode === 'boolean') return t.darkMode;
+    return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  /** Reads the installed version once (shown in the "About" chapter). */
+  _loadVersion() {
+    if (FamilyMissionHelp._version !== undefined || FamilyMissionHelp._loading || !this._hass || !this._hass.callWS) return;
+    FamilyMissionHelp._loading = true;
+    this._hass.callWS({ type: 'family_mission/get_data' }).then((d) => {
+      FamilyMissionHelp._version = (d && d.version) || '';
+      if (this.isConnected && this._built) this._renderList();
+    }).catch(() => { FamilyMissionHelp._version = ''; }).finally(() => { FamilyMissionHelp._loading = false; });
+  }
+
+  /** Logo with lettering and version, only when the brand helper is loaded. */
+  _aboutBrand() {
+    const brand = window.FamilyMissionBrand;
+    if (!brand) return '';
+    const v = FamilyMissionHelp._version;
+    return `<div class="brand">${brand.logoSvg(280, this._isDark())}${v ? `<div class="brand-ver">Version ${escHelp(v)}</div>` : ''}</div>`;
   }
 
   /** Language of the content: de, fr or en (fallback en). */
@@ -687,7 +715,7 @@ class FamilyMissionHelp extends HTMLElement {
     list.innerHTML = shown.map(({ ch, n }) => `
       <details class="chapter" id="ch-${ch.id}" data-chapter="${ch.id}" ${query || this._open.has(ch.id) ? 'open' : ''}>
         <summary><span class="num">${n}</span><span class="ico" aria-hidden="true">${ch.icon}</span><span class="ttl">${inlineHelp(ch.title, query)}</span></summary>
-        <div class="chbody">${ch.blocks.map(b => this._renderBlock(b, query)).join('')}</div>
+        <div class="chbody">${ch.id === 'about' ? this._aboutBrand() : ''}${ch.blocks.map(b => this._renderBlock(b, query)).join('')}</div>
       </details>`).join('') || `<p class="empty">${escHelp(c.no_results)}</p>`;
     if (status) status.textContent = query ? c.results.replace('{n}', shown.length) : '';
     if (clear) clear.hidden = !query;
@@ -709,7 +737,7 @@ class FamilyMissionHelp extends HTMLElement {
       <section class="panel" role="${overlay ? 'dialog' : 'region'}" aria-label="${escHelp(c.title)}" ${overlay ? 'aria-modal="true"' : ''}>
         <header class="head">
           <div class="head-row">
-            <div class="head-text"><h1>❓ ${escHelp(c.title)}</h1><div class="sub">${escHelp(c.subtitle)}</div></div>
+            <div class="head-text"><h1>${window.FamilyMissionBrand ? `<span class="h-ico">${window.FamilyMissionBrand.iconSvg(26)}</span>` : '❓ '}${escHelp(c.title)}</h1><div class="sub">${escHelp(c.subtitle)}</div></div>
             ${overlay ? `<button class="close" id="close" data-action="close" aria-label="${escHelp(c.close)}" title="${escHelp(c.close)}">✕</button>` : ''}
           </div>
           <div class="search">
@@ -747,7 +775,10 @@ class FamilyMissionHelp extends HTMLElement {
       .head { flex: none; padding: 16px 16px 10px; border-bottom: 1px solid var(--h-line); background: var(--h-bg); border-radius: inherit; }
       .head-row { display: flex; align-items: flex-start; gap: 12px; }
       .head-text { flex: 1; min-width: 0; }
-      h1 { margin: 0; font-size: 22px; line-height: 1.25; }
+      h1 { margin: 0; font-size: 22px; line-height: 1.25; display: flex; align-items: center; gap: 10px; }
+      .h-ico { display: inline-flex; flex: none; }
+      .brand { display: flex; flex-direction: column; align-items: center; gap: 4px; margin: 4px 0 14px; }
+      .brand-ver { font-size: 13px; color: var(--h-sub); }
       .sub { color: var(--h-sub); font-size: 14px; margin-top: 2px; }
       .close { flex: none; width: 44px; height: 44px; border-radius: 22px; border: 1px solid var(--h-line); background: var(--h-soft); color: var(--h-text); font-size: 20px; cursor: pointer; }
       .search { position: relative; margin-top: 12px; }
