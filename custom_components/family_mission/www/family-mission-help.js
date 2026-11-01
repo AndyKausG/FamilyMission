@@ -162,7 +162,8 @@ const HELP_CONTENT = {
           "**Kind will keine Punkte mehr.** Das ist nach einigen Wochen normal. Erneuert die Belohnungen, setzt mehr auf Erlebnisse, schleicht gut laufende Routinen aus und fragt, was dem Kind fehlt. Punkte sind nie ein Druckmittel.",
           "**Krankheit / Ferien.** Pausiert Aufgaben im Task-Editor (Pause bis Datum) oder nutzt „Heute aussetzen“ für einzelne Tage. Am Geburtstag sind Pflichten automatisch frei. Passt bei langen Pausen das Monatsziel an.",
           "**Geschwister unterschiedlich alt.** Aufgaben haben ein Mindestalter, jedes Kind hat ein eigenes Ziel. Haltet den Aufwand pro Minute vergleichbar, nicht die Zahl der Aufgaben. Ältere können Jüngeren mit „Zusammen“ helfen.",
-          "**Tablet zeigt eine alte Version.** Das ist der Browser-Cache. Seite neu laden (im Fully Kiosk Browser: Cache leeren und neu laden), in der Companion-App den Frontend-Cache leeren. Nach einem Update von FamilyMission erscheint die neue Version nach einem Neustart von Home Assistant und einem Neuladen."
+          "**Tablet zeigt eine alte Version.** Das ist der Browser-Cache. Seite neu laden (im Fully Kiosk Browser: Cache leeren und neu laden), in der Companion-App den Frontend-Cache leeren. Nach einem Update von FamilyMission erscheint die neue Version nach einem Neustart von Home Assistant und einem Neuladen.",
+          "**Ein neuer Bonus erscheint nicht?** Logo antippen: Das kleine Raketen-Symbol neben dem Titel (Kinder-Tablet: Startseite bzw. Kopfzeile bei „Meine Aufgaben“, Eltern-Hub: Kopfzeile) lädt alles sofort neu und bestätigt mit „Aktualisiert ✓“. Normalerweise passiert das von selbst: nach einem Verbindungsabbruch, beim Aufwachen des Tablets und alle 5 Minuten. Hilft es nicht, prüft die Verbindung zu Home Assistant („Keine Verbindung“) und ladet die Seite neu."
         ]
       ] },
       { id: "about", icon: "ℹ️", title: "Über FamilyMission", blocks: [
@@ -322,7 +323,8 @@ const HELP_CONTENT = {
           "**L'enfant ne veut plus de points.** C'est normal après quelques semaines. Renouvelez les récompenses, misez davantage sur les expériences, réduisez progressivement les routines qui marchent bien et demandez ce qui manque à l'enfant. Les points ne sont jamais un moyen de pression.",
           "**Maladie / vacances.** Mettez des tâches en pause dans l'éditeur de tâches (pause jusqu'à une date) ou utilisez « Suspendre aujourd'hui » pour des jours isolés. Le jour d'anniversaire, les obligations sont automatiquement suspendues. Pour de longues pauses, adaptez l'objectif mensuel.",
           "**Frères et sœurs d'âges différents.** Les tâches ont un âge minimum, chaque enfant a son propre objectif. Gardez l'effort par minute comparable, pas le nombre de tâches. Les plus grands peuvent aider les plus petits avec « Ensemble ».",
-          "**La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de FamilyMission, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement."
+          "**La tablette affiche une ancienne version.** C'est le cache du navigateur. Rechargez la page (dans Fully Kiosk Browser : vider le cache et recharger), dans l'application Companion videz le cache du frontend. Après une mise à jour de FamilyMission, la nouvelle version apparaît après un redémarrage de Home Assistant et un rechargement.",
+          "**Un nouveau bonus n'apparaît pas ?** Touchez le logo : la petite icône de fusée à côté du titre (tablette des enfants : écran d'accueil, ou en-tête avec « Mes tâches » ; hub des parents : en-tête) recharge tout immédiatement et confirme par « Actualisé ✓ ». Normalement cela se fait tout seul : après une coupure de connexion, au réveil de la tablette et toutes les 5 minutes. Si cela n'aide pas, vérifiez la connexion à Home Assistant (« Pas de connexion ») et rechargez la page."
         ]
       ] },
       { id: "about", icon: "ℹ️", title: "À propos de FamilyMission", blocks: [
@@ -482,7 +484,8 @@ const HELP_CONTENT = {
           "**Kid does not want points any more.** That is normal after a few weeks. Renew the rewards, focus more on experiences, phase out routines that run well and ask what the child is missing. Points are never a means of pressure.",
           "**Illness / holidays.** Pause tasks in the task editor (pause until a date) or use “Skip today” for single days. On the birthday, duties are automatically off. For long breaks, adjust the monthly goal.",
           "**Siblings of different ages.** Tasks have a minimum age, every child has their own goal. Keep the effort per minute comparable, not the number of tasks. Older kids can help younger ones with “Together”.",
-          "**Tablet shows an old version.** That is the browser cache. Reload the page (in Fully Kiosk Browser: clear the cache and reload), in the companion app clear the frontend cache. After a FamilyMission update, the new version appears after a Home Assistant restart and a reload."
+          "**Tablet shows an old version.** That is the browser cache. Reload the page (in Fully Kiosk Browser: clear the cache and reload), in the companion app clear the frontend cache. After a FamilyMission update, the new version appears after a Home Assistant restart and a reload.",
+          "**A new bonus does not show up?** Tap the logo: the small rocket icon next to the title (kids tablet: home screen, or the header with “My tasks”; parents' hub: header) reloads everything at once and confirms with “Updated ✓”. Normally this happens by itself: after a lost connection, when the tablet wakes up and every 5 minutes. If it does not help, check the connection to Home Assistant (“No connection”) and reload the page."
         ]
       ] },
       { id: "about", icon: "ℹ️", title: "About FamilyMission", blocks: [

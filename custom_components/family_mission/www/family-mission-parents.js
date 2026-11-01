@@ -49,6 +49,7 @@ const I18N_PARENTS = {
     rewards_active: "Active", rewards_delete: "Delete", rewards_save: "Save", toast_rewards_saved: "Rewards saved",
     rewards_invalid: "Please give every reward a name and a cost from 1 to 1000.", rewards_max: "At most 30 rewards.",
     praise_btn: "Praise", praise_title: "Praise {name}", praise_sticker: "Sticker", praise_msg_ph: "Your own words (optional)", praise_msg_lbl: "Message",
+    refresh_label: "Refresh", refresh_done: "Updated ✓", refresh_fail: "No connection",
     help_btn: "Help", praise_send: "Send praise", toast_praise: "Praise sent to {name}", type_praise: "Praise",
     praise_c1: "Thanks for helping!", praise_c2: "You did that really well!", praise_c3: "I am proud of you!", praise_c4: "Great how you stuck with it!",
     tab_today: "Today", tab_kids: "Kids", tab_more: "More", kids_today: "Kids today",
@@ -109,6 +110,7 @@ const I18N_PARENTS = {
     rewards_active: "Aktiv", rewards_delete: "Löschen", rewards_save: "Speichern", toast_rewards_saved: "Belohnungen gespeichert",
     rewards_invalid: "Bitte jeder Belohnung einen Namen und einen Preis von 1 bis 1000 geben.", rewards_max: "Höchstens 30 Belohnungen.",
     praise_btn: "Loben", praise_title: "{name} loben", praise_sticker: "Sticker", praise_msg_ph: "Eigene Worte (optional)", praise_msg_lbl: "Nachricht",
+    refresh_label: "Aktualisieren", refresh_done: "Aktualisiert ✓", refresh_fail: "Keine Verbindung",
     help_btn: "Hilfe", praise_send: "Lob senden", toast_praise: "Lob an {name} gesendet", type_praise: "Lob",
     praise_c1: "Danke fürs Helfen!", praise_c2: "Das hast du super gemacht!", praise_c3: "Ich bin stolz auf dich!", praise_c4: "Toll, wie du drangeblieben bist!",
     tab_today: "Heute", tab_kids: "Kinder", tab_more: "Mehr", kids_today: "Kinder heute",
@@ -231,6 +233,13 @@ class FamilyMissionParents extends HTMLElement {
     this._del = null;             // parent task id to delete
     this._picker = null;          // <family-mission-parents-picker> element while its sheet is open
     this._toastTimer = null;
+    this._readyConn = null;       // connection whose "ready" (reconnected) event we listen to
+    this._readyHandler = null;
+    this._wakeHandler = null;
+    this._lastFetchAt = 0;        // time of the last get_data request (throttle + safety-net refresh)
+    this._inflight = 0;
+    this._refreshing = false;
+    this._safetyTimer = null;
     this.shadowRoot.innerHTML = `<style>${this._styles()}</style><div id="app"></div><div id="embed"><div id="embed-tasks" hidden></div><div id="embed-settings" hidden></div></div><div id="layer"></div><div id="toast" role="status" aria-live="polite"></div>`;
     this.shadowRoot.addEventListener('click', (ev) => this._onClick(ev));
     this.shadowRoot.addEventListener('input', (ev) => this._onInput(ev));
@@ -275,6 +284,17 @@ class FamilyMissionParents extends HTMLElement {
 
   connectedCallback() {
     if (this._hass && !this._unsubEvents) this._subscribe();
+    this._bindConnection();
+    if (!this._wakeHandler) {
+      // Tablet standby / tab switch: pick up changes missed while the screen was off
+      this._wakeHandler = () => { if (!document.hidden) this._autoRefresh(); };
+      document.addEventListener('visibilitychange', this._wakeHandler);
+      window.addEventListener('focus', this._wakeHandler);
+    }
+    // Safety net in case an event got lost: check every minute whether 5 minutes passed without a load
+    if (!this._safetyTimer) this._safetyTimer = setInterval(() => {
+      if (Date.now() - this._lastFetchAt >= 300000) this._autoRefresh();
+    }, 30000);
   }
 
   disconnectedCallback() {
@@ -282,7 +302,60 @@ class FamilyMissionParents extends HTMLElement {
       this._unsubEvents.then(unsub => unsub());
       this._unsubEvents = null;
     }
+    this._unbindConnection();
+    if (this._wakeHandler) {
+      document.removeEventListener('visibilitychange', this._wakeHandler);
+      window.removeEventListener('focus', this._wakeHandler);
+      this._wakeHandler = null;
+    }
+    clearInterval(this._safetyTimer);
+    this._safetyTimer = null;
     clearTimeout(this._toastTimer);
+  }
+
+  /**
+   * Reloads the data after the websocket reconnected: events fired while it was
+   * down are lost. The connection object can change (frontend reload), so it is followed in `set hass`.
+   */
+  _bindConnection() {
+    const conn = this._hass && this._hass.connection;
+    if (conn === this._readyConn) return;
+    this._unbindConnection();
+    if (!conn || typeof conn.addEventListener !== 'function' || !this.isConnected) return;
+    this._readyHandler = () => this._fetchData();
+    conn.addEventListener('ready', this._readyHandler);
+    this._readyConn = conn;
+  }
+
+  _unbindConnection() {
+    if (this._readyConn && this._readyHandler && typeof this._readyConn.removeEventListener === 'function') {
+      this._readyConn.removeEventListener('ready', this._readyHandler);
+    }
+    this._readyConn = null;
+    this._readyHandler = null;
+  }
+
+  /** Quiet background refresh, throttled to one request per 10 s; skipped while hidden or typing in a field. */
+  _autoRefresh() {
+    if (!this._hass || !this._dataLoaded || document.hidden || this._inflight) return;
+    if (Date.now() - this._lastFetchAt < 10000) return;
+    const active = this.shadowRoot.activeElement;
+    if (active && /^(INPUT|TEXTAREA|SELECT)$/.test(active.tagName)) return;
+    this._fetchData();
+  }
+
+  /** Logo tap: reload now and confirm with a spin and a toast. */
+  async _manualRefresh() {
+    if (this._refreshing) return;
+    this._refreshing = true;
+    const ok = await this._fetchData();
+    this._refreshing = false;
+    const btn = this.shadowRoot.querySelector('.refresh-btn');
+    if (ok && btn) {
+      btn.classList.add('spin');
+      btn.addEventListener('animationend', () => btn.classList.remove('spin'), { once: true });
+    }
+    this._toast(this.localize(ok ? 'refresh_done' : 'refresh_fail'));
   }
 
   _subscribe() {
@@ -301,7 +374,14 @@ class FamilyMissionParents extends HTMLElement {
       this._fetchData();
       this._render();
     }
+    if (this._readyConn && hass.connection !== this._readyConn && this._unsubEvents) {
+      // The Home Assistant frontend replaced its connection (reload): follow it
+      const old = this._unsubEvents;
+      this._unsubEvents = null;
+      Promise.resolve(old).then(unsub => unsub()).catch(() => {});
+    }
     if (!this._unsubEvents && this.isConnected) this._subscribe();
+    this._bindConnection();
     for (const el of Object.values(this._embeds)) el.hass = hass;
   }
 
@@ -311,9 +391,12 @@ class FamilyMissionParents extends HTMLElement {
     return ['admin', 'manager', 'parent'].includes(this._myRole);
   }
 
+  /** @returns {Promise<boolean>} - Resolves true when the data arrived (never rejects). */
   _fetchData() {
-    if (!this._hass) return;
-    this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
+    if (!this._hass) return Promise.resolve(false);
+    this._lastFetchAt = Date.now();
+    this._inflight++;
+    return this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
       this._myRole = data.my_role || null;
       this.pending = data.pending || {};
       this.history = Array.isArray(data.history) ? data.history : [];
@@ -329,7 +412,9 @@ class FamilyMissionParents extends HTMLElement {
       this._fetched = true;
       this._render();
       if (this._skip || this._pickKid) this._renderLayer();
-    }).catch((err) => console.error("FamilyMission Parents: could not load data", err));
+      return true;
+    }).catch((err) => { console.error("FamilyMission Parents: could not load data", err); return false; })
+      .finally(() => { this._inflight = Math.max(0, this._inflight - 1); });
   }
 
   // ---------------------------------------------------------------------------
@@ -537,6 +622,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'praise-sticker' && this._praise) { this._praise.sticker = el.dataset.sticker; this._renderLayer(); }
     else if (action === 'praise-chip' && this._praise) { this._praise.message = el.dataset.text; this._renderLayer(); }
     else if (action === 'praise-send') this._sendPraise();
+    else if (action === 'refresh') this._manualRefresh();
     else if (action === 'help') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, el.dataset.anchor); }
     else if (action === 'rw-open') this._openRewards();
     else if (action === 'rw-add') this._rewardsAdd(false);
@@ -1242,7 +1328,7 @@ class FamilyMissionParents extends HTMLElement {
         if (this._more === 'tasks' || this._more === 'settings') embedKey = this._more;
       } else body = this._renderToday();
     }
-    app.innerHTML = `<ha-card><div class="head"><span class="head-title">${window.FamilyMissionBrand ? `<span class="head-ico">${window.FamilyMissionBrand.iconSvg(22)}</span>` : ''}${title}</span>${window.FamilyMissionHelp ? `<button class="help-btn" data-action="help" data-anchor="parents">❓ ${escParents(this.localize('help_btn'))}</button>` : ''}</div>${tabs}<div class="body">${body}</div></ha-card>`;
+    app.innerHTML = `<ha-card><div class="head"><span class="head-title">${window.FamilyMissionBrand ? `<button class="refresh-btn" data-action="refresh" aria-label="${escParents(this.localize('refresh_label'))}" title="${escParents(this.localize('refresh_label'))}"><span class="head-ico">${window.FamilyMissionBrand.iconSvg(22)}</span></button>` : ''}${title}</span>${window.FamilyMissionHelp ? `<button class="help-btn" data-action="help" data-anchor="parents">❓ ${escParents(this.localize('help_btn'))}</button>` : ''}</div>${tabs}<div class="body">${body}</div></ha-card>`;
     this._syncEmbed(embedKey);
     // The dialog layer is not rebuilt on data refreshes (it would reset what is typed);
     // it only closes when its approval was handled elsewhere in the meantime.
@@ -1749,6 +1835,11 @@ class FamilyMissionParents extends HTMLElement {
       .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 22px; font-weight: 700; margin-bottom: 12px; color: var(--primary-text-color); }
       .head-title { min-width: 0; overflow-wrap: anywhere; display: inline-flex; align-items: center; gap: 8px; }
       .head-ico { display: inline-flex; flex: none; }
+      .refresh-btn { flex: none; width: 44px; height: 44px; margin: -8px -6px -8px -10px; padding: 0; border: 0; border-radius: 50%; background: transparent; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+      .refresh-btn:active { background: var(--p-line); }
+      .refresh-btn:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 1px; }
+      .refresh-btn.spin .head-ico { animation: refresh-spin 0.7s ease-in-out; }
+      @keyframes refresh-spin { to { transform: rotate(360deg); } }
       .help-btn { flex: none; min-height: 40px; padding: 0 14px; border-radius: 20px; border: 2px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 14px; font-weight: 700; }
       .body { min-width: 0; display: flex; flex-direction: column; gap: 20px; color: var(--primary-text-color); }
       h2 { margin: 0 0 10px; font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
@@ -1939,7 +2030,7 @@ class FamilyMissionParents extends HTMLElement {
         .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(460px, calc(100vw - 32px)); border-radius: 16px; }
         .grab { display: none; }
       }
-      @media (prefers-reduced-motion: reduce) { #toast { transition: none; } .btn:active, .qbtn:active { transform: none; } }
+      @media (prefers-reduced-motion: reduce) { .refresh-btn.spin .head-ico { animation: none; } #toast { transition: none; } .btn:active, .qbtn:active { transform: none; } }
     `;
   }
 }
