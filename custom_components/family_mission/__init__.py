@@ -1,5 +1,6 @@
 """Initialization of the FamilyMission integration."""
 
+import asyncio
 import copy
 import logging
 import random
@@ -42,6 +43,7 @@ from .const import (
     EVENT_ROCKET_READY,
     EVENT_ROCKET_COUNTDOWN,
     EVENT_ROCKET_LAUNCHED,
+    EVENT_SAVINGS_GOAL_REACHED,
     WS_TYPE_ROCKET_COUNTDOWN,
     WS_TYPE_ROCKET_LAUNCHED,
     EVENT_REWARD_RESOLVED,
@@ -4145,7 +4147,8 @@ async def ws_test_push(hass: HomeAssistant, connection: websocket_api.ActiveConn
 ANNOUNCE_ADHOC = "adhoc"
 ANNOUNCE_WASTE = "waste"
 ANNOUNCE_TRIGGER = "trigger"
-ANNOUNCE_KINDS = (ANNOUNCE_ADHOC, ANNOUNCE_WASTE, ANNOUNCE_TRIGGER)
+ANNOUNCE_GOAL = "goal"
+ANNOUNCE_KINDS = (ANNOUNCE_ADHOC, ANNOUNCE_WASTE, ANNOUNCE_TRIGGER, ANNOUNCE_GOAL)
 MAX_ANNOUNCE_NAME = 30
 MAX_ANNOUNCE_PLAYERS = 10
 _TTS_RE = re.compile(r"^tts\.[a-z0-9_]{1,100}$")
@@ -4208,11 +4211,94 @@ async def _async_announce(hass: HomeAssistant, kind: str, message: str) -> bool:
         return False
     if not conf["announce_tts"] or not conf["announce_players"]:
         return False
-    if not conf["announce_night"] and options.get("night_mode", True) is not False and is_night_time(
-        dt_util.now(), options.get("night_sleep"), options.get("night_wake_weekday"), options.get("night_wake_weekend"),
-    ):
+    if _announce_quiet_now(options, conf):
         return False
     return await _async_speak(hass, conf["announce_tts"], conf["announce_players"], message) is None
+
+
+def _announce_quiet_now(options, conf: dict) -> bool:
+    """True inside the night mode times unless announcements are allowed at night."""
+    return not conf["announce_night"] and options.get("night_mode", True) is not False and is_night_time(
+        dt_util.now(), options.get("night_sleep"), options.get("night_wake_weekday"), options.get("night_wake_weekend"),
+    )
+
+
+def _goal_voice_wanted(options, conf: dict) -> bool:
+    """Whether a reached savings goal would be spoken (switched on and configured)."""
+    return (
+        conf["announce_enabled"] and ANNOUNCE_GOAL in conf["announce_events"]
+        and bool(conf["announce_tts"]) and bool(conf["announce_players"])
+    )
+
+
+def _goal_announcement(hass: HomeAssistant, kid_name: str, reward_name: str) -> str:
+    if _lang(hass) == "de":
+        return f"{kid_name} hat das Sparziel erreicht: {reward_name}. Jetzt kann eingelöst werden!"
+    return f"{kid_name} reached the savings goal: {reward_name}. Ready to redeem!"
+
+
+async def _async_check_savings_goals(hass: HomeAssistant) -> int:
+    """Announce kids whose wallet reached the cost of their savings goal (once per reach).
+
+    Memory ``data["goal_reached"] = {kid_id: reward_id}``: set when reached, removed
+    when the balance drops below the cost or the goal changes, so reaching it again
+    (e.g. after redeeming) is announced again. Goals that were already reached
+    before this check existed are marked silently. While the announcement would be
+    silent at night the kid is not marked yet, so it follows after waking up.
+    Fires ``family_mission_savings_goal_reached``. Returns the number reached.
+    """
+    domain_data = hass.data.get(DOMAIN)
+    if not domain_data or "data" not in domain_data:
+        return 0
+    lock = domain_data.setdefault("goal_lock", asyncio.Lock())
+    async with lock:
+        options = _get_entry(hass).options
+        data = domain_data["data"]
+        kids = options.get("kids") or {}
+        rewards = options.get("rewards")
+        wallet = data.get("wallet") or {}
+        first = not isinstance(data.get("goal_reached"), dict)
+        if first:
+            data["goal_reached"] = {}
+        memory = data["goal_reached"]
+        conf = _announce_settings(options)
+        quiet = _goal_voice_wanted(options, conf) and _announce_quiet_now(options, conf)
+        changed = first
+        reached = []
+        for kid_id in [k for k in memory if k not in kids]:
+            del memory[kid_id]
+            changed = True
+        for kid_id, profile in kids.items():
+            goal_id = profile.get("goal_reward") if isinstance(profile, dict) else None
+            reward = find_reward(rewards, goal_id) if goal_id else None
+            try:
+                cost = float(reward.get("cost") or 0) if reward and reward.get("active", True) is not False else 0.0
+                balance = float(wallet.get(kid_id, 0) or 0)
+            except (TypeError, ValueError):
+                cost, balance = 0.0, 0.0
+            if cost <= 0 or balance < cost:
+                if kid_id in memory:
+                    del memory[kid_id]
+                    changed = True
+                continue
+            if memory.get(kid_id) == reward["id"]:
+                continue
+            if not first and quiet:
+                continue
+            memory[kid_id] = reward["id"]
+            changed = True
+            if not first:
+                reached.append((kid_id, reward, cost, balance))
+        if changed:
+            await domain_data["store"].async_save(data)
+    for kid_id, reward, cost, balance in reached:
+        kid_name = _participant_name(hass, kid_id)
+        hass.bus.async_fire(EVENT_SAVINGS_GOAL_REACHED, {
+            "kid_id": kid_id, "kid_name": kid_name, "reward_id": reward["id"],
+            "name": reward.get("name", ""), "emoji": reward.get("emoji", ""), "cost": cost, "balance": balance,
+        })
+        await _async_announce(hass, ANNOUNCE_GOAL, _goal_announcement(hass, kid_name, reward.get("name", "")))
+    return len(reached)
 
 
 def _announce_name(hass: HomeAssistant, user) -> str:
@@ -4851,6 +4937,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Register listener for the OptionsFlow (gear icon)
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
+    @callback
+    def _goal_on_update(event) -> None:
+        """Savings goals follow every data change (credits, redemptions, goal changes)."""
+        hass.async_create_task(_async_check_savings_goals(hass))
+
+    entry.async_on_unload(hass.bus.async_listen(EVENT_TASK_UPDATED, _goal_on_update))
+
     # Perform initial check on startup
     await _async_check_monthly_reset(hass)
 
@@ -4869,6 +4962,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_check_planning_reminders(hass)
         await _async_check_weekly_summary(hass)
         await _async_check_waste(hass)
+        await _async_check_savings_goals(hass)
 
     await _async_remove_expired_adhoc(hass)
 

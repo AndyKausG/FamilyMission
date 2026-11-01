@@ -45,7 +45,7 @@ The effect depends mostly on you as parents: **consistent** (the rules apply eve
 - **Own devices (`mode: mine`):** with `mode: mine` the card shows the tasks of the logged-in person right away, without tiles and PIN. Ideal for the phone or tablet of an older child.
 - **Bonus triggers:** a bonus can open by itself, for example when the dishwasher has finished (settings card, Bonus triggers section). The tablet can announce it by voice.
 - **Waste collection:** with the HACS integration “Waste Collection Schedule” the bonus task “Put the bins out” opens the evening before a collection (empty the bins in the flat, bins out, check there is room), and “Bring the bins in” on the evening of the collection day. You decide per bin whether the kids may do it (e.g. glass stays with you), from which age (default 6) and whether you approve before the points are credited (settings card, Waste collection section).
-- **Voice announcement:** new bonus tasks can be announced on speakers, e.g. “Dad created a bonus task: carry up the shopping. 3 points.” Selectable for spontaneous bonuses, waste tasks and bonus triggers; silent at night (settings card, Voice announcement section, with a test button).
+- **Voice announcement:** new bonus tasks can be announced on speakers, e.g. “Dad created a bonus task: carry up the shopping. 3 points.” Selectable for spontaneous bonuses, waste tasks, bonus triggers and reached savings goals (“Anna reached the savings goal: cinema.”); silent at night (settings card, Voice announcement section, with a test button).
 - **Reminders:** a time can be set per task. If the task is still open then, an event or notification is sent.
 
 > 💡 Plan 10 minutes for the setup, and afterwards take a quiet moment to explain the system to the kids.
