@@ -7,6 +7,7 @@
 - **Internal:** ad-hoc bonus creation moved to `_async_create_adhoc` (shared by the websocket and the waste check).
 - **Docs:** README, help and parents' guide (de/en/fr).
 - **Tests:** new `tests/test_waste.py` and `tests/test_waste_announce_ws.py`.
+- **Releases:** new workflow `.github/workflows/release.yml` creates a GitHub release `vX.Y.Z` (text from this changelog) whenever the manifest version changes on `main`, so HACS shows version numbers.
 
 ## [2.3.3] - 2026-11-01
 

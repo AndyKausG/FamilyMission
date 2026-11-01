@@ -1042,5 +1042,10 @@ All data is stored in the internal Home Assistant storage at `.storage/family_mi
 
 Colors and overdue thresholds can be defined globally within the settings card.
 
+## Releases
+Releases are created automatically by `.github/workflows/release.yml`: when a push to `main` changes `version` in `custom_components/family_mission/manifest.json`, a GitHub release `vX.Y.Z` is created with the matching `CHANGELOG.md` section as text. HACS then shows version numbers instead of commit ids and offers the update.
+
+To publish a new version: raise `version` in `manifest.json`, add `## [X.Y.Z] - date` to `CHANGELOG.md`, merge to `main`. An existing release is never changed; the workflow can also be started by hand (Actions → Release → Run workflow).
+
 ## Credits and license
 FamilyMission is based on [TaskOrganizer](https://github.com/patrickvonwiegen/TaskOrganizer) by Patrick von Wiegen (MIT). Maintained by [AndyKausG](https://github.com/AndyKausG). Released under the [MIT license](LICENSE) (copyright Patrick von Wiegen and AndyKausG).
