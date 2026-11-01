@@ -101,6 +101,9 @@ from .const import (
     WS_TYPE_KID_CARE_ANSWER,
     WS_TYPE_MY_CARE_ANSWER,
     WS_TYPE_CARE_CONFIRM,
+    WS_TYPE_ABSENCE_ADD,
+    WS_TYPE_ABSENCE_END,
+    WS_TYPE_ABSENCE_DELETE,
     WS_TYPE_MY_CLOSE_BONUS,
     WS_TYPE_MY_REDEEM,
     WS_TYPE_MY_SET_GOAL,
@@ -389,6 +392,8 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
     response_data["family_goal_info"] = _goal_info(hass)
     response_data["care_today"] = _care_today(hass)
     response_data["care_log"] = _care_log_recent(hass)
+    response_data["absences"] = _absence_view(data)
+    response_data["tasks"] = _tasks_for_client(hass, data)
     rocket = data.get("rocket")
     # A record of an earlier period no longer counts
     response_data["rocket"] = rocket if isinstance(rocket, dict) and rocket.get("period") == data.get("current_month") else None
@@ -477,7 +482,7 @@ def _goal_possible(hass: HomeAssistant, data: dict, start: date, end: date) -> f
             skip_days.setdefault(entry.get("task_id"), set()).add(day)
     return possible_points(
         tasks, options.get("kids") or {}, start, end, now,
-        settings=options, skip_days=skip_days, exclude_ids=exclude,
+        settings=options, skip_days=skip_days, exclude_ids=exclude, absences=_absence_list(data),
     )
 
 
@@ -613,16 +618,72 @@ def _next_due_iso(task: dict) -> str:
 def _rotation_member(task: dict, day: date | None = None, skip: set | frozenset = frozenset()) -> str | None:
     """The kid whose turn it is for the rotation task (``None`` for a task without rotation).
 
-    ``day`` and ``skip`` are the hook for absences (a later step passes the
-    members that are away on ``day``): skipped members are passed over.
+    ``skip`` are the members that are away on ``day`` (see ``_absent_set``):
+    skipped members are passed over without changing the stored turn.
     """
     return kidslib.rotation_member(task.get("rotation"), skip)
 
 
-def _rotation_advance(task: dict) -> None:
-    """The occurrence is over (completed / expired): the turn moves to the next member."""
+# ---- absences (2.6) ---------------------------------------------------------------
+
+def _absence_list(data: dict) -> list[dict]:
+    """The stored absences (well-formed entries only)."""
+    return [a for a in (data.get("absences") or []) if isinstance(a, dict)]
+
+
+def _absence_members(task: dict) -> list[str]:
+    """Kids the task belongs to: the rotation members or the assignees."""
+    rotation = task.get("rotation")
+    if isinstance(rotation, dict):
+        return [m for m in (rotation.get("members") or []) if isinstance(m, str)]
+    return kidslib._assignee_list(task)
+
+
+def _absent_set(data: dict, task: dict, day: date | None = None) -> set:
+    """Members of the task whose tasks of its scope are paused by an absence on ``day`` (default today)."""
+    absences = _absence_list(data)
+    if not absences:
+        return set()
+    return kidslib.absent_kids(day or dt_util.now().date(), absences, kidslib.task_scope(task), _absence_members(task))
+
+
+def _assignees_now(data: dict, task: dict, day: date | None = None) -> list:
+    """Who has the task as a duty: ``kids.effective_assignees`` with absent rotation members skipped."""
     if isinstance(task.get("rotation"), dict):
-        task["rotation"] = kidslib.rotation_advanced(task["rotation"])
+        return kidslib.effective_assignees(task, _absent_set(data, task, day))
+    return kidslib.effective_assignees(task)
+
+
+def _task_paused(data: dict, task: dict, day: date | None = None) -> bool:
+    """True when an absence pauses the task on ``day`` for everybody it belongs to (kids and adults)."""
+    absences = _absence_list(data)
+    if not absences:
+        return False
+    day = day or dt_util.now().date()
+    ids = _absence_members(task) or [""]
+    return all(kidslib.is_paused(task, k, day, absences) for k in ids)
+
+
+def _trip_today(data: dict) -> dict | None:
+    """The family trip that is active today, else ``None``."""
+    return kidslib.trip_active(dt_util.now().date(), _absence_list(data))
+
+
+def _rotation_advance(task: dict, data: dict | None = None) -> None:
+    """The occurrence is over (completed / expired): the turn moves to the next member.
+
+    With ``data`` an absent member whose turn was passed over is not counted:
+    the turn moves on from the member who actually took the occurrence.
+    """
+    rotation = task.get("rotation")
+    if not isinstance(rotation, dict):
+        return
+    if data is not None:
+        actual = _rotation_member(task, None, _absent_set(data, task))
+        members = rotation.get("members") or []
+        if actual in members:
+            rotation = {**rotation, "index": members.index(actual)}
+    task["rotation"] = kidslib.rotation_advanced(rotation)
 
 
 def _next_due_after(interval: int) -> str:
@@ -658,7 +719,8 @@ def _advance_task(data: dict, task_id: str, rotate: bool = True) -> dict | None:
         task["due_date"] = _next_due_iso(task)
         task["paused_until"] = None
         if rotate:
-            _rotation_advance(task)
+            _rotation_advance(task, data)
+        task.pop("absence_from_due", None)
 
         # Reset subtasks for recurring tasks
         if "subtasks" in task:
@@ -835,7 +897,7 @@ async def ws_complete_task(hass: HomeAssistant, connection: websocket_api.Active
 
 
 def _apply_schedule(hass: HomeAssistant, item: dict, msg: dict) -> None:
-    """Take ``weekdays`` and ``rotation`` of an add / edit message (task or template); invalid values fall back.
+    """Take ``scope`` (home | personal), ``weekdays`` and ``rotation`` of an add / edit message (task or template); invalid values fall back.
 
     ``weekdays`` (Mon=0 ... Sun=6) replace the interval-based schedule; the
     ``interval`` stays stored for compatibility (at least 1 then). ``rotation``
@@ -843,6 +905,10 @@ def _apply_schedule(hass: HomeAssistant, item: dict, msg: dict) -> None:
     edit without ``rotation["index"]`` keeps the current turn when the members
     are unchanged.
     """
+    if msg.get("scope") in kidslib.SCOPES:
+        item["scope"] = msg["scope"]
+    else:
+        item.setdefault("scope", kidslib.SCOPE_HOME)    # unknown / hand-made tasks are home tasks
     if "weekdays" in msg:
         weekdays = kidslib.normalize_weekdays(msg["weekdays"])
         if weekdays:
@@ -909,6 +975,7 @@ _ROTATION_FIELD = vol.Any(None, dict)
     vol.Optional("subtasks"): cv.ensure_list,
     vol.Optional("weekdays"): _WEEKDAYS_FIELD,
     vol.Optional("rotation"): _ROTATION_FIELD,
+    vol.Optional("scope"): vol.Any(None, str),
 })
 @websocket_api.async_response
 async def ws_add_task(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -987,6 +1054,7 @@ async def ws_add_task(hass: HomeAssistant, connection: websocket_api.ActiveConne
     vol.Optional("subtasks"): cv.ensure_list,
     vol.Optional("weekdays"): _WEEKDAYS_FIELD,
     vol.Optional("rotation"): _ROTATION_FIELD,
+    vol.Optional("scope"): vol.Any(None, str),
 })
 @websocket_api.async_response
 async def ws_edit_task(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1113,6 +1181,8 @@ _PROTECTED_SETTING_KEYS = (
     "birthday_handled", "birthday_levelup", "monthly_history",
     # Care (medication) log and alert memory are runtime data
     "care_log", "care_alerts",
+    # Absences have their own commands
+    "absences", "absence_suggest",
     # Reward shop: wallet / redemptions are runtime data, rewards have set_rewards
     "wallet", "redemptions", "rewards", "praise",
     # Roles are only changed through the admin-only set_parents command
@@ -1120,11 +1190,27 @@ _PROTECTED_SETTING_KEYS = (
 )
 
 
+ABSENCE_SUGGEST_DEFAULT_HOURS = 24
+
+
+def _suggest_hours(value) -> int:
+    """Hours everybody has to be away before the "are you on a trip?" push: int 6..168, default 24."""
+    if isinstance(value, bool):
+        return ABSENCE_SUGGEST_DEFAULT_HOURS
+    try:
+        hours = int(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return ABSENCE_SUGGEST_DEFAULT_HOURS
+    return hours if 6 <= hours <= 168 else ABSENCE_SUGGEST_DEFAULT_HOURS
+
+
 def _sanitize_parent_settings(incoming: dict) -> None:
     """Keep only well-formed values of the parents' settings (anything else is dropped)."""
-    for key in ("role_model_band", "weekly_summary", "planning_reminders", "parent_digest_enabled"):
+    for key in ("role_model_band", "weekly_summary", "planning_reminders", "parent_digest_enabled", "absence_suggest_enabled"):
         if key in incoming and not isinstance(incoming[key], bool):
             del incoming[key]
+    if "absence_suggest_hours" in incoming:
+        incoming["absence_suggest_hours"] = _suggest_hours(incoming["absence_suggest_hours"])
     for key, default in (
         ("weekly_summary_time", parents_catalog.DEFAULT_WEEKLY_SUMMARY_TIME),
         ("planning_reminder_time", parents_catalog.DEFAULT_PLANNING_REMINDER_TIME),
@@ -1400,6 +1486,7 @@ async def ws_import_tasks(hass: HomeAssistant, connection: websocket_api.ActiveC
     vol.Optional("subtasks", default=[]): cv.ensure_list,
     vol.Optional("weekdays"): _WEEKDAYS_FIELD,
     vol.Optional("rotation"): _ROTATION_FIELD,
+    vol.Optional("scope"): vol.Any(None, str),
 })
 @websocket_api.async_response
 async def ws_add_template(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1458,6 +1545,7 @@ async def ws_add_template(hass: HomeAssistant, connection: websocket_api.ActiveC
     vol.Optional("subtasks"): cv.ensure_list,
     vol.Optional("weekdays"): _WEEKDAYS_FIELD,
     vol.Optional("rotation"): _ROTATION_FIELD,
+    vol.Optional("scope"): vol.Any(None, str),
 })
 @websocket_api.async_response
 async def ws_edit_template(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1667,7 +1755,8 @@ def _task_precheck(hass: HomeAssistant, kid_id: str, task_id: str, settings: dic
     if task is None:
         return {"success": False, "error": ERR_NOT_FOUND}, None
 
-    error = check_eligibility(task, kid_id, kids.get(kid_id, {}), data["tasks"], settings, dt_util.now())
+    error = check_eligibility(
+        task, kid_id, kids.get(kid_id, {}), data["tasks"], settings, dt_util.now(), _absence_list(data))
     if error:
         result = {"success": False, "error": error}
         if error == ERR_NOT_YET:
@@ -1805,6 +1894,8 @@ def _care_mission(hass: HomeAssistant, kid_id: str, anchor: str, settings: dict,
             continue
         if kid_id not in kidslib._assignee_list(task):
             continue
+        if kidslib.is_paused(task, kid_id, now.date(), _absence_list(hass.data[DOMAIN]["data"])):
+            continue    # a paused mission is not shown: the care entry stands on its own then
         if is_open(task, now, overdue_days) and not is_expired(task, now) and window_state(task, now) != WINDOW_TOO_LATE:
             return task_id
     return None
@@ -1817,6 +1908,8 @@ def _care_items(hass: HomeAssistant, kid_id: str, now: datetime | None = None) -
     day = now.date()
     log = hass.data[DOMAIN]["data"].get("care_log") or []
     items = []
+    if kidslib.care_paused(kid_id, day, _absence_list(hass.data[DOMAIN]["data"])):
+        return items    # an absence without medication (a kid who is away)
     for entry in _kid_care(settings, kid_id):
         if not kidslib.care_due_on(entry, day):
             continue
@@ -1966,7 +2059,10 @@ async def _async_check_care(hass: HomeAssistant) -> int:
     alerts = data.setdefault("care_alerts", {})
     changed = False
 
+    absences = _absence_list(data)
     for kid_id, entries in care_of.items():
+        if kidslib.care_paused(kid_id, today, absences):
+            continue
         for entry in entries.values():
             if (kidslib.care_due_on(entry, today) and kidslib.care_deadline_passed(entry, now)
                     and kidslib.care_find(log, day, kid_id, entry["id"]) is None):
@@ -2566,7 +2662,7 @@ async def ws_parent_task_action(hass: HomeAssistant, connection: websocket_api.A
         _advance_task(data, msg["task_id"], rotate=False)
 
     reason = "Von Eltern ausgesetzt" if _lang(hass) == "de" else "Skipped by parents"
-    for uid in kidslib.effective_assignees(task) or [connection.user.id]:
+    for uid in _assignees_now(data, task) or [connection.user.id]:
         data["history"].insert(0, {
             "id": str(uuid.uuid4()),
             "task_id": msg["task_id"],
@@ -3194,7 +3290,7 @@ def _my_context(hass: HomeAssistant, connection, msg: dict, with_task: bool = Tr
     if error is None and pid not in kids:
         # Adults (no kid profile) only get their own assigned tasks, not the
         # kids' open bonus tasks.
-        if pid not in kidslib.effective_assignees(ctx["task"]):
+        if pid not in _assignees_now(hass.data[DOMAIN]["data"], ctx["task"]):
             return {"success": False, "error": ERR_NOT_ELIGIBLE}, None
     return error, ctx
 
@@ -3342,6 +3438,8 @@ async def _async_check_approval_reminders(hass: HomeAssistant) -> int:
     ):
         return 0
     data = hass.data[DOMAIN]["data"]
+    if _trip_today(data):
+        return 0    # on a trip: no nudges
     limit = dt_util.utcnow() - timedelta(hours=hours)
     due = []
     for pid, record in (data.get("pending") or {}).items():
@@ -3398,6 +3496,8 @@ async def _async_check_reminders(hass: HomeAssistant) -> int:
             continue
         if not is_open(task, now, overdue_days) or is_expired(task, now) or window_state(task, now) == WINDOW_TOO_LATE:
             continue
+        if _task_paused(data, task, now.date()) or not _assignees_now(data, task) and isinstance(task.get("rotation"), dict):
+            continue    # absent: no reminder
         task["reminded_on"] = today
         if night:
             muted = True
@@ -3409,7 +3509,7 @@ async def _async_check_reminders(hass: HomeAssistant) -> int:
         return 0
     de = _lang(hass) == "de"
     for task_id, task in due:
-        assignees = kidslib.effective_assignees(task)
+        assignees = _assignees_now(data, task)
         hass.bus.async_fire(EVENT_TASK_REMINDER, {
             "task_id": task_id, "task_name": task.get("name"), "assignees": assignees,
             "assignee_names": [_participant_name(hass, a) for a in assignees],
@@ -3800,6 +3900,7 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
             "wizard_key": item["wizard_key"],
             "generated_by": kids_catalog.GENERATED_BY,
             "requires_approval": bool(item.get("requires_approval", False)),
+            "scope": kidslib.scope_for_key(kids_catalog.split_key(item["wizard_key"])[0]),
         }
         if item.get("replaced_by_key"):
             task["replaced_by_key"] = item["replaced_by_key"]
@@ -3938,6 +4039,8 @@ async def _async_open_bonus_task(hass: HomeAssistant, trig: dict) -> None:
     if task is None or task.get("parent_task"):
         _LOGGER.debug("Bonus trigger %s: task not found", trig)
         return
+    if _trip_today(data):
+        return  # family trip: the washing machine may run, nobody is asked to help
     if is_open(task, dt_util.now(), data.get("settings", {}).get("overdue_days", 5)):
         return  # already open: no new announcement
     task["due_date"] = dt_util.utcnow().isoformat()
@@ -4846,6 +4949,8 @@ async def _async_announce(hass: HomeAssistant, kind: str, message: str) -> bool:
     """Announce ``message`` if switched on for ``kind`` (not at night unless allowed). True when spoken."""
     if DOMAIN not in hass.data or not message:
         return False
+    if _trip_today(hass.data[DOMAIN]["data"]):
+        return False    # family trip: the house stays quiet
     options = _get_entry(hass).options
     conf = _announce_settings(options)
     if not conf["announce_enabled"] or kind not in conf["announce_events"]:
@@ -5072,6 +5177,8 @@ async def _async_check_waste(hass: HomeAssistant) -> int:
     settings = waste.normalize_waste_settings(_get_entry(hass).options)
     if not settings["waste_enabled"]:
         return 0
+    if _trip_today(hass.data[DOMAIN]["data"]):
+        return 0    # nobody is home: no waste jobs while a family trip is on
     calendars = _waste_calendar_ids(hass, settings)
     if not calendars:
         return 0
@@ -5192,9 +5299,12 @@ async def _async_rollover_parent_tasks(hass: HomeAssistant) -> int:
     data = hass.data[DOMAIN]["data"]
     today = dt_util.now().date()
     count = 0
+    await _async_apply_absences(hass)
     for task in data["tasks"].values():
         if not _is_parent_task(task) or task.get("dated"):
             continue  # a one-time task with a date stays overdue instead of being carried over
+        if _task_paused(data, task, today):
+            continue  # on a trip: nothing is carried over
         paused = _local_day_of(task.get("paused_until"))
         if paused is not None and paused >= today:
             continue
@@ -5232,6 +5342,8 @@ async def _async_check_planning_reminders(hass: HomeAssistant) -> int:
         paused = _local_day_of(task.get("paused_until"))
         if paused is not None and paused >= tomorrow:
             continue
+        if _task_paused(data, task, tomorrow):
+            continue    # on a trip
         task["planning_reminded_for"] = tomorrow.isoformat()
         due.append(task)
     if not due:
@@ -5283,7 +5395,7 @@ async def _async_check_parent_digest(hass: HomeAssistant) -> int:
     for adult in _adults(hass):
         states = [
             _parent_list_state(t, today) for t in data["tasks"].values()
-            if _is_parent_task(t) and adult["id"] in _assignee_ids(t)
+            if _is_parent_task(t) and adult["id"] in _assignee_ids(t) and not _task_paused(data, t, today)
         ]
         n_today, n_overdue = parents_catalog.digest_counts(states)
         if n_today + n_overdue == 0:
@@ -5308,7 +5420,7 @@ async def _async_check_parent_due_times(hass: HomeAssistant) -> int:
             continue
         if _local_day_of(task.get("due_date")) != today or task.get("due_reminded_for") == today.isoformat():
             continue
-        if _parent_list_state(task, today) != parents_catalog.STATE_TODAY:
+        if _parent_list_state(task, today) != parents_catalog.STATE_TODAY or _task_paused(data, task, today):
             continue
         if not parents_catalog.clock_reached(clock, parents_catalog.valid_clock(task["due_time"], "00:00")):
             continue
@@ -5456,6 +5568,7 @@ async def _async_expire_missed(hass: HomeAssistant) -> int:
     if DOMAIN not in hass.data:
         return 0
     entry = _get_entry(hass)
+    await _async_apply_absences(hass)    # paused duties move behind the absence instead of expiring
     if entry.options.get("expire_missed", True) is False:
         return 0
     data = hass.data[DOMAIN]["data"]
@@ -5477,7 +5590,7 @@ async def _async_expire_missed(hass: HomeAssistant) -> int:
     for task_id, task in list(data["tasks"].items()):
         if not isinstance(task, dict) or task.get("parent_task") or normalize_category(task.get("category")) != "basis":
             continue  # parents' tasks never expire as missed
-        kid_ids = [a for a in kidslib.effective_assignees(task) if a in kids]
+        kid_ids = [a for a in _assignees_now(data, task) if a in kids]
         if not kid_ids:
             continue
         interval = task.get("interval", 7)
@@ -5493,7 +5606,7 @@ async def _async_expire_missed(hass: HomeAssistant) -> int:
         nxt = kidslib.next_due_for_task(task, due_day, today)
         task["due_date"] = dt_util.as_utc(dt_util.start_of_local_day(nxt)).isoformat()
         task["paused_until"] = None
-        _rotation_advance(task)    # the missed occurrence counted as this member's turn
+        _rotation_advance(task, data)    # the missed occurrence counted as this member's turn
         task.pop("claimed_by", None)
         task.pop("claimed_until", None)
         for st in task.get("subtasks") or []:
@@ -5501,6 +5614,8 @@ async def _async_expire_missed(hass: HomeAssistant) -> int:
         changed = True
         if task_id in replaced_ids:
             continue  # replaced by a bigger duty that day: skipped, not missed
+        if _task_paused(data, task, due_day):
+            continue  # the kid was absent that day: excused, not missed
         for kid_id in kid_ids:
             data["history"].insert(0, {
                 "id": str(uuid.uuid4()),
@@ -5516,6 +5631,228 @@ async def _async_expire_missed(hass: HomeAssistant) -> int:
     if changed:
         hass.bus.async_fire(EVENT_TASK_UPDATED)
     return count
+
+
+ABSENCE_KEEP_DAYS = 120
+
+
+async def _async_apply_absences(hass: HomeAssistant) -> int:
+    """Move recurring duties that are due but paused by an absence behind the absence (no "missed").
+
+    Runs at midnight / startup and after every absence change. A duty (kid or
+    parents' task) that is due today or earlier while an absence pauses it gets
+    the first day after the absence as due date; the original due date is kept
+    in ``absence_from_due``. When the absence ends earlier than planned, such a
+    duty is due again right away. Old absences are pruned. Returns the number moved.
+    """
+    if DOMAIN not in hass.data or "data" not in hass.data[DOMAIN]:
+        return 0
+    data = hass.data[DOMAIN]["data"]
+    today = dt_util.now().date()
+    changed = False
+    stored = data.get("absences")
+    if isinstance(stored, list):
+        limit = (today - timedelta(days=ABSENCE_KEEP_DAYS)).isoformat()
+        kept = [a for a in stored if isinstance(a, dict) and str(a.get("to", "")) >= limit]
+        if len(kept) != len(stored):
+            data["absences"] = kept
+            changed = True
+    absences = _absence_list(data)
+    kids = _get_entry(hass).options.get("kids") or {}
+    moved = 0
+    for task in data["tasks"].values():
+        if not isinstance(task, dict):
+            continue
+        paused = bool(absences) and _task_paused(data, task, today)
+        if task.get("absence_from_due") and not paused:
+            task.pop("absence_from_due", None)    # the absence is over: due again from the moved date (or now)
+            due = _local_day_of(task.get("due_date"))
+            if due is not None and due > today:
+                task["due_date"] = _day_start_iso(today)
+                _align_due_to_weekdays(task, today)
+            changed = True
+            continue
+        if not paused or task.get("someday") or task.get("adhoc") or task.get("waste_key") or _is_one_time(task):
+            continue
+        parent = _is_parent_task(task)
+        if not parent and normalize_category(task.get("category")) != "basis":
+            continue
+        ids = [a for a in _absence_members(task) if parent or a in kids]
+        if not ids:
+            continue
+        due = _local_day_of(task.get("due_date"))
+        if due is None or due > today:
+            continue
+        new_due = kidslib.first_unpaused_day(task, ids, today, absences)
+        weekdays = kidslib.normalize_weekdays(task.get("weekdays"))
+        if weekdays:
+            new_due = kidslib.next_weekday_on_or_after(weekdays, new_due)
+        task.setdefault("absence_from_due", task.get("due_date"))
+        task["due_date"] = _day_start_iso(new_due)
+        task["paused_until"] = None
+        task.pop("claimed_by", None)
+        task.pop("claimed_until", None)
+        for st in task.get("subtasks") or []:
+            st["done"] = False
+        moved += 1
+        changed = True
+    if changed:
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    return moved
+
+
+def _tasks_for_client(hass: HomeAssistant, data: dict) -> dict:
+    """The tasks as sent to the cards: with ``absent_for`` (kids paused today) and the current rotation member.
+
+    Tasks without an absence effect are sent unchanged.
+    """
+    absences = _absence_list(data)
+    if not absences:
+        return data.get("tasks") or {}
+    today = dt_util.now().date()
+    result = {}
+    for task_id, task in (data.get("tasks") or {}).items():
+        if not isinstance(task, dict):
+            result[task_id] = task
+            continue
+        members = _absence_members(task)
+        absent = sorted(k for k in set(members) if kidslib.is_paused(task, k, today, absences))
+        extra = {}
+        if absent:
+            extra["absent_for"] = absent
+        if _is_parent_task(task) and _task_paused(data, task, today):
+            extra["absent_all"] = True
+        elif not members and kidslib.is_paused(task, "", today, absences):
+            extra["absent_all"] = True    # an open task while everybody is away
+        if isinstance(task.get("rotation"), dict):
+            current = _assignees_now(data, task)
+            if current:
+                extra["rotation_current"] = current[0]
+        result[task_id] = {**task, **extra} if extra else task
+    return result
+
+
+def _absence_view(data: dict) -> list[dict]:
+    return [dict(a) for a in _absence_list(data)]
+
+
+async def _async_absence_changed(hass: HomeAssistant, data: dict) -> None:
+    """Save after an absence change; paused duties move, ended ones are released."""
+    await hass.data[DOMAIN]["store"].async_save(data)
+    await _async_apply_absences(hass)
+    await _async_goal_refresh(hass)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_ABSENCE_ADD,
+    vol.Required("kind"): str,
+    vol.Optional("kids"): vol.Any(None, str, [str]),
+    vol.Required("from"): str,
+    vol.Required("to"): str,
+    vol.Optional("personal"): bool,
+    vol.Optional("care"): bool,
+    vol.Optional("note"): str,
+})
+@websocket_api.async_response
+async def ws_absence_add(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Record an absence (trip of the family, a kid who is away or sick)."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    kids = _get_entry(hass).options.get("kids") or {}
+    absence = kidslib.normalize_absence({**msg, "kids": msg.get("kids") or ("all" if msg["kind"] == "trip" else None)}, kids)
+    absences = _absence_list(data)
+    if absence is None or len(absences) >= kidslib.MAX_ABSENCES:
+        connection.send_error(msg["id"], "invalid_absence", "Invalid absence (kind, kids or dates)")
+        return
+    absence["id"] = str(uuid.uuid4())
+    data["absences"] = absences + [absence]
+    await _async_absence_changed(hass, data)
+    connection.send_result(msg["id"], {"success": True, "absence_id": absence["id"], "absence": absence})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_ABSENCE_END,
+    vol.Required("absence_id"): str,
+})
+@websocket_api.async_response
+async def ws_absence_end(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """End an absence today: it lasted until yesterday (an absence that has not started yet is deleted)."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    today = dt_util.now().date()
+    absence = next((a for a in _absence_list(data) if a.get("id") == msg["absence_id"]), None)
+    if absence is None:
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    start = date.fromisoformat(absence["from"])
+    if start >= today:
+        data["absences"] = [a for a in _absence_list(data) if a is not absence]
+        deleted = True
+    else:
+        absence["to"] = min(date.fromisoformat(absence["to"]), today - timedelta(days=1)).isoformat()
+        deleted = False
+    await _async_absence_changed(hass, data)
+    connection.send_result(msg["id"], {"success": True, "deleted": deleted})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_ABSENCE_DELETE,
+    vol.Required("absence_id"): str,
+})
+@websocket_api.async_response
+async def ws_absence_delete(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Delete an absence completely."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    before = _absence_list(data)
+    after = [a for a in before if a.get("id") != msg["absence_id"]]
+    if len(after) == len(before):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    data["absences"] = after
+    await _async_absence_changed(hass, data)
+    connection.send_result(msg["id"], {"success": True})
+
+
+async def _async_check_absence_suggest(hass: HomeAssistant) -> bool:
+    """Push the adults once per away phase: "Are you on a trip?" (setting ``absence_suggest_enabled``, off by default).
+
+    Fires when every person has been ``not_home`` for ``absence_suggest_hours`` hours
+    and no trip is entered. A phase is identified by the latest departure, so the
+    push comes once; not at night (it follows after waking up).
+    """
+    if DOMAIN not in hass.data:
+        return False
+    options = _get_entry(hass).options
+    if options.get("absence_suggest_enabled") is not True:
+        return False
+    data = hass.data[DOMAIN]["data"]
+    if _trip_today(data):
+        return False
+    persons = hass.states.async_all("person")
+    if not persons or any(p.state != "not_home" for p in persons):
+        return False
+    since = max(p.last_changed for p in persons)
+    if dt_util.utcnow() - since < timedelta(hours=_suggest_hours(options.get("absence_suggest_hours"))):
+        return False
+    if (data.get("absence_suggest") or {}).get("since") == since.isoformat() or _parent_night(hass):
+        return False
+    data["absence_suggest"] = {"since": since.isoformat()}
+    await hass.data[DOMAIN]["store"].async_save(data)
+    de = _lang(hass) == "de"
+    await _async_push_all_adults(
+        hass,
+        "🌴 Seid ihr verreist?" if de else "🌴 Are you on a trip?",
+        "In FamilyMission Urlaub eintragen, dann pausieren Aufgaben und Erinnerungen." if de
+        else "Add a vacation in FamilyMission to pause tasks and reminders.",
+        tag=f"{DOMAIN}_absence_suggest",
+    )
+    return True
 
 
 def _assignee_ids(task: dict) -> list:
@@ -5607,6 +5944,8 @@ def _ensure_data_defaults(data: dict) -> None:
     data.setdefault("birthday_levelup", {})
     data.setdefault("care_log", [])
     data.setdefault("care_alerts", {})
+    if not isinstance(data.get("absences"), list):
+        data["absences"] = []
     # Reward shop: the wallet survives the monthly reset. First start with the
     # shop: already earned points of the month become the starting balance.
     if not isinstance(data.get("wallet"), dict):
@@ -5694,6 +6033,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_check_waste(hass)
         await _async_check_savings_goals(hass)
         await _async_check_care(hass)
+        await _async_check_absence_suggest(hass)
 
     await _async_remove_expired_adhoc(hass)
 
@@ -5745,7 +6085,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "monthly_history": {}, "current_month": dt_util.now().strftime("%Y-%m"), 
             "current_period_start": dt_util.utcnow().isoformat(),
             "templates": {}, "pending": {}, "birthday_handled": {}, "birthday_levelup": {},
-            "wallet": {}, "redemptions": {}, "praise": [], "care_log": [], "care_alerts": {},
+            "wallet": {}, "redemptions": {}, "praise": [], "care_log": [], "care_alerts": {}, "absences": [],
         }
         hass.data[DOMAIN]["data"] = new_data
         
@@ -5769,7 +6109,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return
             
         task = data["tasks"][target_task_id]
-        completed_by = [target_uid] if target_uid else kidslib.effective_assignees(task)
+        completed_by = [target_uid] if target_uid else _assignees_now(data, task)
         
         if not completed_by: 
             return
@@ -5806,7 +6146,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             task["due_date"] = _next_due_iso(task)
         else:
             task["due_date"] = _next_due_after(task.get("interval", 1))
-        _rotation_advance(task)
+        _rotation_advance(task, data)
+        task.pop("absence_from_due", None)
         task["paused_until"] = None 
         task.pop("claimed_by", None)
         task.pop("claimed_until", None)
@@ -5915,7 +6256,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "subtasks": call.data.get("subtasks") or (template.get("subtasks", []) if template else [])
         }
         # weekday schedule / rotation of the template (an explicit interval or assignee list wins)
-        schedule = {}
+        schedule = {"scope": template.get("scope") if template else None}
         if template and call.data.get("interval") is None and template.get("weekdays"):
             schedule["weekdays"] = template["weekdays"]
         if template and call.data.get("assignees") is None and isinstance(template.get("rotation"), dict):
@@ -6202,6 +6543,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_kid_care_answer)
     websocket_api.async_register_command(hass, ws_my_care_answer)
     websocket_api.async_register_command(hass, ws_care_confirm)
+    websocket_api.async_register_command(hass, ws_absence_add)
+    websocket_api.async_register_command(hass, ws_absence_end)
+    websocket_api.async_register_command(hass, ws_absence_delete)
     websocket_api.async_register_command(hass, ws_delete_history_item)
     websocket_api.async_register_command(hass, ws_edit_history_item)
     websocket_api.async_register_command(hass, ws_import_tasks)

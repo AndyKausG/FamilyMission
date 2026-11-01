@@ -69,6 +69,15 @@ const I18N_PARENTS = {
     st_open: "open", st_waiting: "awaiting approval", st_done: "done", for_kid: "Do it for {name}",
     m_ptasks: "Parent tasks", m_ptasks_d: "Who does what, planning, duration", m_tasks: "Tasks", m_tasks_d: "Kids' tasks and templates",
     m_shop: "Shop", m_shop_d: "Redemptions and rewards", m_settings: "Settings", m_settings_d: "Kids, points, notifications",
+    m_absence: "Absences", m_absence_d: "Vacation, kid away, sick",
+    abs_trip: "Family on a trip", abs_away: "Kid away", abs_sick: "Sick", abs_kids: "Who?", abs_from: "From", abs_to: "To (incl.)", abs_note: "Note (optional)",
+    abs_note_ph: "e.g. Grandma, class trip", abs_personal: "Keep personal tasks (missions, routines)", abs_care: "Medication continues",
+    abs_hint_trip: "Chores and reminders pause. Medication continues.", abs_hint_away: "All tasks of the selected kids pause; rotations skip them.",
+    abs_hint_sick: "Chores pause. Medication continues.", abs_create: "Save", abs_none: "No absences entered.", abs_new: "Add absence",
+    abs_active: "Now", abs_upcoming: "Upcoming", abs_end: "End today", abs_delete: "Delete", abs_until: "until {date}", abs_range: "{from} – {to}",
+    abs_banner_trip: "🌴 Family trip until {date} - chores and reminders are paused.", abs_banner_kids: "{names} {kind} until {date} - tasks are paused.",
+    abs_kind_away: "away", abs_kind_sick: "sick", abs_need_kids: "Pick at least one kid.", abs_bad_dates: "Check the dates (end not before start, at most 120 days).",
+    toast_abs_saved: "Absence saved", toast_abs_ended: "Absence ended", toast_abs_deleted: "Absence deleted", abs_paused_note: "paused",
     m_help: "Help", m_help_d: "How everything works", embed_missing: "This part is not available. Reload the page.",
     mode_me: "Me", mode_you: "You", mode_alt: "Alternating", pt_minutes_lbl: "Minutes", pt_from_templates: "From templates", pt_own: "Own task",
     pick_kid: "For whom?", picker_apply: "Apply", picker_missing: "The template list could not be loaded.",
@@ -139,6 +148,15 @@ const I18N_PARENTS = {
     st_open: "offen", st_waiting: "wartet auf Freigabe", st_done: "erledigt", for_kid: "Für {name} erledigen",
     m_ptasks: "Eltern-Aufgaben", m_ptasks_d: "Wer macht was, Planung, Dauer", m_tasks: "Aufgaben", m_tasks_d: "Kinder-Aufgaben und Vorlagen",
     m_shop: "Shop", m_shop_d: "Einlösungen und Belohnungen", m_settings: "Einstellungen", m_settings_d: "Kinder, Punkte, Benachrichtigungen",
+    m_absence: "Abwesenheit", m_absence_d: "Urlaub, Kind weg, krank",
+    abs_trip: "Familie verreist", abs_away: "Kind weg", abs_sick: "Krank", abs_kids: "Wer?", abs_from: "Von", abs_to: "Bis (einschl.)", abs_note: "Notiz (optional)",
+    abs_note_ph: "z. B. Oma, Klassenfahrt", abs_personal: "Persönliche Aufgaben behalten (Missionen, Routinen)", abs_care: "Medikamente laufen weiter",
+    abs_hint_trip: "Haushaltsaufgaben und Erinnerungen pausieren. Medikamente laufen weiter.", abs_hint_away: "Alle Aufgaben der gewählten Kinder pausieren, Rotationen überspringen sie.",
+    abs_hint_sick: "Haushaltsaufgaben pausieren. Medikamente laufen weiter.", abs_create: "Speichern", abs_none: "Keine Abwesenheit eingetragen.", abs_new: "Abwesenheit eintragen",
+    abs_active: "Jetzt", abs_upcoming: "Geplant", abs_end: "Heute beenden", abs_delete: "Löschen", abs_until: "bis {date}", abs_range: "{from} – {to}",
+    abs_banner_trip: "🌴 Familie verreist bis {date} - Haushaltsaufgaben und Erinnerungen pausieren.", abs_banner_kids: "{names} {kind} bis {date} - Aufgaben pausieren.",
+    abs_kind_away: "weg", abs_kind_sick: "krank", abs_need_kids: "Mindestens ein Kind wählen.", abs_bad_dates: "Daten prüfen (Ende nicht vor Beginn, höchstens 120 Tage).",
+    toast_abs_saved: "Abwesenheit gespeichert", toast_abs_ended: "Abwesenheit beendet", toast_abs_deleted: "Abwesenheit gelöscht", abs_paused_note: "pausiert",
     m_help: "Hilfe", m_help_d: "So funktioniert alles", embed_missing: "Dieser Bereich ist nicht verfügbar. Bitte die Seite neu laden.",
     mode_me: "Ich", mode_you: "Du", mode_alt: "Abwechselnd", pt_minutes_lbl: "Minuten", pt_from_templates: "Aus Vorlagen", pt_own: "Eigene Aufgabe",
     pick_kid: "Für wen?", picker_apply: "Übernehmen", picker_missing: "Die Vorlagenliste konnte nicht geladen werden.",
@@ -249,6 +267,8 @@ class FamilyMissionParents extends HTMLElement {
     this._skip = null;            // skip sheet { kidId }
     this._own = null;             // own parent task sheet
     this._del = null;             // parent task id to delete
+    this._abs = null;             // absence sheet state
+    this.absences = [];
     this._picker = null;          // <family-mission-parents-picker> element while its sheet is open
     this._toastTimer = null;
     this._readyConn = null;       // connection whose "ready" (reconnected) event we listen to
@@ -428,6 +448,7 @@ class FamilyMissionParents extends HTMLElement {
       this.tasks = data.tasks || {};
       this.careToday = data.care_today || {};
       this.careLog = Array.isArray(data.care_log) ? data.care_log : [];
+      this.absences = Array.isArray(data.absences) ? data.absences : [];
       this.adults = Array.isArray(data.adults) ? data.adults : [];
       this.pushWarning = data.push_warning || null;
       this.me = data.me || null;
@@ -558,7 +579,11 @@ class FamilyMissionParents extends HTMLElement {
       const n = parseInt(el.value);
       if (n >= 1 && n <= 600) this._ptSet(el.dataset.ptMin, { minutes: n });
       else this._render();
-    } else if (el.id === 'own-int' && this._own) this._own.interval = parseInt(el.value);
+    } else if (el.id === 'abs-from' && this._abs) { this._abs.from = el.value; if (this._abs.to < el.value) this._abs.to = el.value; this._renderLayer(); }
+    else if (el.id === 'abs-to' && this._abs) this._abs.to = el.value;
+    else if (el.id === 'abs-personal' && this._abs) this._abs.personal = el.checked;
+    else if (el.id === 'abs-care' && this._abs) this._abs.care = el.checked;
+    else if (el.id === 'own-int' && this._own) this._own.interval = parseInt(el.value);
     else if (el.id === 'own-date' && this._own) { this._own.date = el.value; this._own.when = 'custom'; this._renderLayer(); }
     else if (el.id === 'own-time' && this._own) this._own.time = el.value;
     else if (el.id === 'own-plan' && this._own) this._own.planning = el.checked;
@@ -575,6 +600,7 @@ class FamilyMissionParents extends HTMLElement {
       else row[f] = el.value;
       return;
     }
+    if (el.id === 'abs-note' && this._abs) { this._abs.note = el.value; return; }
     if (el.id === 'praise-input' && this._praise) {
       this._praise.message = el.value;
       this.shadowRoot.querySelectorAll('[data-action="praise-chip"]').forEach(c => c.classList.toggle('on', c.dataset.text === el.value));
@@ -604,7 +630,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'not-done') this._reject(el.dataset.id, 'not_done');
     else if (action === 'cheated') { this._confirm = el.dataset.id; this._renderLayer(); }
     else if (action === 'cheated-confirm') { const id = this._confirm; this._confirm = null; this._renderLayer(); this._reject(id, 'cheated'); }
-    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._del = null; this._picker = null; this._renderLayer(); }
+    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._del = null; this._picker = null; this._abs = null; this._renderLayer(); }
     else if (action === 'tab') this._setTab(el.dataset.tab);
     else if (action === 'goto-approvals') { const sec = this.shadowRoot.getElementById('appr-section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     else if (action === 'pw-setup') {
@@ -615,6 +641,13 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'kid-select') { this._kidSel = el.dataset.kid; this._render(); }
     else if (action === 'more-open') { this._more = el.dataset.sub; this._render(); }
     else if (action === 'more-back') { this._more = null; this._render(); }
+    else if (action === 'abs-new') this._openAbsence();
+    else if (action === 'abs-kind' && this._abs) this._absKind(el.dataset.kind);
+    else if (action === 'abs-kid' && this._abs) { const k = el.dataset.kid; const i = this._abs.kids.indexOf(k); if (i >= 0) this._abs.kids.splice(i, 1); else this._abs.kids.push(k); this._renderLayer(); }
+    else if (action === 'abs-save') this._saveAbsence();
+    else if (action === 'abs-end') this._absCall('abs:' + el.dataset.id, { type: 'family_mission/absence_end', absence_id: el.dataset.id }, 'toast_abs_ended');
+    else if (action === 'abs-del') this._absCall('abs:' + el.dataset.id, { type: 'family_mission/absence_delete', absence_id: el.dataset.id }, 'toast_abs_deleted');
+    else if (action === 'abs-open') { this._setTab('more'); this._more = 'absence'; this._render(); }
     else if (action === 'pt-done') this._ptDone(el.dataset.id);
     else if (action === 'pt-ask') this._ptAsk(el.dataset.id);
     else if (action === 'ho-yes') this._hoAnswer(el.dataset.id, true);
@@ -1052,7 +1085,7 @@ class FamilyMissionParents extends HTMLElement {
   }
 
   _parentTasksToday() {
-    return this._parentTasksAll().filter(t => this._isOpen(t));
+    return this._parentTasksAll().filter(t => this._isOpen(t) && !t.absent_all);
   }
 
   _parentDoneToday() {
@@ -1077,7 +1110,10 @@ class FamilyMissionParents extends HTMLElement {
     if (!r || !Array.isArray(r.members) || !r.members.length) return [];
     const n = r.members.length;
     const idx = Number.isInteger(r.index) && r.index >= 0 ? r.index : 0;
-    return r.members.map((_, i) => r.members[(idx + i) % n]);
+    const order = r.members.map((_, i) => r.members[(idx + i) % n]);
+    // an absent member is passed over: the backend names the member whose turn it really is
+    const cur = order.indexOf(t.rotation_current);
+    return cur > 0 ? order.slice(cur).concat(order.slice(0, cur)) : order;
   }
 
   /** Who has the task as a duty: the member whose turn it is for a rotation task, else the assignees. */
@@ -1118,7 +1154,7 @@ class FamilyMissionParents extends HTMLElement {
   /** Today's tasks of one kid: open ones, waiting for approval and done today. */
   _kidToday(kid) {
     const today = this._todayKey();
-    const open = this._taskList().filter(t => !t.parent_task && this._assigneesOf(t).includes(kid.id) && this._isOpen(t))
+    const open = this._taskList().filter(t => !t.parent_task && this._assigneesOf(t).includes(kid.id) && this._isOpen(t) && !(t.absent_for || []).includes(kid.id))
       .sort((a, b) => String(a.name).localeCompare(String(b.name)));
     const done = this.history.filter(h => h.type === 'task' && h.user_id === kid.id && this._dateKey(h.timestamp) === today);
     const waiting = this._pendingList().filter(p => p.kid_id === kid.id);
@@ -1281,6 +1317,143 @@ class FamilyMissionParents extends HTMLElement {
     this._own = null;
     this._renderLayer();
     await this._call('own', payload, this.localize('toast_pt_saved'));
+  }
+
+// ---- absences (vacation, kid away, sick) -------------------------------------
+
+  /** Absences of today or later, newest start first: [{...absence, active}]. */
+  _absenceList() {
+    const today = this._todayKey();
+    return (this.absences || []).filter(a => a.to >= today)
+      .map(a => ({ ...a, active: a.from <= today }))
+      .sort((a, b) => String(a.from).localeCompare(String(b.from)));
+  }
+
+  _absenceKidNames(a) {
+    const kids = a.kids === 'all' ? this._kids() : a.kids.map(id => this._kid(id));
+    return kids.map(k => k.name).join(', ');
+  }
+
+  _absenceTitle(a) {
+    const icon = { trip: '🌴', away: '🎒', sick: '🤒' }[a.kind] || '🌴';
+    return `${icon} ${this.localize('abs_' + a.kind)}${a.kind === 'trip' ? '' : ': ' + this._absenceKidNames(a)}`;
+  }
+
+  /** Small banner on the Today tab while an absence is active. */
+  _renderAbsenceBanner() {
+    const active = this._absenceList().filter(a => a.active);
+    if (!active.length) return '';
+    const lines = active.map(a => {
+      const date = this._formatDate(a.to);
+      if (a.kind === 'trip') return this.localize('abs_banner_trip', { date });
+      return `${a.kind === 'sick' ? '🤒' : '🎒'} ${this.localize('abs_banner_kids', { names: this._absenceKidNames(a), kind: this.localize('abs_kind_' + a.kind), date })}`;
+    });
+    return `<button class="abs-banner" data-action="abs-open" aria-label="${escParents(this.localize('m_absence'))}">${lines.map(l => `<span>${escParents(l)}</span>`).join('')}</button>`;
+  }
+
+  _renderAbsences() {
+    const list = this._absenceList();
+    const rows = list.map(a => {
+      const busy = this._busy.has('abs:' + a.id) ? 'disabled' : '';
+      const range = this.localize('abs_range', { from: this._formatDate(a.from), to: this._formatDate(a.to) });
+      return `
+        <article class="abs-row ${a.active ? 'active' : ''}">
+          <div class="abs-main">
+            <span class="abs-t">${escParents(this._absenceTitle(a))}</span>
+            <span class="abs-d">${escParents(range)}${a.note ? ' · ' + escParents(a.note) : ''}</span>
+            <span class="badge">${escParents(this.localize(a.active ? 'abs_active' : 'abs_upcoming'))}</span>
+          </div>
+          <div class="abs-act">
+            <button class="btn neutral sm" data-action="abs-end" data-id="${escParents(a.id)}" ${busy}>${escParents(this.localize(a.active ? 'abs_end' : 'abs_delete'))}</button>
+          </div>
+        </article>`;
+    }).join('');
+    return `${rows || `<div class="empty">${escParents(this.localize('abs_none'))}</div>`}
+      <button class="adhoc-btn rw-btn" data-action="abs-new">➕ ${escParents(this.localize('abs_new'))}</button>`;
+  }
+
+  _openAbsence() {
+    const today = this._todayKey();
+    this._abs = { kind: 'trip', kids: [], from: today, to: this._addDays(today, 6), personal: false, care: true, note: '' };
+    this._renderLayer();
+  }
+
+  /** Switching the kind resets the toggles to the defaults of that kind. */
+  _absKind(kind) {
+    if (!['trip', 'away', 'sick'].includes(kind)) return;
+    this._abs.kind = kind;
+    this._abs.personal = false;
+    this._abs.care = kind !== 'away';
+    this._renderLayer();
+  }
+
+  _renderAbsenceSheet() {
+    const a = this._abs;
+    const kinds = [['trip', '🌴'], ['away', '🎒'], ['sick', '🤒']].map(([id, ico]) =>
+      `<button class="chip ${a.kind === id ? 'on' : ''}" data-action="abs-kind" data-kind="${id}" aria-pressed="${a.kind === id}">${ico} ${escParents(this.localize('abs_' + id))}</button>`).join('');
+    const kidChips = a.kind === 'trip' ? '' : `
+      <div class="lbl">${escParents(this.localize('abs_kids'))}</div>
+      <div class="chips">${this._kids().map(k => `<button class="chip kidchip ${a.kids.includes(k.id) ? 'on' : ''}" data-action="abs-kid" data-kid="${escParents(k.id)}" aria-pressed="${a.kids.includes(k.id)}" style="--kc:${k.color}">${this._avatar(k)}${escParents(k.name)}</button>`).join('')}</div>`;
+    // away never keeps the personal tasks; the medication of a trip / sick kid always continues
+    const personal = a.kind === 'away' ? '' : `
+      <div class="row"><label class="lbl inline" for="abs-personal">${escParents(this.localize('abs_personal'))}</label>
+        <input id="abs-personal" type="checkbox" class="chk" ${a.personal ? 'checked' : ''}></div>`;
+    const care = a.kind !== 'away' ? '' : `
+      <div class="row"><label class="lbl inline" for="abs-care">${escParents(this.localize('abs_care'))}</label>
+        <input id="abs-care" type="checkbox" class="chk" ${a.care ? 'checked' : ''}></div>`;
+    const ready = a.kind === 'trip' || a.kids.length > 0;
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('abs_new'))}" style="--kc:#00897B">
+        <div class="grab"></div>
+        <h3>🌴 ${escParents(this.localize('abs_new'))}</h3>
+        <div class="chips">${kinds}</div>
+        <p class="abs-hint">${escParents(this.localize('abs_hint_' + a.kind))}</p>
+        ${kidChips}
+        <div class="row"><label class="lbl inline" for="abs-from">${escParents(this.localize('abs_from'))}</label>
+          <input id="abs-from" class="txt" type="date" value="${escParents(a.from)}"></div>
+        <div class="row"><label class="lbl inline" for="abs-to">${escParents(this.localize('abs_to'))}</label>
+          <input id="abs-to" class="txt" type="date" min="${escParents(a.from)}" value="${escParents(a.to)}"></div>
+        ${personal}${care}
+        <label class="lbl" for="abs-note">${escParents(this.localize('abs_note'))}</label>
+        <input id="abs-note" class="txt" type="text" maxlength="60" autocomplete="off" placeholder="${escParents(this.localize('abs_note_ph'))}" value="${escParents(a.note)}">
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
+          <button class="btn ok solid" id="abs-save" data-action="abs-save" ${ready ? '' : 'disabled'}>${escParents(this.localize('abs_create'))}</button>
+        </div>
+      </div>`;
+  }
+
+  async _saveAbsence() {
+    const a = this._abs;
+    if (!a) return;
+    if (a.kind !== 'trip' && !a.kids.length) { this._toast(this.localize('abs_need_kids')); return; }
+    const days = (new Date(a.to) - new Date(a.from)) / 86400000 + 1;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a.from || '') || !/^\d{4}-\d{2}-\d{2}$/.test(a.to || '') || !(days >= 1 && days <= 120)) {
+      this._toast(this.localize('abs_bad_dates')); return;
+    }
+    const payload = { type: 'family_mission/absence_add', kind: a.kind, from: a.from, to: a.to, note: (a.note || '').trim().slice(0, 60) };
+    if (a.kind !== 'trip') payload.kids = a.kids.slice();
+    if (a.kind !== 'away') payload.personal = !!a.personal;
+    if (a.kind === 'away') payload.care = !!a.care;
+    this._abs = null;
+    this._renderLayer();
+    await this._absCall('abs:new', payload, 'toast_abs_saved');
+  }
+
+  async _absCall(busyKey, payload, okKey) {
+    if (this._busy.has(busyKey)) return;
+    this._busy.add(busyKey);
+    this._render();
+    try {
+      const res = await this._hass.callWS(payload);
+      if (res && res.success === false) this._toast(this.localize('toast_gone'));
+      else this._toast(this.localize(okKey));
+    } catch (err) {
+      this._toast(this.localize('err') + (err && err.message ? err.message : ''));
+    }
+    this._busy.delete(busyKey);
+    this._fetchData();
   }
 
   // ---- template picker (from family-mission-wizard.js) -------------------------
@@ -1498,7 +1671,7 @@ class FamilyMissionParents extends HTMLElement {
   // ---- tab "Heute" -------------------------------------------------------------
 
   _renderToday() {
-    return `${this._renderPushWarning()}${this._renderKidStatus()}${this._renderWaiting()}${this._renderCare()}${this._renderOwnTasks()}${this._renderQuick()}`;
+    return `${this._renderPushWarning()}${this._renderAbsenceBanner()}${this._renderKidStatus()}${this._renderWaiting()}${this._renderCare()}${this._renderOwnTasks()}${this._renderQuick()}`;
   }
 
   /** Care entries (medication) of a kid profile. */
@@ -1660,6 +1833,7 @@ class FamilyMissionParents extends HTMLElement {
     const today = this._todayKey();
     const paused = this._dateKey(t.paused_until);
     if (paused && today <= paused) return 'hidden';
+    if (t.absent_all) return 'hidden';
     const due = this._dateKey(t.due_date);
     const once = (t.interval === 0);
     if (t.someday || !due) return once ? 'someday' : 'hidden';
@@ -1869,11 +2043,12 @@ class FamilyMissionParents extends HTMLElement {
     const back = (key) => `<button class="back" data-action="more-back">‹ ${escParents(this.localize('tab_more'))}</button><h2>${escParents(this.localize(key))}</h2>`;
     if (sub === 'ptasks') return `<section>${back('m_ptasks')}${this._renderParentTaskEditor()}</section>`;
     if (sub === 'shop') return `<section>${back('m_shop')}${this._renderShop()}</section>`;
+    if (sub === 'absence') return `<section>${back('m_absence')}${this._renderAbsences()}</section>`;
     if (sub === 'tasks' || sub === 'settings') {
       const key = sub === 'tasks' ? 'm_tasks' : 'm_settings';
       return `<section>${back(key)}${this._embedAvailable(sub) ? '' : `<div class="note">${escParents(this.localize('embed_missing'))}</div>`}</section>`;
     }
-    const rows = [['ptasks', '🧩', 'm_ptasks', 'm_ptasks_d'], ['tasks', '📋', 'm_tasks', 'm_tasks_d'], ['shop', '🛍️', 'm_shop', 'm_shop_d']];
+    const rows = [['ptasks', '🧩', 'm_ptasks', 'm_ptasks_d'], ['tasks', '📋', 'm_tasks', 'm_tasks_d'], ['shop', '🛍️', 'm_shop', 'm_shop_d'], ['absence', '🌴', 'm_absence', 'm_absence_d']];
     if (this._canManage()) rows.push(['settings', '⚙️', 'm_settings', 'm_settings_d']);
     const list = rows.map(([id, icon, key, desc]) => `
       <button class="mrow" data-action="more-open" data-sub="${id}">
@@ -1964,6 +2139,7 @@ class FamilyMissionParents extends HTMLElement {
       if (host) host.appendChild(this._picker);
       return;
     }
+    if (this._abs) { layer.innerHTML = this._renderAbsenceSheet(); return; }
     if (this._own) { layer.innerHTML = this._renderOwnSheet(); return; }
     if (this._pickKid) { layer.innerHTML = this._renderPickKidSheet(); return; }
     if (this._skip) { layer.innerHTML = this._renderSkipSheet(); return; }
@@ -2261,6 +2437,13 @@ class FamilyMissionParents extends HTMLElement {
       .btn.sm { min-height: 44px; font-size: 14px; white-space: normal; line-height: 1.2; padding: 4px 8px; }
       .btn.ok.sm { font-size: 14px; min-height: 44px; }
       .mlist { display: flex; flex-direction: column; gap: 8px; }
+      .abs-banner { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; padding: 10px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, #00897B 45%, transparent); background: color-mix(in srgb, #00897B 12%, var(--card-background-color, #fff)); color: var(--primary-text-color); font-size: 14px; font-weight: 600; }
+      .abs-row { display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 10px; border-radius: 14px; border: 1px solid var(--p-line); background: var(--card-background-color, #fff); }
+      .abs-row.active { border-left: 6px solid #00897B; }
+      .abs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+      .abs-t { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+      .abs-d { font-size: 13px; color: var(--p-sub); }
+      .abs-hint { margin: 8px 0 0; font-size: 13px; color: var(--p-sub); }
       .mrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 8px 14px; text-align: left; border-radius: 14px; border: 1px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); }
       .mrow-ico { flex: none; font-size: 24px; width: 32px; text-align: center; }
       .mrow-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }

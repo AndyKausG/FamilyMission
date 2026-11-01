@@ -171,6 +171,184 @@ def allow_together(task: dict) -> bool:
     return bool(value)
 
 
+# ---------------------------------------------------------------------------
+# Task scope (home / personal) and absences (2.6)
+# ---------------------------------------------------------------------------
+
+SCOPE_HOME = "home"
+SCOPE_PERSONAL = "personal"
+SCOPES = (SCOPE_HOME, SCOPE_PERSONAL)
+# Catalog keys (and the ``<key>:<kid>`` prefix of ``wizard_key``) that are a kid's own routines.
+# Household chores and everything unknown / hand-made count as "home".
+PERSONAL_CATALOG_KEYS = frozenset({
+    "morning", "evening", "room_blitz", "room_blitz_small", "room_deep", "own_laundry", "bedding",
+    "reading", "teeth", "homework", "practice",
+})
+
+
+def normalize_scope(value: Any, default: str = SCOPE_HOME) -> str:
+    """``"home"`` | ``"personal"``; anything else -> ``default``."""
+    return value if value in SCOPES else default
+
+
+def scope_for_key(catalog_key: Any) -> str:
+    """Scope of a catalog key: the kid's own routines are personal, chores and unknown keys are home."""
+    return SCOPE_PERSONAL if isinstance(catalog_key, str) and catalog_key in PERSONAL_CATALOG_KEYS else SCOPE_HOME
+
+
+def derive_scope(item: dict) -> str:
+    """The stored ``scope`` of a task / template, else derived from its catalog key (unknown -> home)."""
+    scope = (item or {}).get("scope")
+    if scope in SCOPES:
+        return scope
+    key = (item or {}).get("catalog_key") or str((item or {}).get("wizard_key") or "").split(":", 1)[0]
+    return scope_for_key(key)
+
+
+def task_scope(task: dict) -> str:
+    """Scope of a task (a missing field counts as home)."""
+    return normalize_scope((task or {}).get("scope"))
+
+
+ABSENCE_KINDS = ("trip", "away", "sick")
+MAX_ABSENCE_DAYS = 120
+MAX_ABSENCES = 60
+MAX_ABSENCE_NOTE = 60
+
+
+def absence_defaults(kind: str) -> dict:
+    """Default options of an absence kind: ``personal`` (personal tasks keep running), ``care`` (medication continues)."""
+    return {"personal": False, "care": kind != "away"}
+
+
+def _iso_day(value: Any) -> date | None:
+    if not isinstance(value, str) or not _DATE_RE.match(value):
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def normalize_absence(raw: Any, kid_ids: Iterable[str] | None = None) -> dict | None:
+    """A validated absence ``{id, kind, kids, from, to, personal, care, note}`` or ``None``.
+
+    A trip always covers everybody (``kids == "all"``); ``away`` / ``sick`` need
+    at least one kid (every one of ``kid_ids`` when given). ``to`` is inclusive and
+    must not be before ``from``; at most ``MAX_ABSENCE_DAYS`` days. ``away`` never
+    keeps the personal tasks; medication follows ``care`` for ``away`` and always
+    continues for trip / sick.
+    """
+    if not isinstance(raw, dict):
+        return None
+    kind = raw.get("kind")
+    if kind not in ABSENCE_KINDS:
+        return None
+    start, end = _iso_day(raw.get("from")), _iso_day(raw.get("to"))
+    if start is None or end is None or end < start or (end - start).days + 1 > MAX_ABSENCE_DAYS:
+        return None
+    if kind == "trip":
+        kids: Any = "all"
+    else:
+        value = raw.get("kids")
+        if value == "all":
+            kids = "all"
+        elif isinstance(value, (list, tuple)):
+            clean = []
+            for k in value:
+                if not isinstance(k, str) or not k or k in clean or (kid_ids is not None and k not in set(kid_ids)):
+                    return None
+                clean.append(k)
+            if not clean:
+                return None
+            kids = clean
+        else:
+            return None
+    defaults = absence_defaults(kind)
+    personal = raw.get("personal")
+    care = raw.get("care")
+    ident = raw.get("id")
+    return {
+        "id": ident if isinstance(ident, str) and ident else "",
+        "kind": kind,
+        "kids": kids,
+        "from": start.isoformat(),
+        "to": end.isoformat(),
+        "personal": False if kind == "away" else (personal if isinstance(personal, bool) else defaults["personal"]),
+        "care": care if kind == "away" and isinstance(care, bool) else (False if kind == "away" else True),
+        "note": str(raw.get("note") or "").strip()[:MAX_ABSENCE_NOTE],
+    }
+
+
+def absence_active(absence: dict, day: date) -> bool:
+    """True when ``day`` lies inside ``from..to`` (inclusive)."""
+    start, end = _iso_day(absence.get("from")), _iso_day(absence.get("to"))
+    return start is not None and end is not None and start <= day <= end
+
+
+def _absence_covers(absence: dict, kid_id: str) -> bool:
+    kids = absence.get("kids")
+    return kids == "all" or (isinstance(kids, (list, tuple)) and kid_id in kids)
+
+
+def is_paused(task: dict, kid_id: str, day: date, absences: Iterable[dict] | None) -> bool:
+    """True when ``task`` is paused for ``kid_id`` on ``day`` because of an absence.
+
+    * trip: home tasks pause; personal tasks pause unless the trip keeps them (``personal``).
+    * away: everything of the kid pauses.
+    * sick: home tasks pause; personal tasks pause unless ``personal``.
+    """
+    scope = task_scope(task)
+    for absence in absences or ():
+        if not isinstance(absence, dict) or not absence_active(absence, day) or not _absence_covers(absence, kid_id):
+            continue
+        if absence.get("kind") == "away" or scope == SCOPE_HOME or not absence.get("personal"):
+            return True
+    return False
+
+
+def absent_kids(day: date, absences: Iterable[dict] | None, scope: str = SCOPE_HOME, all_kids: Iterable[str] = ()) -> set[str]:
+    """Kids whose tasks of ``scope`` are paused on ``day`` (``all_kids`` stands for ``kids == "all"``)."""
+    absences = [a for a in (absences or ()) if isinstance(a, dict) and absence_active(a, day)]
+    if not absences:
+        return set()
+    candidates = set(all_kids or ())
+    for absence in absences:
+        if isinstance(absence.get("kids"), (list, tuple)):
+            candidates.update(k for k in absence["kids"] if isinstance(k, str))
+    probe = {"scope": normalize_scope(scope)}
+    return {k for k in candidates if is_paused(probe, k, day, absences)}
+
+
+def trip_active(day: date, absences: Iterable[dict] | None) -> dict | None:
+    """The family trip (``kids == "all"``, kind trip) active on ``day``, else ``None``."""
+    for absence in absences or ():
+        if (isinstance(absence, dict) and absence.get("kind") == "trip" and absence.get("kids") == "all"
+                and absence_active(absence, day)):
+            return absence
+    return None
+
+
+def care_paused(kid_id: str, day: date, absences: Iterable[dict] | None) -> bool:
+    """True when the kid's medication is suspended on ``day`` (an absence covering the kid without ``care``)."""
+    for absence in absences or ():
+        if (isinstance(absence, dict) and absence_active(absence, day) and _absence_covers(absence, kid_id)
+                and not absence.get("care", absence.get("kind") != "away")):
+            return True
+    return False
+
+
+def first_unpaused_day(task: dict, kid_ids: Iterable[str], day: date, absences: Iterable[dict] | None) -> date:
+    """First day ``>= day`` on which ``task`` is not paused for at least one of ``kid_ids`` (``day`` if none is paused)."""
+    kid_ids = list(kid_ids) or [""]
+    probe = day
+    for _ in range(MAX_ABSENCE_DAYS * 3):
+        if not all(is_paused(task, k, probe, absences) for k in kid_ids):
+            return probe
+        probe += timedelta(days=1)
+    return probe
+
+
 def migrate_task_like(item: dict) -> None:
     """Additively add ``category`` / ``min_age`` defaults to a task/template."""
     item["category"] = normalize_category(item.get("category"))
@@ -182,6 +360,7 @@ def migrate_task_like(item: dict) -> None:
     item["available_until"] = normalize_time(item.get("available_until"))
     item["reminder_at"] = normalize_time(item.get("reminder_at"))
     item["reminder_target"] = normalize_reminder_target(item.get("reminder_target"))
+    item["scope"] = derive_scope(item)
 
 
 _NOTIFY_RE = re.compile(r"^(?:notify\.)?([a-z0-9_]{1,64})$")
@@ -989,8 +1168,11 @@ def open_basis_tasks_for(
     now: datetime,
     default_overdue_days: int,
     age: int | None = None,
+    absences: Iterable[dict] | None = None,
 ) -> list[dict]:
     """Due/overdue ``basis`` tasks assigned to the kid that the kid can do.
+
+    Tasks paused for the kid by an absence (``absences``) are not open either.
 
     Tasks the kid is too young for are ignored: they can never be completed by
     this kid and must not block the bonus tasks forever. Tasks outside their
@@ -1000,7 +1182,8 @@ def open_basis_tasks_for(
         t
         for t in tasks.values()
         if normalize_category(t.get("category")) == "basis"
-        and kid_id in effective_assignees(t)
+        and kid_id in effective_assignees(t, absent_kids(now.date(), absences, task_scope(t), _assignee_list(t)) if absences else ())
+        and not is_paused(t, kid_id, now.date(), absences)
         and is_open(t, now, default_overdue_days)
         and in_window(t, now)
         and not _too_young(t, age)
@@ -1104,8 +1287,12 @@ def check_eligibility(
     tasks: dict,
     settings: dict,
     now: datetime,
+    absences: Iterable[dict] | None = None,
 ) -> str | None:
-    """Return ``None`` when the kid may work on the task, else an error code."""
+    """Return ``None`` when the kid may work on the task, else an error code.
+
+    A task paused for the kid by an absence (``absences``) is not eligible.
+    """
     overdue_days = settings.get("overdue_days", DEFAULT_OVERDUE_DAYS)
 
     if task.get("parent_task"):
@@ -1115,7 +1302,10 @@ def check_eligibility(
     if is_replaced(task, tasks, now, overdue_days):
         return ERR_NOT_ELIGIBLE
 
-    assignees = effective_assignees(task)
+    if is_paused(task, kid_id, now.date(), absences):
+        return ERR_NOT_ELIGIBLE
+    skip = absent_kids(now.date(), absences, task_scope(task), _assignee_list(task)) if absences else ()
+    assignees = effective_assignees(task, skip)
     if (assignees or isinstance(task.get("rotation"), dict)) and kid_id not in assignees:
         return ERR_NOT_ELIGIBLE
 
@@ -1133,7 +1323,7 @@ def check_eligibility(
     if claim_active(task, now) and task.get("claimed_by") != kid_id:
         return ERR_CLAIMED
 
-    if bonus_needs_routine(task) and open_basis_tasks_for(tasks, kid_id, now, overdue_days, age):
+    if bonus_needs_routine(task) and open_basis_tasks_for(tasks, kid_id, now, overdue_days, age, absences):
         return ERR_BASIS_OPEN
 
     return None
@@ -1316,13 +1506,14 @@ def possible_points(
     settings: dict | None = None,
     skip_days: dict | None = None,
     exclude_ids: Iterable[str] = (),
+    absences: Iterable[dict] | None = None,
 ) -> float:
     """Points the kids could earn with their basis duties on ``start..end`` (inclusive).
 
     Sum of ``complexity`` x due occurrences per task. A task with several
     assignees or a rotation counts once per occurrence. Not counted: bonus and
     ad-hoc tasks, waste jobs, trigger tasks (``exclude_ids``), parents' tasks,
-    days a task is paused, days all its kids are too young, birthday duty-free
+    days a task is paused, days all its kids are absent (``absences``), days all its kids are too young, birthday duty-free
     days (single assignee) and the days of ``skip_days`` (``{task_id: {date}}``).
     ``now`` only supplies the time zone.
     """
@@ -1359,6 +1550,8 @@ def possible_points(
             if paused_to is not None and day <= paused_to:
                 continue
             if day in skipped:
+                continue
+            if absences and all(is_paused(task, m, day, absences) for m in members):
                 continue
             if all(_too_young(task, kid_age(kids.get(m), day)) for m in members):
                 continue

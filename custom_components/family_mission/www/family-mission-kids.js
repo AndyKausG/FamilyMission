@@ -84,6 +84,10 @@ const I18N_KIDS = {
     pa_skipped: "Skipped for today", pa_postponed: "Postponed", pa_completed: "Done for {name}: +{n}", pa_undone: "Undone",
     replaced_today: "Today: {a} instead of {b}",
     rotation_turn: "It's your turn today",
+    trip_title: "Vacation", trip_until: "🌴 Vacation until {date}", trip_text: "Enjoy the time together. The tasks are back afterwards.",
+    trip_care: "💊 Medication continues - ask your parents.",
+    abs_sick: "🤒 Get well soon, {name}! Nothing is due for you.", abs_away: "🎒 Have a great time! Nothing is due for you.",
+    abs_sick_badge: "🤒 sick", abs_away_badge: "🎒 away",
     shop: "Shop", shop_title: "Reward shop", shop_balance: "You have", shop_empty: "No rewards available yet.",
     shop_redeem: "Redeem", shop_need: "{n} ⭐ to go", shop_goal: "Savings goal", shop_goal_on: "Savings goal ✓",
     shop_confirm: "Redeem {emoji} {name} for ⭐ {cost}?", shop_waiting: "waiting for mom or dad",
@@ -164,6 +168,10 @@ const I18N_KIDS = {
     pa_skipped: "Für heute ausgesetzt", pa_postponed: "Zurückgestellt", pa_completed: "Für {name} erledigt: +{n}", pa_undone: "Rückgängig gemacht",
     replaced_today: "Heute: {a} statt {b}",
     rotation_turn: "Heute bist du dran",
+    trip_title: "Urlaub", trip_until: "🌴 Urlaub bis {date}", trip_text: "Genießt die Zeit zusammen. Danach geht es mit den Aufgaben weiter.",
+    trip_care: "💊 Die Medikamente laufen weiter - frag deine Eltern.",
+    abs_sick: "🤒 Gute Besserung, {name}! Für dich ist nichts fällig.", abs_away: "🎒 Schöne Zeit! Für dich ist nichts fällig.",
+    abs_sick_badge: "🤒 krank", abs_away_badge: "🎒 weg",
     shop: "Shop", shop_title: "Belohnungs-Shop", shop_balance: "Du hast", shop_empty: "Noch keine Belohnungen vorhanden.",
     shop_redeem: "Einlösen", shop_need: "noch {n} ⭐", shop_goal: "Sparziel", shop_goal_on: "Sparziel ✓",
     shop_confirm: "{emoji} {name} für ⭐ {cost} einlösen?", shop_waiting: "wartet auf Mama oder Papa",
@@ -347,6 +355,7 @@ class FamilyMissionKids extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.tasks = {};
     this.careToday = {};
+    this.absences = [];
     this.points = {};
     this.settings = {};
     this.pending = {};
@@ -690,6 +699,7 @@ class FamilyMissionKids extends HTMLElement {
     return this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
       this.tasks = data.tasks || {};
       this.careToday = data.care_today || {};
+      this.absences = Array.isArray(data.absences) ? data.absences : [];
       this.points = data.points || {};
       this.settings = data.settings || {};
       this.pending = data.pending || {};
@@ -796,11 +806,34 @@ class FamilyMissionKids extends HTMLElement {
   _assignees(task) {
     const rot = task.rotation;
     if (rot && Array.isArray(rot.members) && rot.members.length) {
+      // an absent member is passed over: the backend names the member whose turn it really is
+      if (task.rotation_current) return [task.rotation_current];
       const idx = Number.isInteger(rot.index) && rot.index >= 0 ? rot.index : 0;
       return [rot.members[idx % rot.members.length]];
     }
     if (Array.isArray(task.assignees)) return task.assignees;
     return task.assignees ? [task.assignees] : [];
+  }
+
+  /** Absences active today (trip, kid away, sick), as sent by the backend. */
+  _activeAbsences() {
+    const today = this._localToday();
+    return (this.absences || []).filter(a => a && a.from <= today && today <= a.to);
+  }
+
+  /** The family trip that is on today, or null. */
+  _tripToday() {
+    return this._activeAbsences().find(a => a.kind === 'trip' && a.kids === 'all') || null;
+  }
+
+  /** The away / sick absence of a kid that is on today, or null (a trip is handled by the trip screen). */
+  _absenceOf(kidId) {
+    return this._activeAbsences().find(a => a.kind !== 'trip' && (a.kids === 'all' || (a.kids || []).includes(kidId))) || null;
+  }
+
+  /** The task is paused for the kid because of an absence (the backend lists the kids in absent_for). */
+  _pausedFor(task, kidId) {
+    return (task.absent_for || []).includes(kidId);
   }
 
   _claimActive(task) {
@@ -1188,7 +1221,7 @@ class FamilyMissionKids extends HTMLElement {
       ['basis', 'auftrag'].includes(this._category(t)) &&
       // parent tasks only appear for an adult on the own device, never in kid lists
       (!t.parent_task || kid.adult) &&
-      this._assignees(t).includes(kid.id) &&
+      this._assignees(t).includes(kid.id) && !this._pausedFor(t, kid.id) && !t.absent_all &&
       this._isOpen(t) && !this._expired(t) && this._oldEnough(t, kid) && !this._replacedBy(t)));
     const start = (t) => this._hhmm(t.available_from) || 0;
     const rank = new Map(list.map(t => [t, this._windowRank(t)]));
@@ -1201,7 +1234,7 @@ class FamilyMissionKids extends HTMLElement {
   _replacedLines(kid) {
     return Object.values(this.tasks).filter(t =>
       ['basis', 'auftrag'].includes(this._category(t)) && !t.parent_task &&
-      this._assignees(t).includes(kid.id) && this._isOpen(t) && !this._expired(t)).map(t => {
+      this._assignees(t).includes(kid.id) && !this._pausedFor(t, kid.id) && this._isOpen(t) && !this._expired(t)).map(t => {
       const by = this._replacedBy(t);
       if (!by) return null;
       const short = (task) => {
@@ -1215,7 +1248,7 @@ class FamilyMissionKids extends HTMLElement {
   /** Due bonus tasks the kid may do (unassigned or assigned to the kid, old enough). */
   _bonusFor(kid) {
     return this._sortTasks(Object.values(this.tasks).filter(t =>
-      this._category(t) === 'bonus' && !t.parent_task && this._isOpen(t) &&
+      this._category(t) === 'bonus' && !t.parent_task && this._isOpen(t) && !t.absent_all && !this._absenceOf(kid.id) &&
       (this._assignees(t).length === 0 || this._assignees(t).includes(kid.id)) &&
       !this._expired(t) && this._oldEnough(t, kid)));
   }
@@ -1223,7 +1256,7 @@ class FamilyMissionKids extends HTMLElement {
   /** All currently due bonus tasks (for the bonus board on the home screen). */
   _allBonus() {
     return this._sortTasks(Object.values(this.tasks).filter(t =>
-      this._category(t) === 'bonus' && !t.parent_task && this._isOpen(t) && !this._expired(t)));
+      this._category(t) === 'bonus' && !t.parent_task && this._isOpen(t) && !t.absent_all && !this._expired(t)));
   }
 
   /**
@@ -2745,6 +2778,10 @@ class FamilyMissionKids extends HTMLElement {
     let html;
     if (!this._fetched) {
       html = `<div class="root"><div class="empty-state">${escKids(this.localize('loading'))}</div></div>`;
+    } else if (this._tripToday() && !this._tripToday().personal && !(this._isMine() && (this._mineKid() || {}).adult)) {
+      this._session = null;
+      this._view = 'home';
+      html = this._renderTrip(this._tripToday());
     } else if (this._isMine()) {
       const me = this._mineKid();
       if (!me) {
@@ -2834,7 +2871,10 @@ class FamilyMissionKids extends HTMLElement {
 
     const tiles = kids.map(kid => {
       const open = this._openDuties(kid).length;
-      const badge = open > 0
+      const away = this._absenceOf(kid.id);
+      const badge = away
+        ? `<div class="badge ok">${escKids(this.localize(away.kind === 'sick' ? 'abs_sick_badge' : 'abs_away_badge'))}</div>`
+        : open > 0
         ? `<div class="badge open">${escKids(open === 1 ? this.localize('tasks_open_one') : this.localize('tasks_open', { n: open }))}</div>`
         : `<div class="badge ok">${escKids(this.localize('all_done_badge'))}</div>`;
       const waiting = kid.pendingCount > 0 ? `<div class="badge wait" title="${escKids(this.localize('waiting_title'))}">⏳ ${kid.pendingCount}</div>` : '';
@@ -2965,7 +3005,7 @@ class FamilyMissionKids extends HTMLElement {
     const waiting = this._pendingFor(kid.id);
     const dutyHtml = (mine && this._isParent() ? this._renderParentApprovals(persons) : '') + (duties.length
       ? duties.map(t => this._renderTask(t, kid, 'duty', persons)).join('')
-      : `<div class="empty-state small">🎉 ${escKids(this.localize('no_tasks'))}</div>`)
+      : this._absenceNote(kid))
       + this._careStandalone(kid).map(c => this._renderCareCard(c)).join('')
       + this._renderReplaced(kid) + this._renderWaiting(waiting) + this._renderPrivate(kid)
       + (this._isParent() ? this._renderDoneToday(kid) : '');
@@ -3003,6 +3043,29 @@ class FamilyMissionKids extends HTMLElement {
           </section>`}
         </div>`}
         ${this._helperMode() ? this._renderPin() : (this._sheet && this._sheet.type === 'together' ? this._renderTogether() : this._renderSheet())}
+      </div>`;
+  }
+
+  /** "Nothing due" note of a kid's list: the absence (get well soon / away) or the usual "all done". */
+  _absenceNote(kid) {
+    const a = this._absenceOf(kid.id);
+    if (!a) return `<div class="empty-state small">🎉 ${escKids(this.localize('no_tasks'))}</div>`;
+    return `<div class="empty-state small absence-note">${escKids(this.localize(a.kind === 'sick' ? 'abs_sick' : 'abs_away', { name: kid.name }))}</div>`;
+  }
+
+  /** Calm screen while the whole family is on a trip: no tasks, no points, no pressure. */
+  _renderTrip(trip) {
+    const date = this._dateKey(trip.to);
+    const pretty = date ? new Date(date + 'T12:00:00').toLocaleDateString((this._hass && this._hass.language) || undefined, { day: 'numeric', month: 'long' }) : '';
+    const care = Object.values(this.careToday || {}).some(list => (list || []).length);
+    return `
+      <div class="root trip" role="status">
+        <div class="trip-card">
+          <div class="trip-title">${escKids(this.localize('trip_until', { date: pretty }))}</div>
+          <div class="trip-text">${escKids(this.localize('trip_text'))}</div>
+          ${trip.note ? `<div class="trip-note">${escKids(trip.note)}</div>` : ''}
+          ${care ? `<div class="trip-care">${escKids(this.localize('trip_care'))}</div>` : ''}
+        </div>
       </div>`;
   }
 
@@ -3259,6 +3322,14 @@ class FamilyMissionKids extends HTMLElement {
       button:disabled { cursor: default; }
       .root { box-sizing: border-box; min-height: inherit; height: 100%; overflow-x: hidden; overflow-y: auto; scrollbar-width: none; display: flex; flex-direction: column; gap: 16px; padding: 16px 24px 20px; }
       .root::-webkit-scrollbar { display: none; }
+      .root.trip { display: grid; place-items: center; min-height: 100%; padding: 24px; }
+      .trip-card { max-width: 560px; text-align: center; padding: 32px 24px; border-radius: 28px; background: color-mix(in srgb, #00897B 14%, var(--card-background-color, #fff)); border: 2px solid color-mix(in srgb, #00897B 40%, transparent); color: var(--k-text, var(--primary-text-color)); }
+      .trip-ico { font-size: 72px; line-height: 1; }
+      .trip-title { font-size: 38px; font-weight: 800; }
+      .trip-text { margin-top: 10px; font-size: 20px; color: var(--k-sub, var(--secondary-text-color)); }
+      .trip-note { margin-top: 8px; font-size: 18px; font-weight: 600; }
+      .trip-care { margin-top: 16px; font-size: 16px; font-weight: 600; }
+      .absence-note { font-size: 22px; }
       .empty-state { grid-column: 1 / -1; align-self: center; justify-self: center; text-align: center; font-size: 30px; font-weight: 700; color: var(--k-sub); padding: 32px; }
       .empty-state.small { font-size: 26px; padding: 24px 8px; }
 

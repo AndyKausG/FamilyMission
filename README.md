@@ -437,6 +437,15 @@ Optional (setting `announce_enabled`, default off). Speaks via `tts.speak` (`ann
 * **Bonus tasks are free by default.** Per bonus task you can opt in to "duties first" (`requires_routine`, task/template editor: "Bonus only after the kid's due duties"): such a bonus is shown locked ("Your tasks first!") while the kid has due `basis` tasks open. Only duties inside their time window count (an evening mission from 17:00 does not lock a bonus in the morning). Spontaneous (ad-hoc) bonus tasks are never locked. Points are booked immediately on completion (unless the task needs parent approval).
 * **Reservations:** a claimed bonus task is reserved for `claim_minutes` (default 10) minutes; other kids see who took it. Completing the task clears the reservation.
 
+### Absences (new in 2.6)
+Parents card -> More -> **Abwesenheit**: 🌴 *Familie verreist*, 🎒 *Kind weg* (grandma, class trip) or 🤒 *Krank*, with kids, from / to (inclusive, at most 120 days). Websockets `family_mission/absence_add`, `absence_end`, `absence_delete` (admin / manager / parent); `get_data` returns `absences` (`{id, kind, kids, from, to, personal, care, note}`).
+
+* **Trip:** chores and reminders pause, personal tasks (missions, routines) pause too unless the option "keep personal tasks" is on; medication continues; the tablet shows "🌴 Urlaub bis ...". No waste jobs, bonus triggers or announcements.
+* **Kid away:** everything of that kid pauses, rotations skip the kid; medication only with the option. **Sick:** chores pause, medication continues, personal tasks optional; the kid sees "Gute Besserung".
+* Paused duties are never logged as missed and move to the first day after the absence; the percent family goal excludes them; parent tasks with scope home pause during a trip.
+* Tasks and templates have a `scope` (`home` | `personal`; select in the task and template dialogs; existing tasks are derived from the quick-start catalog).
+* Optional setting `absence_suggest_enabled` (default off, `absence_suggest_hours` default 24): a push "Seid ihr verreist?" once per away phase when everybody is `not_home`.
+
 ### Medication / care (new in 2.6)
 Optional and off until a kid profile gets entries. For a daily tablet, drops or an inhaler: the parents add **care entries** to the kid profile (settings card, kid row, "💊 Medikamente"; `set_kid_profile` with `care`, admin / manager). Per entry: `label` (default "Tablette"), `emoji` (💊), `anchor` (`morning` / `evening` / `time`), `time` (`HH:MM`, for `time`), `weekdays` (0 = Monday ... 6, default every day), `deadline` (`HH:MM`, default 10:00 morning / 21:00 evening / time + 2 h), `notify_parents` (default on) and `decline_alert` `{enabled: false, count: 3, days: 7}`. Every value is validated, anything invalid falls back to the default, at most 6 entries per kid. `get_data.settings.kids[id].care` returns them.
 

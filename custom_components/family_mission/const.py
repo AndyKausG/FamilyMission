@@ -112,6 +112,9 @@ WS_TYPE_ROCKET_LAUNCHED = "family_mission/rocket_launched"
 WS_TYPE_TEST_PUSH = "family_mission/test_push"
 WS_TYPE_WASTE_SOURCES = "family_mission/waste_sources"
 WS_TYPE_TEST_ANNOUNCE = "family_mission/test_announce"
+WS_TYPE_ABSENCE_ADD = "family_mission/absence_add"
+WS_TYPE_ABSENCE_END = "family_mission/absence_end"
+WS_TYPE_ABSENCE_DELETE = "family_mission/absence_delete"
 
 # Service Names
 SERVICE_RESET_MONTHLY_POINTS = "reset_monthly_points"

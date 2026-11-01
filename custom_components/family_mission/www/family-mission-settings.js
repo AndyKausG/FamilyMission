@@ -29,6 +29,8 @@ const I18N_SETTINGS = {
     import_hover: "Opens a dialog to select a JSON file for importing tasks.", 
     desc_lbl: "Description (optional)", area_lbl: "Area", points_lbl: "Points (1-10)", icon_lbl: "Icon",
     interval_lbl: "Days (Interval)", assignees_lbl: "Assignees",
+    scope_lbl: "Scope (for absences)", scope_home: "Home (chores)", scope_personal: "Personal (own routines)",
+    pe_abs: "Suggest a vacation entry", pe_abs_d: "When everybody has been away for the given hours and no vacation is entered, the adults get one push: \"Are you on a trip?\". Off by default.", pe_abs_hours: "Hours away",
     weekdays_lbl: "Weekdays (instead of the interval)", weekday_short: "Mo,Tu,We,Th,Fr,Sa,Su",
     rotation_lbl: "Take turns (one kid per occurrence)", rotation_hint: "Each occurrence belongs to one kid; the turn moves on after it is done or missed.",
     cancel: "Cancel", save: "Save",
@@ -136,6 +138,8 @@ claim_minutes: "Bonus reservation (minutes)",
     import_hover: "Öffnet einen Dialog zur Auswahl einer JSON-Datei für den Import von Aufgaben.", 
     desc_lbl: "Beschreibung (optional)", area_lbl: "Bereich", points_lbl: "Punkte (1-10)", icon_lbl: "Icon",
     interval_lbl: "Tage (Intervall)", assignees_lbl: "Bearbeiter",
+    scope_lbl: "Bereich (für Abwesenheit)", scope_home: "Zuhause (Haushalt)", scope_personal: "Persönlich (eigene Routinen)",
+    pe_abs: "Urlaub vorschlagen", pe_abs_d: "Sind alle länger als die angegebenen Stunden unterwegs und ist kein Urlaub eingetragen, bekommen die Erwachsenen einmal eine Push-Nachricht: \"Seid ihr verreist?\". Standardmäßig aus.", pe_abs_hours: "Stunden unterwegs",
     weekdays_lbl: "Wochentage (statt Intervall)", weekday_short: "Mo,Di,Mi,Do,Fr,Sa,So",
     rotation_lbl: "Im Wechsel (ein Kind pro Termin)", rotation_hint: "Jeder Termin gehört einem Kind; nach Erledigen oder Verpassen ist das nächste dran.",
     cancel: "Abbrechen", save: "Speichern",
@@ -1010,6 +1014,7 @@ class FamilyMissionSettings extends HTMLElement {
       icon: this.shadowRoot.getElementById('tmpl-icon').value,
       interval: parseInt(this.shadowRoot.getElementById('tmpl-interval').value),
       category: this.shadowRoot.getElementById('tmpl-category').value || 'basis',
+      scope: this.shadowRoot.getElementById('tmpl-scope')?.value === 'personal' ? 'personal' : 'home',
       min_age: Math.max(0, Math.min(18, parseInt(this.shadowRoot.getElementById('tmpl-min-age').value) || 0)),
       requires_approval: !!this.shadowRoot.getElementById('tmpl-approval')?.checked,
       requires_routine: !!this.shadowRoot.getElementById('tmpl-routine')?.checked,
@@ -1798,6 +1803,12 @@ class FamilyMissionSettings extends HTMLElement {
                 <input type="time" id="pe-reminder-time" value="${time(st.planning_reminder_time, '18:00')}"></label>
             </div>
             <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-abs" ${st.absence_suggest_enabled === true ? 'checked' : ''}> ${this.localize('pe_abs')}</label>
+              <p class="kids-note">${this.localize('pe_abs_d')}</p>
+              <label class="kid-field">${this.localize('pe_abs_hours')}
+                <input type="number" id="pe-abs-hours" min="6" max="168" value="${esc(st.absence_suggest_hours || 24)}"></label>
+            </div>
+            <div class="family-box">
               <h4>${this.localize('pe_push')}</h4>
               <p class="kids-note">${this.localize('pe_push_d')}</p>
               ${adults || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
@@ -1822,6 +1833,9 @@ class FamilyMissionSettings extends HTMLElement {
       this.settings.parent_digest_time = time('pe-digest-time', '07:00');
       this.settings.planning_reminders = !!val('pe-reminder').checked;
       this.settings.planning_reminder_time = time('pe-reminder-time', '18:00');
+      this.settings.absence_suggest_enabled = !!val('pe-abs').checked;
+      const hours = parseInt(val('pe-abs-hours').value);
+      this.settings.absence_suggest_hours = hours >= 6 && hours <= 168 ? hours : 24;
       const notify = {};
       root.querySelectorAll('.pe-push').forEach(el => { if (el.value) notify[el.dataset.uid] = el.value; });
       this.settings.parent_notify = notify;
@@ -2597,6 +2611,12 @@ class FamilyMissionSettings extends HTMLElement {
                   <ha-input id="tmpl-min-age" type="number" min="0" max="18" label="${this.localize('min_age_lbl')}" value="${template?.min_age || 0}" class="form-col"></ha-input>
               </div>
               <div class="form-row">
+                  <div class="form-col">
+                      <label class="form-label" for="tmpl-scope">${this.localize('scope_lbl')}</label>
+                      <select id="tmpl-scope" class="form-select">
+                          ${['home', 'personal'].map(c => `<option value="${c}" ${(template?.scope || 'home') === c ? 'selected' : ''}>${this.localize('scope_' + c)}</option>`).join('')}
+                      </select>
+                  </div>
                   <div class="form-col">
                       <label class="form-label" for="tmpl-available-from">${this.localize('available_from_lbl')}</label>
                       <select id="tmpl-available-from" class="form-select">${toSetTTimeOptions(template?.available_from || '', '—')}</select>

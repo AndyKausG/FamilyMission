@@ -44,6 +44,7 @@ const I18N_CARD = {
     min_age_lbl: "Minimum age (0 = any)", approval_lbl: "Requires parent approval", routine_lbl: "Bonus only after the kid's due duties", together_lbl: "Doing it together allowed",
     available_from_lbl: "Only from (time)", available_until_lbl: "Only until (time)",
     reminder_lbl: "Reminder", reminder_time_lbl: "Remind at", reminder_target_lbl: "Notify via", reminder_event_only: "Event only",
+    scope_lbl: "Scope (for absences)", scope_home: "Home (chores)", scope_personal: "Personal (own routines)",
     weekdays_lbl: "Weekdays (instead of the interval)", weekday_short: "Mo,Tu,We,Th,Fr,Sa,Su",
     rotation_lbl: "Take turns (one kid per occurrence)", rotation_hint: "Each occurrence belongs to one kid; the turn moves on after it is done or missed.",
     help_link: "Configuration Guide (README)"
@@ -88,6 +89,7 @@ const I18N_CARD = {
     min_age_lbl: "Mindestalter (0 = egal)", approval_lbl: "Freigabe durch Eltern nötig", routine_lbl: "Bonus erst nach den fälligen Pflichten", together_lbl: "Zusammen erledigen erlaubt",
     available_from_lbl: "Erst ab (Uhrzeit)", available_until_lbl: "Nur bis (Uhrzeit)",
     reminder_lbl: "Erinnerung", reminder_time_lbl: "Erinnern um", reminder_target_lbl: "Benachrichtigen über", reminder_event_only: "nur Ereignis",
+    scope_lbl: "Bereich (für Abwesenheit)", scope_home: "Zuhause (Haushalt)", scope_personal: "Persönlich (eigene Routinen)",
     weekdays_lbl: "Wochentage (statt Intervall)", weekday_short: "Mo,Di,Mi,Do,Fr,Sa,So",
     rotation_lbl: "Im Wechsel (ein Kind pro Termin)", rotation_hint: "Jeder Termin gehört einem Kind; nach Erledigen oder Verpassen ist das nächste dran.",
     help_link: "Konfigurations-Handbuch (README)"
@@ -894,6 +896,7 @@ class FamilyMissionCard extends HTMLElement {
         }
         if (this.shadowRoot.getElementById('f-complexity')) this.shadowRoot.getElementById('f-complexity').value = t.complexity;
         this._setCategoryFields(t.category, t.min_age, t.requires_approval, t.available_from, t.available_until, t.requires_routine, t.reminder_at, t.reminder_target, t.allow_together);
+        this._setScope(t.scope);
         this._subtasks = t.subtasks ? [...t.subtasks] : [];
         this._currentIcon = t.icon || "mdi:broom";
         
@@ -929,6 +932,7 @@ class FamilyMissionCard extends HTMLElement {
         this.shadowRoot.getElementById('f-interval').value = 7;
         this.shadowRoot.getElementById('f-complexity').value = 5; 
         this._setCategoryFields('basis', 0, false);
+        this._setScope('home');
         this._currentIcon = "mdi:broom";
         this._subtasks = [];
         
@@ -1038,6 +1042,12 @@ class FamilyMissionCard extends HTMLElement {
    * @param {number} minAge - Minimum age in years (0 = any).
    * @param {boolean} requiresApproval - A parent has to approve completions by kids.
    */
+  /** Scope select of the task editor ("home" | "personal"; anything else = home). */
+  _setScope(scope) {
+    const sel = this.shadowRoot.getElementById('f-scope');
+    if (sel) sel.value = scope === 'personal' ? 'personal' : 'home';
+  }
+
   _setCategoryFields(category, minAge, requiresApproval = false, availableFrom = null, availableUntil = null, requiresRoutine = false, reminderAt = null, reminderTarget = '', allowTogether = undefined) {
     this._setReminderFields(reminderAt, reminderTarget);
     const routine = this.shadowRoot.getElementById('f-routine');
@@ -1177,6 +1187,7 @@ class FamilyMissionCard extends HTMLElement {
       reminder_at: this.shadowRoot.getElementById('f-reminder')?.checked ? (this.shadowRoot.getElementById('f-reminder-at')?.value || "18:00") : "",
       reminder_target: this.shadowRoot.getElementById('f-reminder')?.checked ? (this.shadowRoot.getElementById('f-reminder-target')?.value || "") : "",
       assignees: assignees,
+      scope: this.shadowRoot.getElementById('f-scope')?.value === 'personal' ? 'personal' : 'home',
       // weekday schedule replaces the interval ([] = none); rotation null = kids do not take turns
       weekdays: isOnetime ? [] : this._getWeekdays(),
       rotation: this._getRotation(),
@@ -1396,6 +1407,15 @@ class FamilyMissionCard extends HTMLElement {
                             </select>
                         </div>
                         <ha-input id="f-min-age" type="number" min="0" max="18" label="${this.localize('min_age_lbl')}" class="form-col"></ha-input>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="form-label" for="f-scope">${this.localize('scope_lbl')}</label>
+                            <select id="f-scope" class="form-select">
+                                <option value="home">${this.localize('scope_home')}</option>
+                                <option value="personal">${this.localize('scope_personal')}</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-col">
@@ -1683,6 +1703,7 @@ class FamilyMissionCard extends HTMLElement {
         this.shadowRoot.getElementById('f-complexity').value = t.complexity || 5;
         this.shadowRoot.getElementById('f-icon-picker').value = t.icon || 'mdi:broom';
         this._setCategoryFields(t.category, t.min_age, t.requires_approval, t.available_from, t.available_until, t.requires_routine, t.reminder_at, t.reminder_target, t.allow_together);
+        this._setScope(t.scope);
         this.shadowRoot.getElementById('template-suggestions').innerHTML = '';
         
         this._subtasks = t.subtasks ? JSON.parse(JSON.stringify(t.subtasks)) : [];
