@@ -44,6 +44,8 @@ Die Wirkung hängt vor allem an euch Eltern: **konsequent** (Regeln gelten jeden
 - **Tablet-Dashboard (Kiosk):** Die Kinder-Karte als Vollbild auf einem Wand-Tablet (zum Beispiel mit Fully Kiosk Browser, Querformat). Die Kinder tippen ihre Kachel, geben die PIN ein und sehen ihre Missionen.
 - **Eigene Geräte (`mode: mine`):** Mit `mode: mine` zeigt die Karte direkt die Aufgaben der angemeldeten Person, ohne Kachel und PIN. Ideal für das Handy oder Tablet eines älteren Kindes.
 - **Bonus-Auslöser:** Ein Bonus kann sich von selbst öffnen, etwa wenn die Spülmaschine fertig ist (Einstellungen-Karte, Bereich Bonus-Auslöser). Das Tablet kann ihn per Sprachausgabe ansagen.
+- **Müllabfuhr:** Mit der HACS-Integration „Waste Collection Schedule“ öffnet sich am Vorabend einer Leerung die Bonusaufgabe „Mülltonnen rausstellen“ (Mülleimer in der Wohnung leeren, Tonnen raus, Platz prüfen) und am Abend des Leerungstags „Mülltonnen reinholen“. Ihr entscheidet pro Tonne, ob die Kinder sie übernehmen dürfen (z.B. Glas lieber selbst), ab welchem Alter (Standard 6) und ob ihr vor der Gutschrift bestätigt (Einstellungen-Karte, Bereich Müllabfuhr).
+- **Sprachdurchsage:** Neue Bonusaufgaben können über Lautsprecher angesagt werden, z.B. „Papa hat eine Bonusaufgabe erstellt: Einkäufe hochtragen. 3 Punkte.“ Wählbar für spontane Boni, Müll-Aufgaben und Bonus-Auslöser; nachts still (Einstellungen-Karte, Bereich Sprachdurchsage, mit Test-Knopf).
 - **Erinnerungen:** Pro Aufgabe lässt sich eine Uhrzeit festlegen. Ist die Aufgabe dann noch offen, gibt es ein Ereignis bzw. eine Benachrichtigung.
 
 > 💡 Plant für die Einrichtung 10 Minuten ein, und nehmt euch danach einen ruhigen Moment, um den Kindern das System zu erklären.

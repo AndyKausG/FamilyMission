@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.4.0] - 2026-11-01
+
+- **Waste collection bonus:** optional connector to the HACS integration *Waste Collection Schedule* (no hard dependency). Its calendar entities (entity registry platform `waste_collection_schedule`) are read with `calendar.get_events` (at most every 30 minutes). The evening before a collection an ad-hoc bonus "Mülltonnen rausstellen" / "Put the bins out" opens (subtasks: empty the bins in the flat, one per bin, check for room), on the evening of the collection day "Mülltonnen reinholen" / "Bring the bins in". Only waste types released for kids count (`waste_types`, new types are off). New settings `waste_enabled` (default off), `waste_calendars`, `waste_types`, `waste_min_age` (6), `waste_points_per_bin` (1, × bins, max. 10), `waste_approval` (on), `waste_out_time` / `waste_out_until` (17:00 / 07:00), `waste_in_time` / `waste_in_until` (16:00 / 21:00); all validated. Each task is created once (`waste_done`). New module `waste.py`, new websocket `family_mission/waste_sources`, settings card section "Müllabfuhr / Waste collection".
+- **Voice announcement:** optional `tts.speak` on media players for a parent's ad-hoc bonus ("Papa hat eine Bonusaufgabe erstellt: Einkäufe hochtragen. 3 Punkte."), waste tasks and bonus-trigger tasks. New settings `announce_enabled` (default off), `announce_tts`, `announce_players`, `announce_events`, `announce_night` (default off = silent in the night mode times), `announce_names` (spoken name per adult). New websocket `family_mission/test_announce`, settings card section "Sprachdurchsage / Voice announcement" with a test button. Speaker errors are only logged.
+- **Internal:** ad-hoc bonus creation moved to `_async_create_adhoc` (shared by the websocket and the waste check).
+- **Docs:** README, help and parents' guide (de/en/fr).
+- **Tests:** new `tests/test_waste.py` and `tests/test_waste_announce_ws.py`.
+
 ## [2.3.3] - 2026-11-01
 
 - **Family goal suggestion:** below "Points per month" in the settings card (Kids) a line shows a suggestion (80 % of the kids' monthly goals, rounded to 10, like the quick-start wizard) and the task points all kids reached last month (what the rocket counts), with a button to take the suggestion. It follows the monthly goals as they are typed.

@@ -40,6 +40,8 @@ const HELP_CONTENT = {
           "**Tablet-Dashboard (Kiosk):** Die Kinder-Karte als Vollbild auf einem Wand-Tablet (zum Beispiel mit Fully Kiosk Browser, Querformat). Die Kinder tippen ihre Kachel, geben die PIN ein und sehen ihre Missionen.",
           "**Eigene Geräte (`mode: mine`):** Mit `mode: mine` zeigt die Karte direkt die Aufgaben der angemeldeten Person, ohne Kachel und PIN. Ideal für das Handy oder Tablet eines älteren Kindes.",
           "**Bonus-Auslöser:** Ein Bonus kann sich von selbst öffnen, etwa wenn die Spülmaschine fertig ist (Einstellungen-Karte, Bereich Bonus-Auslöser). Das Tablet kann ihn per Sprachausgabe ansagen.",
+          "**Müllabfuhr:** Mit der HACS-Integration „Waste Collection Schedule“ öffnet sich am Vorabend einer Leerung die Bonusaufgabe „Mülltonnen rausstellen“ (Mülleimer in der Wohnung leeren, Tonnen raus, Platz prüfen) und am Abend des Leerungstags „Mülltonnen reinholen“. Ihr entscheidet pro Tonne, ob die Kinder sie übernehmen dürfen (z.B. Glas lieber selbst), ab welchem Alter (Standard 6) und ob ihr vor der Gutschrift bestätigt (Einstellungen-Karte, Bereich Müllabfuhr).",
+          "**Sprachdurchsage:** Neue Bonusaufgaben können über Lautsprecher angesagt werden, z.B. „Papa hat eine Bonusaufgabe erstellt: Einkäufe hochtragen. 3 Punkte.“ Wählbar für spontane Boni, Müll-Aufgaben und Bonus-Auslöser; nachts still (Einstellungen-Karte, Bereich Sprachdurchsage, mit Test-Knopf).",
           "**Erinnerungen:** Pro Aufgabe lässt sich eine Uhrzeit festlegen. Ist die Aufgabe dann noch offen, gibt es ein Ereignis bzw. eine Benachrichtigung."
         ],
         { tip: "Plant für die Einrichtung 10 Minuten ein, und nehmt euch danach einen ruhigen Moment, um den Kindern das System zu erklären." }
@@ -201,6 +203,8 @@ const HELP_CONTENT = {
           "**Tableau de bord tablette (kiosque) :** la carte Enfants en plein écran sur une tablette murale (par exemple avec Fully Kiosk Browser, en mode paysage). Les enfants touchent leur vignette, saisissent leur PIN et voient leurs missions.",
           "**Appareils personnels (`mode: mine`) :** avec `mode: mine`, la carte affiche directement les tâches de la personne connectée, sans vignette ni PIN. Idéal pour le téléphone ou la tablette d'un enfant plus grand.",
           "**Déclencheurs de bonus :** un bonus peut s'ouvrir tout seul, par exemple quand le lave-vaisselle a terminé (carte Réglages, section Déclencheurs de bonus). La tablette peut l'annoncer à voix haute.",
+          "**Collecte des déchets :** avec l'intégration HACS « Waste Collection Schedule », la tâche bonus « Sortir les poubelles » s'ouvre la veille d'une collecte (vider les poubelles de la maison, sortir les bacs, vérifier qu'il reste de la place) et « Rentrer les poubelles » le soir du jour de collecte. Vous décidez pour chaque bac si les enfants peuvent s'en charger (le verre, par exemple, reste aux parents), à partir de quel âge (6 ans par défaut) et si vous validez avant que les points soient crédités (carte Réglages, section Collecte des déchets).",
+          "**Annonce vocale :** les nouvelles tâches bonus peuvent être annoncées sur des haut-parleurs, par ex. « Papa a créé une tâche bonus : monter les courses. 3 points. » Au choix pour les bonus spontanés, les tâches déchets et les déclencheurs de bonus ; silencieux la nuit (carte Réglages, section Annonce vocale, avec bouton de test).",
           "**Rappels :** une heure peut être définie pour chaque tâche. Si la tâche est alors encore ouverte, un événement ou une notification est envoyé."
         ],
         { tip: "Prévoyez 10 minutes pour l'installation, puis prenez un moment calme pour expliquer le système aux enfants." }
@@ -362,6 +366,8 @@ const HELP_CONTENT = {
           "**Tablet dashboard (kiosk):** the kids card in full screen on a wall tablet (for example with Fully Kiosk Browser, landscape). Kids tap their tile, enter the PIN and see their missions.",
           "**Own devices (`mode: mine`):** with `mode: mine` the card shows the tasks of the logged-in person right away, without tiles and PIN. Ideal for the phone or tablet of an older child.",
           "**Bonus triggers:** a bonus can open by itself, for example when the dishwasher has finished (settings card, Bonus triggers section). The tablet can announce it by voice.",
+          "**Waste collection:** with the HACS integration “Waste Collection Schedule” the bonus task “Put the bins out” opens the evening before a collection (empty the bins in the flat, bins out, check there is room), and “Bring the bins in” on the evening of the collection day. You decide per bin whether the kids may do it (e.g. glass stays with you), from which age (default 6) and whether you approve before the points are credited (settings card, Waste collection section).",
+          "**Voice announcement:** new bonus tasks can be announced on speakers, e.g. “Dad created a bonus task: carry up the shopping. 3 points.” Selectable for spontaneous bonuses, waste tasks and bonus triggers; silent at night (settings card, Voice announcement section, with a test button).",
           "**Reminders:** a time can be set per task. If the task is still open then, an event or notification is sent."
         ],
         { tip: "Plan 10 minutes for the setup, and afterwards take a quiet moment to explain the system to the kids." }

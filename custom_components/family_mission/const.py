@@ -104,6 +104,8 @@ WS_TYPE_WEEKLY_SUMMARY = "family_mission/weekly_summary"
 WS_TYPE_ROCKET_COUNTDOWN = "family_mission/rocket_countdown"
 WS_TYPE_ROCKET_LAUNCHED = "family_mission/rocket_launched"
 WS_TYPE_TEST_PUSH = "family_mission/test_push"
+WS_TYPE_WASTE_SOURCES = "family_mission/waste_sources"
+WS_TYPE_TEST_ANNOUNCE = "family_mission/test_announce"
 
 # Service Names
 SERVICE_RESET_MONTHLY_POINTS = "reset_monthly_points"
