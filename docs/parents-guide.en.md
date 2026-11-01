@@ -140,6 +140,7 @@ The **❤️ Praise** button complements the personal word, it does not replace 
 - **Monthly goal:** every child has their own points goal. The ring around the avatar shows progress.
 - **Ring above 100 %:** whoever does more spins further laps in darker colours. More is allowed, but never necessary.
 - **Family rocket:** all points together fill the rocket up to the family goal (for example a pizza night). Only confirmed task points count, no bonuses and no deductions.
+- **Goal in percent:** instead of fixed points you can choose “Percent of possible points” in the settings (default 75 %). At the start of the month the maximum the kids can earn with their duties is calculated once; the family goal is the chosen percentage of it, rounded to 5. During the month the goal can only go **down** (task removed or paused, day skipped, birthday, lower percent), never up: new tasks and a higher percent apply from next month. The settings show, for example, “November: 410 points (75 % of 547, as of 1.11.) · from 1.12. probably 460”. Bonus tasks count towards progress but not towards the possible points; medication never counts.
 - **Month change:** at the start of the month the monthly points are reset and the month is archived. The **shop balance is kept**.
 
 > 💡 Set the goal so that a child with normal effort reaches about 75 % of the maximum. That keeps it reachable without every day having to be perfect.

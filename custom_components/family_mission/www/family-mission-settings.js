@@ -66,7 +66,7 @@ const I18N_SETTINGS = {
     birthday_title: "Birthday", birthday_bonus_points: "Birthday bonus (points, 0 = off)",
     team_title: "Teamwork", team_bonus: "Team bonus per kid when doing a task together (points, 0 = off)",
     birthday_duty_free: "Duty-free birthday: skip the kid's own due tasks",
-    family_goal: "Family goal", family_goal_points: "Points per month (all kids together)", family_goal_reward: "Reward", family_goal_reward_ph: "e.g. Ice cream trip", fg_suggest: "Suggestion: {n} (80 % of the kids' monthly goals)", fg_last: "last month: {n} task points", fg_take: "Use {n}",
+    family_goal: "Family goal", family_goal_points: "Points per month (all kids together)", family_goal_reward: "Reward", family_goal_reward_ph: "e.g. Ice cream trip", fg_suggest: "Suggestion: {n} (80 % of the kids' monthly goals)", fg_last: "last month: {n} task points", fg_take: "Use {n}", fg_mode: "Goal type", fg_mode_points: "Fixed points", fg_mode_percent: "Percent of possible points", fg_percent: "Percent of the possible points", fg_percent_hint: "Calculated once a month from the kids' duties. During the month the goal can only go down (tasks removed, days skipped, lower percent); a higher percent applies from next month.", fg_info: "{month}: {target} points ({percent} % of {possible}, as of {asof}) · from {nextdate} probably {next}", fg_info_none: "The goal is calculated as soon as you save.",
 claim_minutes: "Bonus reservation (minutes)",
     category_lbl: "Category (kids mode)", cat_basis: "Basis (assigned duty)", cat_bonus: "Bonus (open for all)", cat_auftrag: "Order (one-time)",
     min_age_lbl: "Minimum age (0 = any)", min_age_short: "age {age}+", approval_lbl: "Requires parent approval", routine_lbl: "Bonus only after the kid's due duties", together_lbl: "Doing it together allowed",
@@ -173,7 +173,7 @@ claim_minutes: "Bonus reservation (minutes)",
     birthday_title: "Geburtstag", birthday_bonus_points: "Geburtstags-Bonus (Punkte, 0 = aus)",
     team_title: "Teamarbeit", team_bonus: "Team-Bonus pro Kind bei gemeinsam erledigten Aufgaben (Punkte, 0 = aus)",
     birthday_duty_free: "Pflichtfreier Geburtstag: eigene fällige Aufgaben überspringen",
-    family_goal: "Familienziel", family_goal_points: "Punkte pro Monat (alle Kinder zusammen)", family_goal_reward: "Belohnung", family_goal_reward_ph: "z.B. Eis essen gehen", fg_suggest: "Vorschlag: {n} (80 % der Monatsziele der Kinder)", fg_last: "letzter Monat: {n} Aufgabenpunkte", fg_take: "{n} übernehmen",
+    family_goal: "Familienziel", family_goal_points: "Punkte pro Monat (alle Kinder zusammen)", family_goal_reward: "Belohnung", family_goal_reward_ph: "z.B. Eis essen gehen", fg_suggest: "Vorschlag: {n} (80 % der Monatsziele der Kinder)", fg_last: "letzter Monat: {n} Aufgabenpunkte", fg_take: "{n} übernehmen", fg_mode: "Zielart", fg_mode_points: "Feste Punkte", fg_mode_percent: "Prozent der möglichen Punkte", fg_percent: "Prozent der möglichen Punkte", fg_percent_hint: "Wird einmal im Monat aus den Pflichten der Kinder berechnet. Im Monat kann das Ziel nur sinken (Aufgaben entfernt, Tage ausgesetzt, weniger Prozent); mehr Prozent gilt ab dem nächsten Monat.", fg_info: "{month}: {target} Punkte ({percent} % von {possible}, Stand {asof}) · ab {nextdate} voraussichtlich {next}", fg_info_none: "Das Ziel wird berechnet, sobald du speicherst.",
 claim_minutes: "Bonus-Reservierung (Minuten)",
     category_lbl: "Kategorie (Kindermodus)", cat_basis: "Basis (feste Pflicht)", cat_bonus: "Bonus (offen für alle)", cat_auftrag: "Auftrag (einmalig)",
     min_age_lbl: "Mindestalter (0 = egal)", min_age_short: "ab {age}", approval_lbl: "Freigabe durch Eltern nötig", routine_lbl: "Bonus erst nach den fälligen Pflichten", together_lbl: "Zusammen erledigen erlaubt",
@@ -325,6 +325,7 @@ class FamilyMissionSettings extends HTMLElement {
     this.users = {};
     this.templates = {};
     this.history = [];
+    this.goalInfo = null;
     this.points = {};
     this.monthly_history = {};
     this.current_month = null;
@@ -554,6 +555,7 @@ class FamilyMissionSettings extends HTMLElement {
       this.tasks = data.tasks || {};
       this.templates = data.templates || {};
       this.history = data.history || [];
+      this.goalInfo = data.family_goal_info || null;
       this.points = data.points || {};
       this.monthly_history = data.monthly_history || {};
       this.current_month = data.current_month;
@@ -719,7 +721,9 @@ class FamilyMissionSettings extends HTMLElement {
     if (fgPoints) {
       newSettings.family_goal = {
         points: Math.max(0, parseInt(fgPoints.value) || 0),
-        reward: (this.shadowRoot.getElementById('fg-reward')?.value || '').trim()
+        reward: (this.shadowRoot.getElementById('fg-reward')?.value || '').trim(),
+        mode: this.shadowRoot.getElementById('fg-mode')?.value === 'percent' ? 'percent' : 'points',
+        percent: Math.max(10, Math.min(150, parseInt(this.shadowRoot.getElementById('fg-percent')?.value) || 75))
       };
       newSettings.claim_minutes = Math.max(1, parseInt(this.shadowRoot.getElementById('claim-minutes')?.value) || 10);
       const num = (id, lo, hi, def) => {
@@ -1283,8 +1287,10 @@ class FamilyMissionSettings extends HTMLElement {
         .kid-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 500; font-size: 14px; color: var(--primary-text-color); }
         .kid-head .kid-avatar-preview { font-size: 24px; margin-right: 8px; }
         .kid-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+        .family-box [hidden] { display: none !important; }
         .kid-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary-text-color); }
         .kid-field input[type="text"], .kid-field input[type="password"], .kid-field input[type="number"], .kid-field input[type="time"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; text-align: left; }
+        .kid-field select { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; }
         .kid-field input[type="color"] { width: 100%; height: 36px; }
         .kid-slider { gap: 6px; }
         .kid-slider input[type="range"] { width: 100%; accent-color: var(--primary-color); }
@@ -1356,6 +1362,25 @@ class FamilyMissionSettings extends HTMLElement {
       seen = true;
     }
     return { suggest, last: seen ? Math.round(last) : null };
+  }
+
+  /** Info line of the percent goal: "November: 410 points (75 % of 547, as of 1.11.) · from 1.12. probably 460". */
+  _familyPercentInfo() {
+    const info = this.goalInfo;
+    const snap = info && info.snapshot;
+    if (!info || info.mode !== 'percent' || !snap) return this.localize('fg_info_none');
+    const lang = (this._hass && this._hass.language) ? this._hass.language.substring(0, 2) : 'en';
+    const [y, m] = String(snap.period).split('-').map(n => parseInt(n));
+    const month = new Date(y, m - 1, 1).toLocaleDateString(lang, { month: 'long' });
+    const short = (d) => d.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' });
+    const asof = short(new Date(String(snap.asof || snap.from) + 'T00:00:00'));
+    const next = info.next;
+    const nextDate = short(new Date(y, m, 1));
+    let text = this.localize('fg_info')
+      .replace('{month}', month).replace('{target}', Math.round(snap.target))
+      .replace('{percent}', snap.percent).replace('{possible}', Math.round(snap.possible))
+      .replace('{asof}', asof).replace('{nextdate}', nextDate).replace('{next}', next ? Math.round(next.target) : '?');
+    return text;
   }
 
   /** HTML of the suggestion line below the family goal points (empty without data). */
@@ -1437,6 +1462,8 @@ class FamilyMissionSettings extends HTMLElement {
     const fd = this._familyDraft;
     const fgPointsVal = fd.points !== undefined ? fd.points : (fg.points || '');
     const fgRewardVal = fd.reward !== undefined ? fd.reward : (fg.reward || '');
+    const fgMode = (fd.fg_mode !== undefined ? fd.fg_mode : fg.mode) === 'percent' ? 'percent' : 'points';
+    const fgPercentVal = fd.fg_percent !== undefined ? fd.fg_percent : (fg.percent || 75);
     const claimVal = fd.claim !== undefined ? fd.claim : (this.settings.claim_minutes || 10);
     const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
@@ -1513,10 +1540,20 @@ class FamilyMissionSettings extends HTMLElement {
             <div class="family-box">
               <h4>${this.localize('family_goal')}</h4>
               <div class="kid-fields">
-                <label class="kid-field">${this.localize('family_goal_points')}
+                <label class="kid-field">${this.localize('fg_mode')}
+                  <select id="fg-mode" ${dis}>
+                    <option value="points" ${fgMode === 'points' ? 'selected' : ''}>${this.localize('fg_mode_points')}</option>
+                    <option value="percent" ${fgMode === 'percent' ? 'selected' : ''}>${this.localize('fg_mode_percent')}</option>
+                  </select>
+                </label>
+                <label class="kid-field fg-percent-box" ${fgMode === 'percent' ? '' : 'hidden'}>${this.localize('fg_percent')}
+                  <input type="number" id="fg-percent" min="10" max="150" ${dis} value="${esc(fgPercentVal)}">
+                </label>
+                <p class="kids-note fg-percent-box" id="fg-info" style="grid-column:1 / -1" ${fgMode === 'percent' ? '' : 'hidden'}>${esc(this._familyPercentInfo())}<br>${esc(this.localize('fg_percent_hint'))}</p>
+                <label class="kid-field fg-points-box" ${fgMode === 'points' ? '' : 'hidden'}>${this.localize('family_goal_points')}
                   <input type="number" id="fg-points" min="0" placeholder="0" value="${esc(fgPointsVal)}">
                 </label>
-                <p class="kids-note fg-suggest" id="fg-suggest" style="grid-column:1 / -1">${this._familySuggestionHtml()}</p>
+                <p class="kids-note fg-suggest fg-points-box" id="fg-suggest" style="grid-column:1 / -1" ${fgMode === 'points' ? '' : 'hidden'}>${this._familySuggestionHtml()}</p>
                 <label class="kid-field">${this.localize('family_goal_reward')}
                   <input type="text" id="fg-reward" maxlength="80" placeholder="${this.localize('family_goal_reward_ph')}" value="${esc(fgRewardVal)}">
                 </label>
@@ -2291,6 +2328,14 @@ class FamilyMissionSettings extends HTMLElement {
       if (el) el.addEventListener('input', (ev) => { this._familyDraft[key] = ev.target.value; });
     };
     fam('fg-points', 'points');
+    fam('fg-percent', 'fg_percent');
+    const fgModeEl = root.getElementById('fg-mode');
+    if (fgModeEl) fgModeEl.addEventListener('change', (ev) => {
+      this._familyDraft.fg_mode = ev.target.value;
+      const pct = ev.target.value === 'percent';
+      root.querySelectorAll('.fg-percent-box').forEach(el => { el.hidden = !pct; });
+      root.querySelectorAll('.fg-points-box').forEach(el => { el.hidden = pct; });
+    });
     const bindTake = () => {
       const take = root.getElementById('fg-take');
       if (take) take.addEventListener('click', () => {

@@ -1232,6 +1232,143 @@ def next_due_day(due: date, interval: int, today: date) -> date:
 
 
 # ---------------------------------------------------------------------------
+# Family goal in percent (2.6)
+# ---------------------------------------------------------------------------
+
+GOAL_MODES = ("points", "percent")
+GOAL_PERCENT_MIN = 10
+GOAL_PERCENT_MAX = 150
+GOAL_PERCENT_DEFAULT = 75
+
+
+def normalize_goal_mode(value: Any) -> str:
+    """``"percent"`` or ``"points"`` (default and fallback)."""
+    return value if value in GOAL_MODES else "points"
+
+
+def normalize_goal_percent(value: Any) -> int:
+    """Percent of the possible points as int 10-150, invalid -> 75."""
+    if isinstance(value, bool):
+        return GOAL_PERCENT_DEFAULT
+    try:
+        number = int(round(float(value)))
+    except (TypeError, ValueError):
+        return GOAL_PERCENT_DEFAULT
+    if not GOAL_PERCENT_MIN <= number <= GOAL_PERCENT_MAX:
+        return GOAL_PERCENT_DEFAULT
+    return number
+
+
+def goal_target(percent: Any, possible: float) -> int:
+    """Target points: ``percent`` of ``possible`` rounded to 5, at least 5."""
+    try:
+        raw = float(possible) * normalize_goal_percent(percent) / 100.0
+    except (TypeError, ValueError):
+        raw = 0.0
+    return max(5, int(math.floor(raw / 5.0 + 0.5)) * 5)
+
+
+def goal_ratchet(snapshot: dict, option_percent: Any, possible_now: float) -> dict:
+    """The snapshot after applying the "only ever down" rule (a copy).
+
+    The percent can only fall within a period (raising it applies to the next
+    one); the new target is ``min(stored target, target of the recomputed
+    possible points)``. Adding tasks or raising the percent never raises it.
+    """
+    new = dict(snapshot)
+    percent = min(normalize_goal_percent(snapshot.get("percent")), normalize_goal_percent(option_percent))
+    new["percent"] = percent
+    try:
+        stored = int(snapshot.get("target"))
+    except (TypeError, ValueError):
+        stored = goal_target(percent, possible_now)
+    new["target"] = min(stored, goal_target(percent, possible_now))
+    return new
+
+
+def _goal_task_days(task: dict, start: date, end: date, now: datetime) -> list[date]:
+    """Days in ``start..end`` on which a duty is due (weekday schedule, or the interval projected from ``due_date``)."""
+    weekdays = normalize_weekdays(task.get("weekdays"))
+    days = (end - start).days + 1
+    if days <= 0:
+        return []
+    if weekdays:
+        return [d for d in (start + timedelta(days=i) for i in range(days)) if d.weekday() in weekdays]
+    due_dt = parse_dt(task.get("due_date"))
+    if due_dt is None:
+        return []  # a task without a date ("someday") has no schedule
+    anchor = _local_date(due_dt, now)
+    interval = task.get("interval", 7)
+    if isinstance(interval, bool) or not isinstance(interval, int):
+        interval = 7
+    if interval <= 0:
+        return [anchor] if start <= anchor <= end else []
+    first = start + timedelta(days=(anchor - start).days % interval)
+    return [first + timedelta(days=i * interval) for i in range(((end - first).days // interval) + 1)] if first <= end else []
+
+
+def possible_points(
+    tasks: dict,
+    kids: dict | None,
+    start: date,
+    end: date,
+    now: datetime,
+    settings: dict | None = None,
+    skip_days: dict | None = None,
+    exclude_ids: Iterable[str] = (),
+) -> float:
+    """Points the kids could earn with their basis duties on ``start..end`` (inclusive).
+
+    Sum of ``complexity`` x due occurrences per task. A task with several
+    assignees or a rotation counts once per occurrence. Not counted: bonus and
+    ad-hoc tasks, waste jobs, trigger tasks (``exclude_ids``), parents' tasks,
+    days a task is paused, days all its kids are too young, birthday duty-free
+    days (single assignee) and the days of ``skip_days`` (``{task_id: {date}}``).
+    ``now`` only supplies the time zone.
+    """
+    kids = kids or {}
+    excluded = set(exclude_ids or ())
+    free = birthday_duty_free(settings)
+    total = 0.0
+    for task_id, task in (tasks or {}).items():
+        if (
+            not isinstance(task, dict)
+            or task_id in excluded
+            or task.get("parent_task")
+            or task.get("adhoc")
+            or task.get("waste_key")
+            or normalize_category(task.get("category")) != "basis"
+        ):
+            continue
+        try:
+            points = float(task.get("complexity") or 0)
+        except (TypeError, ValueError):
+            continue
+        if points <= 0:
+            continue
+        rotation = task.get("rotation")
+        members = list(rotation.get("members") or []) if isinstance(rotation, dict) else _assignee_list(task)
+        members = [m for m in members if m in kids]
+        if not members:
+            continue
+        single = members[0] if len(members) == 1 and not isinstance(rotation, dict) else None
+        paused_dt = parse_dt(task.get("paused_until"))
+        paused_to = _local_date(paused_dt, now) if paused_dt is not None else None
+        skipped = (skip_days or {}).get(task_id) or ()
+        for day in _goal_task_days(task, start, end, now):
+            if paused_to is not None and day <= paused_to:
+                continue
+            if day in skipped:
+                continue
+            if all(_too_young(task, kid_age(kids.get(m), day)) for m in members):
+                continue
+            if free and single and is_birthday(kids.get(single), day):
+                continue
+            total += points
+    return round(total, 1)
+
+
+# ---------------------------------------------------------------------------
 # Reward shop (wallet, rewards)
 # ---------------------------------------------------------------------------
 

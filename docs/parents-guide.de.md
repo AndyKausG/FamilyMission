@@ -140,6 +140,7 @@ Der Button **❤️ Loben** ergänzt das persönliche Wort, er ersetzt es nicht.
 - **Monatsziel:** Jedes Kind hat sein eigenes Punkteziel. Der Ring um den Avatar zeigt den Fortschritt.
 - **Ring über 100 %:** Wer mehr schafft, dreht weitere Runden in dunkleren Farben. Mehr ist erlaubt, aber nie nötig.
 - **Familien-Rakete:** Alle Punkte zusammen füllen die Rakete bis zum Familienziel (zum Beispiel ein Pizza-Abend). Es zählen nur bestätigte Aufgabenpunkte, keine Boni und keine Abzüge.
+- **Ziel in Prozent:** Statt fester Punkte könnt ihr in den Einstellungen „Prozent der möglichen Punkte“ wählen (Standard 75 %). Zum Monatsanfang wird einmal berechnet, wie viele Punkte die Kinder mit ihren Pflichten maximal holen können; das Familienziel ist der gewählte Prozentsatz davon, auf 5 gerundet. Im Monat kann das Ziel nur **sinken** (Aufgabe entfernt oder pausiert, Tag ausgesetzt, Geburtstag, weniger Prozent), nie steigen: neue Aufgaben und ein höherer Prozentsatz gelten erst ab dem nächsten Monat. Die Einstellungen zeigen zum Beispiel „November: 410 Punkte (75 % von 547, Stand 1.11.) · ab 1.12. voraussichtlich 460“. Bonus-Aufgaben zählen für den Fortschritt, nicht für die möglichen Punkte; Medikamente zählen nie.
 - **Monatswechsel:** Am Monatsanfang werden die Monatspunkte zurückgesetzt und der Monat archiviert. Das **Guthaben im Shop bleibt** erhalten.
 
 > 💡 Setzt das Ziel so, dass ein Kind mit normalem Einsatz etwa 75 % des Maximums erreicht. So bleibt es erreichbar, ohne dass jeder Tag perfekt sein muss.

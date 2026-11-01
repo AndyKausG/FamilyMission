@@ -352,6 +352,7 @@ class FamilyMissionKids extends HTMLElement {
     this.pending = {};
     this.history = [];
     this.familyPoints = null;
+    this.familyGoalInfo = null;
     this.birthdayLevelup = {};
     this.wallet = {};
     this.redemptions = {};
@@ -694,6 +695,7 @@ class FamilyMissionKids extends HTMLElement {
       this.pending = data.pending || {};
       this.history = Array.isArray(data.history) ? data.history : [];
       this._myRole = data.my_role || null;
+      this.familyGoalInfo = data.family_goal_info || null;
       this.familyPoints = (data.family_points === undefined || data.family_points === null) ? null : parseFloat(data.family_points);
       this.birthdayLevelup = data.birthday_levelup || {};
       this.wallet = data.wallet || {};
@@ -2874,7 +2876,9 @@ class FamilyMissionKids extends HTMLElement {
 
   _renderFamily(kids) {
     const goal = this.settings.family_goal || {};
-    const target = parseFloat(goal.points) || 0;
+    // Percent mode: the backend computes the effective target (snapshot + ratchet), the card only shows points / target
+    const info = this.familyGoalInfo;
+    const target = info && info.mode === 'percent' ? (parseFloat(info.target) || 0) : (parseFloat(goal.points) || 0);
     if (target <= 0) return '';
     // Approved task points of the period, computed by the backend (birthday bonus,
     // manual bonus and penalties do not count); fall back to the kids' sum for old backends

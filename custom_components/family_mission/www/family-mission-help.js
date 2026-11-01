@@ -117,6 +117,7 @@ const HELP_CONTENT = {
           "**Monatsziel:** Jedes Kind hat sein eigenes Punkteziel. Der Ring um den Avatar zeigt den Fortschritt.",
           "**Ring über 100 %:** Wer mehr schafft, dreht weitere Runden in dunkleren Farben. Mehr ist erlaubt, aber nie nötig.",
           "**Familien-Rakete:** Alle Punkte zusammen füllen die Rakete bis zum Familienziel (zum Beispiel ein Pizza-Abend). Es zählen nur bestätigte Aufgabenpunkte, keine Boni und keine Abzüge.",
+          "**Ziel in Prozent:** Statt fester Punkte könnt ihr in den Einstellungen „Prozent der möglichen Punkte“ wählen (Standard 75 %). Zum Monatsanfang wird einmal berechnet, wie viele Punkte die Kinder mit ihren Pflichten maximal holen können; das Familienziel ist der gewählte Prozentsatz davon, auf 5 gerundet. Im Monat kann das Ziel nur **sinken** (Aufgabe entfernt oder pausiert, Tag ausgesetzt, Geburtstag, weniger Prozent), nie steigen: neue Aufgaben und ein höherer Prozentsatz gelten erst ab dem nächsten Monat. Die Einstellungen zeigen zum Beispiel „November: 410 Punkte (75 % von 547, Stand 1.11.) · ab 1.12. voraussichtlich 460“. Bonus-Aufgaben zählen für den Fortschritt, nicht für die möglichen Punkte; Medikamente zählen nie.",
           "**Monatswechsel:** Am Monatsanfang werden die Monatspunkte zurückgesetzt und der Monat archiviert. Das **Guthaben im Shop bleibt** erhalten."
         ],
         { tip: "Setzt das Ziel so, dass ein Kind mit normalem Einsatz etwa 75 % des Maximums erreicht. So bleibt es erreichbar, ohne dass jeder Tag perfekt sein muss." }
@@ -287,6 +288,7 @@ const HELP_CONTENT = {
           "**Objectif mensuel :** chaque enfant a son propre objectif de points. L'anneau autour de l'avatar montre la progression.",
           "**Anneau au-delà de 100 % :** celui qui fait plus tourne d'autres tours dans des couleurs plus foncées. Plus est permis, mais jamais nécessaire.",
           "**Fusée de la famille :** tous les points ensemble remplissent la fusée jusqu'à l'objectif familial (par exemple une soirée pizza). Seuls les points de tâches confirmés comptent, pas les bonus ni les déductions.",
+          "**Objectif en pourcentage :** au lieu de points fixes, vous pouvez choisir « Pourcentage des points possibles » dans les réglages (par défaut 75 %). Au début du mois, le maximum que les enfants peuvent gagner avec leurs obligations est calculé une fois ; l'objectif familial est le pourcentage choisi, arrondi à 5. Pendant le mois, l'objectif ne peut que **baisser** (tâche supprimée ou en pause, jour suspendu, anniversaire, pourcentage plus bas), jamais monter : les nouvelles tâches et un pourcentage plus élevé valent à partir du mois suivant. Les réglages affichent par exemple « Novembre : 410 points (75 % de 547, au 1.11.) · à partir du 1.12. probablement 460 ». Les tâches bonus comptent pour la progression mais pas pour les points possibles ; les médicaments ne comptent jamais.",
           "**Changement de mois :** au début du mois, les points mensuels sont remis à zéro et le mois est archivé. Le **solde de la boutique est conservé**."
         ],
         { tip: "Fixez l'objectif pour qu'un enfant atteigne environ 75 % du maximum avec un effort normal. Il reste atteignable sans que chaque jour doive être parfait." }
@@ -457,6 +459,7 @@ const HELP_CONTENT = {
           "**Monthly goal:** every child has their own points goal. The ring around the avatar shows progress.",
           "**Ring above 100 %:** whoever does more spins further laps in darker colours. More is allowed, but never necessary.",
           "**Family rocket:** all points together fill the rocket up to the family goal (for example a pizza night). Only confirmed task points count, no bonuses and no deductions.",
+          "**Goal in percent:** instead of fixed points you can choose “Percent of possible points” in the settings (default 75 %). At the start of the month the maximum the kids can earn with their duties is calculated once; the family goal is the chosen percentage of it, rounded to 5. During the month the goal can only go **down** (task removed or paused, day skipped, birthday, lower percent), never up: new tasks and a higher percent apply from next month. The settings show, for example, “November: 410 points (75 % of 547, as of 1.11.) · from 1.12. probably 460”. Bonus tasks count towards progress but not towards the possible points; medication never counts.",
           "**Month change:** at the start of the month the monthly points are reset and the month is archived. The **shop balance is kept**."
         ],
         { tip: "Set the goal so that a child with normal effort reaches about 75 % of the maximum. That keeps it reachable without every day having to be perfect." }

@@ -190,6 +190,11 @@ from .kids import (
     PinLimiter,
     birthday_bonus_points,
     birthday_duty_free,
+    goal_ratchet,
+    goal_target,
+    normalize_goal_mode,
+    normalize_goal_percent,
+    possible_points,
     birthday_kids,
     build_kid_profile,
     check_eligibility,
@@ -380,6 +385,8 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
     response_data.setdefault("redemptions", {})
     response_data.setdefault("praise", [])
     response_data["family_points"] = _family_points(hass)
+    await _async_goal_refresh(hass)
+    response_data["family_goal_info"] = _goal_info(hass)
     response_data["care_today"] = _care_today(hass)
     response_data["care_log"] = _care_log_recent(hass)
     rocket = data.get("rocket")
@@ -407,6 +414,154 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
 def _wallet_add(data: dict, uid: str, delta: float) -> float:
     """Credit / debit the wallet (reward shop balance, never negative, not reset monthly)."""
     return wallet_add(data.setdefault("wallet", {}), uid, delta)
+
+
+def _goal_conf(options) -> dict:
+    """The family goal option: ``mode`` (points | percent), ``percent``, ``points``, ``reward``."""
+    goal = (options or {}).get("family_goal")
+    goal = goal if isinstance(goal, dict) else {}
+    return {
+        "mode": normalize_goal_mode(goal.get("mode")),
+        "percent": normalize_goal_percent(goal.get("percent")),
+        "points": goal.get("points") or 0,
+        "reward": str(goal.get("reward") or ""),
+    }
+
+
+def _sanitize_family_goal(incoming: dict) -> None:
+    """Validate ``family_goal`` of an incoming settings update in place (bad values -> defaults)."""
+    if "family_goal" not in incoming:
+        return
+    goal = incoming["family_goal"]
+    goal = goal if isinstance(goal, dict) else {}
+    try:
+        points = max(0, min(999999, int(float(goal.get("points") or 0))))
+    except (TypeError, ValueError, OverflowError):
+        points = 0
+    incoming["family_goal"] = {
+        "points": points,
+        "reward": str(goal.get("reward") or "").strip()[:80],
+        "mode": normalize_goal_mode(goal.get("mode")),
+        "percent": normalize_goal_percent(goal.get("percent")),
+    }
+
+
+def _goal_period_range(period: str, first: date | None = None) -> tuple[date, date]:
+    """First and last day of the ``YYYY-MM`` period (``first`` overrides the start for a pro rata range)."""
+    import calendar
+    year, month = int(period[:4]), int(period[5:7])
+    start = date(year, month, 1)
+    end = date(year, month, calendar.monthrange(year, month)[1])
+    return (first if first is not None and start <= first <= end else start), end
+
+
+def _goal_possible(hass: HomeAssistant, data: dict, start: date, end: date) -> float:
+    """Possible task points of all kids on ``start..end`` with the current task set (kids.possible_points)."""
+    options = _get_entry(hass).options
+    now = dt_util.now()
+    tasks = data.get("tasks") or {}
+    exclude = set()
+    for trig in _valid_bonus_triggers(options):
+        task = _find_trigger_task(tasks, trig)
+        if task is not None:
+            exclude.add(task.get("id"))
+    skip_days: dict = {}
+    for entry in data.get("history") or []:
+        if not isinstance(entry, dict) or entry.get("type") != TYPE_SKIPPED:
+            continue
+        ts = parse_dt(entry.get("timestamp"))
+        if ts is None:
+            continue
+        day = ts.astimezone(now.tzinfo).date() if ts.tzinfo else ts.date()
+        if start <= day <= end:
+            skip_days.setdefault(entry.get("task_id"), set()).add(day)
+    return possible_points(
+        tasks, options.get("kids") or {}, start, end, now,
+        settings=options, skip_days=skip_days, exclude_ids=exclude,
+    )
+
+
+def _goal_sync(hass: HomeAssistant, data: dict) -> dict | None:
+    """Create / ratchet the percent snapshot ``data["goal_snapshot"]`` (does not save). ``None`` in points mode.
+
+    A snapshot is created at the monthly reset or lazily when the period has none
+    (pro rata: from today). Afterwards the target only ever goes down: it is the
+    minimum of the stored target and the target of the possible points recomputed
+    with the current tasks (removed / paused tasks, skips) and the lowest percent.
+    """
+    conf = _goal_conf(_get_entry(hass).options)
+    if conf["mode"] != "percent":
+        data.pop("goal_snapshot", None)
+        return None
+    period = data.get("current_month") or dt_util.now().strftime("%Y-%m")
+    today = dt_util.now().date()
+    snap = data.get("goal_snapshot")
+    if not isinstance(snap, dict) or snap.get("period") != period or "target" not in snap:
+        start, end = _goal_period_range(period, today)
+        possible = _goal_possible(hass, data, start, end)
+        data["goal_snapshot"] = {
+            "period": period, "from": start.isoformat(), "asof": start.isoformat(), "possible": possible,
+            "percent": conf["percent"], "target": goal_target(conf["percent"], possible),
+        }
+        return data["goal_snapshot"]
+    try:
+        start, end = _goal_period_range(period, date.fromisoformat(str(snap.get("from"))))
+    except ValueError:
+        start, end = _goal_period_range(period)
+    possible = _goal_possible(hass, data, start, end)
+    new = goal_ratchet(snap, conf["percent"], possible)
+    if new["target"] < snap.get("target", 0) or new["percent"] < normalize_goal_percent(snap.get("percent")):
+        new["possible"] = possible
+        new["asof"] = today.isoformat()
+    if new != snap:
+        data["goal_snapshot"] = new
+    return data["goal_snapshot"]
+
+
+def _goal_target_now(hass: HomeAssistant, data: dict) -> float | None:
+    """Points the family needs this period (``None`` = no goal)."""
+    conf = _goal_conf(_get_entry(hass).options)
+    if conf["mode"] == "percent":
+        snap = _goal_sync(hass, data)
+        target = float(snap["target"]) if snap else 0.0
+    else:
+        try:
+            target = float(conf["points"] or 0)
+        except (TypeError, ValueError):
+            return None
+    return target if target > 0 else None
+
+
+async def _async_goal_refresh(hass: HomeAssistant) -> None:
+    """``_goal_sync`` and save when the snapshot changed."""
+    data = hass.data[DOMAIN]["data"]
+    before = copy.deepcopy(data.get("goal_snapshot"))
+    _goal_sync(hass, data)
+    if data.get("goal_snapshot") != before:
+        await hass.data[DOMAIN]["store"].async_save(data)
+
+
+def _goal_info(hass: HomeAssistant) -> dict:
+    """Family goal for the cards: mode, effective target, snapshot and the preview of the next period."""
+    data = hass.data[DOMAIN]["data"]
+    conf = _goal_conf(_get_entry(hass).options)
+    info = {"mode": conf["mode"], "percent": conf["percent"], "reward": conf["reward"], "snapshot": None, "next": None}
+    if conf["mode"] != "percent":
+        info["target"] = float(conf["points"] or 0)
+        return info
+    snap = data.get("goal_snapshot")
+    info["snapshot"] = dict(snap) if isinstance(snap, dict) else None
+    info["target"] = float(snap["target"]) if isinstance(snap, dict) and "target" in snap else 0.0
+    period = data.get("current_month") or dt_util.now().strftime("%Y-%m")
+    year, month = int(period[:4]), int(period[5:7])
+    nxt = f"{year + (month == 12)}-{(month % 12) + 1:02d}"
+    start, end = _goal_period_range(nxt)
+    possible = _goal_possible(hass, data, start, end)
+    info["next"] = {
+        "period": nxt, "possible": possible, "percent": conf["percent"],
+        "target": goal_target(conf["percent"], possible),
+    }
+    return info
 
 
 def _family_points(hass: HomeAssistant) -> float:
@@ -525,9 +680,8 @@ def _rocket_check(hass: HomeAssistant, data: dict) -> dict | None:
     """
     entries = hass.config_entries.async_entries(DOMAIN)
     goal = (entries[0].options.get("family_goal") or {}) if entries else {}
-    try:
-        target = float(goal.get("points") or 0)
-    except (TypeError, ValueError):
+    target = _goal_target_now(hass, data)
+    if target is None:
         return None
     period = data.get("current_month") or dt_util.now().strftime("%Y-%m")
     rocket = data.get("rocket")
@@ -1043,9 +1197,11 @@ async def ws_update_settings(hass: HomeAssistant, connection: websocket_api.Acti
     _sanitize_tablet_settings(incoming)
     waste.sanitize_waste_input(incoming)
     _sanitize_announce(incoming)
+    _sanitize_family_goal(incoming)
     new_options.update(incoming)
     
     hass.config_entries.async_update_entry(entry, options=new_options)
+    await _async_goal_refresh(hass)
     # The update event is triggered automatically by the update_listener
     connection.send_result(msg["id"], {"success": True})
 
@@ -3702,7 +3858,11 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
     elif not full_goals:
         options.pop("point_goals_prorated_month", None)
     if "family_goal" in msg:
+        previous = options.get("family_goal") if isinstance(options.get("family_goal"), dict) else {}
         options["family_goal"] = {"points": msg["family_goal"]["points"], "reward": msg["family_goal"].get("reward", "").strip()}
+        for key in ("mode", "percent"):   # the wizard only knows points: keep the percent mode of the settings
+            if key in previous:
+                options["family_goal"][key] = previous[key]
 
     open_keys = {kids_catalog.make_key(k, kids_catalog.OPEN_SUFFIX) for k in kids_catalog.OPEN_BONUS_KEYS}
     triggers = [
@@ -5411,10 +5571,13 @@ async def _async_check_monthly_reset(hass: HomeAssistant, force: bool = False):
         data["current_period_start"] = dt_util.utcnow().isoformat()
         
         
+        data.pop("goal_snapshot", None)   # the new period gets a fresh snapshot (percent mode)
+        _goal_sync(hass, data)
         await store.async_save(data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
 
     _restore_full_goals(hass)
+    await _async_goal_refresh(hass)
 
 
 def _restore_full_goals(hass: HomeAssistant) -> None:
