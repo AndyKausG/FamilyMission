@@ -386,6 +386,9 @@ async def test_adjust_points_service_rejects_non_admin_user(hass, hass_read_only
 async def test_family_points_count_only_approved_task_points(hass, hass_ws_client, setup, freezer):
     ws = await hass_ws_client(hass)
     freezer.move_to(NOON)
+    # The setup ran at the real date: pin the points period to the frozen month
+    _data(hass)["current_month"] = dt_util.now().strftime("%Y-%m")
+    _data(hass)["current_period_start"] = (dt_util.utcnow() - timedelta(days=1)).isoformat()
     await _make_kid(ws, birthday="2016-10-29")
     t = await _add_task(ws, assignees=[ANNA], complexity=4)
     await _kid_complete(ws, t)
