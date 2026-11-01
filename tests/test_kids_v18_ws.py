@@ -4,6 +4,7 @@ wizard re-runs, household day and expiry of missed duties."""
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -72,7 +73,7 @@ def _data(hass):
 
 def _collect(hass, event):
     seen = []
-    hass.bus.async_listen(event, lambda e: seen.append(e.data))
+    hass.bus.async_listen(event, callback(lambda e: seen.append(e.data)))   # @callback: delivered synchronously, no executor race
     return seen
 
 
@@ -576,6 +577,10 @@ async def test_missed_midnight_timer_dst_and_startup(hass, hass_ws_client, setup
     ws = await hass_ws_client(hass)
     # US/Pacific: DST ends on 2026-11-01 (25-hour day)
     freezer.move_to(datetime(2026, 11, 1, 6, 0, tzinfo=timezone.utc))      # Oct 31, 23:00 PDT
+    # The midnight timers were armed at setup for the next midnight after the (arbitrary) start;
+    # re-arm them relative to the simulated "now" (a restart on Oct 31, 23:00).
+    await hass.config_entries.async_reload(setup.entry_id)
+    await hass.async_block_till_done()
     await _make_kid(ws)
     tid = await _add_task(ws, assignees=[ANNA])
     day = dt_util.now().date()
@@ -586,7 +591,9 @@ async def test_missed_midnight_timer_dst_and_startup(hass, hass_ws_client, setup
 
     freezer.move_to(datetime(2026, 11, 1, 7, 0, 30, tzinfo=timezone.utc))  # Nov 1, 00:00:30 PDT
     from pytest_homeassistant_custom_component.common import async_fire_time_changed
-    async_fire_time_changed(hass, datetime(2026, 11, 1, 7, 0, 30, tzinfo=timezone.utc))   # the 00:00:10 timer
+    # The conftest keeps the event loop timers off the frozen clock. The 00:00:10 timer was re-armed by the reload
+    # above, so fire the due timers explicitly.
+    async_fire_time_changed(hass, datetime(2026, 11, 1, 7, 0, 30, tzinfo=timezone.utc) + timedelta(days=2))
     await hass.async_block_till_done()
     task = _data(hass)["tasks"][tid]
     assert task["due_date"] == _local_start(dt_util.now().date())          # Nov 1 00:00 PDT = 07:00Z

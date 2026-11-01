@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.auth.const import GROUP_ID_USER
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
@@ -98,7 +99,7 @@ def _data(hass):
 
 def _collect(hass, event):
     seen = []
-    hass.bus.async_listen(event, lambda e: seen.append(e.data))
+    hass.bus.async_listen(event, callback(lambda e: seen.append(e.data)))   # @callback: delivered synchronously, no executor race
     return seen
 
 
@@ -156,6 +157,7 @@ async def test_rocket_reached_by_direct_completion(hass, clients, env):
 async def test_rocket_reached_by_approval_only_once_per_period(hass, clients, env):
     admin = clients["admin"]
     await _kid(admin)
+    await _call(admin, "family_mission/update_settings", settings={"approval_push": False})   # count rocket pushes only
     ready = _collect(hass, "family_mission_rocket_ready")
     tid = await _task(admin, complexity=10, requires_approval=True)
     await _kid_done(admin, tid)
@@ -224,6 +226,7 @@ async def test_rocket_countdown_and_launched_idempotent_for_any_user(hass, clien
     assert first
     assert (await _call(sam, "family_mission/rocket_countdown"))["success"]
     assert (await _rocket(admin))["countdown_started_at"] == first        # marked once
+    await hass.async_block_till_done()                                    # the collector is a non-callback listener (executor job)
     assert counting == [{"seconds": 60, "reward": "Zoo"}] * 2             # event on every call (speakers)
     assert (await _call(sam, "family_mission/rocket_launched"))["result"] == {"success": True}
     stamp = (await _rocket(admin))["launched_at"]

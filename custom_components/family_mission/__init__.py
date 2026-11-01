@@ -415,6 +415,16 @@ def _undo_info(task: dict) -> dict:
     return info
 
 
+def _next_due_after(interval: int) -> str:
+    """Due date ``interval`` calendar days from now (same local wall-clock time, UTC ISO string).
+
+    Plain ``utcnow() + timedelta(days=n)`` is 24 h per day and is off by an hour across a DST change
+    (a daily task completed in the first hour of a 25 h day stayed due; in the last hour before the
+    spring change it skipped a day).
+    """
+    return dt_util.as_utc(dt_util.now() + timedelta(days=interval)).isoformat()
+
+
 def _advance_task(data: dict, task_id: str) -> dict | None:
     """Move a task to its next occurrence like a completion - without points or history.
 
@@ -432,7 +442,7 @@ def _advance_task(data: dict, task_id: str) -> dict | None:
 
     interval = task.get("interval", 7)
     if interval > 0:
-        task["due_date"] = (dt_util.utcnow() + timedelta(days=interval)).isoformat()
+        task["due_date"] = _next_due_after(interval)
         task["paused_until"] = None
 
         # Reset subtasks for recurring tasks
@@ -4496,7 +4506,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             data["history"].insert(0, history_entry)
         
         interval = task.get("interval", 1)
-        task["due_date"] = (dt_util.utcnow() + timedelta(days=interval)).isoformat()
+        task["due_date"] = _next_due_after(interval)
         task["paused_until"] = None 
         task.pop("claimed_by", None)
         task.pop("claimed_until", None)

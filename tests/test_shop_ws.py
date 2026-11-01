@@ -3,6 +3,7 @@
 from datetime import datetime, timezone
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.auth.const import GROUP_ID_USER
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -247,7 +248,7 @@ async def test_redeem_flow_and_checks(hass, hass_ws_client, setup):
     await _rewards(ws)
     await _fund(hass, ws, 20)
     seen = []
-    hass.bus.async_listen("family_mission_reward_requested", lambda e: seen.append(e.data))
+    hass.bus.async_listen("family_mission_reward_requested", callback(lambda e: seen.append(e.data)))
     month_before = _data(hass)["points"][ANNA]
     wrong = await _redeem(ws, pin="0000")
     assert wrong["error"] == "wrong_pin" and _wallet(hass) == 20
@@ -300,7 +301,7 @@ async def test_resolve_approve_reject_and_idempotent(hass, hass_ws_client, setup
     await _redeem(ws, "r1")
     a, b = list(_data(hass)["redemptions"])
     resolved = []
-    hass.bus.async_listen("family_mission_reward_resolved", lambda e: resolved.append(e.data["result"]))
+    hass.bus.async_listen("family_mission_reward_resolved", callback(lambda e: resolved.append(e.data["result"])))
     other = await hass_ws_client(hass, users["other"][1])
     assert (await _call(other, "family_mission/redemption_resolve", redemption_id=a, approve=True))["error"]["code"] == "unauthorized"
     parent = await hass_ws_client(hass, users["parent"][1])

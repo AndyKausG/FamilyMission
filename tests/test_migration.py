@@ -1,10 +1,12 @@
 """Takeover of the TaskOrganizer data (storage + config entry options), copy only."""
 
 import copy
+from datetime import timezone
 
 import pytest
 from homeassistant.auth.const import GROUP_ID_ADMIN, GROUP_ID_USER
 from homeassistant.core import Context
+from homeassistant.util import dt as dt_util
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -23,8 +25,6 @@ OLD_DATA = {
     "pending": {},
     "praise": [{"kid_id": "person.ben", "text": "Great job"}],
     "monthly_history": {"2026-09": {"person.anna": 40.0}},
-    "current_month": "2026-10",
-    "current_period_start": "2026-10-01T00:00:00+00:00",
     "custom_extra_key": {"keep": "me"},
     "settings": {},
 }
@@ -51,9 +51,15 @@ def _fake_http(hass):
 
 
 def _put_old_storage(hass_storage, data=None):
+    data = copy.deepcopy(OLD_DATA if data is None else data)
+    # The old data belong to the running points period; a fixed month would be reset at
+    # setup whenever the (frozen) start is in another month.
+    now = dt_util.now()
+    data.setdefault("current_month", now.strftime("%Y-%m"))
+    data.setdefault("current_period_start", now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).isoformat())
     hass_storage[OLD_STORAGE_KEY] = {
         "version": 1, "minor_version": 1, "key": OLD_STORAGE_KEY,
-        "data": copy.deepcopy(OLD_DATA if data is None else data),
+        "data": data,
     }
 
 

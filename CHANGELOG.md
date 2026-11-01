@@ -6,6 +6,8 @@
 - **Quick-start catalog:** `room_blitz`, `room_blitz_small` and `room_deep` are created with "Requires parent approval". Re-running the wizard sets the flag on earlier wizard tasks only if they never had the key; the parents' own choice is kept. The wizard preview returns `requires_approval` per task and the wizard shows a small "✅ Freigabe" badge.
 - **Docs:** README, help and parents' guide (de/en/fr).
 - **Tests:** new `tests/test_approval_push_ws.py`; the rocket test counts only rocket pushes.
+- **Fix:** the next due date after a completion / skip is now computed in calendar days (same local time); across a DST change it was off by an hour, so a daily task done in the first hour of the 25-hour day stayed due.
+- **Tests:** the suite no longer depends on the real date or time (fixed start time, scheduler independent of the frozen clock, synchronous event listeners).
 - **New logo and icon:** rocket in the progress ring (replaces the old TaskOrganizer logo); `brand/` now also has `icon@2x.png`, `logo@2x.png` and dark-mode logos.
 
 ## [2.2.0] - 2026-11-01

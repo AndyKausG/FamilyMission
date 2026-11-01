@@ -1,6 +1,7 @@
 """Praise: parents send a sticker + message to a kid (no points), the kid marks it as seen."""
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.auth.const import GROUP_ID_USER
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -71,7 +72,7 @@ async def _kids(hass, hass_ws_client, hass_access_token, env):
 async def test_send_praise_roles_and_names(hass, hass_ws_client, hass_access_token, env):
     await _kids(hass, hass_ws_client, hass_access_token, env)
     events = []
-    hass.bus.async_listen("family_mission_praise", lambda e: events.append(e.data))
+    hass.bus.async_listen("family_mission_praise", callback(lambda e: events.append(e.data)))
     # a user without a role is refused
     ws = await hass_ws_client(hass, env["tablet"][1])
     res = await _call(ws, "family_mission/send_praise", kid_id=BEN, message="Hi", sticker="⭐")

@@ -1,6 +1,7 @@
 """Integration tests for the kids quick-start wizard and the bonus triggers."""
 
 import pytest
+from homeassistant.core import callback
 from homeassistant.util import dt as dt_util
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -106,7 +107,7 @@ async def test_catalog_and_preview(hass, hass_ws_client, setup):
 
 async def test_apply_creates_everything(hass, hass_ws_client, setup):
     created_events = []
-    hass.bus.async_listen("family_mission_task_created", lambda e: created_events.append(e.data["name"]))
+    hass.bus.async_listen("family_mission_task_created", callback(lambda e: created_events.append(e.data["name"])))
     ws = await hass_ws_client(hass)
     res = await _apply(ws, goals={ANNA: 200}, family_goal={"points": 640, "reward": "Pizza-Abend"})
     assert res["success"], res
@@ -276,7 +277,7 @@ async def test_device_trigger_opens_bonus_task_and_fires_event(hass, hass_ws_cli
     assert res["result"]["settings"]["bonus_triggers"][0]["to_state"] == "finished"
 
     events = []
-    hass.bus.async_listen("family_mission_bonus_opened", lambda e: events.append(dict(e.data)))
+    hass.bus.async_listen("family_mission_bonus_opened", callback(lambda e: events.append(dict(e.data))))
     task = _by_key(hass)["dishwasher_unload:open"]
     assert dt_util.parse_datetime(task["due_date"]) > dt_util.utcnow()
 
@@ -305,7 +306,7 @@ async def test_trigger_ignores_unavailable_recovery_and_first_state(hass, hass_w
     assert res["success"]
     await hass.async_block_till_done()
     events = []
-    hass.bus.async_listen("family_mission_bonus_opened", lambda e: events.append(e.data["task_name"]))
+    hass.bus.async_listen("family_mission_bonus_opened", callback(lambda e: events.append(e.data["task_name"])))
 
     hass.states.async_set("binary_sensor.bin_full", "on")          # first state ever
     hass.states.async_set("binary_sensor.bin_full", "unavailable")
@@ -365,7 +366,7 @@ async def test_listeners_are_cleaned_up_on_unload(hass, hass_ws_client, setup):
     await hass.async_block_till_done()
     assert hass.data[DOMAIN]["bonus_unsub"]
     events = []
-    hass.bus.async_listen("family_mission_bonus_opened", lambda e: events.append(e.data))
+    hass.bus.async_listen("family_mission_bonus_opened", callback(lambda e: events.append(e.data)))
 
     assert await hass.config_entries.async_unload(setup.entry_id)
     await hass.async_block_till_done()
