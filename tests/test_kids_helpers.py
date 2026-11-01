@@ -684,3 +684,76 @@ def test_care_texts():
     assert "Lena" in kids.care_texts("declined", "Lena", "💊 Tablette", "de")[1]
     assert "3x" in kids.care_texts("alert", "Lena", "T", "en", 3, 7)[1]
     assert "open" in kids.care_texts("unanswered", "Lena", "T", "en")[1]
+
+
+# -- weekday schedule and rotation (2.6) ---------------------------------------
+
+def test_normalize_weekdays_and_validation():
+    assert kids.normalize_weekdays([4, 0, 2, 2]) == [0, 2, 4]
+    assert kids.normalize_weekdays([]) == [] and kids.normalize_weekdays(None) == []
+    for bad in ([7], [-1], ["1"], [True], "0", [1.5], 3):
+        assert kids.normalize_weekdays(bad) == []
+    assert kids.valid_weekdays(None) and kids.valid_weekdays([]) and kids.valid_weekdays([0, 6])
+    assert not kids.valid_weekdays([7]) and not kids.valid_weekdays([1, 1]) and not kids.valid_weekdays("1")
+
+
+def test_next_weekday_helpers():
+    thu = date(2026, 10, 29)
+    mwf = [0, 2, 4]
+    assert kids.next_weekday_on_or_after(mwf, thu) == date(2026, 10, 30)             # Fri
+    assert kids.next_weekday_on_or_after(mwf, date(2026, 10, 30)) == date(2026, 10, 30)
+    assert kids.next_weekday_after(mwf, date(2026, 10, 30)) == date(2026, 11, 2)     # Mon
+    assert kids.next_weekday_after([3], thu) == date(2026, 11, 5)                    # same weekday: next week
+    assert kids.next_weekday_after([], thu) == thu + timedelta(days=1)               # no schedule: tomorrow
+
+
+def test_missed_weekday_occurrence_expires_like_a_daily_duty():
+    # weekly interval stored, but the weekday schedule makes it expire after the day
+    task = _task(interval=7, weekdays=[0, 3], due_date=(NOW - timedelta(days=1)).astimezone(timezone.utc).isoformat())
+    assert kids.is_missed(task, NOW, 7)
+    assert not kids.is_missed({**task, "weekdays": []}, NOW, 7)                      # weekly grace without weekdays
+    # next occurrence: next listed weekday on or after today (Thu, Oct 29 -> today is listed)
+    assert kids.next_due_for_task(task, date(2026, 10, 28), date(2026, 10, 29)) == date(2026, 10, 29)
+    assert kids.next_due_for_task({**task, "weekdays": [0]}, date(2026, 10, 28), date(2026, 10, 29)) == date(2026, 11, 2)
+    assert kids.next_due_for_task({"interval": 3}, date(2026, 10, 27), date(2026, 10, 29)) == date(2026, 10, 30)
+
+
+def test_rotation_member_and_skip():
+    rot = {"members": ["a", "b", "c"], "index": 4}
+    assert kids.rotation_member(rot) == "b"                                           # members[4 % 3]
+    assert kids.rotation_member(rot, skip={"b"}) == "c"
+    assert kids.rotation_member(rot, skip={"b", "c"}) == "a"
+    assert kids.rotation_member(rot, skip={"a", "b", "c"}) is None
+    assert kids.rotation_member(None) is None and kids.rotation_member({"members": []}) is None
+    assert kids.rotation_upcoming(rot, 2) == ["b", "c"]
+    assert kids.rotation_upcoming(rot, 2, skip={"c"}) == ["b", "a"]
+
+
+def test_rotation_normalize_advance_and_swap():
+    assert kids.normalize_rotation({"members": ["a"]}) is None                       # needs two kids
+    assert kids.normalize_rotation({"members": ["a", "a"]}) is None
+    assert kids.normalize_rotation({"members": ["a", "x"]}, allowed=["a", "b"]) is None
+    assert kids.normalize_rotation({"members": ["a", "b"], "index": 5})["index"] == 1
+    assert kids.normalize_rotation({"members": ["a", "b"], "index": -1})["index"] == 0
+    rot = kids.normalize_rotation({"members": ["a", "b", "c"], "index": 2})
+    assert kids.rotation_advanced(rot)["index"] == 0                                  # wraps
+    assert rot["index"] == 2                                                          # input untouched
+    swapped = kids.rotation_swapped(rot, "a")
+    assert kids.rotation_member(swapped) == "a" and swapped["return_to"] == "c"
+    assert kids.rotation_advanced(swapped)["index"] == 2                              # the one who gave up is next
+    assert "return_to" not in kids.rotation_advanced(swapped)
+    assert kids.rotation_swapped(rot, "zzz") is None
+
+
+def test_effective_assignees_and_eligibility_of_rotation():
+    task = _task(assignees=["a", "b"], rotation={"members": ["a", "b"], "index": 1})
+    assert kids.effective_assignees(task) == ["b"]
+    assert kids.effective_assignees(_task(assignees=["a", "b"])) == ["a", "b"]
+    kid = _kid()
+    settings = {"overdue_days": 5}
+    assert kids.check_eligibility(task, "a", kid, {}, settings, NOW) == kids.ERR_NOT_ELIGIBLE
+    assert kids.check_eligibility(task, "b", kid, {}, settings, NOW) is None
+    # only the current member has the duty open (bonus gating)
+    tasks = {"t": task}
+    assert kids.open_basis_tasks_for(tasks, "b", NOW, 5) == [task]
+    assert kids.open_basis_tasks_for(tasks, "a", NOW, 5) == []

@@ -71,6 +71,8 @@ Les enfants qui ont besoin de beaucoup de structure profitent surtout d'horaires
 **Ce que voient les enfants :**
 
 - **Plages horaires :** les tâches ne sont actives qu'à l'heure prévue. Avant, un symbole indique à partir de quand.
+- **Jours de la semaine :** au lieu de « tous les N jours », une tâche peut être due certains jours fixes (par exemple lun., mer., ven.). Si elle n'est pas faite, ce jour expire sans points et sans retrait, et cela continue au prochain jour indiqué.
+- **À tour de rôle :** si vous choisissez deux enfants ou plus et « À tour de rôle » pour une tâche, chaque occurrence appartient à un seul enfant ; seul cet enfant voit la tâche (« C'est ton tour aujourd'hui »). Une fois faite ou manquée, c'est au tour de l'enfant suivant.
 - **Étapes :** de petites étapes à cocher (s'habiller, faire le lit). « Terminé ! » n'est possible que lorsque toutes les étapes sont cochées.
 - **Médicament :** si vous avez ajouté un comprimé, des gouttes ou un inhalateur à un enfant (réglages → enfant → « 💊 Médicaments »), il apparaît comme une étape de plus dans la mission du matin ou du soir avec « ✓ Pris » et « Pas aujourd'hui ». Les deux réponses comptent ; seule l'absence de réponse bloque « Terminé ! ». Il ne donne jamais de points et personne n'est jugé.
 - **Terminé :** donne tout de suite des points, des confettis et un son, ou attend votre validation.
@@ -86,6 +88,7 @@ Les enfants qui ont besoin de beaucoup de structure profitent surtout d'horaires
 - **Suspendre aujourd'hui :** une tâche saute aujourd'hui (maladie, sortie), sans points et sans pénalité.
 - **Reporter :** repousser la tâche à une date ultérieure.
 - **Valider pour l'enfant :** vous enregistrez après coup une tâche faite, par exemple si la tablette n'était pas à portée de main.
+- **Échanger un tour :** dans l'onglet Enfants, « À tour de rôle » affiche « Aujourd'hui : Léa · la prochaine fois : Max » pour chaque tâche. « À la place de Léa : Max » laisse un autre enfant prendre l'occurrence du jour (Léa passe ensuite en premier) ; « Passer le tour » la transmet à l'enfant suivant sans rattrapage.
 - **Santé aujourd'hui :** dans l'onglet Aujourd'hui, vous voyez pour chaque enfant si le médicament a été pris ; « ✓ donné » enregistre que vous l'avez donné vous-même. Vous recevez une notification quand un enfant dit « Pas aujourd'hui » ou ne répond pas avant l'heure limite (la nuit, elle attend le matin). Une alerte facultative signale quand « Pas aujourd'hui » revient trop souvent. L'onglet Enfants montre les 7 derniers jours.
 - **Annuler :** coché par erreur ? L'entrée peut être annulée, les points sont retirés.
 

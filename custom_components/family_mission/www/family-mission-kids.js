@@ -83,6 +83,7 @@ const I18N_KIDS = {
     err_helper_too_young: "{name} is too young for this task.", err_helper_unknown_kid: "{name} is not set up yet.",
     pa_skipped: "Skipped for today", pa_postponed: "Postponed", pa_completed: "Done for {name}: +{n}", pa_undone: "Undone",
     replaced_today: "Today: {a} instead of {b}",
+    rotation_turn: "It's your turn today",
     shop: "Shop", shop_title: "Reward shop", shop_balance: "You have", shop_empty: "No rewards available yet.",
     shop_redeem: "Redeem", shop_need: "{n} ⭐ to go", shop_goal: "Savings goal", shop_goal_on: "Savings goal ✓",
     shop_confirm: "Redeem {emoji} {name} for ⭐ {cost}?", shop_waiting: "waiting for mom or dad",
@@ -162,6 +163,7 @@ const I18N_KIDS = {
     err_helper_too_young: "{name} ist für diese Aufgabe noch zu jung.", err_helper_unknown_kid: "{name} ist noch nicht eingerichtet.",
     pa_skipped: "Für heute ausgesetzt", pa_postponed: "Zurückgestellt", pa_completed: "Für {name} erledigt: +{n}", pa_undone: "Rückgängig gemacht",
     replaced_today: "Heute: {a} statt {b}",
+    rotation_turn: "Heute bist du dran",
     shop: "Shop", shop_title: "Belohnungs-Shop", shop_balance: "Du hast", shop_empty: "Noch keine Belohnungen vorhanden.",
     shop_redeem: "Einlösen", shop_need: "noch {n} ⭐", shop_goal: "Sparziel", shop_goal_on: "Sparziel ✓",
     shop_confirm: "{emoji} {name} für ⭐ {cost} einlösen?", shop_waiting: "wartet auf Mama oder Papa",
@@ -784,7 +786,17 @@ class FamilyMissionKids extends HTMLElement {
     return isNaN(d.getTime()) ? '' : d.toLocaleTimeString((this._hass && this._hass.language) || [], { hour: '2-digit', minute: '2-digit' });
   }
 
+  /**
+   * Who has the task as a duty right now. A rotation task belongs to the member
+   * whose turn it is (members[index % length], same rule as the backend), so
+   * only this kid sees and may do it; otherwise the assignees.
+   */
   _assignees(task) {
+    const rot = task.rotation;
+    if (rot && Array.isArray(rot.members) && rot.members.length) {
+      const idx = Number.isInteger(rot.index) && rot.index >= 0 ? rot.index : 0;
+      return [rot.members[idx % rot.members.length]];
+    }
     if (Array.isArray(task.assignees)) return task.assignees;
     return task.assignees ? [task.assignees] : [];
   }
@@ -3198,6 +3210,7 @@ class FamilyMissionKids extends HTMLElement {
             <div class="t-name">${escKids(task.name)}</div>
             <div class="t-meta">
               <span class="stars">⭐ ${fmtKids(task.complexity)}</span>
+              ${task.rotation && task.rotation.members && mode !== 'bonus' ? `<span class="age rot-turn">🔁 ${escKids(this.localize('rotation_turn'))}</span>` : ''}
               ${minAge > 0 ? `<span class="age">${escKids(this.localize('min_age_badge', { age: minAge }))}</span>` : ''}
               ${task.expires_at ? `<span class="age">⏳ ${escKids(this.localize('until_time', { t: this._clockText(task.expires_at) }))}</span>` : ''}
               ${claimedByMe ? `<span class="mine-tag">${escKids(this.localize('claimed_mine'))}</span>` : ''}

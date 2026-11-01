@@ -29,6 +29,8 @@ const I18N_SETTINGS = {
     import_hover: "Opens a dialog to select a JSON file for importing tasks.", 
     desc_lbl: "Description (optional)", area_lbl: "Area", points_lbl: "Points (1-10)", icon_lbl: "Icon",
     interval_lbl: "Days (Interval)", assignees_lbl: "Assignees",
+    weekdays_lbl: "Weekdays (instead of the interval)", weekday_short: "Mo,Tu,We,Th,Fr,Sa,Su",
+    rotation_lbl: "Take turns (one kid per occurrence)", rotation_hint: "Each occurrence belongs to one kid; the turn moves on after it is done or missed.",
     cancel: "Cancel", save: "Save",
     export_tasks_cb: "Tasks", export_templates_cb: "Templates", export_history_cb: "History & Points", export_settings_cb: "Settings",
     no_desc: "No description", onetime: "One-time",
@@ -134,6 +136,8 @@ claim_minutes: "Bonus reservation (minutes)",
     import_hover: "Öffnet einen Dialog zur Auswahl einer JSON-Datei für den Import von Aufgaben.", 
     desc_lbl: "Beschreibung (optional)", area_lbl: "Bereich", points_lbl: "Punkte (1-10)", icon_lbl: "Icon",
     interval_lbl: "Tage (Intervall)", assignees_lbl: "Bearbeiter",
+    weekdays_lbl: "Wochentage (statt Intervall)", weekday_short: "Mo,Di,Mi,Do,Fr,Sa,So",
+    rotation_lbl: "Im Wechsel (ein Kind pro Termin)", rotation_hint: "Jeder Termin gehört einem Kind; nach Erledigen oder Verpassen ist das nächste dran.",
     cancel: "Abbrechen", save: "Speichern",
     export_tasks_cb: "Aufgaben", export_templates_cb: "Vorlagen", export_history_cb: "Protokoll & Historie", export_settings_cb: "Einstellungen",
     no_desc: "Keine Beschreibung", onetime: "Einmalig",
@@ -787,7 +791,7 @@ class FamilyMissionSettings extends HTMLElement {
     const path = ev.composedPath();
     const target = path.find(el =>
         (el.id && (el.id.startsWith('btn-') || el.id.startsWith('toggle-') || el.id === 'theme-toggle' || el.id.endsWith('-toggle'))) ||
-        (el.classList && (el.classList.contains('action-btn') || el.classList.contains('subtask-check') || el.classList.contains('kid-emoji-pick')))
+        (el.classList && (el.classList.contains('action-btn') || el.classList.contains('subtask-check') || el.classList.contains('kid-emoji-pick') || el.classList.contains('wd-chip')))
     );
 
     if (!target) return;
@@ -826,6 +830,11 @@ class FamilyMissionSettings extends HTMLElement {
     else if (id === 'btn-help-open') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
     else if (id === 'btn-trig-add') this._addTrigger();
     else if (target.classList.contains('btn-trig-del')) this._removeTrigger(parseInt(target.dataset.index));
+    else if (target.classList.contains('wd-chip')) {
+      target.classList.toggle('active');
+      target.setAttribute('aria-pressed', String(target.classList.contains('active')));
+      this._syncTemplateSchedule();
+    }
     else if (target.classList.contains('kid-emoji-pick')) {
       if (this._canManage()) {
         this._kidDraft(target.dataset.uid).avatar = target.dataset.emoji;
@@ -961,6 +970,25 @@ class FamilyMissionSettings extends HTMLElement {
     this._render();
   }
 
+  /** Selected weekdays of the template editor (Mon=0 ... Sun=6). */
+  _templateWeekdays() {
+    return Array.from(this.shadowRoot.querySelectorAll('.wd-chip.active'))
+      .map(b => parseInt(b.dataset.wd)).sort((a, b) => a - b);
+  }
+
+  /** Weekdays replace the interval; the rotation switch needs two or more kids among the assignees. */
+  _syncTemplateSchedule() {
+    const interval = this.shadowRoot.getElementById('tmpl-interval');
+    if (interval) interval.disabled = this._templateWeekdays().length > 0;
+    const kids = this.settings.kids || {};
+    const members = Array.from(this.shadowRoot.querySelectorAll('.tmpl-assignee-cb')).filter(cb => cb.checked && kids[cb.value]).map(cb => cb.value);
+    const row = this.shadowRoot.getElementById('tmpl-rotation-row');
+    const sw = this.shadowRoot.getElementById('tmpl-rotation');
+    if (row) row.hidden = members.length < 2;
+    if (sw && members.length < 2) sw.checked = false;
+    return members;
+  }
+
   /**
    * Saves the current template data to the backend via websocket.
    */
@@ -987,6 +1015,9 @@ class FamilyMissionSettings extends HTMLElement {
       reminder_at: this.shadowRoot.getElementById('tmpl-reminder')?.checked ? (this.shadowRoot.getElementById('tmpl-reminder-at')?.value || '18:00') : '',
       reminder_target: this.shadowRoot.getElementById('tmpl-reminder')?.checked ? (this.shadowRoot.getElementById('tmpl-reminder-target')?.value || '') : '',
       assignees: assignees,
+      weekdays: this._templateWeekdays(),
+      rotation: (this.shadowRoot.getElementById('tmpl-rotation')?.checked && this._syncTemplateSchedule().length >= 2)
+        ? { members: this._syncTemplateSchedule() } : null,
       subtasks: this._subtasks
     };
 
@@ -1208,6 +1239,9 @@ class FamilyMissionSettings extends HTMLElement {
         .form-row { display: flex; gap: 16px; }
         .form-row[hidden] { display: none; }
         .form-col { flex: 1; }
+        .wd-chips { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 6px; }
+        .wd-chip { min-width: 40px; min-height: 36px; padding: 0 8px; border-radius: 18px; border: 1px solid var(--divider-color); background: transparent; color: var(--primary-text-color); font: inherit; cursor: pointer; }
+        .wd-chip.active { background: var(--primary-color); color: var(--text-primary-color, #fff); border-color: var(--primary-color); }
         .templates-header { display: flex; justify-content: space-between; align-items: center; }
         .template-card { display: flex; align-items: center; justify-content: space-between; background: var(--card-background-color); padding: 12px; border-radius: 8px; border: 1px solid var(--divider-color); }
         .template-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
@@ -2487,6 +2521,16 @@ class FamilyMissionSettings extends HTMLElement {
                   <ha-input id="tmpl-complexity" type="number" label="${this.localize('points_lbl')}" min="1" max="10" value="${template?.complexity || 5}" class="form-col"></ha-input>
               </div>
 
+              <div>
+                  <label class="form-label">${this.localize('weekdays_lbl')}</label>
+                  <div class="wd-chips" role="group" aria-label="${this.localize('weekdays_lbl')}">
+                      ${this.localize('weekday_short').split(',').map((d, i) => {
+                          const on = (template?.weekdays || []).includes(i);
+                          return `<button type="button" class="wd-chip ${on ? 'active' : ''}" data-wd="${i}" aria-pressed="${on}">${d}</button>`;
+                      }).join('')}
+                  </div>
+              </div>
+
               <div class="form-row">
                   <div class="form-col">
                       <label class="form-label">${this.localize('icon_lbl')}</label>
@@ -2552,6 +2596,12 @@ class FamilyMissionSettings extends HTMLElement {
                           `;
                       }).join('')}
                   </div>
+                  <div id="tmpl-rotation-row" hidden style="padding-top:8px;">
+                      <ha-formfield label="${this.localize('rotation_lbl')}">
+                          <ha-switch id="tmpl-rotation" ${template?.rotation ? 'checked' : ''}></ha-switch>
+                      </ha-formfield>
+                      <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('rotation_hint')}</div>
+                  </div>
               </div>
 
               <div id="toggle-subtasks" class="collapsible-header">
@@ -2615,6 +2665,7 @@ class FamilyMissionSettings extends HTMLElement {
     this.shadowRoot.querySelector('ha-card').addEventListener('click', (ev) => this._handleClick(ev));
     this.shadowRoot.querySelector('#template-modal').addEventListener('click', (ev) => this._handleClick(ev));
     this.shadowRoot.querySelector('#template-modal').addEventListener('change', (ev) => {
+      if (ev.target && ev.target.classList && ev.target.classList.contains('tmpl-assignee-cb')) this._syncTemplateSchedule();
       if (ev.target && ev.target.id === 'tmpl-reminder') {
         const row = this.shadowRoot.getElementById('tmpl-reminder-row');
         if (row) row.hidden = !ev.target.checked;
@@ -2655,6 +2706,7 @@ class FamilyMissionSettings extends HTMLElement {
     this._bindAnnounceInputs();
 
     if (this._templateModalOpen) {
+      this._syncTemplateSchedule();
       const iconPicker = this.shadowRoot.getElementById('tmpl-icon');
       if(iconPicker) iconPicker.hass = this._hass;
 

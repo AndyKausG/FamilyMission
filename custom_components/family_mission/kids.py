@@ -822,10 +822,165 @@ def claim_active(task: dict, now: datetime) -> bool:
 
 
 def _assignee_list(task: dict) -> list:
+    """Assignee ids of a task (for a rotation task: all members, see ``effective_assignees``)."""
     assignees = task.get("assignees") or []
     if isinstance(assignees, str):
         assignees = [assignees]
     return list(assignees)
+
+
+# ---------------------------------------------------------------------------
+# Weekday schedule and real rotation (2.6)
+# ---------------------------------------------------------------------------
+
+MAX_ROTATION_MEMBERS = 12
+
+
+def normalize_weekdays(value: Any) -> list[int]:
+    """Sorted unique weekdays (Mon=0 ... Sun=6) of a schedule; anything invalid -> ``[]`` (= use ``interval``)."""
+    if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple, set, frozenset)):
+        return []
+    days = set()
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int) or not 0 <= item <= 6:
+            return []
+        days.add(item)
+    return sorted(days)
+
+
+def valid_weekdays(value: Any) -> bool:
+    """True for ``None`` / an empty list (no weekday schedule) or a list of ints 0-6."""
+    if value is None or value == []:
+        return True
+    return bool(normalize_weekdays(value)) and len(normalize_weekdays(value)) == len(value)
+
+
+def next_weekday_on_or_after(weekdays: Iterable[int], day: date) -> date:
+    """First day ``>= day`` whose weekday is in ``weekdays`` (``day`` itself when no valid schedule)."""
+    days = normalize_weekdays(list(weekdays))
+    if not days:
+        return day
+    for offset in range(7):
+        if (day + timedelta(days=offset)).weekday() in days:
+            return day + timedelta(days=offset)
+    return day  # pragma: no cover - days is not empty
+
+
+def next_weekday_after(weekdays: Iterable[int], day: date) -> date:
+    """First listed weekday strictly after ``day`` (a completion today -> the next occurrence)."""
+    return next_weekday_on_or_after(weekdays, day + timedelta(days=1))
+
+
+def normalize_rotation(value: Any, allowed: Iterable[str] | None = None) -> dict | None:
+    """Validated rotation ``{members, index}`` or ``None``.
+
+    ``members`` are unique ids (at least two); with ``allowed`` every member
+    has to be one of them. Invalid input -> ``None`` (= no rotation).
+    """
+    if not isinstance(value, dict):
+        return None
+    members = value.get("members")
+    if not isinstance(members, (list, tuple)):
+        return None
+    clean = []
+    for m in members:
+        if not isinstance(m, str) or not m or m in clean:
+            return None
+        clean.append(m)
+    if not 2 <= len(clean) <= MAX_ROTATION_MEMBERS:
+        return None
+    if allowed is not None and not set(clean) <= set(allowed):
+        return None
+    index = value.get("index", 0)
+    if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+        index = 0
+    rotation = {"members": clean, "index": index % len(clean), "every": "occurrence"}
+    back = value.get("return_to")
+    if isinstance(back, str) and back in clean:
+        rotation["return_to"] = back
+    return rotation
+
+
+def rotation_member(rotation: Any, skip: Iterable[str] = ()) -> str | None:
+    """The member whose turn it is: ``members[index % len]``, the next one when that one is in ``skip``.
+
+    ``skip`` is the hook for absences: skipped members are passed over without
+    changing the stored index. ``None`` for no valid rotation or when everybody is skipped.
+    """
+    if not isinstance(rotation, dict):
+        return None
+    members = [m for m in (rotation.get("members") or []) if isinstance(m, str)]
+    if not members:
+        return None
+    index = rotation.get("index", 0)
+    index = index if isinstance(index, int) and not isinstance(index, bool) else 0
+    skip = set(skip or ())
+    for offset in range(len(members)):
+        member = members[(index + offset) % len(members)]
+        if member not in skip:
+            return member
+    return None
+
+
+def rotation_upcoming(rotation: Any, count: int = 2, skip: Iterable[str] = ()) -> list[str]:
+    """The next ``count`` members in turn order (current first), skipped members left out."""
+    if not isinstance(rotation, dict):
+        return []
+    members = [m for m in (rotation.get("members") or []) if isinstance(m, str)]
+    if not members:
+        return []
+    skip = set(skip or ())
+    index = rotation.get("index", 0)
+    index = index if isinstance(index, int) and not isinstance(index, bool) else 0
+    order = [members[(index + i) % len(members)] for i in range(len(members))]
+    order = [m for m in order if m not in skip]
+    return [order[i % len(order)] for i in range(count)] if order else []
+
+
+def rotation_advanced(rotation: dict) -> dict:
+    """The rotation after an occurrence was completed or expired (a copy).
+
+    After a swap the member who gave up the turn (``return_to``) is next.
+    Otherwise the next member in line.
+    """
+    new = copy.deepcopy(rotation)
+    members = new.get("members") or []
+    if not members:
+        return new
+    back = new.pop("return_to", None)
+    if back in members:
+        new["index"] = members.index(back)
+    else:
+        index = new.get("index", 0)
+        new["index"] = (index + 1) % len(members)
+    return new
+
+
+def rotation_swapped(rotation: dict, member: str) -> dict | None:
+    """The rotation with ``member`` taking over the current occurrence (a copy), ``None`` for a non-member.
+
+    The member whose turn it was is next after the swap (``return_to``).
+    """
+    members = rotation.get("members") or []
+    if member not in members:
+        return None
+    new = copy.deepcopy(rotation)
+    current = rotation_member(rotation)
+    if member != current and "return_to" not in new:
+        new["return_to"] = current
+    new["index"] = members.index(member)
+    if member == new.get("return_to"):
+        new.pop("return_to", None)
+    return new
+
+
+def effective_assignees(task: dict, skip: Iterable[str] = ()) -> list:
+    """Who has the task as a duty right now: the current member of a rotation, else the assignees."""
+    rotation = task.get("rotation")
+    if isinstance(rotation, dict):
+        member = rotation_member(rotation, skip)
+        return [member] if member else []
+    return _assignee_list(task)
 
 
 def open_basis_tasks_for(
@@ -845,7 +1000,7 @@ def open_basis_tasks_for(
         t
         for t in tasks.values()
         if normalize_category(t.get("category")) == "basis"
-        and kid_id in _assignee_list(t)
+        and kid_id in effective_assignees(t)
         and is_open(t, now, default_overdue_days)
         and in_window(t, now)
         and not _too_young(t, age)
@@ -860,7 +1015,7 @@ def _replaces(replaced: dict, replacing: dict) -> bool:
         return False
     if not str(replacing.get("wizard_key") or "").startswith(f"{key}:"):
         return False
-    return bool(set(_assignee_list(replaced)) & set(_assignee_list(replacing)))
+    return bool(set(effective_assignees(replaced)) & set(effective_assignees(replacing)))
 
 
 def is_replaced(
@@ -960,8 +1115,8 @@ def check_eligibility(
     if is_replaced(task, tasks, now, overdue_days):
         return ERR_NOT_ELIGIBLE
 
-    assignees = _assignee_list(task)
-    if assignees and kid_id not in assignees:
+    assignees = effective_assignees(task)
+    if (assignees or isinstance(task.get("rotation"), dict)) and kid_id not in assignees:
         return ERR_NOT_ELIGIBLE
 
     # Unknown birth year: the parents did not restrict this kid -> allowed
@@ -1042,6 +1197,8 @@ def missed_grace_days(base_interval: Any) -> int | None:
 
 def is_missed(task: dict, now: datetime, base_interval: Any, default_overdue_days: int = DEFAULT_OVERDUE_DAYS) -> bool:
     """True when the duty is still open from a previous day beyond its grace period."""
+    if normalize_weekdays(task.get("weekdays")):
+        base_interval = 1  # a missed weekday occurrence expires like a daily duty
     grace = missed_grace_days(base_interval)
     if grace is None or not is_open(task, now, default_overdue_days):
         return False
@@ -1049,6 +1206,15 @@ def is_missed(task: dict, now: datetime, base_interval: Any, default_overdue_day
     if due_dt is None:
         return False
     return (now.date() - _local_date(due_dt, now)).days > grace
+
+
+def next_due_for_task(task: dict, due: date, today: date) -> date:
+    """Next occurrence of a missed duty: the next listed weekday (on or after ``today``) or ``next_due_day``."""
+    weekdays = normalize_weekdays(task.get("weekdays"))
+    if weekdays:
+        return next_weekday_on_or_after(weekdays, today)
+    interval = task.get("interval", 7)
+    return next_due_day(due, interval if isinstance(interval, int) else 7, today)
 
 
 def next_due_day(due: date, interval: int, today: date) -> date:

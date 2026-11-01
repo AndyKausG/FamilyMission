@@ -71,6 +71,8 @@ Kids who need a lot of structure benefit most from fixed times, few steps per mi
 **What the kids see:**
 
 - **Time windows:** tasks are only active at the right time. Before that, a symbol shows when it starts.
+- **Weekdays:** instead of “every N days” a task can be due on fixed weekdays (for example Mon, Wed, Fri). If it is not done, that day lapses without points and without a deduction, and it continues on the next listed weekday.
+- **Taking turns:** if you pick two or more kids and “Taking turns” for a task, every occurrence belongs to exactly one kid; only that kid sees the task (“It's your turn today”). After it is done or missed, the next kid is up.
 - **Steps:** small steps to tick (get dressed, make the bed). “Done!” only works once all steps are ticked.
 - **Medication:** if you added a tablet, drops or an inhaler to a child (settings → kid → “💊 Medication”), it shows up as one more step in the morning or evening mission with “✓ Taken” and “Not today”. Both answers count; only no answer holds “Done!” back. It never gives points and nobody is judged.
 - **Done:** gives points, confetti and a sound right away, or waits for your approval.
@@ -86,6 +88,7 @@ Kids who need a lot of structure benefit most from fixed times, few steps per mi
 - **Skip today:** a task drops out today (sick, outing), with no points and no penalty.
 - **Postpone:** move the task to a later date.
 - **Complete for the kid:** you record a task that was done, for example when the tablet was not at hand.
+- **Swap a turn:** on the Kids tab, “Taking turns” shows “Today: Lena · next time: Max” per task. “Instead of Lena: Max” lets another kid take today's occurrence (Lena is next afterwards); “Skip turn” passes it on to the next kid without making it up.
 - **Health today:** on the Today tab you see per child whether the medication was taken; “✓ given” records that you gave it yourself. You get a push when a child says “Not today” or does not answer by the deadline (at night it waits until morning). An optional alert tells you when “Not today” happens too often. The Kids tab shows the last 7 days.
 - **Undo:** ticked by mistake? The entry can be taken back and the points are deducted again.
 

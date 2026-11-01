@@ -92,6 +92,7 @@ from .const import (
     WS_TYPE_ADD_ADHOC_BONUS,
     WS_TYPE_SET_PARENTS,
     WS_TYPE_PARENT_TASK_ACTION,
+    WS_TYPE_ROTATION_ACTION,
     WS_TYPE_PARENT_COMPLETE_FOR,
     WS_TYPE_MY_COMPLETE_TASK,
     WS_TYPE_MY_CLAIM_TASK,
@@ -431,12 +432,42 @@ def _undo_info(task: dict) -> dict:
         "previous_paused_until": task.get("paused_until"),
         "subtasks": copy.deepcopy(task.get("subtasks") or []),
     }
-    if task.get("interval", 7) == 0:
+    if isinstance(task.get("rotation"), dict):
+        info["previous_rotation"] = copy.deepcopy(task["rotation"])    # the turn moves on with the completion
+    if _is_one_time(task):
         snapshot = copy.deepcopy(task)
         snapshot.pop("claimed_by", None)
         snapshot.pop("claimed_until", None)
         info["task_snapshot"] = snapshot
     return info
+
+
+def _is_one_time(task: dict) -> bool:
+    """A one-time task (interval 0, no weekday schedule): a completion deletes it."""
+    return task.get("interval", 7) == 0 and not kidslib.normalize_weekdays(task.get("weekdays"))
+
+
+def _next_due_iso(task: dict) -> str:
+    """Due date after a completion: the next listed weekday (``weekdays``) or ``interval`` days from now."""
+    weekdays = kidslib.normalize_weekdays(task.get("weekdays"))
+    if weekdays:
+        return _day_start_iso(kidslib.next_weekday_after(weekdays, dt_util.now().date()))
+    return _next_due_after(task.get("interval", 7))
+
+
+def _rotation_member(task: dict, day: date | None = None, skip: set | frozenset = frozenset()) -> str | None:
+    """The kid whose turn it is for the rotation task (``None`` for a task without rotation).
+
+    ``day`` and ``skip`` are the hook for absences (a later step passes the
+    members that are away on ``day``): skipped members are passed over.
+    """
+    return kidslib.rotation_member(task.get("rotation"), skip)
+
+
+def _rotation_advance(task: dict) -> None:
+    """The occurrence is over (completed / expired): the turn moves to the next member."""
+    if isinstance(task.get("rotation"), dict):
+        task["rotation"] = kidslib.rotation_advanced(task["rotation"])
 
 
 def _next_due_after(interval: int) -> str:
@@ -449,11 +480,14 @@ def _next_due_after(interval: int) -> str:
     return dt_util.as_utc(dt_util.now() + timedelta(days=interval)).isoformat()
 
 
-def _advance_task(data: dict, task_id: str) -> dict | None:
+def _advance_task(data: dict, task_id: str, rotate: bool = True) -> dict | None:
     """Move a task to its next occurrence like a completion - without points or history.
 
     Recurring tasks get a new due date and fresh subtasks, one-time tasks
     (interval 0) are deleted. A kid's reservation is dropped.
+
+    A rotation task hands its turn to the next member unless ``rotate`` is
+    False (a skip by the parents leaves the turn where it is).
 
     :return: the undo information (see ``_undo_info``) or ``None`` for an unknown task.
     """
@@ -464,10 +498,12 @@ def _advance_task(data: dict, task_id: str) -> dict | None:
     task.pop("claimed_by", None)
     task.pop("claimed_until", None)
 
-    interval = task.get("interval", 7)
-    if interval > 0:
-        task["due_date"] = _next_due_after(interval)
+    one_time = _is_one_time(task)
+    if not one_time:
+        task["due_date"] = _next_due_iso(task)
         task["paused_until"] = None
+        if rotate:
+            _rotation_advance(task)
 
         # Reset subtasks for recurring tasks
         if "subtasks" in task:
@@ -475,7 +511,7 @@ def _advance_task(data: dict, task_id: str) -> dict | None:
                 st["done"] = False
 
     # A one-time task is removed from the main dictionary
-    if interval == 0:
+    if one_time:
         del data["tasks"][task_id]
     return undo
 
@@ -644,6 +680,57 @@ async def ws_complete_task(hass: HomeAssistant, connection: websocket_api.Active
     connection.send_result(msg["id"], {"success": True})
 
 
+def _apply_schedule(hass: HomeAssistant, item: dict, msg: dict) -> None:
+    """Take ``weekdays`` and ``rotation`` of an add / edit message (task or template); invalid values fall back.
+
+    ``weekdays`` (Mon=0 ... Sun=6) replace the interval-based schedule; the
+    ``interval`` stays stored for compatibility (at least 1 then). ``rotation``
+    needs two or more known kids; its members become the ``assignees``. An
+    edit without ``rotation["index"]`` keeps the current turn when the members
+    are unchanged.
+    """
+    if "weekdays" in msg:
+        weekdays = kidslib.normalize_weekdays(msg["weekdays"])
+        if weekdays:
+            item["weekdays"] = weekdays
+            interval = item.get("interval")
+            if isinstance(interval, bool) or not isinstance(interval, int) or interval <= 0:
+                item["interval"] = 1
+        else:
+            item.pop("weekdays", None)
+    if "rotation" in msg:
+        kids = _get_entry(hass).options.get("kids") or {}
+        rotation = kidslib.normalize_rotation(msg["rotation"], kids)
+        if rotation is None:
+            item.pop("rotation", None)
+            return
+        old = item.get("rotation")
+        if (
+            isinstance(msg["rotation"], dict) and "index" not in msg["rotation"]
+            and isinstance(old, dict) and set(old.get("members") or []) == set(rotation["members"])
+        ):
+            rotation = kidslib.normalize_rotation({**rotation, "index": old.get("index", 0)}, kids) or rotation
+        item["rotation"] = rotation
+        item["assignees"] = list(rotation["members"])
+
+
+def _align_due_to_weekdays(task: dict, minimum: date | None = None) -> None:
+    """A weekday task is only ever due on a listed weekday: move a due date that is not one.
+
+    The first listed weekday on or after the due day (or ``minimum`` if later) is used.
+    """
+    weekdays = kidslib.normalize_weekdays(task.get("weekdays"))
+    due = _local_day_of(task.get("due_date"))
+    if not weekdays or due is None or due.weekday() in weekdays:
+        return
+    start = max(due, minimum) if minimum else due
+    task["due_date"] = _day_start_iso(kidslib.next_weekday_on_or_after(weekdays, start))
+
+
+_WEEKDAYS_FIELD = vol.Any(None, [int])
+_ROTATION_FIELD = vol.Any(None, dict)
+
+
 @websocket_api.websocket_command({
     vol.Required("type"): WS_TYPE_ADD_TASK,
     vol.Required("name"): str, 
@@ -666,6 +753,8 @@ async def ws_complete_task(hass: HomeAssistant, connection: websocket_api.Active
     vol.Optional("paused_until"): vol.Any(str, None),
     vol.Optional("override_overdue_days"): vol.Any(vol.All(int, vol.Range(min=0, max=9999)), None),
     vol.Optional("subtasks"): cv.ensure_list,
+    vol.Optional("weekdays"): _WEEKDAYS_FIELD,
+    vol.Optional("rotation"): _ROTATION_FIELD,
 })
 @websocket_api.async_response
 async def ws_add_task(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -709,7 +798,9 @@ async def ws_add_task(hass: HomeAssistant, connection: websocket_api.ActiveConne
         "override_overdue_days": msg.get("override_overdue_days"),
         "subtasks": msg.get("subtasks", [])
     }
-    
+    _apply_schedule(hass, new_task, msg)
+    _align_due_to_weekdays(new_task, dt_util.now().date() if not custom_due_date_str else None)
+
     data["tasks"][task_id] = new_task
     hass.bus.async_fire(EVENT_TASK_CREATED, new_task)
     await hass.data[DOMAIN]["store"].async_save(data)
@@ -740,6 +831,8 @@ async def ws_add_task(hass: HomeAssistant, connection: websocket_api.ActiveConne
     vol.Optional("paused_until"): vol.Any(str, None),
     vol.Optional("override_overdue_days"): vol.Any(vol.All(int, vol.Range(min=0, max=9999)), None),
     vol.Optional("subtasks"): cv.ensure_list,
+    vol.Optional("weekdays"): _WEEKDAYS_FIELD,
+    vol.Optional("rotation"): _ROTATION_FIELD,
 })
 @websocket_api.async_response
 async def ws_edit_task(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -789,7 +882,11 @@ async def ws_edit_task(hass: HomeAssistant, connection: websocket_api.ActiveConn
 
     if "override_overdue_days" in msg:
         task_ref["override_overdue_days"] = msg["override_overdue_days"]
-        
+
+    _apply_schedule(hass, task_ref, msg)
+    if "weekdays" in msg:
+        _align_due_to_weekdays(task_ref, dt_util.now().date())
+
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     connection.send_result(msg["id"], {"success": True})
@@ -1145,6 +1242,8 @@ async def ws_import_tasks(hass: HomeAssistant, connection: websocket_api.ActiveC
     vol.Optional("interval", default=7): int,
     vol.Optional("assignees", default=[]): cv.ensure_list,
     vol.Optional("subtasks", default=[]): cv.ensure_list,
+    vol.Optional("weekdays"): _WEEKDAYS_FIELD,
+    vol.Optional("rotation"): _ROTATION_FIELD,
 })
 @websocket_api.async_response
 async def ws_add_template(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1174,7 +1273,8 @@ async def ws_add_template(hass: HomeAssistant, connection: websocket_api.ActiveC
         "assignees": msg.get("assignees"),
         "subtasks": msg.get("subtasks", []),
     }
-    
+    _apply_schedule(hass, new_template, msg)
+
     data["templates"][template_id] = new_template
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED) # Fire update to sync clients
@@ -1200,6 +1300,8 @@ async def ws_add_template(hass: HomeAssistant, connection: websocket_api.ActiveC
     vol.Optional("interval"): int,
     vol.Optional("assignees"): cv.ensure_list,
     vol.Optional("subtasks"): cv.ensure_list,
+    vol.Optional("weekdays"): _WEEKDAYS_FIELD,
+    vol.Optional("rotation"): _ROTATION_FIELD,
 })
 @websocket_api.async_response
 async def ws_edit_template(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
@@ -1234,7 +1336,8 @@ async def ws_edit_template(hass: HomeAssistant, connection: websocket_api.Active
         if key in msg:
             template_ref[key] = normalize_time(msg[key])
     _apply_reminder_fields(template_ref, msg)
-            
+    _apply_schedule(hass, template_ref, msg)
+
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     connection.send_result(msg["id"], {"success": True})
@@ -1958,6 +2061,9 @@ async def _async_reject_pending(
         if task is not None:
             task["due_date"] = dt_util.utcnow().isoformat()
             task["paused_until"] = None
+            previous = (pending.get("undo") or {}).get("previous_rotation")
+            if isinstance(previous, dict):
+                task["rotation"] = copy.deepcopy(previous)    # not done: the same member is still in turn
 
     hass.bus.async_fire(EVENT_APPROVAL_RESOLVED, result)
     await hass.data[DOMAIN]["store"].async_save(data)
@@ -2177,6 +2283,8 @@ def _restore_task_after_undo(data: dict, task_id: str, source: dict | None) -> N
         data["tasks"][task_id] = task
     task["due_date"] = due
     task["paused_until"] = paused
+    if isinstance(source.get("previous_rotation"), dict):
+        task["rotation"] = copy.deepcopy(source["previous_rotation"])    # the turn goes back to the member
     if source.get("parent_undo"):
         _restore_parent_fields(task, source)
     task.pop("claimed_by", None)
@@ -2289,7 +2397,7 @@ async def ws_parent_task_action(hass: HomeAssistant, connection: websocket_api.A
             connection.send_error(msg["id"], "invalid_date", "until must be in the future (at most one year)")
             return
 
-    if msg["action"] == "postpone" or task.get("interval", 7) == 0:
+    if msg["action"] == "postpone" or _is_one_time(task):
         task["paused_until"] = _local_day_end(until - timedelta(days=1))
         task.pop("claimed_by", None)
         task.pop("claimed_until", None)
@@ -2299,10 +2407,10 @@ async def ws_parent_task_action(hass: HomeAssistant, connection: websocket_api.A
             hass.bus.async_fire(EVENT_TASK_UPDATED)
             return
     else:
-        _advance_task(data, msg["task_id"])
+        _advance_task(data, msg["task_id"], rotate=False)
 
     reason = "Von Eltern ausgesetzt" if _lang(hass) == "de" else "Skipped by parents"
-    for uid in _assignee_ids(task) or [connection.user.id]:
+    for uid in kidslib.effective_assignees(task) or [connection.user.id]:
         data["history"].insert(0, {
             "id": str(uuid.uuid4()),
             "task_id": msg["task_id"],
@@ -2346,6 +2454,51 @@ async def ws_parent_complete_for(hass: HomeAssistant, connection: websocket_api.
     points = round(float(task.get("complexity", 1)), 1)
     await _async_complete_task_internal(hass, msg["task_id"], [kid_id], {kid_id: 100})
     connection.send_result(msg["id"], {"success": True, "points": points, "task_name": task.get("name")})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_ROTATION_ACTION,
+    vol.Required("task_id"): str,
+    vol.Required("action"): vol.In(["swap", "skip"]),
+    vol.Optional("member"): str,
+})
+@websocket_api.async_response
+async def ws_rotation_action(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Change whose turn it is for the current occurrence of a rotation task (admin / manager / parent).
+
+    ``swap`` + ``member``: that member does this occurrence instead ("today
+    Max instead of Lena"); the member who gave up the turn is next afterwards.
+    ``skip``: the current member is passed over, the next one in line does it
+    (the skipped turn is not made up). Answers ``{success, member, next}``
+    with the new current member and the one after.
+    """
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(msg["task_id"])
+    if task is None:
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    rotation = task.get("rotation")
+    if not isinstance(rotation, dict) or _is_parent_task(task):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_ELIGIBLE})
+        return
+    if msg["action"] == "swap":
+        new = kidslib.rotation_swapped(rotation, msg.get("member") or "")
+        if new is None:
+            connection.send_result(msg["id"], {"success": False, "error": ERR_UNKNOWN_KID})
+            return
+    else:
+        new = kidslib.rotation_advanced({k: v for k, v in rotation.items() if k != "return_to"})
+    task["rotation"] = new
+    task.pop("claimed_by", None)
+    task.pop("claimed_until", None)
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    upcoming = kidslib.rotation_upcoming(new, 2)
+    connection.send_result(msg["id"], {
+        "success": True, "member": _rotation_member(task), "next": upcoming[1] if len(upcoming) > 1 else None,
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -2535,17 +2688,14 @@ def _skip_duties_for(hass: HomeAssistant, data: dict, kid_id: str, settings: dic
     overdue_days = settings.get("overdue_days", 5)
     skipped = 0
     for task_id, task in list(data["tasks"].items()):
-        assignees = task.get("assignees") or []
-        if isinstance(assignees, str):
-            assignees = [assignees]
         if (
             not task.get("parent_task")
-            and list(assignees) == [kid_id]
+            and kidslib.effective_assignees(task) == [kid_id]
             and normalize_category(task.get("category")) == "basis"
-            and task.get("interval", 7) > 0
+            and not _is_one_time(task)
             and is_open(task, now, overdue_days)
         ):
-            _advance_task(data, task_id)
+            _advance_task(data, task_id, rotate=False)
             skipped += 1
     return skipped
 
@@ -2888,10 +3038,7 @@ def _my_context(hass: HomeAssistant, connection, msg: dict, with_task: bool = Tr
     if error is None and pid not in kids:
         # Adults (no kid profile) only get their own assigned tasks, not the
         # kids' open bonus tasks.
-        assignees = ctx["task"].get("assignees") or []
-        if isinstance(assignees, str):
-            assignees = [assignees]
-        if pid not in assignees:
+        if pid not in kidslib.effective_assignees(ctx["task"]):
             return {"success": False, "error": ERR_NOT_ELIGIBLE}, None
     return error, ctx
 
@@ -3106,7 +3253,7 @@ async def _async_check_reminders(hass: HomeAssistant) -> int:
         return 0
     de = _lang(hass) == "de"
     for task_id, task in due:
-        assignees = _assignee_ids(task)
+        assignees = kidslib.effective_assignees(task)
         hass.bus.async_fire(EVENT_TASK_REMINDER, {
             "task_id": task_id, "task_name": task.get("name"), "assignees": assignees,
             "assignee_names": [_participant_name(hass, a) for a in assignees],
@@ -5170,7 +5317,7 @@ async def _async_expire_missed(hass: HomeAssistant) -> int:
     for task_id, task in list(data["tasks"].items()):
         if not isinstance(task, dict) or task.get("parent_task") or normalize_category(task.get("category")) != "basis":
             continue  # parents' tasks never expire as missed
-        kid_ids = [a for a in _assignee_ids(task) if a in kids]
+        kid_ids = [a for a in kidslib.effective_assignees(task) if a in kids]
         if not kid_ids:
             continue
         interval = task.get("interval", 7)
@@ -5183,9 +5330,10 @@ async def _async_expire_missed(hass: HomeAssistant) -> int:
 
         due_dt = parse_dt(task["due_date"])
         due_day = (due_dt.astimezone(now.tzinfo) if due_dt.tzinfo else due_dt).date()
-        nxt = next_due_day(due_day, interval, today)
+        nxt = kidslib.next_due_for_task(task, due_day, today)
         task["due_date"] = dt_util.as_utc(dt_util.start_of_local_day(nxt)).isoformat()
         task["paused_until"] = None
+        _rotation_advance(task)    # the missed occurrence counted as this member's turn
         task.pop("claimed_by", None)
         task.pop("claimed_until", None)
         for st in task.get("subtasks") or []:
@@ -5458,7 +5606,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return
             
         task = data["tasks"][target_task_id]
-        completed_by = [target_uid] if target_uid else task.get("assignees", [])
+        completed_by = [target_uid] if target_uid else kidslib.effective_assignees(task)
         
         if not completed_by: 
             return
@@ -5491,8 +5639,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             }
             data["history"].insert(0, history_entry)
         
-        interval = task.get("interval", 1)
-        task["due_date"] = _next_due_after(interval)
+        if kidslib.normalize_weekdays(task.get("weekdays")):
+            task["due_date"] = _next_due_iso(task)
+        else:
+            task["due_date"] = _next_due_after(task.get("interval", 1))
+        _rotation_advance(task)
         task["paused_until"] = None 
         task.pop("claimed_by", None)
         task.pop("claimed_until", None)
@@ -5600,6 +5751,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "override_overdue_days": call.data.get("override_overdue_days"),
             "subtasks": call.data.get("subtasks") or (template.get("subtasks", []) if template else [])
         }
+        # weekday schedule / rotation of the template (an explicit interval or assignee list wins)
+        schedule = {}
+        if template and call.data.get("interval") is None and template.get("weekdays"):
+            schedule["weekdays"] = template["weekdays"]
+        if template and call.data.get("assignees") is None and isinstance(template.get("rotation"), dict):
+            schedule["rotation"] = {"members": template["rotation"].get("members") or [], "index": 0}
+        _apply_schedule(hass, new_task_data, schedule)
+        _align_due_to_weekdays(new_task_data, dt_util.now().date())
         data["tasks"][task_id] = new_task_data
         hass.bus.async_fire(EVENT_TASK_CREATED, new_task_data)
         await store.async_save(data)
@@ -5905,6 +6064,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_add_adhoc_bonus)
     websocket_api.async_register_command(hass, ws_set_parents)
     websocket_api.async_register_command(hass, ws_parent_task_action)
+    websocket_api.async_register_command(hass, ws_rotation_action)
     websocket_api.async_register_command(hass, ws_parent_complete_for)
     websocket_api.async_register_command(hass, ws_my_complete_task)
     websocket_api.async_register_command(hass, ws_my_claim_task)

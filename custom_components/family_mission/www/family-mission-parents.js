@@ -61,6 +61,8 @@ const I18N_PARENTS = {
     pt_all_done: "Nothing left for you today.", pt_partner: "With {name} today ({n})", pt_other: "the others", pt_done_today: "Done today ({n})",
     skip_btn: "Skip", skip_all: "Skip everything today", skip_title: "{name}: skip today", skip_none: "No open tasks today.",
     kid_today: "Today: {done} of {total} done", kid_no_tasks: "No tasks for today.",
+    rot_title: "🔁 Taking turns", rot_today: "Today: {a} · next time: {b}", rot_next: "Next: {a} · after that: {b}",
+    rot_swap: "Instead of {cur}: {name}", rot_skip: "Skip {cur}'s turn", toast_rot: "Turn changed",
     care_title: "💊 Health today", care_none_today: "Nothing due today.", care_given: "✓ Given", care_given_title: "Mark as given",
     care_st_taken: "taken", care_st_taken_by: "given by a parent", care_st_declined: "not today", care_st_unanswered: "no answer", care_st_open: "open",
     care_history: "Last 7 days", care_hist_title: "💊 Health", care_legend: "✓ taken · – not today · ! no answer",
@@ -129,6 +131,8 @@ const I18N_PARENTS = {
     pt_all_done: "Heute ist nichts mehr offen.", pt_partner: "Bei {name} heute ({n})", pt_other: "den anderen", pt_done_today: "Heute erledigt ({n})",
     skip_btn: "Aussetzen", skip_all: "Heute alles aussetzen", skip_title: "{name}: heute aussetzen", skip_none: "Heute ist nichts offen.",
     kid_today: "Heute: {done} von {total} erledigt", kid_no_tasks: "Keine Aufgaben für heute.",
+    rot_title: "🔁 Im Wechsel", rot_today: "Heute: {a} · nächstes Mal: {b}", rot_next: "Als Nächstes: {a} · danach: {b}",
+    rot_swap: "Statt {cur}: {name}", rot_skip: "Dienst von {cur} überspringen", toast_rot: "Dienst geändert",
     care_title: "💊 Gesundheit heute", care_none_today: "Heute ist nichts fällig.", care_given: "✓ gegeben", care_given_title: "Als gegeben eintragen",
     care_st_taken: "genommen", care_st_taken_by: "von Eltern gegeben", care_st_declined: "heute nicht", care_st_unanswered: "keine Antwort", care_st_open: "offen",
     care_history: "Letzte 7 Tage", care_hist_title: "💊 Gesundheit", care_legend: "✓ genommen · – heute nicht · ! keine Antwort",
@@ -629,6 +633,8 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'kt-done') this._ktDone(el.dataset.id, el.dataset.kid);
     else if (action === 'care-given') this._careGiven(el.dataset.kid, el.dataset.care);
     else if (action === 'kt-skip') this._ktSkip(el.dataset.id);
+    else if (action === 'rot-swap') this._rotAction(el.dataset.id, 'swap', el.dataset.member);
+    else if (action === 'rot-skip') this._rotAction(el.dataset.id, 'skip');
     else if (action === 'skip-all') this._skipAll(el.dataset.kid);
     else if (action === 'praise-pick') this._pickKidFor('praise');
     else if (action === 'skip-pick') this._pickKidFor('skip');
@@ -1065,10 +1071,54 @@ class FamilyMissionParents extends HTMLElement {
     return (this._persons()[uid] || {}).name || uid || '';
   }
 
+  /** Rotation members in turn order starting with the current one (same rule as the backend), or []. */
+  _rotationOrder(t) {
+    const r = t && t.rotation;
+    if (!r || !Array.isArray(r.members) || !r.members.length) return [];
+    const n = r.members.length;
+    const idx = Number.isInteger(r.index) && r.index >= 0 ? r.index : 0;
+    return r.members.map((_, i) => r.members[(idx + i) % n]);
+  }
+
+  /** Who has the task as a duty: the member whose turn it is for a rotation task, else the assignees. */
+  _assigneesOf(t) {
+    const order = this._rotationOrder(t);
+    return order.length ? [order[0]] : (Array.isArray(t.assignees) ? t.assignees : (t.assignees ? [t.assignees] : []));
+  }
+
+  /** Rotation tasks the kid takes part in: "today: X, next time: Y" with swap / skip actions. */
+  _renderRotation(kid) {
+    const tasks = this._taskList().filter(t => !t.parent_task && this._rotationOrder(t).includes(kid.id));
+    if (!tasks.length) return '';
+    const name = (id) => this._kid(id).name;
+    const rows = tasks.map(t => {
+      const order = this._rotationOrder(t);
+      const busy = this._busy.has('rot:' + t.id) ? 'disabled' : '';
+      const line = this.localize(this._isOpen(t) ? 'rot_today' : 'rot_next', { a: name(order[0]), b: name(order[1] || order[0]) });
+      const swaps = order.slice(1).map(m =>
+        `<button class="btn neutral sm" data-action="rot-swap" data-id="${escParents(t.id)}" data-member="${escParents(m)}" ${busy}>${escParents(this.localize('rot_swap', { cur: name(order[0]), name: name(m) }))}</button>`).join('');
+      return `
+        <div class="trow">
+          <div class="trow-top"><span class="trow-name">${escParents(t.name)}</span></div>
+          <div class="rot-line">${escParents(line)}</div>
+          <div class="trow-actions">${swaps}
+            <button class="btn neutral sm" data-action="rot-skip" data-id="${escParents(t.id)}" ${busy}>⏭️ ${escParents(this.localize('rot_skip', { cur: name(order[0]) }))}</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `<h3 class="sub">${escParents(this.localize('rot_title'))}</h3><div class="trows">${rows}</div>`;
+  }
+
+  _rotAction(taskId, action, member) {
+    const payload = { type: 'family_mission/rotation_action', task_id: taskId, action };
+    if (member) payload.member = member;
+    return this._call('rot:' + taskId, payload, this.localize('toast_rot'));
+  }
+
   /** Today's tasks of one kid: open ones, waiting for approval and done today. */
   _kidToday(kid) {
     const today = this._todayKey();
-    const open = this._taskList().filter(t => !t.parent_task && (t.assignees || []).includes(kid.id) && this._isOpen(t))
+    const open = this._taskList().filter(t => !t.parent_task && this._assigneesOf(t).includes(kid.id) && this._isOpen(t))
       .sort((a, b) => String(a.name).localeCompare(String(b.name)));
     const done = this.history.filter(h => h.type === 'task' && h.user_id === kid.id && this._dateKey(h.timestamp) === today);
     const waiting = this._pendingList().filter(p => p.kid_id === kid.id);
@@ -1800,6 +1850,7 @@ class FamilyMissionParents extends HTMLElement {
           <h3 class="sub">${escParents(this.localize('kid_today', { done: t.done.length, total: t.total }))}</h3>
           <div class="trows">${rows || `<div class="empty small">${escParents(this.localize('kid_no_tasks'))}</div>`}</div>
           ${t.open.length ? `<button class="btn neutral" data-action="skip-all" data-kid="${escParents(kid.id)}">⏸️ ${escParents(this.localize('skip_all'))}</button>` : ''}
+          ${this._renderRotation(kid)}
           ${this._renderCareHistory(kid)}
           <div class="quick">${quick}</div>
           <button class="praise-btn" data-action="praise-open" data-kid="${escParents(kid.id)}">❤️ ${escParents(this.localize('praise_btn'))}</button>
@@ -2205,6 +2256,7 @@ class FamilyMissionParents extends HTMLElement {
       .trow-name { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
       .st { flex: none; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--secondary-background-color, #f0f0f0); color: var(--p-sub); }
       .st.done { color: var(--p-ok); }
+      .rot-line { font-size: 14px; color: var(--p-sub); }
       .trow-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .btn.sm { min-height: 44px; font-size: 14px; white-space: normal; line-height: 1.2; padding: 4px 8px; }
       .btn.ok.sm { font-size: 14px; min-height: 44px; }
