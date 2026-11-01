@@ -84,7 +84,7 @@ claim_minutes: "Bonus reservation (minutes)",
     tb_test: "Test push", tb_test_ok: "Test push sent to {t}", tb_test_none: "No push target for this person.", tb_test_fail: "Test push failed: {e}",
     tb_test_hint: "The test uses the saved settings - save first after choosing a target.",
     tb_reminder: "Remind after … hours (0 = off)", tb_reminder_d: "If nobody handled an approval, all adults get one quiet reminder after this time (not at night). 0 switches it off.",
-    tb_night: "Night mode (tablet sleeps)", tb_night_d: "At bedtime the tablet shows a dark sleep screen with stars. Tapping shows the clock for 5 seconds. An open kid session runs out normally first. No reminders are sent at night.",
+    tb_night: "Night mode (tablet sleeps)", tb_night_d: "At bedtime the tablet shows a dim sleep screen with a sleeping buddy and an alarm clock showing how long it still sleeps. Only the tablet user sleeps, parents keep the normal view. Tapping shows the clock for 5 seconds. An open kid session runs out normally first. No reminders are sent at night.",
     tb_sleep: "Bedtime", tb_wake_wd: "Wake up Mon-Fri", tb_wake_we: "Wake up Sat + Sun",
     tb_rocket: "Rocket countdown (seconds)", tb_rocket_d: "How long the family counts down before the rocket launches (15-180, default 60)."
   },
@@ -168,7 +168,7 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     tb_test: "Test-Push", tb_test_ok: "Test-Push gesendet an {t}", tb_test_none: "Für diese Person gibt es kein Push-Ziel.", tb_test_fail: "Test-Push fehlgeschlagen: {e}",
     tb_test_hint: "Der Test nutzt die gespeicherten Einstellungen – nach der Zielwahl erst speichern.",
     tb_reminder: "Nachfassen nach … Stunden (0 = aus)", tb_reminder_d: "Hat niemand eine Freigabe bearbeitet, erhalten alle Erwachsenen nach dieser Zeit einen leisen Erinnerungs-Push (nicht nachts). 0 schaltet ab.",
-    tb_night: "Nachtmodus (Tablet schläft)", tb_night_d: "Zur Schlafenszeit zeigt das Tablet einen dunklen Schlafbildschirm mit Sternen. Antippen zeigt 5 Sekunden die Uhr. Eine offene Kind-Sitzung läuft vorher normal aus. Nachts werden keine Erinnerungen gesendet.",
+    tb_night: "Nachtmodus (Tablet schläft)", tb_night_d: "Zur Schlafenszeit zeigt das Tablet einen gedimmten Schlafbildschirm mit schlafendem Buddy und Wecker, der zeigt, wie lange noch geschlafen wird. Nur der Tablet-Benutzer schläft, Eltern sehen weiter die normale Ansicht. Antippen zeigt 5 Sekunden die Uhr. Eine offene Kind-Sitzung läuft vorher normal aus. Nachts werden keine Erinnerungen gesendet.",
     tb_sleep: "Schlafenszeit", tb_wake_wd: "Aufstehen Mo-Fr", tb_wake_we: "Aufstehen Sa + So",
     tb_rocket: "Raketen-Countdown (Sekunden)", tb_rocket_d: "So lange zählt die Familie herunter, bevor die Rakete startet (15-180, Standard 60)."
   }
