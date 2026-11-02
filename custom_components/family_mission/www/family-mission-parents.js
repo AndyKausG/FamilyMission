@@ -81,6 +81,12 @@ const I18N_PARENTS = {
     m_help: "Help", m_help_d: "How everything works", embed_missing: "This part is not available. Reload the page.",
     mode_me: "Me", mode_you: "You", mode_alt: "Alternating", pt_minutes_lbl: "Minutes", pt_from_templates: "From templates", pt_own: "Own task",
     pick_kid: "For whom?", picker_apply: "Apply", picker_missing: "The template list could not be loaded.",
+    pt_steps: "Checklist", own_steps: "Steps (one per line, optional)", own_steps_ph: "e.g. Pack the bags", own_days: "On these days",
+    pt_hint_bedding: "🛏 Strip the beds and wash the linen", pt_todo_btn: "🛒 To the shopping list", pt_todo_title: "Shopping list",
+    pt_todo_item: "What is missing?", pt_todo_item_ph: "e.g. Milk", pt_todo_add: "Add", toast_todo_added: "On the shopping list",
+    toast_todo_err: "The shopping list could not be reached", pt_ed_more: "Days, steps, shopping list", pt_ed_days: "Repeats on",
+    pt_ed_steps: "Steps (one per line)", pt_ed_todo: "Shopping list", pt_ed_todo_none: "— none —",
+    nt_c_stock: "Stock (pills, optional)", nt_c_perdose: "Pills per dose", nt_c_stock_d: "A week before it runs out you get the task \"Prescription / refill\".",
     own_title: "New task", own_name: "Name", own_name_ph: "e.g. Call the dentist", own_interval: "Repeats", own_planning: "Planning task", own_who: "Who does it?", own_create: "Add",
     pt_add: "Add task", pt_g_overdue: "Overdue", pt_g_today: "Today", pt_g_upcoming: "Coming up", pt_g_someday: "Someday",
     pt_tomorrow: "Tomorrow", pt_postpone: "→ Tomorrow", toast_pt_postponed: "Moved to tomorrow", pt_overdue_since: "overdue since {day}",
@@ -179,6 +185,12 @@ const I18N_PARENTS = {
     m_help: "Hilfe", m_help_d: "So funktioniert alles", embed_missing: "Dieser Bereich ist nicht verfügbar. Bitte die Seite neu laden.",
     mode_me: "Ich", mode_you: "Du", mode_alt: "Abwechselnd", pt_minutes_lbl: "Minuten", pt_from_templates: "Aus Vorlagen", pt_own: "Eigene Aufgabe",
     pick_kid: "Für wen?", picker_apply: "Übernehmen", picker_missing: "Die Vorlagenliste konnte nicht geladen werden.",
+    pt_steps: "Checkliste", own_steps: "Schritte (einer pro Zeile, optional)", own_steps_ph: "z. B. Taschen packen", own_days: "An diesen Tagen",
+    pt_hint_bedding: "🛏 Betten abziehen und Wäsche waschen", pt_todo_btn: "🛒 Auf die Einkaufsliste", pt_todo_title: "Einkaufsliste",
+    pt_todo_item: "Was fehlt?", pt_todo_item_ph: "z. B. Milch", pt_todo_add: "Hinzufügen", toast_todo_added: "Auf der Einkaufsliste",
+    toast_todo_err: "Die Einkaufsliste ist nicht erreichbar", pt_ed_more: "Tage, Schritte, Einkaufsliste", pt_ed_days: "Wiederholt sich am",
+    pt_ed_steps: "Schritte (einer pro Zeile)", pt_ed_todo: "Einkaufsliste", pt_ed_todo_none: "— keine —",
+    nt_c_stock: "Vorrat (Tabletten, optional)", nt_c_perdose: "Tabletten pro Gabe", nt_c_stock_d: "Eine Woche bevor er reicht, bekommt ihr die Aufgabe \"Rezept/Nachkauf\".",
     own_title: "Neue Aufgabe", own_name: "Name", own_name_ph: "z. B. Zahnarzt anrufen", own_interval: "Wiederholung", own_planning: "Planungsaufgabe", own_who: "Wer macht es?", own_create: "Hinzufügen",
     pt_add: "Aufgabe hinzufügen", pt_g_overdue: "Überfällig", pt_g_today: "Heute", pt_g_upcoming: "Demnächst", pt_g_someday: "Irgendwann",
     pt_tomorrow: "Morgen", pt_postpone: "→ Morgen", toast_pt_postponed: "Auf morgen verschoben", pt_overdue_since: "überfällig seit {day}",
@@ -304,6 +316,7 @@ class FamilyMissionParents extends HTMLElement {
     this._pickKid = null;         // kid chooser purpose: 'praise' | 'skip'
     this._skip = null;            // skip sheet { kidId }
     this._own = null;             // own parent task sheet
+    this._todo = null;            // "to the shopping list" sheet { id, item }
     this._nt = null;              // new task flow state
     this._flowCatalog = null;     // localized kids catalog (family_mission/kids_catalog)
     this.templates = {};
@@ -326,6 +339,7 @@ class FamilyMissionParents extends HTMLElement {
     this.shadowRoot.addEventListener('change', (ev) => this._onChange(ev));
     this.shadowRoot.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter' && ev.target && ev.target.id === 'own-name' && this._own && this._own.name.trim()) { ev.preventDefault(); this._submitOwn(); }
+      if (ev.key === 'Enter' && ev.target && ev.target.id === 'todo-item' && this._todo && this._todo.item.trim()) { ev.preventDefault(); this._submitTodo(); }
       if (ev.key === 'Enter' && ev.target && this._nt) {
         const id = ev.target.id;
         if (id === 'nt-q' && this._nt.q.trim()) { ev.preventDefault(); this._ntPick('none', ''); }
@@ -628,6 +642,10 @@ class FamilyMissionParents extends HTMLElement {
       const n = parseInt(el.value);
       if (n >= 1 && n <= 600) this._ptSet(el.dataset.ptMin, { minutes: n });
       else this._render();
+    } else if (el.dataset.ptSteps !== undefined) {
+      this._ptSet(el.dataset.ptSteps, { subtasks: this._stepLines(el.value) });
+    } else if (el.dataset.ptTodo !== undefined) {
+      this._ptSet(el.dataset.ptTodo, { todo_entity: el.value || null });
     } else if (el.id === 'abs-from' && this._abs) { this._abs.from = el.value; if (this._abs.to < el.value) this._abs.to = el.value; this._renderLayer(); }
     else if (el.id === 'abs-to' && this._abs) this._abs.to = el.value;
     else if (el.id === 'abs-personal' && this._abs) this._abs.personal = el.checked;
@@ -663,6 +681,12 @@ class FamilyMissionParents extends HTMLElement {
       if (btn) btn.disabled = !el.value.trim();
     } else if (el.id === 'own-min' && this._own) {
       this._own.minutes = el.value;
+    } else if (el.id === 'own-steps' && this._own) {
+      this._own.steps = el.value;
+    } else if (el.id === 'todo-item' && this._todo) {
+      this._todo.item = el.value;
+      const btn = this.shadowRoot.getElementById('todo-add');
+      if (btn) btn.disabled = !el.value.trim();
     } else if (el.id === 'adhoc-name' && this._adhoc) {
       this._adhoc.name = el.value;
       this._updateAdhocState();
@@ -680,7 +704,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'not-done') this._reject(el.dataset.id, 'not_done');
     else if (action === 'cheated') { this._confirm = el.dataset.id; this._renderLayer(); }
     else if (action === 'cheated-confirm') { const id = this._confirm; this._confirm = null; this._renderLayer(); this._reject(id, 'cheated'); }
-    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._nt = null; this._del = null; this._picker = null; this._abs = null; this._renderLayer(); }
+    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._todo = null; this._nt = null; this._del = null; this._picker = null; this._abs = null; this._renderLayer(); }
     else if (action === 'tab') this._setTab(el.dataset.tab);
     else if (action === 'goto-approvals') { const sec = this.shadowRoot.getElementById('appr-section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     else if (action === 'pw-setup') {
@@ -704,6 +728,16 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'ho-no') this._hoAnswer(el.dataset.id, false);
     else if (action === 'pt-plan') { const t = this._task(el.dataset.id); if (t) this._ptSet(t.id, { planning: !t.planning }); }
     else if (action === 'pt-mode') { if (this._ptMode(this._task(el.dataset.id) || {}) !== el.dataset.mode) this._ptSet(el.dataset.id, { mode: el.dataset.mode }); }
+    else if (action === 'pt-step') this._ptStep(el.dataset.id, parseInt(el.dataset.i));
+    else if (action === 'pt-todo') { this._todo = { id: el.dataset.id, item: '' }; this._renderLayer(); const i = this.shadowRoot.getElementById('todo-item'); if (i) i.focus(); }
+    else if (action === 'todo-add') this._submitTodo();
+    else if (action === 'pt-wd') this._ptWeekday(el.dataset.id, parseInt(el.dataset.d));
+    else if (action === 'own-wd' && this._own) {
+      const d = parseInt(el.dataset.d);
+      const i = this._own.wd.indexOf(d);
+      if (i >= 0) this._own.wd.splice(i, 1); else this._own.wd.push(d);
+      this._renderLayer();
+    }
     else if (action === 'pt-del') { this._del = el.dataset.id; this._renderLayer(); }
     else if (action === 'pt-del-confirm') this._ptDelete();
     else if (action === 'pt-picker') this._openPicker();
@@ -1245,6 +1279,42 @@ class FamilyMissionParents extends HTMLElement {
 
   _ptPostpone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_postpone', task_id: id }, this.localize('toast_pt_postponed')); }
 
+  /** Ticks a checklist step of a parent task (progress only, never blocks the tick-off). */
+  _ptStep(id, index) {
+    return this._call('pt:' + id, { type: 'family_mission/parent_toggle_step', task_id: id, index });
+  }
+
+  /** The lines of a textarea as step titles. */
+  _stepLines(text) { return String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).slice(0, 12); }
+
+  /** Switches one weekday of a parent task on / off. */
+  _ptWeekday(id, day) {
+    const t = this._task(id);
+    if (!t) return;
+    const days = (t.weekdays || []).slice();
+    const i = days.indexOf(day);
+    if (i >= 0) days.splice(i, 1); else days.push(day);
+    days.sort((a, b) => a - b);
+    return this._ptSet(id, { weekdays: days });
+  }
+
+  /** Number of open items of the shopping list linked to a parent task (null when not linked or unknown). */
+  _todoCount(t) {
+    const st = t && t.todo_entity && this._hass && this._hass.states ? this._hass.states[t.todo_entity] : null;
+    const n = st ? parseInt(st.state) : NaN;
+    return isNaN(n) ? null : n;
+  }
+
+  async _submitTodo() {
+    const td = this._todo;
+    if (!td || !td.item.trim()) return;
+    this._todo = null;
+    this._renderLayer();
+    const res = await this._call('todo:' + td.id, { type: 'family_mission/parent_todo_add', task_id: td.id, item: td.item.trim().slice(0, 100) });
+    if (res && res.success) this._toast(this.localize('toast_todo_added'));
+    else if (res) this._toast(this.localize('toast_todo_err'));
+  }
+
   _ptAsk(id) { return this._call('pt:' + id, { type: 'family_mission/handover_ask', task_id: id }, this.localize('toast_asked')); }
 
   _hoAnswer(id, accept) {
@@ -1320,7 +1390,7 @@ class FamilyMissionParents extends HTMLElement {
   // ---- own parent task sheet ---------------------------------------------------
 
   _openOwn() {
-    this._own = { name: '', minutes: 20, interval: 0, planning: false, mode: 'me', when: 'today', date: '', time: '' };
+    this._own = { name: '', minutes: 20, interval: 0, planning: false, mode: 'me', when: 'today', date: '', time: '', wd: [], steps: '' };
     this._renderLayer();
     const input = this.shadowRoot.getElementById('own-name');
     if (input) input.focus();
@@ -1365,6 +1435,9 @@ class FamilyMissionParents extends HTMLElement {
     }
     const minutes = parseInt(o.minutes);
     if (minutes >= 1 && minutes <= 600) payload.minutes = minutes;
+    if (o.wd.length) payload.weekdays = o.wd.slice().sort((a, b) => a - b);
+    const steps = this._stepLines(o.steps);
+    if (steps.length) payload.subtasks = steps;
     if (this.me) payload.me = this.me;
     this._own = null;
     this._renderLayer();
@@ -1470,7 +1543,7 @@ class FamilyMissionParents extends HTMLElement {
     const kids = this._kids();
     if (src === 'care') {
       if (!nt.kids.length) nt.kids = kids.map(k => k.id);
-      nt.care = { label: '', emoji: '💊', anchor: 'morning', time: '08:00', deadline: '', weekdays: [0, 1, 2, 3, 4, 5, 6], notify: true };
+      nt.care = { label: '', emoji: '💊', anchor: 'morning', time: '08:00', deadline: '', weekdays: [0, 1, 2, 3, 4, 5, 6], notify: true, stock: '', perDose: 1 };
       nt.step = 'care';
       this._renderLayer();
       return;
@@ -1660,6 +1733,8 @@ class FamilyMissionParents extends HTMLElement {
           decline_alert: { enabled: false, count: 3, days: 7 }
         };
         if (c.deadline) entry.deadline = c.deadline;
+        const stock = parseInt(c.stock);
+        if (c.stock !== '' && stock >= 0 && stock <= 9999) { entry.stock = stock; entry.per_dose = Math.max(1, Math.min(20, parseInt(c.perDose) || 1)); }
         if (typeof c.after === 'string' && c.anchor !== 'time') entry.after = c.after.slice(0, 60);
         const payload = {
           type: 'family_mission/set_kid_profile', participant_id: kid.id, avatar: p.avatar || kid.avatar, color: p.color || kid.color,
@@ -1851,6 +1926,11 @@ class FamilyMissionParents extends HTMLElement {
         <div class="lbl">${L('nt_c_days')}</div>
         <div class="chips" role="group">${days.map((d, i) =>
           `<button class="chip ico ${c.weekdays.includes(i) ? 'on' : ''}" aria-pressed="${c.weekdays.includes(i)}" data-action="nt-c-wd" data-wd="${i}">${escParents(d)}</button>`).join('')}</div>
+        <div class="row"><label class="lbl inline" for="nt-c-stock">${L('nt_c_stock')}</label>
+          <input id="nt-c-stock" class="txt num" type="number" min="0" max="9999" inputmode="numeric" value="${escParents(c.stock)}"></div>
+        ${c.stock !== '' ? `<div class="row"><label class="lbl inline" for="nt-c-perdose">${L('nt_c_perdose')}</label>
+          <input id="nt-c-perdose" class="txt num" type="number" min="1" max="20" inputmode="numeric" value="${escParents(c.perDose)}"></div>` : ''}
+        <p class="nt-hint">${L('nt_c_stock_d')}</p>
         <div class="row"><label class="lbl inline" for="nt-c-notify">${L('nt_c_notify')}</label>
           <input id="nt-c-notify" type="checkbox" class="chk" ${c.notify ? 'checked' : ''}></div>
         <p class="nt-hint">${L('nt_c_more')}</p>
@@ -1886,6 +1966,8 @@ class FamilyMissionParents extends HTMLElement {
     else if (id === 'nt-c-time' && nt.care) nt.care.time = el.value || '08:00';
     else if (id === 'nt-c-deadline' && nt.care) nt.care.deadline = el.value;
     else if (id === 'nt-c-notify' && nt.care) nt.care.notify = el.checked;
+    else if (id === 'nt-c-stock' && nt.care) { const had = nt.care.stock !== ''; nt.care.stock = el.value; if (had !== (el.value !== '')) this._renderLayer(); }
+    else if (id === 'nt-c-perdose' && nt.care) nt.care.perDose = el.value;
     else return false;
     return true;
   }
@@ -2151,10 +2233,32 @@ class FamilyMissionParents extends HTMLElement {
             <label class="lbl inline" for="own-plan">🧠 ${escParents(this.localize('own_planning'))}</label>
             <input id="own-plan" type="checkbox" class="chk" ${o.planning ? 'checked' : ''}>
           </div>
+          <div class="lbl">${escParents(this.localize('own_days'))}</div>
+          <div class="chips" role="group">${this.localize('nt_days').map((d, i) =>
+            `<button class="chip ico ${o.wd.includes(i) ? 'on' : ''}" data-action="own-wd" data-d="${i}" aria-pressed="${o.wd.includes(i)}">${escParents(d)}</button>`).join('')}</div>
+          <label class="lbl" for="own-steps">${escParents(this.localize('own_steps'))}</label>
+          <textarea id="own-steps" class="txt" rows="3" placeholder="${escParents(this.localize('own_steps_ph'))}">${escParents(o.steps)}</textarea>
         </details>
         <div class="dialog-actions">
           <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
           <button class="btn ok solid" id="own-create" data-action="own-create" ${o.name.trim() ? '' : 'disabled'}>${escParents(this.localize('own_create'))}</button>
+        </div>
+      </div>`;
+  }
+
+  /** Small sheet: one item for the shopping list that is linked to a parent task. */
+  _renderTodoSheet() {
+    const td = this._todo;
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('pt_todo_title'))}" style="--kc:#7E57C2">
+        <div class="grab"></div>
+        <h3>🛒 ${escParents(this.localize('pt_todo_title'))}</h3>
+        <label class="lbl" for="todo-item">${escParents(this.localize('pt_todo_item'))}</label>
+        <input id="todo-item" class="txt" type="text" maxlength="100" autocomplete="off" enterkeyhint="done" placeholder="${escParents(this.localize('pt_todo_item_ph'))}" value="${escParents(td.item)}">
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
+          <button class="btn ok solid" id="todo-add" data-action="todo-add" ${td.item.trim() ? '' : 'disabled'}>${escParents(this.localize('pt_todo_add'))}</button>
         </div>
       </div>`;
   }
@@ -2445,6 +2549,13 @@ class FamilyMissionParents extends HTMLElement {
     else if (t.due_time && (bucket === 'today' || bucket === 'overdue')) out.push(`<span class="badge due">🕐 ${escParents(t.due_time)}</span>`);
     if (t.planning) out.push(`<span class="badge plan" title="${escParents(this.localize('pt_planning'))}">🧠 ${escParents(this.localize('pt_planning'))}</span>`);
     if (t.minutes) out.push(`<span class="badge">${escParents(this.localize('pt_minutes', { n: t.minutes }))}</span>`);
+    const wd = Array.isArray(t.weekdays) ? t.weekdays : [];
+    if (wd.length) out.push(`<span class="badge days">🔁 ${escParents(wd.map(d => this.localize('nt_days')[d]).join(' '))}</span>`);
+    const steps = (t.subtasks || []).filter(st => st && st.title);
+    if (steps.length) out.push(`<span class="badge steps">☑ ${steps.filter(st => st.done).length}/${steps.length}</span>`);
+    const todo = this._todoCount(t);
+    if (todo !== null) out.push(`<span class="badge todo">🛒 ${todo}</span>`);
+    if (t.hint === 'bedding') out.push(`<span class="badge hint">${escParents(this.localize('pt_hint_bedding'))}</span>`);
     if (t.carried_since) out.push(`<span class="badge carried">↷ ${escParents(this.localize('pt_since', { day: this._dayLabel(t.carried_since) }))}</span>`);
     return out.length ? `<div class="badges">${out.join('')}</div>` : '';
   }
@@ -2471,13 +2582,27 @@ class FamilyMissionParents extends HTMLElement {
       <article class="ptask">
         <div class="pt-name">${escParents(t.name)}</div>
         ${this._parentBadges(t)}
+        ${this._renderSteps(t)}
         <div class="pt-actions">
           <button class="btn ok pt-done" data-action="pt-done" data-id="${escParents(t.id)}" ${busy}>✓ ${escParents(this.localize('pt_done'))}</button>
           ${canPostpone ? `<button class="btn neutral pt-ask pt-later" data-action="pt-postpone" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_postpone'))}</button>` : ''}
           ${asked ? `<span class="pt-asked">${escParents(this.localize('pt_asked', { name: this._adultName(h.to) }))}</span>` : ''}
           ${canAsk ? `<button class="btn neutral pt-ask" data-action="pt-ask" data-id="${escParents(t.id)}" ${busy}>🙋 ${escParents(this.localize('pt_ask'))}</button>` : ''}
+          ${t.parent_key === 'fridge' && t.todo_entity ? `<button class="btn neutral pt-ask" data-action="pt-todo" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_todo_btn'))}</button>` : ''}
         </div>
       </article>`;
+  }
+
+  /** The checklist of a parent task: tick the steps (progress only - the tick-off button always works). */
+  _renderSteps(t) {
+    const steps = (t.subtasks || []).filter(st => st && st.title);
+    if (!steps.length) return '';
+    const done = steps.filter(st => st.done).length;
+    const busy = this._busy.has('pt:' + t.id) ? 'disabled' : '';
+    return `<details class="fold pt-steps" data-det="steps:${escParents(t.id)}" ${this._open.has('det:steps:' + t.id) ? 'open' : ''}>
+      <summary>☑ ${escParents(this.localize('pt_steps'))} ${done}/${steps.length}</summary>
+      ${steps.map((st, i) => `<label class="pt-step ${st.done ? 'done' : ''}"><input type="checkbox" class="chk" data-action="pt-step" data-id="${escParents(t.id)}" data-i="${i}" ${st.done ? 'checked' : ''} ${busy}> <span>${escParents(st.title)}</span></label>`).join('')}
+    </details>`;
   }
 
   /** The tasks of one adult (or of all) as groups Überfällig / Heute / Demnächst / Irgendwann. */
@@ -2663,6 +2788,27 @@ class FamilyMissionParents extends HTMLElement {
       `<button class="${mode === id ? 'on' : ''}" aria-pressed="${mode === id}" ${attrs} data-mode="${id}">${escParents(this.localize(key))}</button>`).join('')}</div>`;
   }
 
+  /** Editor fold of a parent task: weekdays, checklist steps and (shopping tasks) the linked todo list. */
+  _renderPtMore(t, busy) {
+    const wd = Array.isArray(t.weekdays) ? t.weekdays : [];
+    const todos = Object.keys((this._hass && this._hass.states) || {}).filter(e => e.startsWith('todo.')).sort();
+    const shopping = ['shopping_list', 'shopping', 'fridge'].includes(t.parent_key) || !!t.todo_entity;
+    const todo = shopping ? `<label class="lbl inline" for="pt-todo-${escParents(t.id)}">${escParents(this.localize('pt_ed_todo'))}</label>
+      <select id="pt-todo-${escParents(t.id)}" class="txt" data-pt-todo="${escParents(t.id)}" ${busy}>
+        <option value="">${escParents(this.localize('pt_ed_todo_none'))}</option>
+        ${todos.map(e => `<option value="${escParents(e)}" ${t.todo_entity === e ? 'selected' : ''}>${escParents(((this._hass.states[e] || {}).attributes || {}).friendly_name || e)}</option>`).join('')}
+      </select>` : '';
+    return `<details class="fold" data-det="ed:${escParents(t.id)}" ${this._open.has('det:ed:' + t.id) ? 'open' : ''}>
+      <summary>${escParents(this.localize('pt_ed_more'))}</summary>
+      ${t.auto_key ? '' : `<div class="lbl">${escParents(this.localize('pt_ed_days'))}</div>
+      <div class="chips" role="group">${this.localize('nt_days').map((d, i) =>
+        `<button class="chip ico ${wd.includes(i) ? 'on' : ''}" data-action="pt-wd" data-id="${escParents(t.id)}" data-d="${i}" aria-pressed="${wd.includes(i)}" ${busy}>${escParents(d)}</button>`).join('')}</div>`}
+      <label class="lbl" for="pt-steps-${escParents(t.id)}">${escParents(this.localize('pt_ed_steps'))}</label>
+      <textarea id="pt-steps-${escParents(t.id)}" class="txt" rows="3" data-pt-steps="${escParents(t.id)}" ${busy}>${escParents((t.subtasks || []).map(st => st.title).join('\n'))}</textarea>
+      ${todo}
+    </details>`;
+  }
+
   _renderParentTaskEditor() {
     const list = this._parentTasksAll();
     const rows = list.map(t => {
@@ -2679,6 +2825,7 @@ class FamilyMissionParents extends HTMLElement {
             ${this.me ? this._modeSegment(this._ptMode(t), `data-action="pt-mode" data-id="${escParents(t.id)}" ${busy}`) : `<span class="badge">${escParents(who)}</span>`}
             <label class="rw-f"><input type="number" min="1" max="600" inputmode="numeric" data-pt-min="${escParents(t.id)}" value="${parseInt(t.minutes) || ''}" aria-label="${escParents(this.localize('pt_minutes_lbl'))}"> ${escParents(this.localize('adhoc_min_unit'))}</label>
           </div>
+          ${this._renderPtMore(t, busy)}
         </article>`;
     }).join('');
     return `
@@ -2727,6 +2874,7 @@ class FamilyMissionParents extends HTMLElement {
     if (this._nt) { layer.innerHTML = this._renderNtSheet(); return; }
     if (this._abs) { layer.innerHTML = this._renderAbsenceSheet(); return; }
     if (this._own) { layer.innerHTML = this._renderOwnSheet(); return; }
+    if (this._todo) { layer.innerHTML = this._renderTodoSheet(); return; }
     if (this._pickKid) { layer.innerHTML = this._renderPickKidSheet(); return; }
     if (this._skip) { layer.innerHTML = this._renderSkipSheet(); return; }
     if (this._del) {
@@ -3004,6 +3152,14 @@ class FamilyMissionParents extends HTMLElement {
       .fold { margin-bottom: 10px; }
       .fold > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 15px; font-weight: 700; color: var(--p-sub); }
       .fold .ptask { margin-top: 8px; }
+      .pt-steps { margin: 4px 0 0; }
+      .pt-steps > summary { min-height: 36px; font-size: 14px; }
+      .pt-step { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 15px; }
+      .pt-step.done span { text-decoration: line-through; color: var(--p-sub); }
+      .badge.todo, .badge.steps, .badge.days { background: color-mix(in srgb, #7E57C2 14%, transparent); }
+      .badge.hint { background: color-mix(in srgb, var(--warning-color, #E65100) 18%, transparent); }
+      textarea.txt { display: block; width: 100%; box-sizing: border-box; min-height: 72px; padding: 8px 10px; resize: vertical; font-family: inherit; }
+      .fold > label.lbl { display: block; margin-top: 8px; }
       .quickrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
       .qk { min-height: 72px; padding: 6px; border-radius: 14px; border: 2px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
       .qk span { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; text-align: center; }

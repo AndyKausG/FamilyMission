@@ -49,11 +49,64 @@ MAX_INTERVAL = 365
 DEFAULT_INTERVAL = 7
 
 
-def _e(key, de, en, group, interval, minutes, planning=False, weekday=None, preselected=False) -> dict:
+def _e(
+    key, de, en, group, interval, minutes, planning=False, weekday=None, preselected=False,
+    steps=None, per_kid=False, requires=None, kid_de=None, kid_en=None,
+) -> dict:
+    """One catalog entry.
+
+    ``steps``: ``(German list, English list)`` of checklist steps (non-blocking, 2.6).
+    ``per_kid``: one task per kid profile, named with ``kid_de`` / ``kid_en`` (``{kid}`` = the name).
+    ``requires``: household feature (``pets``) the entry only makes sense for.
+    """
     return {
         "key": key, "name_de": de, "name_en": en, "group": group, "interval": interval,
         "minutes": minutes, "planning": planning, "weekday": weekday, "preselected": preselected,
+        "steps_de": list(steps[0]) if steps else [], "steps_en": list(steps[1]) if steps else [],
+        "per_kid": bool(per_kid), "requires": requires,
+        "name_kid_de": kid_de or "", "name_kid_en": kid_en or "",
     }
+
+
+# Checklist steps (de, en) of the catalog entries
+_STEPS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "bathrooms": (
+        ("WC", "Waschbecken & Spiegel", "Dusche/Wanne", "Boden", "Handtücher tauschen"),
+        ("Toilet", "Sink & mirror", "Shower / bath", "Floor", "Change the towels"),
+    ),
+    "meal_plan": (
+        ("Termine der Woche ansehen", "Gerichte festlegen", "Einkaufsliste daraus"),
+        ("Check the week's dates", "Decide the meals", "Make the shopping list from it"),
+    ),
+    "calendar": (
+        ("Schule/Kita", "Vereine", "Arzt", "Wochenende", "Fahrdienste verteilen"),
+        ("School / nursery", "Clubs", "Doctor", "Weekend", "Share the driving"),
+    ),
+    "finances": (
+        ("Kontoauszüge prüfen", "Rechnungen zahlen", "Belege ablegen", "Taschengeld ausgezahlt?"),
+        ("Check the statements", "Pay the bills", "File the receipts", "Pocket money paid out?"),
+    ),
+    "fridge": (
+        ("Abgelaufenes raus", "Abwischen", "Fehlendes auf die Einkaufsliste"),
+        ("Throw out what expired", "Wipe down", "Put what is missing on the shopping list"),
+    ),
+    "vacuum": (
+        ("Saugen", "Wischen", "Teppiche ausschütteln"),
+        ("Vacuum", "Mop", "Shake out the rugs"),
+    ),
+    "kids_clothes": (
+        ("Zu klein aussortieren", "Saisonkleidung tauschen", "Fehlendes notieren"),
+        ("Sort out what is too small", "Swap the seasonal clothes", "Note what is missing"),
+    ),
+    "checkups": (
+        ("U-Heft/Impfpass prüfen", "Zahnarzt-Termine", "Augen/Ohren nach Bedarf"),
+        ("Check the health booklet / vaccination card", "Dentist appointments", "Eyes / ears if needed"),
+    ),
+    "holiday_care": (
+        ("Ferientermine eintragen", "Urlaub abstimmen", "Betreuung buchen"),
+        ("Enter the holiday dates", "Agree on the leave", "Book the childcare"),
+    ),
+}
 
 
 # (key, name_de, name_en, group, interval days, minutes, planning, weekday, preselected)
@@ -75,6 +128,9 @@ CATALOG: tuple[dict, ...] = (
     _e("bed_linen", "Bettwäsche wechseln", "Change the bed linen", GROUP_WEEKLY, 14, 30),
     _e("bins", "Mülltonnen rausstellen", "Put the bins out", GROUP_WEEKLY, 7, 10, preselected=True),
     _e("couple_checkin", "Paar-Check-in", "Couple check-in", GROUP_WEEKLY, 7, 15, planning=True, weekday=6),
+    _e("family_council", "Familienrat/Wochenrückblick", "Family meeting / weekly review", GROUP_WEEKLY, 7, 30,
+       planning=True, weekday=6),
+    _e("me_time", "Eigene Auszeit planen", "Plan some time for myself", GROUP_WEEKLY, 7, 60, planning=True),
     # --- monthly and longer ----------------------------------------------------
     _e("finances", "Finanzen/Rechnungen", "Finances / bills", GROUP_MONTHLY, 30, 45, planning=True),
     _e("fridge", "Kühlschrank/Vorräte", "Fridge / supplies", GROUP_MONTHLY, 30, 30),
@@ -85,6 +141,9 @@ CATALOG: tuple[dict, ...] = (
     _e("car", "Reifen/TÜV", "Tyres / car inspection", GROUP_MONTHLY, 182, 60, planning=True),
     _e("smoke_alarms", "Rauchmelder testen", "Test the smoke alarms", GROUP_MONTHLY, 365, 15),
     _e("garden", "Garten", "Garden", GROUP_MONTHLY, 91, 120),
+    _e("medicine_cabinet", "Hausapotheke prüfen", "Check the medicine cabinet", GROUP_MONTHLY, 182, 20),
+    _e("vet", "Tierarzt/Impfung", "Vet / vaccination", GROUP_MONTHLY, 365, 30, planning=True, requires="pets"),
+    _e("season_check", "Heizung/Filter/Saisoncheck", "Heating / filters / seasonal check", GROUP_MONTHLY, 182, 45),
     # --- kids' organisation ------------------------------------------------------
     _e("checkups", "Vorsorge/Zahnarzt", "Check-ups / dentist", GROUP_KIDS, 182, 20, planning=True),
     _e("school", "Schule (Post, Hefte, Termine)", "School (mail, notebooks, dates)",
@@ -93,6 +152,15 @@ CATALOG: tuple[dict, ...] = (
     _e("holiday_care", "Ferienbetreuung", "Holiday childcare", GROUP_KIDS, 91, 60, planning=True),
     _e("clubs", "Vereine/Kurse", "Clubs / classes", GROUP_KIDS, 182, 30, planning=True),
     _e("prescriptions", "Rezepte", "Prescriptions", GROUP_KIDS, 30, 15, planning=True),
+    _e("exclusive_time", "Exklusivzeit mit jedem Kind", "One-on-one time with each kid", GROUP_KIDS, 7, 30,
+       preselected=True, per_kid=True, kid_de="Exklusivzeit mit {kid}", kid_en="One-on-one time with {kid}"),
+)
+
+# attach the checklist steps (2.6)
+CATALOG = tuple(
+    {**item, "steps_de": list(_STEPS[item["key"]][0]), "steps_en": list(_STEPS[item["key"]][1])}
+    if item["key"] in _STEPS else item
+    for item in CATALOG
 )
 
 CATALOG_BY_KEY: dict[str, dict] = {item["key"]: item for item in CATALOG}
@@ -396,3 +464,188 @@ def handover_decline_texts(name: str, task_name: str, lang: str = "de") -> tuple
     if lang == "de":
         return "Übernahme", f"{name} kann gerade nicht: {task_name}"
     return "Handover", f"{name} can't right now: {task_name}"
+
+
+# ---------------------------------------------------------------------------
+# 2.6: checklists, weekdays, per-kid names
+# ---------------------------------------------------------------------------
+
+MAX_STEPS = 12
+MAX_STEP_LENGTH = 60
+
+
+def normalize_steps(value: Any) -> list[str]:
+    """Checklist step titles: trimmed, no empty ones, at most 12 steps of 60 characters; anything else -> ``[]``."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    result: list[str] = []
+    for item in value:
+        title = item.get("title") if isinstance(item, dict) else item
+        if not isinstance(title, str):
+            continue
+        title = title.strip()[:MAX_STEP_LENGTH]
+        if title and len(result) < MAX_STEPS:
+            result.append(title)
+    return result
+
+
+def build_subtasks(titles: Iterable[str], previous: Any = None) -> list[dict]:
+    """``[{"title", "done"}]`` for ``titles``; the progress of steps with an unchanged title is kept."""
+    progress = {
+        st.get("title"): bool(st.get("done")) for st in (previous or []) if isinstance(st, dict)
+    }
+    return [{"title": t, "done": progress.get(t, False)} for t in normalize_steps(list(titles))]
+
+
+def subtask_titles(subtasks: Any) -> list[str]:
+    """Titles of a task's checklist."""
+    return [st.get("title") for st in (subtasks or []) if isinstance(st, dict) and st.get("title")]
+
+
+def steps_progress(subtasks: Any) -> tuple[int, int]:
+    """``(done, total)`` of a checklist."""
+    steps = [st for st in (subtasks or []) if isinstance(st, dict)]
+    return sum(1 for st in steps if st.get("done")), len(steps)
+
+
+def catalog_name(entry: dict, lang: str, kid_name: str | None = None) -> str:
+    """Task name of a catalog entry (``per_kid`` entries use the kid's name)."""
+    de = lang == "de"
+    template = (entry.get("name_kid_de") if de else entry.get("name_kid_en")) or ""
+    if kid_name and entry.get("per_kid") and template:
+        return template.replace("{kid}", kid_name)
+    return entry["name_de"] if de else entry["name_en"]
+
+
+def catalog_steps(entry: dict, lang: str) -> list[str]:
+    """Checklist steps of a catalog entry in the given language."""
+    return list(entry.get("steps_de" if lang == "de" else "steps_en") or [])
+
+
+def normalize_weekdays(value: Any) -> list[int]:
+    """Sorted unique weekdays (Mon = 0 ... Sun = 6); anything invalid -> ``[]`` (= use the interval)."""
+    if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple, set, frozenset)):
+        return []
+    days = set()
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int) or not 0 <= item <= 6:
+            return []
+        days.add(item)
+    return sorted(days)
+
+
+def valid_weekdays(value: Any) -> bool:
+    """True for ``None`` / ``[]`` (no schedule) or a list of ints 0-6."""
+    if value is None or value == []:
+        return True
+    return bool(normalize_weekdays(value))
+
+
+def next_weekday_on_or_after(weekdays: Iterable[int], day: date) -> date:
+    """First day ``>= day`` whose weekday is listed (``day`` itself without a valid schedule)."""
+    days = normalize_weekdays(list(weekdays or []))
+    for offset in range(7 if days else 0):
+        if (day + timedelta(days=offset)).weekday() in days:
+            return day + timedelta(days=offset)
+    return day
+
+
+def next_due(today: date, interval: int, weekdays: Any = None) -> date:
+    """Next due day after a completion today: the next listed weekday (strictly after today) or ``interval`` days on."""
+    days = normalize_weekdays(weekdays)
+    if days:
+        return next_weekday_on_or_after(days, today + timedelta(days=1))
+    return today + timedelta(days=max(0, int(interval)))
+
+
+# ---------------------------------------------------------------------------
+# 2.6: bins on the evening before a collection
+# ---------------------------------------------------------------------------
+
+DEFAULT_BINS_CHECK_TIME = "19:30"
+BINS_KEY = "bins"
+BED_LINEN_KEY = "bed_linen"
+BEDDING_KID_KEY = "bedding"
+
+
+def bins_target(collection_days: Iterable[date], today: date) -> date | None:
+    """The next collection day (today counts, the morning of the collection can still be used) or ``None``."""
+    upcoming = sorted(d for d in collection_days if d >= today)
+    return upcoming[0] if upcoming else None
+
+
+def bins_texts(lang: str = "de") -> tuple[str, str]:
+    """``(title, message)`` of the push when the kids have not put the bins out in time."""
+    if lang == "de":
+        return "Mülltonnen", "Tonnen stehen noch nicht draußen"
+    return "Bins", "The bins are not out yet"
+
+
+# ---------------------------------------------------------------------------
+# 2.6: batteries
+# ---------------------------------------------------------------------------
+
+DEFAULT_BATTERY_THRESHOLD = 20
+MIN_BATTERY_THRESHOLD = 5
+MAX_BATTERY_THRESHOLD = 50
+BATTERY_HYSTERESIS = 5
+BATTERY_CHECK_MINUTES = 30
+
+
+def battery_threshold(value: Any) -> int:
+    """Threshold in percent (5-50), default 20 for anything else."""
+    if isinstance(value, bool):
+        return DEFAULT_BATTERY_THRESHOLD
+    try:
+        number = int(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return DEFAULT_BATTERY_THRESHOLD
+    return max(MIN_BATTERY_THRESHOLD, min(MAX_BATTERY_THRESHOLD, number))
+
+
+def battery_level(state: Any) -> float | None:
+    """The battery level (0-100) of a state string, ``None`` for unknown / unavailable / out of range."""
+    try:
+        level = float(state)
+    except (TypeError, ValueError):
+        return None
+    if level != level or not 0 <= level <= 100:
+        return None
+    return level
+
+
+def battery_changes(levels: dict[str, float], low: Iterable[str], threshold: int) -> tuple[list[str], list[str]]:
+    """``(newly_low, recovered)`` entity ids.
+
+    ``newly_low``: below the threshold and not yet reported. ``recovered``: reported before and
+    now above ``threshold + 5`` (the hysteresis keeps a value that hovers around the threshold quiet).
+    An entity without a level (unavailable) changes nothing.
+    """
+    known = set(low)
+    newly = sorted(e for e, v in levels.items() if v < threshold and e not in known)
+    recovered = sorted(e for e in known if e in levels and levels[e] > threshold + BATTERY_HYSTERESIS)
+    return newly, recovered
+
+
+def battery_task_name(friendly_name: str, lang: str = "de") -> str:
+    """Name of the battery task: "🔋 Batterie Rauchmelder Flur"."""
+    head = "🔋 Batterie" if lang == "de" else "🔋 Battery"
+    return f"{head} {friendly_name}".strip()
+
+
+def battery_push_texts(friendly_name: str, level: float, lang: str = "de") -> tuple[str, str]:
+    """``(title, message)`` of the push for a low battery."""
+    value = f"{level:g}"
+    if lang == "de":
+        return "🔋 Batterie wechseln", f"{friendly_name}: {value} %"
+    return "🔋 Replace the battery", f"{friendly_name}: {value} %"
+
+
+# ---------------------------------------------------------------------------
+# 2.6: medication stock follow-up task
+# ---------------------------------------------------------------------------
+
+def stock_task_name(label: str, kid_name: str, lang: str = "de") -> str:
+    """Name of the follow-up task: "💊 Rezept/Nachkauf Tablette Lena"."""
+    head = "💊 Rezept/Nachkauf" if lang == "de" else "💊 Prescription / refill"
+    return " ".join(p for p in (head, label, kid_name) if p)

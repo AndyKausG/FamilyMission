@@ -22,7 +22,7 @@ def _items(*keys):
 
 
 def test_catalog_structure():
-    assert len(pc.CATALOG) == len(pc.CATALOG_BY_KEY) == 28
+    assert len(pc.CATALOG) == len(pc.CATALOG_BY_KEY) == 34
     assert {i["group"] for i in pc.CATALOG} == set(pc.GROUPS)
     for item in pc.CATALOG:
         assert item["name_de"] and item["name_en"]
@@ -32,7 +32,8 @@ def test_catalog_structure():
     assert pc.CATALOG_BY_KEY["calendar"]["weekday"] == 6
     assert pc.CATALOG_BY_KEY["car"]["interval"] == 182
     assert set(pc.PRESELECTED_KEYS) == {
-        "dinner", "kitchen", "bedtime", "meal_plan", "shopping_list", "shopping", "bins", "calendar"}
+        "dinner", "kitchen", "bedtime", "meal_plan", "shopping_list", "shopping", "bins", "calendar",
+        "exclusive_time"}
     planning = {i["key"] for i in pc.CATALOG if i["planning"]}
     assert {"meal_plan", "shopping_list", "calendar", "couple_checkin", "finances"} <= planning
     assert "shopping" not in planning and "dinner" not in planning
@@ -195,3 +196,93 @@ def test_digest_counts_and_texts():
     assert pc.digest_texts(1, 0, "en")[1] == "Today: 1 task"
     assert "07:30" in pc.due_time_texts("Arzt", "07:30", "de")[1]
     assert "07:30" in pc.due_time_texts("Doctor", "07:30", "en")[1]
+
+
+# ---------------------------------------------------------------------------
+# 2.6 step 9: checklists, weekdays, per-kid names, bins, batteries
+# ---------------------------------------------------------------------------
+
+def test_catalog_checklist_steps_de_en():
+    expected = {"bathrooms": 5, "meal_plan": 3, "calendar": 5, "finances": 4, "fridge": 3,
+                "vacuum": 3, "kids_clothes": 3, "checkups": 3, "holiday_care": 3}
+    for key, count in expected.items():
+        entry = pc.CATALOG_BY_KEY[key]
+        assert len(pc.catalog_steps(entry, "de")) == count == len(pc.catalog_steps(entry, "en")), key
+    assert pc.catalog_steps(pc.CATALOG_BY_KEY["bathrooms"], "de")[0] == "WC"
+    assert pc.catalog_steps(pc.CATALOG_BY_KEY["dinner"], "de") == []
+    assert pc.catalog_steps(pc.CATALOG_BY_KEY["finances"], "de")[-1] == "Taschengeld ausgezahlt?"
+    assert pc.CATALOG_BY_KEY["fridge"]["steps_en"][2].startswith("Put what is missing")
+
+
+def test_new_templates():
+    for key, interval in (("medicine_cabinet", 182), ("season_check", 182), ("vet", 365)):
+        assert pc.CATALOG_BY_KEY[key]["interval"] == interval
+    assert pc.CATALOG_BY_KEY["vet"]["requires"] == "pets"
+    assert pc.CATALOG_BY_KEY["family_council"]["weekday"] == 6 and pc.CATALOG_BY_KEY["family_council"]["planning"]
+    assert pc.CATALOG_BY_KEY["me_time"]["planning"] and pc.CATALOG_BY_KEY["me_time"]["interval"] == 7
+    excl = pc.CATALOG_BY_KEY["exclusive_time"]
+    assert excl["per_kid"] and excl["preselected"] and excl["minutes"] == 30 and excl["interval"] == 7
+    assert pc.catalog_name(excl, "de", "Lena") == "Exklusivzeit mit Lena"
+    assert pc.catalog_name(excl, "en", "Lena") == "One-on-one time with Lena"
+    assert pc.catalog_name(excl, "de") == "Exklusivzeit mit jedem Kind"          # without a kid: the general name
+    assert pc.catalog_name(pc.CATALOG_BY_KEY["dinner"], "en", "Lena") == "Dinner"
+    assert not [k for k in pc.PRESELECTED_KEYS if k in ("family_council", "me_time", "vet", "season_check", "medicine_cabinet")]
+
+
+def test_normalize_steps_and_build_subtasks():
+    assert pc.normalize_steps(["  a ", "", None, 5, "b", {"title": "c"}]) == ["a", "b", "c"]
+    assert pc.normalize_steps("x") == [] and pc.normalize_steps(None) == []
+    assert len(pc.normalize_steps([f"s{i}" for i in range(30)])) == 12
+    assert pc.normalize_steps(["y" * 100]) == ["y" * 60]
+    previous = [{"title": "a", "done": True}, {"title": "b", "done": False}]
+    built = pc.build_subtasks(["b", "a", "new"], previous)
+    assert built == [{"title": "b", "done": False}, {"title": "a", "done": True}, {"title": "new", "done": False}]
+    assert pc.steps_progress(built) == (1, 3) and pc.steps_progress(None) == (0, 0)
+    assert pc.subtask_titles(built) == ["b", "a", "new"]
+
+
+def test_weekdays_helpers():
+    assert pc.normalize_weekdays([4, 0, 2, 0]) == [0, 2, 4]
+    for bad in ([7], [-1], ["a"], [True], "135", None, 3, [1.5]):
+        assert pc.normalize_weekdays(bad) == [], bad
+    assert pc.valid_weekdays(None) and pc.valid_weekdays([]) and pc.valid_weekdays([1, 3])
+    assert not pc.valid_weekdays([9]) and not pc.valid_weekdays(["x"])
+    mon_wed_fri = [0, 2, 4]
+    assert pc.next_weekday_on_or_after(mon_wed_fri, TODAY) == TODAY                  # Wednesday
+    assert pc.next_weekday_on_or_after([0], TODAY) == date(2026, 11, 9)
+    assert pc.next_weekday_on_or_after([], TODAY) == TODAY
+
+
+def test_next_due_after_a_completion():
+    assert pc.next_due(TODAY, 7) == TODAY + timedelta(days=7)
+    assert pc.next_due(TODAY, 7, [0, 2, 4]) == date(2026, 11, 6)                     # Wed -> Fri
+    assert pc.next_due(date(2026, 11, 6), 7, [0, 2, 4]) == date(2026, 11, 9)         # Fri -> Mon
+    assert pc.next_due(TODAY, 7, [2]) == date(2026, 11, 11)                          # only Wednesday: next week
+    assert pc.next_due(TODAY, 3, "junk") == TODAY + timedelta(days=3)
+
+
+def test_bins_target_and_texts():
+    days = [date(2026, 11, 3), date(2026, 11, 10)]
+    assert pc.bins_target(days, TODAY) == date(2026, 11, 10)
+    assert pc.bins_target(days, date(2026, 11, 3)) == date(2026, 11, 3)               # the collection morning counts
+    assert pc.bins_target(days, date(2026, 11, 11)) is None and pc.bins_target([], TODAY) is None
+    assert pc.bins_texts("de")[1] == "Tonnen stehen noch nicht draußen"
+    assert "not out yet" in pc.bins_texts("en")[1]
+    assert pc.DEFAULT_BINS_CHECK_TIME == "19:30"
+
+
+def test_battery_helpers():
+    assert pc.battery_threshold(None) == 20 and pc.battery_threshold("x") == 20 and pc.battery_threshold(True) == 20
+    assert pc.battery_threshold(1) == 5 and pc.battery_threshold(99) == 50 and pc.battery_threshold("35") == 35
+    assert pc.battery_level("12.5") == 12.5 and pc.battery_level("0") == 0 and pc.battery_level("100") == 100
+    for bad in ("unavailable", "unknown", "", "nan", "-1", "101", None, "low"):
+        assert pc.battery_level(bad) is None, bad
+    levels = {"a": 10.0, "b": 19.9, "c": 20.0, "d": 90.0}
+    assert pc.battery_changes(levels, [], 20) == (["a", "b"], [])
+    # hysteresis: a reported sensor is only released above threshold + 5
+    assert pc.battery_changes({"a": 25.0, "b": 25.1, "x": 50.0}, ["a", "b", "gone2"], 20) == ([], ["b"])
+    assert pc.battery_changes({"a": 10.0}, ["a"], 20) == ([], [])
+    assert pc.battery_task_name("Rauchmelder", "de") == "🔋 Batterie Rauchmelder"
+    assert pc.battery_task_name("Smoke", "en") == "🔋 Battery Smoke"
+    assert pc.stock_task_name("Tablette", "Lena", "de") == "💊 Rezept/Nachkauf Tablette Lena"
+    assert pc.stock_task_name("Pill", "Lena", "en") == "💊 Prescription / refill Pill Lena"

@@ -537,7 +537,7 @@ class FamilyMissionParentsPicker extends HTMLElement {
         const mode = this._sel[it.key];
         const seg = on && hasPartner ? `<span class="seg" role="group">${['me', 'you', 'alternate'].map(m => `<button type="button" class="${mode === m ? 'on' : ''}" data-act="mode" data-k="${wzEsc(it.key)}" data-v="${m}" aria-pressed="${mode === m}">${wzEsc(this._t(m))}</button>`).join('')}</span>` : '';
         return `<div class="it"><label class="main"><input type="checkbox" data-act="pick" data-k="${wzEsc(it.key)}" ${on ? 'checked' : ''}>
-          <span class="nm">${wzEsc(this._name(it))}${it.planning ? ` <span class="brain" title="${wzEsc(this._t('planning'))}">🧠</span>` : ''}${existing[it.key] ? ` <span class="ex">✓ ${wzEsc(this._t('already'))}</span>` : ''}</span>
+          <span class="nm">${wzEsc(this._name(it))}${it.per_kid && (d.kids || []).length ? ` <span class="muted">(${wzEsc(d.kids.map(k => k.name).join(', '))})</span>` : ''}${it.planning ? ` <span class="brain" title="${wzEsc(this._t('planning'))}">🧠</span>` : ''}${existing[it.key] ? ` <span class="ex">✓ ${wzEsc(this._t('already'))}</span>` : ''}</span>
           <span class="mi">${wzEsc(this._t('min', { n: it.minutes }))}</span></label>${seg}</div>`;
       }).join('');
       return `<h4>${wzEsc(this._t('g_' + g))}</h4>${rows}`;

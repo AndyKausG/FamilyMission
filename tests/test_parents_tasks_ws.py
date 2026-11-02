@@ -136,7 +136,7 @@ async def test_catalog_lists_items_adults_and_existing(hass, clients, env):
     admin = clients["admin"]
     anna = clients["anna"]
     res = (await _call(anna, "family_mission/parents_catalog"))["result"]
-    assert len(res["items"]) == 28 and res["existing"] == {}
+    assert len(res["items"]) == 33 and res["existing"] == {}
     assert {i["key"] for i in res["items"] if i["preselected"]} >= {"dinner", "calendar"}
     # the kid with a Home Assistant user is not an adult
     assert [(a["name"], a["push"]) for a in res["adults"]] == [("Anna", True), ("Ben", True)]

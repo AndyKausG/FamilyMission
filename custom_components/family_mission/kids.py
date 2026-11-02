@@ -1723,8 +1723,83 @@ def normalize_care(raw: Any) -> list[dict]:
         }
         if isinstance(after, str):
             entry["after"] = after.strip()[:MAX_CARE_AFTER]
+        stock = care_stock_of(item.get("stock"))
+        if stock is not None:
+            entry["stock"] = stock
+            entry["per_dose"] = care_per_dose(item.get("per_dose"))
         result.append(entry)
     return result
+
+
+MAX_CARE_STOCK = 9999
+MAX_CARE_PER_DOSE = 20
+CARE_LOW_STOCK_DAYS = 7
+CARE_STOCK_HORIZON = 400
+
+
+def care_stock_of(value: Any) -> int | None:
+    """The pill stock of a care entry: an int 0-9999, ``None`` (= tracking off) for anything else."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, float) and value != int(value):
+        return None
+    if isinstance(value, str):
+        value = value.strip()
+        if not value.lstrip("-").isdigit():
+            return None
+    try:
+        number = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return number if 0 <= number <= MAX_CARE_STOCK else None
+
+
+def care_per_dose(value: Any) -> int:
+    """Pills per dose (1-20), default 1."""
+    if isinstance(value, bool):
+        return 1
+    try:
+        number = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return 1
+    return number if 1 <= number <= MAX_CARE_PER_DOSE else 1
+
+
+def care_stock_change(entry: dict, delta_doses: int) -> int | None:
+    """New stock after ``delta_doses`` doses were taken (+1) or taken back (-1); ``None`` without tracking.
+
+    Never below 0 or above 9999.
+    """
+    stock = care_stock_of(entry.get("stock"))
+    if stock is None:
+        return None
+    return max(0, min(MAX_CARE_STOCK, stock - delta_doses * care_per_dose(entry.get("per_dose"))))
+
+
+def care_days_left(entry: dict, start: date) -> int | None:
+    """How many days from ``start`` on (``start`` included) the stock lasts; ``None`` without tracking.
+
+    One dose of ``per_dose`` pills is taken on every scheduled weekday of the entry (an entry that is
+    only due Mon/Wed/Fri lasts longer in calendar days). Capped at 400 days.
+    """
+    stock = care_stock_of(entry.get("stock"))
+    if stock is None:
+        return None
+    per_dose = care_per_dose(entry.get("per_dose"))
+    weekdays = _care_weekdays(entry.get("weekdays"))
+    left = stock
+    for offset in range(CARE_STOCK_HORIZON):
+        if (start + timedelta(days=offset)).weekday() in weekdays:
+            if left < per_dose:
+                return offset
+            left -= per_dose
+    return CARE_STOCK_HORIZON
+
+
+def care_stock_low(entry: dict, start: date) -> bool:
+    """True when the tracked stock lasts at most ``CARE_LOW_STOCK_DAYS`` days."""
+    days = care_days_left(entry, start)
+    return days is not None and days <= CARE_LOW_STOCK_DAYS
 
 
 def care_insert_index(titles: Iterable[Any], after: Any, anchor: str) -> int:

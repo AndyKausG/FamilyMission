@@ -61,6 +61,8 @@ const I18N_SETTINGS = {
     care_alert: "Extra alert when declined often", care_alert_count: "times", care_alert_days: "within days",
     care_days: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
     care_after: "Position: after step", care_after_end: "At the end",
+    care_stock: "Stock (pills)", care_stock_ph: "off", care_per_dose: "Pills per dose",
+    care_stock_d: "Optional: every \"taken\" counts one dose down. A week before it runs out, the parents get a task \"Prescription / refill\". Empty = off.",
     invalid_birthday: "The birthday must be a valid date in the past.",
     approval_title: "Approval & consequences",
     cheat_penalty_factor: "Deduction when cheating (x task points)", cheat_strict_days: "Strict mode after cheating (days, 0 = off)",
@@ -83,6 +85,9 @@ claim_minutes: "Bonus reservation (minutes)",
     pe_label: "Wording for the band (optional)", pe_label_ph: "Mom and Dad",
     pe_summary: "Sunday summary", pe_summary_d: "A neutral weekly note to each adult: hours per person and what is still open.", pe_time: "Time",
     pe_digest: "Morning overview", pe_digest_d: "One push per adult in the morning: \"Today: 3 tasks, 1 overdue\". Only when something is due. Never at night.",
+    pe_bins: "Bins: remind when the kids have not put them out", pe_bins_d: "Only with the waste collection. The parents' task \"Put the bins out\" is then due on the evening before a collection; if the kids' bonus is not done by this time, the parents get a push. Never at night.",
+    pe_battery: "Create tasks for low batteries", pe_battery_d: "Sensors with the device class battery below the limit become a parents' task \"🔋 Battery ...\" (once per sensor, checked every 30 minutes).",
+    pe_battery_pct: "Limit in %",
     pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. Other parent tasks only remind at their own time (if you set one).",
     pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.", 
     tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
@@ -167,6 +172,8 @@ claim_minutes: "Bonus reservation (minutes)",
     care_alert: "Zusätzlicher Alarm bei häufigem Ablehnen", care_alert_count: "mal", care_alert_days: "innerhalb von Tagen",
     care_days: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
     care_after: "Position: nach Schritt", care_after_end: "am Ende",
+    care_stock: "Vorrat (Tabletten)", care_stock_ph: "aus", care_per_dose: "Tabletten pro Gabe",
+    care_stock_d: "Optional: jedes \"Genommen\" zählt eine Gabe herunter. Eine Woche bevor der Vorrat reicht, bekommen die Eltern die Aufgabe \"Rezept/Nachkauf\". Leer = aus.",
     invalid_birthday: "Der Geburtstag muss ein gültiges Datum in der Vergangenheit sein.",
     approval_title: "Freigabe & Konsequenzen",
     cheat_penalty_factor: "Abzug bei Schummeln (x Aufgabenpunkte)", cheat_strict_days: "Strenge Phase nach Schummeln (Tage, 0 = aus)",
@@ -189,6 +196,9 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     pe_label: "Wortlaut für das Band (optional)", pe_label_ph: "Mama und Papa",
     pe_summary: "Sonntags-Zusammenfassung", pe_summary_d: "Eine neutrale Wochen-Notiz an jeden Erwachsenen: Stunden pro Person und was noch offen ist.", pe_time: "Uhrzeit",
     pe_digest: "Morgen-Übersicht", pe_digest_d: "Eine Push-Nachricht pro Erwachsenem am Morgen: \"Heute: 3 Aufgaben, 1 überfällig\". Nur wenn etwas ansteht. Nie nachts.",
+    pe_bins: "Tonnen: erinnern, wenn die Kinder sie nicht rausgestellt haben", pe_bins_d: "Nur mit der Müllabfuhr. Die Eltern-Aufgabe \"Mülltonnen rausstellen\" ist dann am Abend vor einer Leerung fällig; ist der Bonus der Kinder bis zu dieser Uhrzeit nicht erledigt, bekommen die Eltern eine Push-Nachricht. Nie nachts.",
+    pe_battery: "Aufgaben für schwache Batterien anlegen", pe_battery_d: "Sensoren mit der Geräteklasse Batterie unter der Grenze werden zur Eltern-Aufgabe \"🔋 Batterie ...\" (einmal pro Sensor, geprüft alle 30 Minuten).",
+    pe_battery_pct: "Grenze in %",
     pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nur zu ihrer eigenen Uhrzeit (falls gesetzt).",
     pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.", 
     tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
@@ -1332,6 +1342,8 @@ class FamilyMissionSettings extends HTMLElement {
         .care-days { display: flex; flex-wrap: wrap; gap: 6px; }
         .care-day { min-width: 40px; min-height: 36px; border-radius: 18px; border: 1px solid var(--divider-color); background: transparent; color: var(--primary-text-color); cursor: pointer; }
         .care-day.on { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-primary-color, #fff); }
+        .care-stock-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .care-stock-row input[type=number] { width: 110px; }
         .care-alert-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
         .care-alert-row input[type=number] { width: 64px; }
         .kid-emoji-pick { background: transparent; border: 1px solid var(--divider-color); border-radius: 8px; font-size: 20px; width: 36px; height: 36px; cursor: pointer; padding: 0; }
@@ -1488,6 +1500,13 @@ class FamilyMissionSettings extends HTMLElement {
             ${days.map((name, wd) => `<button type="button" class="care-day ${(c.weekdays || []).includes(wd) ? 'on' : ''}" ${at} data-wd="${wd}"
                 aria-pressed="${(c.weekdays || []).includes(wd) ? 'true' : 'false'}" ${dis}>${esc(name)}</button>`).join('')}
           </div>
+          <div class="care-stock-row">
+            <label class="kid-field">${this.localize('care_stock')}
+              <input type="number" class="care-stock" ${at} min="0" max="9999" step="1" placeholder="${esc(this.localize('care_stock_ph'))}" value="${c.stock === undefined || c.stock === null ? '' : esc(c.stock)}" ${dis}></label>
+            ${c.stock === undefined || c.stock === null ? '' : `<label class="kid-field">${this.localize('care_per_dose')}
+              <input type="number" class="care-perdose" ${at} min="1" max="20" step="1" value="${esc(c.per_dose || 1)}" ${dis}></label>`}
+          </div>
+          <p class="kids-note">${this.localize('care_stock_d')}</p>
           <ha-formfield label="${esc(this.localize('care_notify'))}">
             <ha-checkbox class="care-notify" ${at} ${c.notify_parents !== false ? 'checked' : ''} ${dis}></ha-checkbox>
           </ha-formfield>
@@ -1915,6 +1934,18 @@ class FamilyMissionSettings extends HTMLElement {
                 <input type="time" id="pe-reminder-time" value="${time(st.planning_reminder_time, '18:00')}"></label>
             </div>
             <div class="family-box">
+              <h4>${this.localize('pe_bins')}</h4>
+              <p class="kids-note">${this.localize('pe_bins_d')}</p>
+              <label class="kid-field">${this.localize('pe_time')}
+                <input type="time" id="pe-bins-time" value="${time(st.parent_bins_check_time, '19:30')}"></label>
+            </div>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-battery" ${st.battery_tasks_enabled === true ? 'checked' : ''}> ${this.localize('pe_battery')}</label>
+              <p class="kids-note">${this.localize('pe_battery_d')}</p>
+              <label class="kid-field">${this.localize('pe_battery_pct')}
+                <input type="number" id="pe-battery-pct" min="5" max="50" step="1" value="${esc(st.battery_threshold || 20)}"></label>
+            </div>
+            <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="pe-abs" ${st.absence_suggest_enabled === true ? 'checked' : ''}> ${this.localize('pe_abs')}</label>
               <p class="kids-note">${this.localize('pe_abs_d')}</p>
               <label class="kid-field">${this.localize('pe_abs_hours')}
@@ -1939,6 +1970,10 @@ class FamilyMissionSettings extends HTMLElement {
         this.settings.parent_digest_time = time('pe-digest-time', '07:00');
         this.settings.planning_reminders = !!el('pe-reminder').checked;
         this.settings.planning_reminder_time = time('pe-reminder-time', '18:00');
+        this.settings.parent_bins_check_time = time('pe-bins-time', '19:30');
+        this.settings.battery_tasks_enabled = !!el('pe-battery').checked;
+        const pct = parseInt(el('pe-battery-pct').value);
+        this.settings.battery_threshold = pct >= 5 && pct <= 50 ? pct : 20;
         this.settings.absence_suggest_enabled = !!el('pe-abs').checked;
         const hours = parseInt(el('pe-abs-hours').value);
         this.settings.absence_suggest_hours = hours >= 6 && hours <= 168 ? hours : 24;
@@ -2302,6 +2337,11 @@ class FamilyMissionSettings extends HTMLElement {
       if (set.has(wd)) set.delete(wd); else set.add(wd);
       c.weekdays = [...set].sort();
     }, true);
+    on('.care-stock', 'change', (c, ev) => {
+      const n = parseInt(ev.target.value);
+      if (ev.target.value === '' || isNaN(n)) { delete c.stock; delete c.per_dose; } else { c.stock = Math.max(0, Math.min(9999, n)); c.per_dose = c.per_dose || 1; }
+    }, true);
+    on('.care-perdose', 'input', (c, ev) => { c.per_dose = Math.max(1, Math.min(20, parseInt(ev.target.value) || 1)); });
     on('.care-notify', 'change', (c, ev) => { c.notify_parents = !!ev.target.checked; });
     on('.care-alert', 'change', (c, ev) => {
       c.decline_alert = { count: 3, days: 7, ...(c.decline_alert || {}), enabled: !!ev.target.checked };

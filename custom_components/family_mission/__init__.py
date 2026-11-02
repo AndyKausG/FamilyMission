@@ -129,6 +129,8 @@ from .const import (
     WS_TYPE_PARENT_TASK_ADD,
     WS_TYPE_PARENT_TASK_DONE,
     WS_TYPE_PARENT_TASK_POSTPONE,
+    WS_TYPE_PARENT_TOGGLE_STEP,
+    WS_TYPE_PARENT_TODO_ADD,
     WS_TYPE_HANDOVER_ASK,
     WS_TYPE_HANDOVER_ANSWER,
     WS_TYPE_WEEKLY_SUMMARY,
@@ -735,6 +737,44 @@ def _advance_task(data: dict, task_id: str, rotate: bool = True) -> dict | None:
     return undo
 
 
+def _kid_catalog_key(task: dict) -> str:
+    """Catalog key of a kid's task (wizard task or hand-made task with ``catalog_key``), else ``""``."""
+    if task.get("generated_by") == kids_catalog.GENERATED_BY:
+        key = kids_catalog.split_key(task.get("wizard_key") or "")[0]
+        if key:
+            return key
+    key = task.get("catalog_key")
+    return key if isinstance(key, str) else ""
+
+
+def _after_kid_completion(data: dict, task: dict) -> None:
+    """Side effects of a kid's completed task on the parents' side (2.6). Runs before the task advances.
+
+    * the waste bonus "put the bins out" done -> remembered, the parents' ``bins`` task can close silently
+    * the bedding stripped (catalog key ``bedding``) -> the parents' ``bed_linen`` task is due today
+    """
+    if task.get("parent_task"):
+        return
+    waste_key = task.get("waste_key")
+    if isinstance(waste_key, str) and waste_key.startswith(f"waste:{waste.JOB_OUT}:"):
+        done = waste.prune_done(data.get("waste_kids_done"), dt_util.now().date())
+        if waste_key not in done:
+            done.append(waste_key)
+        data["waste_kids_done"] = done
+    if _kid_catalog_key(task) == parents_catalog.BEDDING_KID_KEY:
+        today = dt_util.now().date()
+        for parent in data["tasks"].values():
+            if not _is_parent_task(parent) or parent.get("parent_key") != parents_catalog.BED_LINEN_KEY:
+                continue
+            due = _local_day_of(parent.get("due_date"))
+            if due is None or due > today:
+                parent["due_date"] = _day_start_iso(today)
+                parent.pop("someday", None)
+                parent.pop("carried_since", None)
+                parent.pop("due_reminded_for", None)
+            parent["hint"] = "bedding"
+
+
 def _rocket_check(hass: HomeAssistant, data: dict) -> dict | None:
     """Mark the family goal as reached (once per period). Does not save; the caller does.
 
@@ -856,6 +896,7 @@ async def _async_complete_task_internal(
 
     task_name = task.get("name")
     _skip_replaced(hass, data, task)
+    _after_kid_completion(data, task)
     undo = _advance_task(data, task_id)
     completion_id = _award_task_points(
         hass, data, task_id, task_name, users_with_points, total_points,
@@ -1268,15 +1309,21 @@ def _suggest_hours(value) -> int:
 
 def _sanitize_parent_settings(incoming: dict) -> None:
     """Keep only well-formed values of the parents' settings (anything else is dropped)."""
-    for key in ("role_model_band", "weekly_summary", "planning_reminders", "parent_digest_enabled", "absence_suggest_enabled"):
+    for key in (
+        "role_model_band", "weekly_summary", "planning_reminders", "parent_digest_enabled", "absence_suggest_enabled",
+        "battery_tasks_enabled",
+    ):
         if key in incoming and not isinstance(incoming[key], bool):
             del incoming[key]
+    if "battery_threshold" in incoming:
+        incoming["battery_threshold"] = parents_catalog.battery_threshold(incoming["battery_threshold"])
     if "absence_suggest_hours" in incoming:
         incoming["absence_suggest_hours"] = _suggest_hours(incoming["absence_suggest_hours"])
     for key, default in (
         ("weekly_summary_time", parents_catalog.DEFAULT_WEEKLY_SUMMARY_TIME),
         ("planning_reminder_time", parents_catalog.DEFAULT_PLANNING_REMINDER_TIME),
         ("parent_digest_time", parents_catalog.DEFAULT_PARENT_DIGEST_TIME),
+        ("parent_bins_check_time", parents_catalog.DEFAULT_BINS_CHECK_TIME),
     ):
         if key in incoming:
             incoming[key] = parents_catalog.valid_clock(incoming[key], default)
@@ -1758,6 +1805,8 @@ async def ws_set_kid_profile(hass: HomeAssistant, connection: websocket_api.Acti
         hass.data[DOMAIN]["pin_limiter"].reset(pid)
 
     _update_kids(hass, kids)
+    if "care" in msg:
+        await _async_check_care_stock(hass)    # a new / higher stock closes the follow-up task, a low one opens it
     connection.send_result(msg["id"], {"success": True})
 
 
@@ -2053,6 +2102,11 @@ async def _async_care_answer(
     )
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
+    # the tracked pill stock follows "taken" (and a changed answer gives the pills back)
+    delta = (status == kidslib.CARE_TAKEN) - (item["status"] == kidslib.CARE_TAKEN)
+    if delta and "stock" in item:
+        await _async_care_stock_taken(hass, kid_id, care_id, delta)
+        await _async_check_care_stock(hass)
     await _async_check_care(hass)  # a decline reaches the parents right away
     return {"success": True, "status": status}
 
@@ -2218,6 +2272,7 @@ async def _async_request_approval(
         record["helpers"] = list(helpers)
         record["team_bonus"] = team_bonus
     _skip_replaced(hass, data, task)
+    _after_kid_completion(data, task)
     undo = _advance_task(data, task_id)
     if undo:
         record["undo"] = undo
@@ -2617,7 +2672,13 @@ def _restore_task_after_undo(data: dict, task_id: str, source: dict | None) -> N
     if not subtasks and source.get("subtasks"):
         subtasks = copy.deepcopy(source["subtasks"])
     if subtasks:
-        task["subtasks"] = [{**st, "done": False} for st in subtasks if isinstance(st, dict)]
+        # a parents' checklist gets its progress back, the kids' steps start afresh
+        progress = {
+            st.get("title"): bool(st.get("done")) for st in source.get("subtasks") or [] if isinstance(st, dict)
+        } if source.get("parent_undo") else {}
+        task["subtasks"] = [
+            {**st, "done": progress.get(st.get("title"), False)} for st in subtasks if isinstance(st, dict)
+        ]
 
 
 @websocket_api.websocket_command({
@@ -4622,6 +4683,8 @@ def _check_parent_actor(hass: HomeAssistant, connection, msg: dict) -> bool:
 def _build_parent_task(
     name: str, interval: int, minutes: int, planning: bool, due_day: date | None, assign: dict,
     parent_key: str | None = None, due_time: str | None = None, dated: bool = False,
+    subtasks: list | None = None, weekdays: list | None = None, for_kid: str | None = None,
+    todo_entity: str | None = None,
 ) -> dict:
     """A new parents' task: no points, category basis, owned by one adult.
 
@@ -4667,7 +4730,89 @@ def _build_parent_task(
         task["dated"] = True
     if due_time and due_day is not None:
         task["due_time"] = due_time
+    if subtasks:
+        task["subtasks"] = parents_catalog.build_subtasks(subtasks)
+    if weekdays:
+        task["weekdays"] = list(weekdays)
+    if for_kid:
+        task["for_kid"] = for_kid
+    if todo_entity:
+        task["todo_entity"] = todo_entity
     return task
+
+
+_PARENT_CUSTOM_FIELDS = ("name", "minutes", "planning", "subtasks", "weekdays")
+
+
+def _parent_definition(task: dict) -> dict:
+    """The definition fields of a parents' task a re-run of the catalog setup must not overwrite."""
+    return {
+        "name": task.get("name"),
+        "minutes": task.get("minutes"),
+        "planning": bool(task.get("planning")),
+        "subtasks": parents_catalog.subtask_titles(task.get("subtasks")),
+        "weekdays": parents_catalog.normalize_weekdays(task.get("weekdays")) or None,
+    }
+
+
+def _record_parent_customization(task: dict, before: dict) -> None:
+    """Remember in ``task["customized"]`` which definition fields an edit changed (catalog tasks only)."""
+    if not task.get("parent_key"):
+        return
+    after = _parent_definition(task)
+    changed = {key for key in _PARENT_CUSTOM_FIELDS if before.get(key) != after.get(key)}
+    if changed:
+        task["customized"] = sorted(set(task.get("customized") or []) | changed)
+
+
+def _parse_parent_extras(hass: HomeAssistant, msg: dict) -> dict:
+    """Validated ``weekdays`` / ``subtasks`` / ``todo_entity`` of a parents' command (only the keys present).
+
+    Raises ``_ParentError`` (``invalid_weekdays``, ``invalid_entity``).
+    """
+    result: dict = {}
+    if "weekdays" in msg:
+        weekdays = msg["weekdays"]
+        if weekdays and not parents_catalog.valid_weekdays(weekdays):
+            raise _ParentError("invalid_weekdays", "Weekdays must be numbers from 0 (Monday) to 6 (Sunday)")
+        result["weekdays"] = parents_catalog.normalize_weekdays(weekdays) if weekdays else []
+    if "subtasks" in msg:
+        result["subtasks"] = parents_catalog.normalize_steps(msg["subtasks"])
+    if "todo_entity" in msg:
+        entity = msg["todo_entity"]
+        if entity:
+            if not isinstance(entity, str) or not entity.startswith("todo.") or hass.states.get(entity) is None:
+                raise _ParentError("invalid_entity", "todo_entity must be an existing todo entity")
+            result["todo_entity"] = entity
+        else:
+            result["todo_entity"] = None
+    return result
+
+
+def _apply_parent_weekdays(task: dict, weekdays: list[int], today: date) -> None:
+    """Give a parents' task a weekday schedule (or remove it with ``[]``) and align its due date to it.
+
+    A one-time task becomes a weekly one. An overdue date is kept, a later one moves to the next listed weekday.
+    """
+    if not weekdays:
+        task.pop("weekdays", None)
+        return
+    task["weekdays"] = list(weekdays)
+    if task.get("interval", parents_catalog.DEFAULT_INTERVAL) == 0:
+        task["interval"] = parents_catalog.DEFAULT_INTERVAL
+        task.pop("dated", None)
+    due = _local_day_of(task.get("due_date"))
+    if task.get("someday") or due is None:
+        aligned = parents_catalog.next_weekday_on_or_after(weekdays, today)
+        task.pop("someday", None)
+    elif due < today:
+        return
+    else:
+        aligned = parents_catalog.next_weekday_on_or_after(weekdays, due)
+    if aligned != due:
+        task["due_date"] = _day_start_iso(aligned)
+        task.pop("carried_since", None)
+        task.pop("due_reminded_for", None)
 
 
 def _parse_due_fields(msg: dict) -> tuple[date | None, str | None]:
@@ -4722,6 +4867,18 @@ def _mode_unchanged(task: dict, assign: dict) -> bool:
     return _assignee_ids(task) == list(assign["assignees"])
 
 
+def _parent_kids(hass: HomeAssistant) -> list[dict]:
+    """The kid profiles as ``[{id, name}]`` (the kids a per-kid catalog entry expands to)."""
+    kids = _get_entry(hass).options.get("kids") or {}
+    return [{"id": kid_id, "name": _participant_name(hass, kid_id)} for kid_id in kids if isinstance(kids[kid_id], dict)]
+
+
+def _has_feature(hass: HomeAssistant, feature: str) -> bool:
+    """True when the household feature (wizard memory, e.g. ``pets``) is set."""
+    features = (_get_entry(hass).options.get("wizard") or {}).get("features")
+    return isinstance(features, list) and feature in features
+
+
 @websocket_api.websocket_command({
     vol.Required("type"): WS_TYPE_PARENTS_CATALOG,
     vol.Optional("me"): str,
@@ -4738,21 +4895,46 @@ async def ws_parents_catalog(hass: HomeAssistant, connection: websocket_api.Acti
         connection.send_error(msg["id"], err.code, err.message)
         return
     lang = _lang(hass)
-    items = parents_catalog.catalog_items()
-    for item in items:
-        item["name"] = item["name_de"] if lang == "de" else item["name_en"]
     existing = {}
     for task_id, task in hass.data[DOMAIN]["data"]["tasks"].items():
         if _is_parent_task(task) and task.get("parent_key") and task["parent_key"] not in existing:
             existing[task["parent_key"]] = {"task_id": task_id, "mode": parents_catalog.mode_of(task, me)}
+    items = []
+    for item in parents_catalog.catalog_items():
+        # entries for a household feature only show up when the household has it (or the task exists already)
+        if item.get("requires") and not _has_feature(hass, item["requires"]) and item["key"] not in existing:
+            continue
+        item["name"] = item["name_de"] if lang == "de" else item["name_en"]
+        items.append(item)
     connection.send_result(msg["id"], {
         "items": items,
         "adults": [{**a, "push": bool(_push_services(hass, a["id"]))} for a in adults],
+        "kids": _parent_kids(hass),
         "me": me,
         "partner": partner,
         "existing": existing,
         "language": lang,
     })
+
+
+def _refresh_catalog_parent_task(
+    task: dict, entry: dict, lang: str, name: str | None = None, steps: bool = True,
+) -> bool:
+    """Bring a catalog parents' task up to date with the catalog; customized fields stay as they are.
+
+    Refreshes the checklist steps (progress of unchanged steps stays) and, for per-kid tasks, the name.
+    """
+    custom = set(task.get("customized") or [])
+    changed = False
+    if steps and "subtasks" not in custom:
+        titles = parents_catalog.catalog_steps(entry, lang)
+        if titles != parents_catalog.subtask_titles(task.get("subtasks")):
+            task["subtasks"] = parents_catalog.build_subtasks(titles, task.get("subtasks"))
+            changed = True
+    if name and "name" not in custom and task.get("name") != name:
+        task["name"] = name
+        changed = True
+    return changed
 
 
 @websocket_api.websocket_command({
@@ -4771,7 +4953,10 @@ async def ws_parents_apply(hass: HomeAssistant, connection: websocket_api.Active
     """Create the chosen catalog tasks (admin / manager / parent).
 
     A catalog key that already exists only gets its mode updated - never a
-    duplicate. Without a partner every mode is ``me``.
+    duplicate. Without a partner every mode is ``me``. Fields the parents changed
+    (``task["customized"]``) are never overwritten. An entry for each kid
+    (``per_kid``) becomes one task per kid profile; tasks of kids that no longer
+    exist are removed.
     """
     if not _check_role(hass, connection, msg, _DAILY_ROLES):
         return
@@ -4791,64 +4976,110 @@ async def ws_parents_apply(hass: HomeAssistant, connection: websocket_api.Active
         chosen.setdefault(item["key"], item)
 
     data = hass.data[DOMAIN]["data"]
-    existing = {}
+    existing: dict[str, list[dict]] = {}
     for task in data["tasks"].values():
         if _is_parent_task(task) and task.get("parent_key"):
-            existing.setdefault(task["parent_key"], task)
+            existing.setdefault(task["parent_key"], []).append(task)
 
     today = dt_util.now().date()
-    new_keys = [k for k in chosen if k not in existing]
+    new_keys = [k for k in chosen if not existing.get(k)]
     starts = parents_catalog.stagger_start_dates([parents_catalog.CATALOG_BY_KEY[k] for k in new_keys], today)
-    de = _lang(hass) == "de"
+    lang = _lang(hass)
+    kids = _parent_kids(hass)
     created: list[dict] = []
     updated = 0
+    removed = 0
+
+    def _update_existing(task: dict, entry: dict, item: dict, assign: dict, name: str | None) -> bool:
+        custom = set(task.get("customized") or [])
+        changed = False
+        if not _mode_unchanged(task, assign):
+            _assign_mode(task, assign)
+            changed = True
+        if "minutes" in item and "minutes" not in custom and task.get("minutes") != item["minutes"]:
+            task["minutes"] = item["minutes"]
+            changed = True
+        if "planning" in item and "planning" not in custom and bool(task.get("planning")) != item["planning"]:
+            task["planning"] = item["planning"]
+            changed = True
+        return _refresh_catalog_parent_task(task, entry, lang, name) or changed
+
     for key, item in chosen.items():
         entry = parents_catalog.CATALOG_BY_KEY[key]
         assign = parents_catalog.resolve_mode(item["mode"], me, partner)
-        task = existing.get(key)
+        steps = parents_catalog.catalog_steps(entry, lang)
+        if entry.get("per_kid"):
+            by_kid = {t.get("for_kid"): t for t in existing.get(key, [])}
+            kid_ids = {k["id"] for k in kids}
+            for kid_id, task in list(by_kid.items()):
+                if kid_id not in kid_ids:    # the kid does not exist any more: its task goes too
+                    data["tasks"].pop(task["id"], None)
+                    removed += 1
+            base = starts.get(key, today)
+            for index, kid in enumerate(kids):
+                name = parents_catalog.catalog_name(entry, lang, kid["name"])
+                # several kids: the turns start with different adults, so one adult does not get them all
+                kid_assign = assign
+                if assign["parent_mode"] == parents_catalog.PARENT_MODE_ALTERNATE and index % 2 == 1:
+                    kid_assign = parents_catalog.resolve_mode(item["mode"], partner, me)
+                task = by_kid.get(kid["id"])
+                if task is not None:
+                    updated += 1 if _update_existing(task, entry, item, assign, name) else 0
+                    continue
+                task = _build_parent_task(
+                    name, entry["interval"], item.get("minutes", entry["minutes"]),
+                    item.get("planning", entry["planning"]),
+                    base + timedelta(days=index) if entry["interval"] > 2 else base, kid_assign,
+                    parent_key=key, subtasks=steps, for_kid=kid["id"],
+                )
+                data["tasks"][task["id"]] = task
+                created.append(task)
+            continue
+        task = (existing.get(key) or [None])[0]
         if task is not None:
-            changed = False
-            if not _mode_unchanged(task, assign):
-                _assign_mode(task, assign)
-                changed = True
-            if "minutes" in item and task.get("minutes") != item["minutes"]:
-                task["minutes"] = item["minutes"]
-                changed = True
-            if "planning" in item and bool(task.get("planning")) != item["planning"]:
-                task["planning"] = item["planning"]
-                changed = True
-            updated += 1 if changed else 0
+            updated += 1 if _update_existing(task, entry, item, assign, None) else 0
             continue
         task = _build_parent_task(
-            entry["name_de"] if de else entry["name_en"], entry["interval"],
+            entry["name_de"] if lang == "de" else entry["name_en"], entry["interval"],
             item.get("minutes", entry["minutes"]), item.get("planning", entry["planning"]),
-            starts[key], assign, parent_key=key,
+            starts[key], assign, parent_key=key, subtasks=steps,
         )
         data["tasks"][task["id"]] = task
         created.append(task)
 
-    if created or updated:
+    if created or updated or removed:
         for task in created:
             hass.bus.async_fire(EVENT_TASK_CREATED, dict(task))
         await hass.data[DOMAIN]["store"].async_save(data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
-    connection.send_result(msg["id"], {"success": True, "created": len(created), "updated": updated})
+    result = {"success": True, "created": len(created), "updated": updated}
+    if removed:
+        result["removed"] = removed
+    connection.send_result(msg["id"], result)
 
 
 @websocket_api.websocket_command({
     vol.Required("type"): WS_TYPE_PARENT_TASK_SET,
     vol.Required("task_id"): str,
     vol.Optional("mode"): vol.In(parents_catalog.MODES),
+    vol.Optional("name"): str,
     vol.Optional("planning"): bool,
     vol.Optional("minutes"): vol.All(int, vol.Range(min=parents_catalog.MIN_MINUTES, max=parents_catalog.MAX_MINUTES)),
     vol.Optional("due_date"): vol.Any(None, str),
     vol.Optional("due_time"): vol.Any(None, str),
+    vol.Optional("weekdays"): vol.Any(None, [int]),
+    vol.Optional("subtasks"): vol.Any(None, [str]),
+    vol.Optional("todo_entity"): vol.Any(None, str),
     vol.Optional("me"): str,
     vol.Optional("partner"): str,
 })
 @websocket_api.async_response
 async def ws_parent_task_set(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
-    """Change mode, planning flag, duration, due date or due time of a parents' task (admin / manager / parent)."""
+    """Change a parents' task: mode, name, planning flag, duration, due date / time, weekdays, checklist, shopping list.
+
+    Admin / manager / parent. What changes on a catalog task is remembered in ``customized``, so that
+    setting the catalog up again does not overwrite it.
+    """
     if not _check_role(hass, connection, msg, _DAILY_ROLES):
         return
     data = hass.data[DOMAIN]["data"]
@@ -4859,11 +5090,18 @@ async def ws_parent_task_set(hass: HomeAssistant, connection: websocket_api.Acti
     try:
         me, partner, _adults_list = _parent_context(hass, connection, msg)
         due_day, due_time = _parse_due_fields(msg)
+        extras = _parse_parent_extras(hass, msg)
         if "due_date" in msg and due_day is None and task.get("interval", parents_catalog.DEFAULT_INTERVAL) != 0:
             raise _ParentError("invalid_date", "A recurring task needs a date")
+        if "name" in msg and (not msg["name"].strip() or len(msg["name"].strip()) > 80):
+            raise _ParentError("invalid_name", "Name is required (max 80 characters)")
     except _ParentError as err:
         connection.send_error(msg["id"], err.code, err.message)
         return
+    if "mode" in msg and not me:
+        connection.send_error(msg["id"], "no_adult", "No adult found (a person with a Home Assistant user)")
+        return
+    before = _parent_definition(task)
     if "due_date" in msg:
         _set_parent_due(task, due_day)
     if "due_time" in msg or "due_date" in msg:
@@ -4875,16 +5113,25 @@ async def ws_parent_task_set(hass: HomeAssistant, connection: websocket_api.Acti
         else:
             task.pop("due_time", None)
     if "mode" in msg:
-        if not me:
-            connection.send_error(msg["id"], "no_adult", "No adult found (a person with a Home Assistant user)")
-            return
         assign = parents_catalog.resolve_mode(msg["mode"], me, partner)
         if not _mode_unchanged(task, assign):
             _assign_mode(task, assign)
+    if "name" in msg:
+        task["name"] = msg["name"].strip()
     if "planning" in msg:
         task["planning"] = msg["planning"]
     if "minutes" in msg:
         task["minutes"] = msg["minutes"]
+    if "weekdays" in extras:
+        _apply_parent_weekdays(task, extras["weekdays"], dt_util.now().date())
+    if "subtasks" in extras:
+        task["subtasks"] = parents_catalog.build_subtasks(extras["subtasks"], task.get("subtasks"))
+    if "todo_entity" in extras:
+        if extras["todo_entity"]:
+            task["todo_entity"] = extras["todo_entity"]
+        else:
+            task.pop("todo_entity", None)
+    _record_parent_customization(task, before)
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     connection.send_result(msg["id"], {"success": True})
@@ -4901,12 +5148,19 @@ async def ws_parent_task_set(hass: HomeAssistant, connection: websocket_api.Acti
     vol.Optional("mode", default=parents_catalog.MODE_ME): vol.In(parents_catalog.MODES),
     vol.Optional("due_date"): vol.Any(None, str),
     vol.Optional("due_time"): vol.Any(None, str),
+    vol.Optional("weekdays"): vol.Any(None, [int]),
+    vol.Optional("subtasks"): vol.Any(None, [str]),
+    vol.Optional("todo_entity"): vol.Any(None, str),
     vol.Optional("me"): str,
     vol.Optional("partner"): str,
 })
 @websocket_api.async_response
 async def ws_parent_task_add(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
-    """Create an own parents' task without a catalog template (admin / manager / parent)."""
+    """Create an own parents' task without a catalog template (admin / manager / parent).
+
+    ``weekdays`` (Mon = 0) make it a weekly task on those days; ``subtasks`` are checklist steps
+    (progress only, they never block the tick-off).
+    """
     if not _check_role(hass, connection, msg, _DAILY_ROLES):
         return
     name = msg["name"].strip()
@@ -4916,19 +5170,27 @@ async def ws_parent_task_add(hass: HomeAssistant, connection: websocket_api.Acti
     try:
         me, partner, _adults_list = _parent_context(hass, connection, msg)
         due_day, due_time = _parse_due_fields(msg)
+        extras = _parse_parent_extras(hass, msg)
     except _ParentError as err:
         connection.send_error(msg["id"], err.code, err.message)
         return
     if not me:
         connection.send_error(msg["id"], "no_adult", "No adult found (a person with a Home Assistant user)")
         return
-    one_time = msg["interval"] == 0
+    weekdays = extras.get("weekdays") or []
+    interval = msg["interval"]
+    if weekdays and interval == 0:
+        interval = parents_catalog.DEFAULT_INTERVAL    # a weekday schedule repeats
+    one_time = interval == 0
     # One-time without a date = "someday"; recurring without a date starts today
     start = due_day if due_day is not None else (None if one_time else dt_util.now().date())
+    if weekdays and start is not None:
+        start = parents_catalog.next_weekday_on_or_after(weekdays, start)
     task = _build_parent_task(
-        name, msg["interval"], msg["minutes"], msg["planning"], start,
+        name, interval, msg["minutes"], msg["planning"], start,
         parents_catalog.resolve_mode(msg["mode"], me, partner),
         due_time=due_time, dated=one_time and due_day is not None,
+        subtasks=extras.get("subtasks"), weekdays=weekdays, todo_entity=extras.get("todo_entity"),
     )
     data = hass.data[DOMAIN]["data"]
     data["tasks"][task["id"]] = task
@@ -4936,6 +5198,73 @@ async def ws_parent_task_add(hass: HomeAssistant, connection: websocket_api.Acti
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     connection.send_result(msg["id"], {"success": True, "task_id": task["id"]})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENT_TOGGLE_STEP,
+    vol.Required("task_id"): str,
+    vol.Required("index"): vol.All(int, vol.Range(min=0, max=parents_catalog.MAX_STEPS - 1)),
+})
+@websocket_api.async_response
+async def ws_parent_toggle_step(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Tick a checklist step of a parents' task on or off (every adult / parents' role).
+
+    The steps only show progress ("2/5"): they never block ticking off the task itself.
+    """
+    if not _check_parent_actor(hass, connection, msg):
+        return
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(msg["task_id"])
+    if not _is_parent_task(task):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    steps = task.get("subtasks") or []
+    if msg["index"] >= len(steps) or not isinstance(steps[msg["index"]], dict):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    steps[msg["index"]]["done"] = not steps[msg["index"]].get("done")
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    done, total = parents_catalog.steps_progress(steps)
+    connection.send_result(msg["id"], {"success": True, "done": steps[msg["index"]]["done"], "progress": [done, total]})
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENT_TODO_ADD,
+    vol.Required("task_id"): str,
+    vol.Required("item"): str,
+})
+@websocket_api.async_response
+async def ws_parent_todo_add(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Put an item on the shopping list (``todo.add_item``) that is linked to a parents' task (every adult / parents' role).
+
+    Only works when the task is linked to a todo entity; the todo integration is optional
+    (``todo_unavailable`` when the entity or the service is missing, the main action never breaks).
+    """
+    if not _check_parent_actor(hass, connection, msg):
+        return
+    task = hass.data[DOMAIN]["data"]["tasks"].get(msg["task_id"])
+    if not _is_parent_task(task):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    item = msg["item"].strip()
+    if not item or len(item) > 100:
+        connection.send_error(msg["id"], "invalid_item", "Item is required (max 100 characters)")
+        return
+    entity = task.get("todo_entity")
+    if not entity:
+        connection.send_result(msg["id"], {"success": False, "error": "no_todo"})
+        return
+    if hass.states.get(entity) is None or not hass.services.has_service("todo", "add_item"):
+        connection.send_result(msg["id"], {"success": False, "error": "todo_unavailable"})
+        return
+    try:
+        await hass.services.async_call("todo", "add_item", {"entity_id": entity, "item": item}, blocking=True)
+    except Exception as err:  # list offline, read-only list ...
+        _LOGGER.warning("Adding %r to %s failed: %s", item, entity, err)
+        connection.send_result(msg["id"], {"success": False, "error": "todo_unavailable"})
+        return
+    connection.send_result(msg["id"], {"success": True})
 
 
 @websocket_api.websocket_command({
@@ -4985,8 +5314,12 @@ def _restore_parent_fields(task: dict, source: dict) -> None:
         task.pop("carried_since", None)
 
 
-async def _async_parent_done(hass: HomeAssistant, task_id: str, uid: str | None) -> dict | None:
+async def _async_parent_done(
+    hass: HomeAssistant, task_id: str, uid: str | None, auto: str | None = None,
+) -> dict | None:
     """Tick off a parents' task: history (type ``parent``, 0 points), next date, handover / alternation.
+
+    ``auto``: the task closed itself (``kids``: the kids already did it) - no person, no minutes.
 
     :return: ``{"history_id", "completion_id"}`` or ``None`` for an unknown task.
     """
@@ -5001,6 +5334,9 @@ async def _async_parent_done(hass: HomeAssistant, task_id: str, uid: str | None)
     task.pop("carried_since", None)
     task.pop("planning_reminded_for", None)
     task.pop("due_reminded_for", None)
+    task.pop("hint", None)
+    if task.get("waste_target"):
+        task["bins_done_for"] = task["waste_target"]    # done for this collection: not due again before the next one
 
     # The handover was for this time only: back to whoever it belonged to
     original = task.pop("handover_original", None)
@@ -5016,15 +5352,15 @@ async def _async_parent_done(hass: HomeAssistant, task_id: str, uid: str | None)
 
     interval = task.get("interval", parents_catalog.DEFAULT_INTERVAL)
     if interval > 0:
-        task["due_date"] = _day_start_iso(today + timedelta(days=interval))
+        task["due_date"] = _day_start_iso(parents_catalog.next_due(today, interval, task.get("weekdays")))
         task["paused_until"] = None
         for st in task.get("subtasks") or []:
-            st["done"] = False
+            st["done"] = False    # the checklist starts afresh
     else:
         del data["tasks"][task_id]
 
     try:
-        minutes = int(task.get("minutes") or 0)
+        minutes = 0 if auto else int(task.get("minutes") or 0)
     except (TypeError, ValueError):
         minutes = 0
     entry = {
@@ -5039,6 +5375,8 @@ async def _async_parent_done(hass: HomeAssistant, task_id: str, uid: str | None)
         "completion_id": str(uuid.uuid4()),
         **undo,
     }
+    if auto:
+        entry["auto"] = auto
     data["history"].insert(0, entry)
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -5706,6 +6044,262 @@ async def _async_check_parent_due_times(hass: HomeAssistant) -> int:
     return len(due)
 
 
+# ---- 2.6: automatic parents' tasks (bins, medication stock, batteries) -----------------
+
+def _auto_parent_assignee(hass: HomeAssistant) -> str | None:
+    """The adult who gets a task the integration creates itself: the first parent, else the first adult."""
+    adults = [a["id"] for a in _adults(hass)]
+    parents = [p for p in _get_entry(hass).options.get("parents") or [] if p in adults]
+    return (parents or adults or [None])[0]
+
+
+def _create_auto_parent_task(hass: HomeAssistant, name: str, auto_key: str, assignee: str, minutes: int = 10) -> dict:
+    """A one-time parents' task that is due today and stays open until done (``auto_key`` finds it again)."""
+    task = _build_parent_task(
+        name, 0, minutes, False, dt_util.now().date(),
+        parents_catalog.resolve_mode(parents_catalog.MODE_ME, assignee, None), dated=True,
+    )
+    task["auto_key"] = auto_key
+    hass.data[DOMAIN]["data"]["tasks"][task["id"]] = task
+    hass.bus.async_fire(EVENT_TASK_CREATED, dict(task))
+    return task
+
+
+def _drop_auto_task(data: dict, task_id: str | None, auto_key: str) -> bool:
+    """Remove the still open automatic task ``auto_key`` (``task_id`` is its id, or the key is searched)."""
+    task = data["tasks"].get(task_id) if task_id else None
+    if task is None or task.get("auto_key") != auto_key:
+        task_id = next((tid for tid, t in data["tasks"].items() if t.get("auto_key") == auto_key), None)
+    if task_id is None:
+        return False
+    del data["tasks"][task_id]
+    return True
+
+
+async def _async_check_care_stock(hass: HomeAssistant) -> int:
+    """Medication stock: one follow-up task per low-stock phase ("💊 Rezept/Nachkauf ...").
+
+    A care entry with a ``stock`` that lasts at most 7 days (doses per day from its weekdays and
+    ``per_dose``) creates ONE one-time parents' task, due today. A higher stock closes that task; the
+    phase ends when the stock lasts more than 7 days again (a later low stock creates a new task).
+    Returns the number of tasks created.
+    """
+    if DOMAIN not in hass.data or "data" not in hass.data[DOMAIN]:
+        return 0
+    data = hass.data[DOMAIN]["data"]
+    low = data.get("care_stock_low")
+    if not isinstance(low, dict):
+        low = data["care_stock_low"] = {}
+    kids = _get_entry(hass).options.get("kids") or {}
+    today = dt_util.now().date()
+    log = data.get("care_log") or []
+    lang = _lang(hass)
+    changed = False
+    created = 0
+    seen = set()
+    for kid_id, profile in kids.items():
+        if not isinstance(profile, dict):
+            continue
+        for entry in kidslib.normalize_care(profile.get("care")):
+            if "stock" not in entry:
+                continue
+            key = f"{kid_id}:{entry['id']}"
+            seen.add(key)
+            taken = kidslib.care_answer_of(log, today.isoformat(), kid_id, entry["id"]) == kidslib.CARE_TAKEN
+            is_low = kidslib.care_stock_low(entry, today + timedelta(days=1) if taken else today)
+            marker = low.get(key)
+            if is_low and marker is None:
+                assignee = _auto_parent_assignee(hass)
+                if assignee is None:
+                    continue    # nobody to hand it to: tried again later
+                name = parents_catalog.stock_task_name(entry["label"], _participant_name(hass, kid_id), lang)
+                task = _create_auto_parent_task(hass, name, f"care_stock:{key}", assignee)
+                low[key] = {"task_id": task["id"], "stock": entry["stock"]}
+                created += 1
+                changed = True
+            elif is_low:
+                if entry["stock"] > int(marker.get("stock", 0)) and _drop_auto_task(data, marker.get("task_id"), f"care_stock:{key}"):
+                    marker["task_id"] = None    # restocked (but still low): the task is done with, no new one
+                    changed = True
+                if marker.get("stock") != entry["stock"]:
+                    marker["stock"] = entry["stock"]
+                    changed = True
+            elif marker is not None:
+                _drop_auto_task(data, marker.get("task_id"), f"care_stock:{key}")
+                del low[key]
+                changed = True
+    for key in [k for k in low if k not in seen]:    # tracking switched off / entry deleted
+        _drop_auto_task(data, (low[key] or {}).get("task_id"), f"care_stock:{key}")
+        del low[key]
+        changed = True
+    if changed:
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    return created
+
+
+async def _async_care_stock_taken(hass: HomeAssistant, kid_id: str, care_id: str, delta: int) -> None:
+    """A dose was taken (``delta`` +1) or taken back (-1): the tracked stock follows (profile in the settings)."""
+    kids = copy.deepcopy(_get_entry(hass).options.get("kids") or {})
+    profile = kids.get(kid_id)
+    if not isinstance(profile, dict):
+        return
+    entries = kidslib.normalize_care(profile.get("care"))
+    entry = next((e for e in entries if e["id"] == care_id), None)
+    new_stock = kidslib.care_stock_change(entry, delta) if entry else None
+    if new_stock is None or new_stock == entry["stock"]:
+        return
+    entry["stock"] = new_stock
+    profile["care"] = entries
+    _update_kids(hass, kids)
+
+
+async def _async_check_batteries(hass: HomeAssistant, force: bool = False) -> int:
+    """Battery sensors below the threshold become parents' tasks ("🔋 Batterie ..."). Off by default.
+
+    Looks at ``sensor.*`` with ``device_class: battery`` and a numeric state, at most every 30 minutes.
+    One task per sensor until its level is above ``threshold + 5`` again (then a task that is still
+    open is removed). The push is held back at night and sent when it ends. Returns the number of tasks created.
+    """
+    if DOMAIN not in hass.data or "data" not in hass.data[DOMAIN]:
+        return 0
+    options = _get_entry(hass).options
+    if options.get("battery_tasks_enabled") is not True:
+        return 0
+    data = hass.data[DOMAIN]["data"]
+    lang = _lang(hass)
+    changed = False
+    # pushes that had to wait for the end of the night
+    if not _parent_night(hass):
+        for task in data["tasks"].values():
+            if _is_parent_task(task) and task.pop("notify_pending", None):
+                changed = True
+                title, text = parents_catalog.battery_push_texts(task.get("battery_name") or task.get("name") or "", task.get("battery_level", 0), lang)
+                for uid in _assignee_ids(task)[:1]:
+                    await _async_push_adult(hass, uid, title, text, tag=f"{DOMAIN}_{task.get('auto_key')}")
+    now = dt_util.utcnow()
+    last = hass.data[DOMAIN].get("battery_checked")
+    if not force and last is not None and now - last < timedelta(minutes=parents_catalog.BATTERY_CHECK_MINUTES):
+        if changed:
+            await hass.data[DOMAIN]["store"].async_save(data)
+        return 0
+    hass.data[DOMAIN]["battery_checked"] = now
+    threshold = parents_catalog.battery_threshold(options.get("battery_threshold"))
+    levels: dict[str, float] = {}
+    names: dict[str, str] = {}
+    for state in hass.states.async_all("sensor"):
+        if state.attributes.get("device_class") != "battery":
+            continue
+        level = parents_catalog.battery_level(state.state)
+        if level is None:
+            continue
+        levels[state.entity_id] = level
+        names[state.entity_id] = str(state.attributes.get("friendly_name") or state.entity_id)
+    low = data.get("battery_low")
+    if not isinstance(low, dict):
+        low = data["battery_low"] = {}
+    newly, recovered = parents_catalog.battery_changes(levels, low, threshold)
+    for entity in recovered:
+        _drop_auto_task(data, low.pop(entity, None), f"battery:{entity}")
+        changed = True
+    created = 0
+    night = _parent_night(hass)
+    for entity in newly:
+        assignee = _auto_parent_assignee(hass)
+        if assignee is None:
+            break
+        auto_key = f"battery:{entity}"
+        existing = next((t for t in data["tasks"].values() if t.get("auto_key") == auto_key), None)
+        if existing is not None:
+            low[entity] = existing["id"]    # already there (e.g. after a reset of the marker): no second one
+            changed = True
+            continue
+        task = _create_auto_parent_task(hass, parents_catalog.battery_task_name(names[entity], lang), auto_key, assignee, minutes=10)
+        task["battery_name"] = names[entity]
+        task["battery_level"] = levels[entity]
+        low[entity] = task["id"]
+        created += 1
+        changed = True
+        if night:
+            task["notify_pending"] = True
+        else:
+            title, text = parents_catalog.battery_push_texts(names[entity], levels[entity], lang)
+            await _async_push_adult(hass, assignee, title, text, tag=f"{DOMAIN}_{auto_key}")
+    if changed:
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    return created
+
+
+async def _async_check_parent_bins(hass: HomeAssistant) -> int:
+    """The parents' ``bins`` task follows the waste calendar (only with the waste module switched on).
+
+    The task is due on the evening before the next collection, not weekly. Once the kids have done
+    their bonus "put the bins out" it closes silently (history, no push). If it is still open at
+    ``parent_bins_check_time`` (default 19:30) on that evening, the adult gets one push
+    ("Tonnen stehen noch nicht draußen", not at night). Without the waste module nothing changes.
+    Returns the number of pushes.
+    """
+    if DOMAIN not in hass.data or "data" not in hass.data[DOMAIN]:
+        return 0
+    data = hass.data[DOMAIN]["data"]
+    tasks = [t for t in data["tasks"].values() if _is_parent_task(t) and t.get("parent_key") == parents_catalog.BINS_KEY]
+    if not tasks:
+        return 0
+    options = _get_entry(hass).options
+    settings = waste.normalize_waste_settings(options)
+    calendars = _waste_calendar_ids(hass, settings) if settings["waste_enabled"] else []
+    if not calendars:
+        return 0
+    events = await _async_waste_events(hass, calendars)
+    now = dt_util.now()
+    today = now.date()
+    target = parents_catalog.bins_target(waste.collections_by_day(events).keys(), today)
+    if target is None:
+        return 0
+    eve = target - timedelta(days=1)
+    target_iso = target.isoformat()
+    changed = False
+    pushes: list[tuple[str, str]] = []
+    done_by_kids = f"waste:{waste.JOB_OUT}:{target_iso}" in (data.get("waste_kids_done") or [])
+    check_at = parents_catalog.valid_clock(options.get("parent_bins_check_time"), parents_catalog.DEFAULT_BINS_CHECK_TIME)
+    for task in tasks:
+        if task.get("waste_target") != target_iso:
+            task["waste_target"] = target_iso
+            task.pop("bins_pushed_for", None)
+            changed = True
+        if task.get("bins_done_for") == target_iso:
+            continue    # handled for this collection
+        due = _local_day_of(task.get("due_date"))
+        wanted = eve if eve >= today else today
+        if eve >= today and due != eve:
+            _set_parent_due(task, eve)
+            changed = True
+        elif eve < today and (due is None or due > today):
+            _set_parent_due(task, today)
+            changed = True
+        if wanted > today or _task_paused(data, task, today):
+            continue    # not the evening yet
+        if done_by_kids:
+            await _async_parent_done(hass, task["id"], None, auto="kids")
+            continue
+        if (
+            today == eve and task.get("bins_pushed_for") != target_iso
+            and parents_catalog.clock_reached(now.strftime("%H:%M"), check_at) and not _parent_night(hass)
+        ):
+            task["bins_pushed_for"] = target_iso
+            changed = True
+            for uid in _assignee_ids(task)[:1]:
+                pushes.append((uid, task["id"]))
+    if changed:
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    title, text = parents_catalog.bins_texts(_lang(hass))
+    for uid, task_id in pushes:
+        await _async_push_adult(hass, uid, title, text, tag=f"{DOMAIN}_bins_{task_id}")
+    return len(pushes)
+
+
 def _weekly_summary_data(hass: HomeAssistant) -> dict:
     """Hours per adult (last 7 local days), the tasks left over and the neutral push text."""
     now = dt_util.now()
@@ -6305,6 +6899,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await _async_check_savings_goals(hass)
         await _async_check_care(hass)
         await _async_check_absence_suggest(hass)
+        await _async_check_parent_bins(hass)
+        await _async_check_care_stock(hass)
+        await _async_check_batteries(hass)
 
     await _async_remove_expired_adhoc(hass)
 
@@ -6868,6 +7465,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_parent_task_add)
     websocket_api.async_register_command(hass, ws_parent_task_done)
     websocket_api.async_register_command(hass, ws_parent_task_postpone)
+    websocket_api.async_register_command(hass, ws_parent_toggle_step)
+    websocket_api.async_register_command(hass, ws_parent_todo_add)
     websocket_api.async_register_command(hass, ws_handover_ask)
     websocket_api.async_register_command(hass, ws_handover_answer)
     websocket_api.async_register_command(hass, ws_weekly_summary)

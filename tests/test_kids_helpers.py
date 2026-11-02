@@ -796,3 +796,47 @@ def test_effective_assignees_and_eligibility_of_rotation():
     tasks = {"t": task}
     assert kids.open_basis_tasks_for(tasks, "b", NOW, 5) == [task]
     assert kids.open_basis_tasks_for(tasks, "a", NOW, 5) == []
+
+
+# ---------------------------------------------------------------------------
+# 2.6: medication stock
+# ---------------------------------------------------------------------------
+
+def test_care_stock_and_per_dose_validation():
+    for raw, expected in ((12, 12), (0, 0), (9999, 9999), ("7", 7), (4.0, 4)):
+        assert kids.care_stock_of(raw) == expected, raw
+    for bad in (None, True, False, -1, 10000, "x", "", 3.5, [], {}):
+        assert kids.care_stock_of(bad) is None, bad
+    assert [kids.care_per_dose(v) for v in (1, 3, 20, 0, 21, "x", None, True, "2")] == [1, 3, 20, 1, 1, 1, 1, 1, 2]
+    entries = kids.normalize_care([
+        {"id": "a", "stock": 10, "per_dose": 2}, {"id": "b", "stock": "nope", "per_dose": 5}, {"id": "c"},
+    ])
+    assert entries[0]["stock"] == 10 and entries[0]["per_dose"] == 2
+    assert "stock" not in entries[1] and "per_dose" not in entries[1] and "stock" not in entries[2]
+
+
+def test_care_stock_change():
+    entry = {"stock": 10, "per_dose": 2}
+    assert kids.care_stock_change(entry, 1) == 8 and kids.care_stock_change(entry, -1) == 12
+    assert kids.care_stock_change({"stock": 1, "per_dose": 2}, 1) == 0                 # never below 0
+    assert kids.care_stock_change({"stock": 9999}, -1) == 9999                         # never above 9999
+    assert kids.care_stock_change({"label": "x"}, 1) is None
+
+
+def test_care_days_left_uses_weekdays_and_per_dose():
+    thursday = datetime(2026, 10, 29).date()
+    assert kids.care_days_left({"label": "x"}, thursday) is None
+    assert kids.care_days_left({"stock": 7, "weekdays": list(range(7))}, thursday) == 7
+    assert kids.care_days_left({"stock": 0}, thursday) == 0
+    assert kids.care_days_left({"stock": 14, "per_dose": 2}, thursday) == 7
+    assert kids.care_days_left({"stock": 15, "per_dose": 2}, thursday) == 7            # the 8th dose does not fit
+    # Mon/Wed/Fri: 6 pills cover Fri, Mon, Wed, Fri, Mon, Wed; the next Friday (15 days on) has none left
+    assert kids.care_days_left({"stock": 6, "weekdays": [0, 2, 4]}, thursday) == 15
+    assert kids.care_days_left({"stock": 9999}, thursday) == 400                       # capped
+
+
+def test_care_stock_low_threshold_is_seven_days():
+    thursday = datetime(2026, 10, 29).date()
+    assert kids.care_stock_low({"stock": 7}, thursday) and not kids.care_stock_low({"stock": 8}, thursday)
+    assert not kids.care_stock_low({"label": "no tracking"}, thursday)
+    assert not kids.care_stock_low({"stock": 6, "weekdays": [0, 2, 4]}, thursday)
