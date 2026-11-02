@@ -172,7 +172,7 @@ Auch der Haushalt der Erwachsenen ist Arbeit, oft unsichtbare. **Wir Eltern** ma
 - **Kannst du?:** Passt es heute nicht, fragt ihr mit einem Tipp den Partner. Er bekommt eine Nachricht mit „Mach ich“ oder „Geht nicht“. Übernimmt er, gilt das nur für dieses eine Mal.
 - **Sonntags-Zusammenfassung:** Am Sonntagabend kommt eine neutrale Notiz: wie viele Stunden jede Person in der Woche geschafft hat und was liegen geblieben ist. Sie bewertet nichts, sie erleichtert nur das Gespräch. In den Einstellungen abschaltbar.
 - **Vorbild-Band:** Auf dem Kinder-Tablet steht eine ruhige Zeile wie „Auch Mama und Papa haben heute 3 Missionen“, dazu Fortschrittspunkte ohne Punktezahl. Die Kinder sehen, dass alle mithelfen. Das Band und sein Wortlaut sind einstellbar.
-- **Eigenes Gerät:** Mit `mode: mine` erscheinen eure eigenen Eltern-Aufgaben (ohne Punkte, mit Dauer) auf dem eigenen Handy und lassen sich dort abhaken.
+- **Eigenes Gerät:** Mit `mode: mine` erscheinen eure eigenen Eltern-Aufgaben (ohne Punkte, mit Dauer) auf dem eigenen Handy und lassen sich dort abhaken. Mit dem runden **＋** in der Kopfzeile von „Meine Aufgaben“ legt ihr dort auch schnell eine eigene Aufgabe an (Name, Heute / Morgen / Wochenende / Datum / Irgendwann, optional Uhrzeit und – mit Partner – „Für“ mich/Partner); Aufgaben ohne Datum und kommende stehen in den Klappzeilen „Irgendwann“ und „Demnächst“, „→ Morgen“ verschiebt.
 
 > 💡 Startet klein: fünf bis acht Aufgaben genügen. Was nicht passt, lasst ihr einfach weg. Es gibt keine Pflichtfelder.
 

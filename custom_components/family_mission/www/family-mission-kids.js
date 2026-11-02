@@ -32,6 +32,12 @@ const I18N_KIDS = {
     refresh_label: "Refresh", refresh_done: "Updated ✓", refresh_fail: "No connection",
     role_model_default: "Mom and Dad", role_model_one: "👪 {who} have 1 mission today too", role_model_many: "👪 {who} have {n} missions today too",
     role_model_done: "{d} of {n} done", parent_min: "~{n} min.", parent_planning: "Planning", parent_done_toast: "Done, thank you!",
+    qa_add: "Add a to-do", qa_title: "New to-do", qa_name: "What needs doing?", qa_name_ph: "e.g. Send documents", qa_when: "When?",
+    qa_today: "Today", qa_tomorrow: "Tomorrow", qa_weekend: "Weekend", qa_date: "Date", qa_someday: "Someday",
+    qa_time: "Time (optional)", qa_who: "For", qa_me: "Me", qa_cancel: "Cancel", qa_create: "Add", qa_need_date: "Please pick a date.",
+    qa_saved: "Added: {name}", qa_err_no_adult: "No adult profile found for your user.", qa_err_unauthorized: "You are not allowed to add to-dos.",
+    parent_soon: "Coming up ({n})", parent_someday: "Someday ({n})", parent_since: "since {day}", parent_overdue: "overdue",
+    parent_postpone: "→ Tomorrow", parent_postponed: "Moved to tomorrow.",
     tasks_open_one: "1 task open", tasks_open: "{n} tasks open", all_done_badge: "All done!",
     family_rocket: "Family rocket", reward: "Reward", points_unit: "pts", goal_reached: "Goal reached!",
     claim: "Take it", done_btn: "Done!", locked_basis: "Your tasks first!", claimed_other: "{name} is on it",
@@ -119,6 +125,12 @@ const I18N_KIDS = {
     refresh_label: "Aktualisieren", refresh_done: "Aktualisiert ✓", refresh_fail: "Keine Verbindung",
     role_model_default: "Mama und Papa", role_model_one: "👪 Auch {who} haben heute 1 Mission", role_model_many: "👪 Auch {who} haben heute {n} Missionen",
     role_model_done: "{d} von {n} geschafft", parent_min: "ca. {n} Min.", parent_planning: "Planung", parent_done_toast: "Erledigt, danke!",
+    qa_add: "To-do hinzufügen", qa_title: "Neue Aufgabe", qa_name: "Was ist zu tun?", qa_name_ph: "z. B. Unterlagen nachreichen", qa_when: "Wann?",
+    qa_today: "Heute", qa_tomorrow: "Morgen", qa_weekend: "Wochenende", qa_date: "Datum", qa_someday: "Irgendwann",
+    qa_time: "Uhrzeit (optional)", qa_who: "Für", qa_me: "Mich", qa_cancel: "Abbrechen", qa_create: "Anlegen", qa_need_date: "Bitte ein Datum wählen.",
+    qa_saved: "Angelegt: {name}", qa_err_no_adult: "Für deinen Benutzer wurde kein Erwachsenen-Profil gefunden.", qa_err_unauthorized: "Du darfst keine Aufgaben anlegen.",
+    parent_soon: "Demnächst ({n})", parent_someday: "Irgendwann ({n})", parent_since: "seit {day}", parent_overdue: "überfällig",
+    parent_postpone: "→ Morgen", parent_postponed: "Auf morgen verschoben.",
     tasks_open_one: "1 Aufgabe offen", tasks_open: "{n} Aufgaben offen", all_done_badge: "Alles geschafft!",
     family_rocket: "Familien-Rakete", reward: "Belohnung", points_unit: "Pkt.", goal_reached: "Ziel erreicht!",
     claim: "Übernehmen", done_btn: "Fertig!", locked_basis: "Erst deine Aufgaben!", claimed_other: "{name} macht das",
@@ -416,7 +428,18 @@ class FamilyMissionKids extends HTMLElement {
     this._morningOn = false;      // good-morning banner shown
     this._morningHidden = false;  // banner tapped away
 
-    this.shadowRoot.innerHTML = `<style>${this._styles()}</style><div id="app"></div><div id="fx"></div>`;
+    this.shadowRoot.innerHTML = `<style>${this._styles()}</style><div id="app"></div><div id="qa"></div><div id="fx"></div>`;
+    this._qa = null;              // quick-add sheet state (adult on the own device)
+    this._me = null;              // participant id of the viewer (get_data.me)
+    this._partner = null;         // partner adult id (get_data.partner)
+    this._adults = [];
+    this._openFolds = new Set();
+    this.shadowRoot.addEventListener('input', (ev) => this._onQaInput(ev));
+    this.shadowRoot.addEventListener('keydown', (ev) => this._onQaKey(ev));
+    this.shadowRoot.addEventListener('toggle', (ev) => {
+      const d = ev.target;
+      if (d && d.dataset && d.dataset.fold) d.open ? this._openFolds.add(d.dataset.fold) : this._openFolds.delete(d.dataset.fold);
+    }, true);
     this.shadowRoot.addEventListener('click', (ev) => this._onClick(ev));
     this.shadowRoot.addEventListener('pointerdown', () => this._onPointerDown());
     this.shadowRoot.addEventListener('change', (ev) => this._onChange(ev));
@@ -711,6 +734,9 @@ class FamilyMissionKids extends HTMLElement {
       this.pending = data.pending || {};
       this.history = Array.isArray(data.history) ? data.history : [];
       this._myRole = data.my_role || null;
+      this._me = data.me || null;
+      this._partner = data.partner || null;
+      this._adults = Array.isArray(data.adults) ? data.adults : [];
       this.familyGoalInfo = data.family_goal_info || null;
       this.familyPoints = (data.family_points === undefined || data.family_points === null) ? null : parseFloat(data.family_points);
       this.birthdayLevelup = data.birthday_levelup || {};
@@ -1067,6 +1093,188 @@ class FamilyMissionKids extends HTMLElement {
       has_pin: false, goal_reward: null, pendingCount: 0 };
     adult.duties = this._duties(adult);
     return adult;
+  }
+
+
+  // ---------------------------------------------------------------------------
+  // Parent tasks on the own device of an adult: folds, postpone, quick-add sheet
+  // ---------------------------------------------------------------------------
+
+  /** Bucket of a parent task (mirrors _ptBucket of the parents card): overdue | today | upcoming | someday | hidden. */
+  _ptBucket(t) {
+    const today = this._localToday();
+    const paused = this._dateKey(t.paused_until);
+    if (paused && today <= paused) return 'hidden';
+    if (t.absent_all) return 'hidden';
+    const due = this._dateKey(t.due_date);
+    const once = t.interval === 0;
+    if (t.someday || !due) return once ? 'someday' : 'hidden';
+    if (due < today) return 'overdue';
+    if (due === today) return 'today';
+    return once ? 'upcoming' : 'hidden';
+  }
+
+  _ptDay(key, past) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key || '');
+    if (!m) return key || '';
+    const d = new Date(+m[1], +m[2] - 1, +m[3]);
+    const lang = (this._hass && this._hass.language) || undefined;
+    const diff = Math.round((d.getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
+    if (Math.abs(diff) < 7) return d.toLocaleDateString(lang, { weekday: 'short' });
+    return d.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' });
+  }
+
+  /** Red-ish "since Mon" badge of an overdue, explicitly dated parent task. */
+  _ptOverdueBadge(t) {
+    if (this._ptBucket(t) !== 'overdue' || !t.dated) return '';
+    const due = this._dateKey(t.due_date);
+    const text = due ? this.localize('parent_since', { day: this._ptDay(due, true) }) : this.localize('parent_overdue');
+    return `<span class="age pt-late">⚠ ${escKids(text)}</span>`;
+  }
+
+  _ptPostponeBtn(t) {
+    const tomorrow = this._ymdOf(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1));
+    if (this._dateKey(t.due_date) === tomorrow) return '';
+    return `<button class="pt-postpone" data-action="pt-postpone" data-task="${escKids(t.id)}" ${this._busy ? 'disabled' : ''}>${escKids(this.localize('parent_postpone'))}</button>`;
+  }
+
+  /** Folds below the list: "Demnächst (N)" (future dated) and "Irgendwann (N)" (no date). */
+  _renderParentFolds(kid) {
+    const mineTasks = Object.values(this.tasks || {}).filter(t => t.parent_task && (t.assignees || []).includes(kid.id));
+    const by = (b) => mineTasks.filter(t => this._ptBucket(t) === b);
+    const key = (t) => (this._dateKey(t.due_date) || '9999') + (t.due_time || '');
+    const fold = (id, label, list, dated) => !list.length ? '' : `<details class="pt-fold" data-fold="${id}" ${this._openFolds.has(id) ? 'open' : ''}>
+      <summary>${escKids(this.localize(label, { n: list.length }))}</summary>
+      ${list.sort((a, b) => key(a).localeCompare(key(b))).map(t => `<div class="pt-row">
+        <div class="pt-row-main"><div class="pt-row-name">${escKids(t.name)}</div>${dated ? `<span class="age">📅 ${escKids(this._ptDay(this._dateKey(t.due_date)))}${t.due_time ? ' ' + escKids(t.due_time) : ''}</span>` : ''}</div>
+        ${this._ptPostponeBtn(t)}</div>`).join('')}
+    </details>`;
+    return fold('soon', 'parent_soon', by('upcoming'), true) + fold('someday', 'parent_someday', by('someday'), false);
+  }
+
+  async _ptPostpone(taskId) {
+    if (this._busy) return;
+    this._busy = true;
+    try {
+      const res = await this._hass.callWS({ type: 'family_mission/parent_task_postpone', task_id: taskId });
+      this._showToast(res && res.success ? this.localize('parent_postponed') : this._errorText(res));
+    } catch (err) {
+      console.error('FamilyMission Kids: postpone failed', err);
+      this._showToast(this.localize('err_generic'));
+    }
+    this._busy = false;
+    this._fetchData();
+  }
+
+  _qaPartnerName() {
+    const a = this._adults.find(x => x.id === this._partner);
+    return a ? a.name : '';
+  }
+
+  _qaDate(q) {
+    const today = this._localToday();
+    const add = (n) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today); return this._ymdOf(new Date(+m[1], +m[2] - 1, +m[3] + n)); };
+    if (q.when === 'today') return today;
+    if (q.when === 'tomorrow') return add(1);
+    if (q.when === 'weekend') {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
+      const dow = new Date(+m[1], +m[2] - 1, +m[3]).getDay();   // 0 = Sunday
+      return dow === 0 ? today : add((6 - dow) % 7);
+    }
+    if (q.when === 'custom') return /^\d{4}-\d{2}-\d{2}$/.test(q.date || '') ? q.date : '';
+    return '';
+  }
+
+  _qaOpen() {
+    this._qa = { name: '', when: 'today', date: '', time: '', mode: 'me', busy: false };
+    this._qaRender(true);
+  }
+
+  _qaClose() {
+    this._qa = null;
+    this._qaRender();
+  }
+
+  _qaRender(focus) {
+    const layer = this.shadowRoot.getElementById('qa');
+    if (!layer) return;
+    const q = this._qa;
+    if (!q) { layer.innerHTML = ''; return; }
+    const kid = this._mineKid();
+    const chips = [['today', 'qa_today'], ['tomorrow', 'qa_tomorrow'], ['weekend', 'qa_weekend'], ['custom', 'qa_date'], ['none', 'qa_someday']].map(([id, key]) =>
+      `<button class="schoice ${q.when === id ? 'on' : ''}" data-action="qa-when" data-when="${id}" aria-pressed="${q.when === id}">${id === 'custom' ? '📅 ' : ''}${escKids(this.localize(key))}</button>`).join('');
+    const times = [];
+    for (let h = 0; h < 24; h++) for (let m = 0; m < 60; m += 15) times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    const timeOpts = `<option value="">—</option>` + times.map(t => `<option value="${t}" ${t === q.time ? 'selected' : ''}>${t}</option>`).join('');
+    const partner = this._partner ? this._qaPartnerName() : '';
+    const who = partner ? `<div class="qa-lbl">${escKids(this.localize('qa_who'))}</div><div class="schoices">
+      <button class="schoice ${q.mode === 'me' ? 'on' : ''}" data-action="qa-mode" data-mode="me" aria-pressed="${q.mode === 'me'}">${escKids(this.localize('qa_me'))}</button>
+      <button class="schoice ${q.mode === 'you' ? 'on' : ''}" data-action="qa-mode" data-mode="you" aria-pressed="${q.mode === 'you'}">${escKids(partner)}</button></div>` : '';
+    layer.innerHTML = `<div class="overlay qa-overlay" role="dialog" aria-modal="true" aria-label="${escKids(this.localize('qa_title'))}">
+      <div class="sheet qa-sheet" style="--kc:${kid ? kid.color : '#4CAF50'}">
+        <div class="sheet-title">📝 ${escKids(this.localize('qa_title'))}</div>
+        <label class="qa-lbl" for="qa-name">${escKids(this.localize('qa_name'))}</label>
+        <input id="qa-name" class="qa-txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" placeholder="${escKids(this.localize('qa_name_ph'))}" value="${escKids(q.name)}">
+        <div class="qa-lbl">${escKids(this.localize('qa_when'))}</div>
+        <div class="schoices">${chips}</div>
+        ${q.when === 'custom' ? `<input id="qa-date" class="qa-txt" type="date" min="${escKids(this._localToday())}" value="${escKids(q.date)}" aria-label="${escKids(this.localize('qa_date'))}">` : ''}
+        ${q.when !== 'none' ? `<div class="qa-row"><label class="qa-lbl" for="qa-time">${escKids(this.localize('qa_time'))}</label><select id="qa-time" class="qa-txt qa-time">${timeOpts}</select></div>` : ''}
+        ${who}
+        <div class="sheet-btns"><button class="sbtn" data-action="qa-close">${escKids(this.localize('qa_cancel'))}</button>
+          <button class="sbtn ok" id="qa-create" data-action="qa-create" ${q.name.trim() && !q.busy ? '' : 'disabled'}>${escKids(this.localize('qa_create'))}</button></div>
+      </div></div>`;
+    if (focus) { const el = layer.querySelector('#qa-name'); if (el) el.focus(); }
+  }
+
+  _onQaInput(ev) {
+    const el = ev.target;
+    if (!this._qa || !el || !el.id) return;
+    if (el.id === 'qa-name') {
+      this._qa.name = el.value;
+      const btn = this.shadowRoot.getElementById('qa-create');
+      if (btn) btn.disabled = !el.value.trim() || this._qa.busy;
+    }
+  }
+
+  _onQaKey(ev) {
+    if (!this._qa) return;
+    if (ev.key === 'Escape') { this._qaClose(); return; }
+    if (ev.key === 'Enter' && ev.target && ev.target.id === 'qa-name') { ev.preventDefault(); this._qaCreate(); }
+  }
+
+  async _qaCreate() {
+    const q = this._qa;
+    if (!q || q.busy || !q.name.trim()) return;
+    const due = this._qaDate(q);
+    if (q.when === 'custom' && !due) { this._showToast(this.localize('qa_need_date')); return; }
+    const payload = { type: 'family_mission/parent_task_add', name: q.name.trim().slice(0, 60), interval: 0, planning: false,
+      mode: this._partner ? q.mode : 'me' };
+    if (due) {
+      payload.due_date = due;
+      if (/^\d{2}:\d{2}$/.test(q.time || '')) payload.due_time = q.time;
+    }
+    q.busy = true;
+    const btn = this.shadowRoot.getElementById('qa-create');
+    if (btn) btn.disabled = true;
+    try {
+      const res = await this._hass.callWS(payload);
+      if (res && res.success) {
+        const name = q.name.trim();
+        this._qa = null;
+        this._qaRender();
+        this._showToast(this.localize('qa_saved', { name }));
+        this._fetchData();
+        return;
+      }
+      this._showToast(this._errorText(res));
+    } catch (err) {
+      const code = err && err.code;
+      const key = code === 'no_adult' ? 'qa_err_no_adult' : (code === 'unauthorized' ? 'qa_err_unauthorized' : 'err_generic');
+      if (key === 'err_generic') console.error('FamilyMission Kids: could not add the to-do', err);
+      this._showToast(this.localize(key));
+    }
+    q.busy = false;
+    if (this._qa === q) { const b = this.shadowRoot.getElementById('qa-create'); if (b) b.disabled = !q.name.trim(); }
   }
 
   /** The kid of the open session (mine mode: the viewer). */
@@ -1490,6 +1698,12 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'ap-approve') this._apAct(el.dataset.id, true);
     else if (action === 'ap-not-done') this._apAct(el.dataset.id, false);
     else if (action === 'close-bonus') this._closeBonus(el.dataset.task);
+    else if (action === 'qa-open' && this._isMine()) this._qaOpen();
+    else if (action === 'qa-close') this._qaClose();
+    else if (action === 'qa-when' && this._qa) { this._qa.when = el.dataset.when; this._qaRender(); }
+    else if (action === 'qa-mode' && this._qa) { this._qa.mode = el.dataset.mode; this._qaRender(); }
+    else if (action === 'qa-create') this._qaCreate();
+    else if (action === 'pt-postpone') this._ptPostpone(el.dataset.task);
     else if (action === 'claim') this._claim(el.dataset.task);
     else if (action === 'complete') this._complete(el.dataset.task);
     else if (action === 'sleep-tap') { this._peekUntil = Date.now() + 5000; this._syncNight(); this._wiggleAlarm(); }
@@ -1524,6 +1738,8 @@ class FamilyMissionKids extends HTMLElement {
 
   _onChange(ev) {
     const el = ev.target;
+    if (this._qa && el && el.id === 'qa-date') { this._qa.date = el.value; return; }
+    if (this._qa && el && el.id === 'qa-time') { this._qa.time = el.value; return; }
     if (!el || !el.dataset || !el.dataset.field || !this._sheet) return;
     this._sheet[el.dataset.field] = el.value;
     this._render();
@@ -3156,8 +3372,8 @@ class FamilyMissionKids extends HTMLElement {
         ${kid.isBirthday && !this._shop ? this._renderParty(kid) : ''}
         ${this._shop ? this._renderShop(kid) : `<div class="kv-body">
           <section class="col">
-            <h2>📋 ${escKids(this.localize('my_tasks'))} <span class="count">${duties.length}</span></h2>
-            <div class="col-scroll">${dutyHtml}</div>
+            <h2>📋 ${escKids(this.localize('my_tasks'))} <span class="count">${duties.length}</span>${mine && adult && this._isParent() ? `<button class="qa-add" data-action="qa-open" aria-label="${escKids(this.localize('qa_add'))}" title="${escKids(this.localize('qa_add'))}">＋</button>` : ''}</h2>
+            <div class="col-scroll">${dutyHtml}${mine && adult ? this._renderParentFolds(kid) : ''}</div>
           </section>
           ${adult ? this._renderAdultBonus() : `<section class="col col-bonus">
             <h2>🎁 ${escKids(this.localize('bonus'))} <span class="count">${bonus.length}</span></h2>
@@ -3400,9 +3616,13 @@ class FamilyMissionKids extends HTMLElement {
             <div class="t-meta">
               ${mins > 0 ? `<span class="age">${escKids(this.localize('parent_min', { n: mins }))}</span>` : ''}
               ${task.planning ? `<span class="age" title="${escKids(this.localize('parent_planning'))}">🧠 ${escKids(this.localize('parent_planning'))}</span>` : ''}
+              ${this._ptOverdueBadge(task)}
+              ${task.due_time && this._dateKey(task.due_date) <= this._localToday() ? `<span class="age">🕐 ${escKids(task.due_time)}</span>` : ''}
             </div>
           </div>
           <div class="t-action"><button class="btn btn-done" data-action="complete" data-task="${escKids(task.id)}" ${busy}>${escKids(this.localize('done_btn'))} ✅</button></div>
+        </div>
+        <div class="pt-later-row">${this._ptPostponeBtn(task)}
         </div>
       </article>`;
     }
@@ -3694,6 +3914,26 @@ class FamilyMissionKids extends HTMLElement {
       .shop-wait { padding: 10px 16px; margin-bottom: 12px; border-radius: 22px; border: 3px dashed color-mix(in srgb, var(--k-sub) 70%, transparent); background: color-mix(in srgb, var(--k-sub) 10%, var(--k-card)); font-size: 24px; font-weight: 800; }
       .shop-wait span { color: var(--k-sub); font-weight: 700; font-size: 20px; }
 
+      /* ---------- adult quick-add (own device) ---------- */
+      .qa-add { margin-left: auto; width: 44px; height: 44px; flex: none; border-radius: 50%; font-size: 30px; line-height: 1; font-weight: 800; display: grid; place-items: center; background: var(--k-good); color: #fff; box-shadow: 0 3px 0 rgba(0,0,0,0.25); }
+      .qa-add:active { transform: translateY(2px); box-shadow: none; }
+      #qa .overlay { z-index: 60; }
+      .qa-sheet { max-height: 100%; overflow-y: auto; }
+      .qa-lbl { font-size: 20px; font-weight: 800; color: var(--k-sub); }
+      .qa-txt { width: 100%; min-height: 64px; font-size: 26px; font-family: inherit; font-weight: 700; padding: 0 16px; border-radius: 18px; border: 3px solid var(--k-line); background: var(--k-card); color: var(--k-text); user-select: text; -webkit-user-select: text; }
+      .qa-txt:focus { outline: none; border-color: var(--kc); }
+      .qa-row { display: flex; align-items: center; gap: 14px; }
+      .qa-time { width: auto; flex: 1; }
+      .pt-later-row { display: flex; justify-content: flex-end; }
+      .pt-later-row:empty { display: none; }
+      .pt-postpone { min-height: 44px; padding: 0 16px; border-radius: 22px; font-size: 18px; font-weight: 800; background: color-mix(in srgb, var(--k-sub) 16%, var(--k-card)); border: 3px solid var(--k-line); }
+      .age.pt-late { background: #FDE0DC; color: #B3261E; }
+      .pt-fold { flex: none; border: 3px dashed var(--k-line); border-radius: 22px; padding: 8px 14px; }
+      .pt-fold summary { font-size: 22px; font-weight: 800; color: var(--k-sub); cursor: pointer; min-height: 40px; display: flex; align-items: center; }
+      .pt-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 2px solid var(--k-line); }
+      .pt-row-main { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+      .pt-row-name { font-size: 22px; font-weight: 800; overflow-wrap: anywhere; }
+
       /* ---------- PIN pad ---------- */
       .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,0.62); display: grid; place-items: center; padding: 16px; }
       .pin-dialog { display: flex; align-items: center; gap: 44px; padding: 32px 44px; border-radius: 44px; background: var(--k-card); border: 6px solid var(--kc); box-shadow: 0 16px 48px rgba(0,0,0,0.5); max-width: 100%; }
@@ -3920,6 +4160,12 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .bday-cake { font-size: 72px; }
       :host([narrow]) .bday-title { font-size: 30px; }
       :host([narrow]) .bday-age { font-size: 24px; }
+      :host([narrow]) .pt-later-row { grid-column: 1 / -1; order: 4; }
+      :host([narrow]) .qa-lbl { font-size: 15px; }
+      :host([narrow]) .qa-txt { min-height: 48px; font-size: 18px; border-width: 2px; }
+      :host([narrow]) .pt-fold summary { font-size: 17px; }
+      :host([narrow]) .pt-row-name { font-size: 17px; }
+      :host([narrow]) .pt-postpone { font-size: 15px; }
       :host([narrow]) #fx .toast { font-size: 17px; padding: 12px 20px; bottom: 16px; }
 
 

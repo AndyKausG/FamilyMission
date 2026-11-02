@@ -146,7 +146,7 @@ const HELP_CONTENT = {
           "**Kannst du?:** Passt es heute nicht, fragt ihr mit einem Tipp den Partner. Er bekommt eine Nachricht mit „Mach ich“ oder „Geht nicht“. Übernimmt er, gilt das nur für dieses eine Mal.",
           "**Sonntags-Zusammenfassung:** Am Sonntagabend kommt eine neutrale Notiz: wie viele Stunden jede Person in der Woche geschafft hat und was liegen geblieben ist. Sie bewertet nichts, sie erleichtert nur das Gespräch. In den Einstellungen abschaltbar.",
           "**Vorbild-Band:** Auf dem Kinder-Tablet steht eine ruhige Zeile wie „Auch Mama und Papa haben heute 3 Missionen“, dazu Fortschrittspunkte ohne Punktezahl. Die Kinder sehen, dass alle mithelfen. Das Band und sein Wortlaut sind einstellbar.",
-          "**Eigenes Gerät:** Mit `mode: mine` erscheinen eure eigenen Eltern-Aufgaben (ohne Punkte, mit Dauer) auf dem eigenen Handy und lassen sich dort abhaken."
+          "**Eigenes Gerät:** Mit `mode: mine` erscheinen eure eigenen Eltern-Aufgaben (ohne Punkte, mit Dauer) auf dem eigenen Handy und lassen sich dort abhaken. Mit dem runden **＋** in der Kopfzeile von „Meine Aufgaben“ legt ihr dort auch schnell eine eigene Aufgabe an (Name, Heute / Morgen / Wochenende / Datum / Irgendwann, optional Uhrzeit und – mit Partner – „Für“ mich/Partner); Aufgaben ohne Datum und kommende stehen in den Klappzeilen „Irgendwann“ und „Demnächst“, „→ Morgen“ verschiebt."
         ],
         { tip: "Startet klein: fünf bis acht Aufgaben genügen. Was nicht passt, lasst ihr einfach weg. Es gibt keine Pflichtfelder." }
       ] },
@@ -327,7 +327,7 @@ const HELP_CONTENT = {
           "**Tu peux ?** Si cela ne convient pas aujourd'hui, demandez à votre partenaire d'un geste. Il reçoit un message avec « Je m'en occupe » ou « Impossible ». S'il accepte, cela ne vaut que pour cette fois.",
           "**Résumé du dimanche :** le dimanche soir arrive une note neutre : combien d'heures chaque personne a faites cette semaine et ce qui est resté en suspens. Elle ne juge rien, elle facilite seulement la discussion. Désactivable dans les réglages.",
           "**Bandeau modèle :** la tablette des enfants affiche une ligne discrète comme « Maman et Papa ont aussi 3 missions aujourd'hui », avec des points de progression sans score. Les enfants voient que tout le monde participe. Le bandeau et son texte sont réglables.",
-          "**Appareil personnel :** avec `mode: mine`, vos propres tâches de parents (sans points, avec la durée) apparaissent sur votre téléphone et s'y cochent."
+          "**Appareil personnel :** avec `mode: mine`, vos propres tâches de parents (sans points, avec la durée) apparaissent sur votre téléphone et s'y cochent. Le **＋** rond dans l'en-tête de « Mes tâches » ajoute une tâche rapidement (nom, Aujourd'hui / Demain / Week-end / Date / Un jour, heure en option et, avec un partenaire, « Pour » moi/partenaire) ; les tâches sans date et à venir sont dans les volets « Un jour » et « Bientôt », « → Demain » reporte."
         ],
         { tip: "Commencez petit : cinq à huit tâches suffisent. Laissez de côté ce qui ne convient pas. Il n'y a aucun champ obligatoire." }
       ] },
@@ -508,7 +508,7 @@ const HELP_CONTENT = {
           "**Can you?:** if today does not work, ask your partner with one tap. They receive a message with “I'll do it” or “Can't”. If they take it, that applies to this one time only.",
           "**Sunday summary:** on Sunday evening a neutral note arrives: how many hours each person did this week and what was left over. It judges nothing, it only makes talking easier. It can be switched off in the settings.",
           "**Role-model band:** the kids tablet shows a quiet line such as “Mom and Dad also have 3 missions today”, with progress dots and no points. Kids see that everybody pitches in. The band and its wording are configurable.",
-          "**Own device:** with `mode: mine` your own parent tasks (no points, with duration) appear on your own phone and can be ticked off there."
+          "**Own device:** with `mode: mine` your own parent tasks (no points, with duration) appear on your own phone and can be ticked off there. The round **＋** in the header of “My tasks” adds a quick to-do right there (name, Today / Tomorrow / Weekend / Date / Someday, optional time and, with a partner, “For” me/partner); undated and upcoming tasks sit in the folds “Someday” and “Coming up”, “→ Tomorrow” postpones."
         ],
         { tip: "Start small: five to eight tasks are enough. Leave out whatever does not fit. There are no required fields." }
       ] },
