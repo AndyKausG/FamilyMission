@@ -1,0 +1,3 @@
+setuptools<70
+wheel
+pytest-homeassistant-custom-component==0.13.316

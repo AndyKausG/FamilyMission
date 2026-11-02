@@ -15,7 +15,7 @@ Notes for AI agents and other contributors working on FamilyMission
 | `custom_components/family_mission/manifest.json` | **Version source of truth** |
 | `tests/` | pytest (pure tests + Home Assistant harness tests `*_ws.py`) |
 | `docs/parents-guide.{de,en,fr}.md` | Parents' guide; same content as the in-app help |
-| `.github/workflows/` | `validation.yml` (HACS + Hassfest), `release.yml` (automatic releases) |
+| `.github/workflows/` | `validation.yml` (HACS + Hassfest), `tests.yml` (pytest + JS syntax), `release.yml` (automatic releases) |
 
 Code, comments, commit messages, CHANGELOG and README are in **English**.
 User-facing texts: backend messages de/en (`_lang(hass)`), settings card
@@ -27,9 +27,14 @@ The HA harness needs a virtualenv (the system Python's setuptools breaks some bu
 
 ```bash
 python -m venv ~/venv
-~/venv/bin/pip install "setuptools<70" wheel pytest-homeassistant-custom-component
+~/venv/bin/pip install -r requirements_test.txt
 ~/venv/bin/python -m pytest -q
 ```
+
+CI (`.github/workflows/tests.yml`) runs pytest and `node --check` on every pull request and
+on pushes to `main`. A local run is optional; the green "Tests" check on the PR counts.
+Keep the pinned `pytest-homeassistant-custom-component` version in `requirements_test.txt`
+current when Home Assistant moves on.
 
 - All tests must pass before a push. New features get tests (pure module test + `*_ws.py`).
 - Pure modules are loaded with `importlib` straight from the file (see `tests/test_waste.py`),
@@ -83,5 +88,5 @@ sections (newest first).
 
 - Work on a feature branch, never commit directly to `main`.
 - Merge `main` into the branch rather than rebasing pushed branches.
-- PRs are merged with a merge commit ("merge"), after the HACS and Hassfest checks are green.
+- PRs are merged with a merge commit ("merge"), after the HACS, Hassfest and Tests checks are green.
 - A merged branch is finished; follow-up work starts from the current `main` in a new PR.
