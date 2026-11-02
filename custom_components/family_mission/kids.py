@@ -92,6 +92,7 @@ ERR_DUPLICATE_HELPER = "duplicate_helper"
 ERR_UNKNOWN_REWARD = "unknown_reward"
 ERR_REWARD_INACTIVE = "reward_inactive"
 ERR_NOT_ENOUGH = "not_enough_points"
+ERR_AFTER_PENDING = "after_pending"
 
 # Window states of a task (see window_state)
 WINDOW_OPEN = "open"
@@ -210,7 +211,7 @@ def task_scope(task: dict) -> str:
     return normalize_scope((task or {}).get("scope"))
 
 
-ABSENCE_KINDS = ("trip", "away", "sick")
+ABSENCE_KINDS = ("trip", "away", "sick", "school_holiday")
 MAX_ABSENCE_DAYS = 120
 MAX_ABSENCES = 60
 MAX_ABSENCE_NOTE = 60
@@ -237,7 +238,8 @@ def normalize_absence(raw: Any, kid_ids: Iterable[str] | None = None) -> dict | 
     at least one kid (every one of ``kid_ids`` when given). ``to`` is inclusive and
     must not be before ``from``; at most ``MAX_ABSENCE_DAYS`` days. ``away`` never
     keeps the personal tasks; medication follows ``care`` for ``away`` and always
-    continues for trip / sick.
+    continues for trip / sick / school holidays. ``school_holiday`` (all kids or the
+    chosen ones) pauses only what needs school (see ``task_requires_school``).
     """
     if not isinstance(raw, dict):
         return None
@@ -274,7 +276,7 @@ def normalize_absence(raw: Any, kid_ids: Iterable[str] | None = None) -> dict | 
         "kids": kids,
         "from": start.isoformat(),
         "to": end.isoformat(),
-        "personal": False if kind == "away" else (personal if isinstance(personal, bool) else defaults["personal"]),
+        "personal": False if kind in ("away", "school_holiday") else (personal if isinstance(personal, bool) else defaults["personal"]),
         "care": care if kind == "away" and isinstance(care, bool) else (False if kind == "away" else True),
         "note": str(raw.get("note") or "").strip()[:MAX_ABSENCE_NOTE],
     }
@@ -297,14 +299,98 @@ def is_paused(task: dict, kid_id: str, day: date, absences: Iterable[dict] | Non
     * trip: home tasks pause; personal tasks pause unless the trip keeps them (``personal``).
     * away: everything of the kid pauses.
     * sick: home tasks pause; personal tasks pause unless ``personal``.
+    * school_holiday: only tasks that need school (homework) pause.
     """
     scope = task_scope(task)
     for absence in absences or ():
         if not isinstance(absence, dict) or not absence_active(absence, day) or not _absence_covers(absence, kid_id):
             continue
+        if absence.get("kind") == "school_holiday":
+            if task_requires_school(task):
+                return True
+            continue
         if absence.get("kind") == "away" or scope == SCOPE_HOME or not absence.get("personal"):
             return True
     return False
+
+
+# Catalog keys of tasks that only make sense on school days (see the ``school`` household feature).
+SCHOOL_CATALOG_KEYS = frozenset({"homework"})
+# Titles (German / English) of catalog steps that need school ("requires": "school"); a stored step carries
+# no feature flag, so it is recognized by its title (or by an explicit ``requires: "school"``).
+SCHOOL_STEP_TITLES = frozenset(t.casefold() for t in (
+    "Brotdose & Trinkflasche einpacken", "Pack lunch box & water bottle",
+    "Schulranzen packen", "Pack school bag",
+))
+
+
+def task_catalog_key(task: dict) -> str:
+    """Catalog key of a task: its ``catalog_key`` or the prefix of its wizard key (``""`` for a plain task)."""
+    key = (task or {}).get("catalog_key")
+    if isinstance(key, str) and key:
+        return key
+    return str((task or {}).get("wizard_key") or "").split(":", 1)[0]
+
+
+def task_requires_school(task: dict) -> bool:
+    """True for a task that only runs on school days (it pauses in school holidays)."""
+    return task_catalog_key(task) in SCHOOL_CATALOG_KEYS
+
+
+def is_school_step(step: Any) -> bool:
+    """True for a mission step that needs school (school bag, lunch box)."""
+    if isinstance(step, dict):
+        if step.get("requires") == "school":
+            return True
+        title = step.get("title")
+    else:
+        title = step
+    return isinstance(title, str) and title.strip().casefold() in SCHOOL_STEP_TITLES
+
+
+def day_ranges(days: Iterable[date]) -> list[tuple[date, date]]:
+    """Consecutive days merged into ``(first, last)`` ranges, sorted."""
+    result: list[tuple[date, date]] = []
+    for day in sorted(set(days)):
+        if result and day == result[-1][1] + timedelta(days=1):
+            result[-1] = (result[-1][0], day)
+        else:
+            result.append((day, day))
+    return result
+
+
+def all_day_event_days(events: Iterable[dict], first: date, last: date) -> list[date]:
+    """Days within ``first..last`` covered by the all-day events of a calendar.
+
+    An all-day event has date-only ``start`` / ``end`` (``YYYY-MM-DD``, ``end`` exclusive like in
+    Home Assistant); timed events are ignored. A missing / earlier ``end`` makes it a single day.
+    """
+    days: set[date] = set()
+    for event in events or ():
+        if not isinstance(event, dict):
+            continue
+        start, end = event.get("start"), event.get("end")
+        if not isinstance(start, str) or not _DATE_RE.match(start):
+            continue
+        begin = _iso_day(start)
+        finish = _iso_day(end) if isinstance(end, str) and _DATE_RE.match(end) else None
+        if begin is None:
+            continue
+        if finish is None or finish <= begin:
+            finish = begin + timedelta(days=1)
+        probe = max(begin, first)
+        while probe < finish and probe <= last:
+            days.add(probe)
+            probe += timedelta(days=1)
+    return sorted(days)
+
+
+def school_holiday(kid_id: str, day: date, absences: Iterable[dict] | None) -> bool:
+    """True when ``day`` is a school holiday for the kid (an active ``school_holiday`` absence covers the kid)."""
+    return any(
+        isinstance(a, dict) and a.get("kind") == "school_holiday" and absence_active(a, day) and _absence_covers(a, kid_id)
+        for a in absences or ()
+    )
 
 
 def absent_kids(day: date, absences: Iterable[dict] | None, scope: str = SCOPE_HOME, all_kids: Iterable[str] = ()) -> set[str]:
@@ -358,6 +444,11 @@ def migrate_task_like(item: dict) -> None:
     item["allow_together"] = allow_together(item)
     item["available_from"] = normalize_time(item.get("available_from"))
     item["available_until"] = normalize_time(item.get("available_until"))
+    for key in ("available_from_we", "available_until_we"):
+        if key in item:
+            item[key] = normalize_time(item.get(key))
+    if "after_key" in item:
+        item["after_key"] = normalize_after_key(item.get("after_key"))
     item["reminder_at"] = normalize_time(item.get("reminder_at"))
     item["reminder_target"] = normalize_reminder_target(item.get("reminder_target"))
     item["scope"] = derive_scope(item)
@@ -445,6 +536,22 @@ def is_night_time(
     return sleep_min <= minute < wake_today
 
 
+def task_window(task: dict, weekday: int | None = None) -> tuple[str | None, str | None]:
+    """The ``(from, until)`` window (``"HH:MM"`` or ``None``) that applies on a weekday (Mon=0).
+
+    On Saturday / Sunday the optional weekend window (``available_from_we`` /
+    ``available_until_we``) replaces the normal one as soon as one of its two
+    times is set; without it the same window applies every day.
+    """
+    task = task or {}
+    if weekday is not None and weekday >= 5:
+        start_we = normalize_time(task.get("available_from_we"))
+        end_we = normalize_time(task.get("available_until_we"))
+        if start_we or end_we:
+            return start_we, end_we
+    return normalize_time(task.get("available_from")), normalize_time(task.get("available_until"))
+
+
 def window_state(task: dict, now: datetime) -> str:
     """Whether ``now`` (local time) is inside the task's time window.
 
@@ -458,9 +565,9 @@ def window_state(task: dict, now: datetime) -> str:
       the gap in between counts as ``not_yet``.
     * ``from == until`` or no valid time at all: no restriction.
     * an ``until`` of ``00:00`` means "end of the day".
+    * on Saturday / Sunday the weekend window applies when the task has one (see ``task_window``).
     """
-    start = normalize_time((task or {}).get("available_from"))
-    end = normalize_time((task or {}).get("available_until"))
+    start, end = task_window(task, now.weekday())
     if start == "00:00":
         start = None
     if end == "00:00" and start is None:
@@ -1162,6 +1269,60 @@ def effective_assignees(task: dict, skip: Iterable[str] = ()) -> list:
     return _assignee_list(task)
 
 
+_AFTER_KEY_RE = re.compile(r"^[a-z0-9_]{1,40}$")
+
+
+def normalize_after_key(value: Any) -> str | None:
+    """Catalog key of the task that has to be done first (``after_key``), ``None`` for anything else."""
+    return value if isinstance(value, str) and _AFTER_KEY_RE.match(value) else None
+
+
+def after_blockers(
+    task: dict,
+    kid_id: str,
+    tasks: dict,
+    now: datetime,
+    default_overdue_days: int = DEFAULT_OVERDUE_DAYS,
+    absences: Iterable[dict] | None = None,
+) -> list[dict]:
+    """The kid's tasks that still stand in front of ``task`` (``after_key``), empty when nothing waits.
+
+    ``after_key`` is a catalog key (e.g. ``homework``). The task is released once the kid's task
+    with that key is done today or is not due today at all (weekend, school holiday, absence,
+    schedule). A blocker whose time window is over for today cannot be done any more and does
+    not block either.
+    """
+    key = normalize_after_key((task or {}).get("after_key"))
+    if not key:
+        return []
+    result = []
+    for other in tasks.values():
+        if (
+            other is task or not isinstance(other, dict) or other.get("parent_task")
+            or task_catalog_key(other) != key
+            or kid_id not in effective_assignees(other)
+            or is_paused(other, kid_id, now.date(), absences)
+            or not is_open(other, now, default_overdue_days)
+            or is_expired(other, now)
+            or window_state(other, now) == WINDOW_TOO_LATE
+        ):
+            continue
+        result.append(other)
+    return result
+
+
+def after_pending(
+    task: dict,
+    kid_id: str,
+    tasks: dict,
+    now: datetime,
+    default_overdue_days: int = DEFAULT_OVERDUE_DAYS,
+    absences: Iterable[dict] | None = None,
+) -> bool:
+    """True while ``task`` has to wait for the kid's task of its ``after_key``."""
+    return bool(after_blockers(task, kid_id, tasks, now, default_overdue_days, absences))
+
+
 def open_basis_tasks_for(
     tasks: dict,
     kid_id: str,
@@ -1176,7 +1337,8 @@ def open_basis_tasks_for(
 
     Tasks the kid is too young for are ignored: they can never be completed by
     this kid and must not block the bonus tasks forever. Tasks outside their
-    time window (not yet available / window over) are not "open" either.
+    time window (not yet available / window over) or that still wait for another
+    task (``after_key``) are not "open" either.
     """
     return [
         t
@@ -1188,6 +1350,7 @@ def open_basis_tasks_for(
         and in_window(t, now)
         and not _too_young(t, age)
         and not is_replaced(t, tasks, now, default_overdue_days)
+        and not after_pending(t, kid_id, tasks, now, default_overdue_days, absences)
     ]
 
 
@@ -1263,18 +1426,21 @@ def bonus_needs_routine(task: dict) -> bool:
     )
 
 
-def open_required_steps(task: dict, care_steps: Iterable[dict] | None = None) -> list[dict]:
+def open_required_steps(
+    task: dict, care_steps: Iterable[dict] | None = None, school_free: bool = False,
+) -> list[dict]:
     """Steps that still have to be done before a kid may finish the task.
 
     Stored subtasks block until ticked, except those marked ``optional``.
     ``care_steps`` are the virtual medication steps of the kid's morning /
     evening mission (never stored in ``subtasks``, see ``care_steps_for``): both
     answers ("taken" and "not today") count as done, only an unanswered step
-    blocks.
+    blocks. ``school_free`` (school holiday): steps that need school do not block.
     """
     steps = [
         st for st in (task.get("subtasks") or [])
         if isinstance(st, dict) and not st.get("done") and not st.get("optional")
+        and not (school_free and is_school_step(st))
     ]
     steps.extend(st for st in (care_steps or ()) if isinstance(st, dict) and not st.get("answer"))
     return steps
@@ -1319,6 +1485,9 @@ def check_eligibility(
         return ERR_NOT_YET
     if window == WINDOW_TOO_LATE:
         return ERR_TOO_LATE
+
+    if after_pending(task, kid_id, tasks, now, overdue_days, absences):
+        return ERR_AFTER_PENDING
 
     if claim_active(task, now) and task.get("claimed_by") != kid_id:
         return ERR_CLAIMED
@@ -1680,6 +1849,8 @@ def normalize_care(raw: Any) -> list[dict]:
     Entry: ``{id, label, emoji, anchor morning|evening|time, time, weekdays, deadline,
     notify_parents, decline_alert {enabled, count, days}, after}``. Anything that is not a
     list gives ``[]``, entries that are not dicts are dropped (at most 6 are kept).
+    ``stock`` / ``per_dose`` / ``stock_set_at`` are the pill stock the parents ENTERED (the live,
+    counted-down stock is kept in the data store, see ``care_stock_reconcile``).
     ``after`` (optional, at most 60 characters) is the title of the mission step the care
     step follows; ``""`` means "at the end", a missing key the default (see ``care_insert_index``).
     """
@@ -1727,6 +1898,7 @@ def normalize_care(raw: Any) -> list[dict]:
         if stock is not None:
             entry["stock"] = stock
             entry["per_dose"] = care_per_dose(item.get("per_dose"))
+            entry["stock_set_at"] = care_stock_token(item.get("stock_set_at"))
         result.append(entry)
     return result
 
@@ -1752,6 +1924,45 @@ def care_stock_of(value: Any) -> int | None:
     except (TypeError, ValueError, OverflowError):
         return None
     return number if 0 <= number <= MAX_CARE_STOCK else None
+
+
+def care_stock_token(value: Any) -> str:
+    """The ``stock_set_at`` token of an entered stock: a short string (an ISO timestamp), ``""`` for anything else."""
+    return value.strip()[:40] if isinstance(value, str) else ""
+
+
+def care_stock_reconcile(old: Any, new: Any, now_iso: str) -> tuple[list[dict], dict]:
+    """Merge the care entries of a profile save with the stored ones; decide which live stocks restart.
+
+    The profile keeps the stock the parents entered (``stock``) with a token (``stock_set_at``); the
+    counted-down stock lives in the data store. A save only restarts the live counter of an entry when
+    the entered stock really changed: a new tracking, a different value, or a newer token. A save whose token
+    is OLDER than the stored one (a stale settings draft) keeps the stored stock and token completely.
+
+    :return: ``(entries, live)``; ``live`` maps the care id of every entry that restarts to its new
+        ``{"remaining", "set_at"}``.
+    """
+    old_by_id = {e["id"]: e for e in normalize_care(old) if "stock" in e}
+    entries = normalize_care(new)
+    live: dict[str, dict] = {}
+    for entry in entries:
+        if "stock" not in entry:
+            continue
+        stored = old_by_id.get(entry["id"])
+        token = entry.get("stock_set_at", "")
+        if stored is None:
+            entry["stock_set_at"] = token or now_iso
+            live[entry["id"]] = {"remaining": entry["stock"], "set_at": entry["stock_set_at"]}
+            continue
+        stored_token = stored.get("stock_set_at", "")
+        if token and stored_token and token < stored_token:
+            entry["stock"], entry["stock_set_at"] = stored["stock"], stored_token    # stale draft
+        elif entry["stock"] != stored["stock"] or (token and token != stored_token):
+            entry["stock_set_at"] = token if token and token != stored_token else now_iso
+            live[entry["id"]] = {"remaining": entry["stock"], "set_at": entry["stock_set_at"]}
+        else:
+            entry["stock_set_at"] = stored_token or token or now_iso
+    return entries, live
 
 
 def care_per_dose(value: Any) -> int:

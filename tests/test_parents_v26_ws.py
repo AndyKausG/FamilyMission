@@ -279,8 +279,10 @@ async def _set_care(env, entries):
     return env["entry"].options["kids"][LENA]["care"]
 
 
-def _stock(env):
-    return env["entry"].options["kids"][LENA]["care"][0].get("stock")
+def _stock(env, care_id="pill"):
+    """The LIVE (counted-down) stock from the data store; the profile keeps the entered value."""
+    live = _data(env["hass"]).get("care_stock", {}).get(f"{LENA}:{care_id}")
+    return live["remaining"] if live else None
 
 
 async def _answer(env, status, care_id="pill"):

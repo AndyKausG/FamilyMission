@@ -74,6 +74,11 @@ claim_minutes: "Bonus reservation (minutes)",
     category_lbl: "Category (kids mode)", cat_basis: "Basis (assigned duty)", cat_bonus: "Bonus (open for all)", cat_auftrag: "Order (one-time)",
     min_age_lbl: "Minimum age (0 = any)", min_age_short: "age {age}+", approval_lbl: "Requires parent approval", routine_lbl: "Bonus only after the kid's due duties", together_lbl: "Doing it together allowed",
     available_from_lbl: "Only from (time)", available_until_lbl: "Only until (time)",
+    available_from_we_lbl: "Weekend: only from (time)", available_until_we_lbl: "Weekend: only until (time)",
+    weekend_window_hint: "Saturday / Sunday. Empty = the same window every day.",
+    after_homework_lbl: "Only after homework",
+    school_cal_lbl: "School holiday calendar", school_cal_off: "none",
+    school_cal_d: "Optional: a calendar whose all-day events are school holidays (homework and school steps pause on those days). Needs the calendar integration of Home Assistant.",
     reminder_lbl: "Reminder", reminder_time_lbl: "Remind at", reminder_target_lbl: "Notify via", reminder_event_only: "Event only",
     expire_missed: "Missed duties expire at midnight (daily duties right away, weekly ones after 2 days) - no points, no deduction",
     help_btn: "Help", wizard_btn: "🚀 Kids mode quick start", wizard_hint: "Proposes an age-appropriate set of tasks, points and goals for your kids and creates everything in one click.",
@@ -185,6 +190,11 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     category_lbl: "Kategorie (Kindermodus)", cat_basis: "Basis (feste Pflicht)", cat_bonus: "Bonus (offen für alle)", cat_auftrag: "Auftrag (einmalig)",
     min_age_lbl: "Mindestalter (0 = egal)", min_age_short: "ab {age}", approval_lbl: "Freigabe durch Eltern nötig", routine_lbl: "Bonus erst nach den fälligen Pflichten", together_lbl: "Zusammen erledigen erlaubt",
     available_from_lbl: "Erst ab (Uhrzeit)", available_until_lbl: "Nur bis (Uhrzeit)",
+    available_from_we_lbl: "Wochenende: erst ab (Uhrzeit)", available_until_we_lbl: "Wochenende: nur bis (Uhrzeit)",
+    weekend_window_hint: "Samstag / Sonntag. Leer = jeden Tag dasselbe Zeitfenster.",
+    after_homework_lbl: "Erst nach den Hausaufgaben",
+    school_cal_lbl: "Schulferien-Kalender", school_cal_off: "keiner",
+    school_cal_d: "Optional: ein Kalender, dessen ganztägige Termine Schulferien sind (Hausaufgaben und Schulschritte pausieren an diesen Tagen). Braucht die Kalender-Integration von Home Assistant.",
     reminder_lbl: "Erinnerung", reminder_time_lbl: "Erinnern um", reminder_target_lbl: "Benachrichtigen über", reminder_event_only: "nur Ereignis",
     expire_missed: "Verpasste Pflichten verfallen um Mitternacht (tägliche sofort, wöchentliche nach 2 Tagen) – ohne Punkte, ohne Abzug",
     help_btn: "Hilfe", wizard_btn: "🚀 Kindermodus-Schnellstart", wizard_hint: "Schlägt altersgerechte Aufgaben, Punkte und Ziele für eure Kinder vor und legt alles mit einem Klick an.",
@@ -1037,6 +1047,10 @@ class FamilyMissionSettings extends HTMLElement {
       allow_together: !!this.shadowRoot.getElementById('tmpl-together')?.checked,
       available_from: this.shadowRoot.getElementById('tmpl-available-from')?.value || '',
       available_until: this.shadowRoot.getElementById('tmpl-available-until')?.value || '',
+      available_from_we: this.shadowRoot.getElementById('tmpl-available-from-we')?.value || '',
+      available_until_we: this.shadowRoot.getElementById('tmpl-available-until-we')?.value || '',
+      after_key: this.shadowRoot.getElementById('tmpl-after') ? (this.shadowRoot.getElementById('tmpl-after').checked ? 'homework' : null)
+        : ((this._editingTemplateId && this.templates[this._editingTemplateId] && this.templates[this._editingTemplateId].after_key) || null),
       reminder_at: this.shadowRoot.getElementById('tmpl-reminder')?.checked ? (this.shadowRoot.getElementById('tmpl-reminder-at')?.value || '18:00') : '',
       reminder_target: this.shadowRoot.getElementById('tmpl-reminder')?.checked ? (this.shadowRoot.getElementById('tmpl-reminder-target')?.value || '') : '',
       assignees: assignees,
@@ -1953,6 +1967,27 @@ class FamilyMissionSettings extends HTMLElement {
             </div>`;
   }
 
+  /** School holiday calendar: any calendar entity; an all-day event there is a school holiday. */
+  _renderSchoolCalendarBody() {
+    const esc = (v) => this._esc(v);
+    const current = (this.settings && this.settings.school_holiday_calendar) || '';
+    const ids = Object.keys((this._hass && this._hass.states) || {}).filter(id => id.startsWith('calendar.')).sort();
+    if (current && !ids.includes(current)) ids.unshift(current);
+    const name = (id) => {
+      const st = this._hass && this._hass.states && this._hass.states[id];
+      return (st && st.attributes && st.attributes.friendly_name) || id;
+    };
+    return `
+            <div class="family-box">
+              <p class="kids-note">${this.localize('school_cal_d')}</p>
+              <label class="kid-field">${this.localize('school_cal_lbl')}
+                <select id="sh-cal">
+                  <option value="">${esc(this.localize('school_cal_off'))}</option>
+                  ${ids.map(id => `<option value="${esc(id)}" ${id === current ? 'selected' : ''}>${esc(name(id))}</option>`).join('')}
+                </select></label>
+            </div>`;
+  }
+
   /** Keeps the tablet / notification inputs in this.settings (saved with the Save bar). */
   _bindParentsCentralInputs() {
     const root = this.shadowRoot;
@@ -1978,6 +2013,7 @@ class FamilyMissionSettings extends HTMLElement {
         const hours = parseInt(el('pe-abs-hours').value);
         this.settings.absence_suggest_hours = hours >= 6 && hours <= 168 ? hours : 24;
       }
+      if (el('sh-cal')) this.settings.school_holiday_calendar = el('sh-cal').value;
       if (el('tb-night')) {
         this.settings.night_mode = !!el('tb-night').checked;
         this.settings.night_sleep = el('tb-sleep').value;
@@ -1996,7 +2032,7 @@ class FamilyMissionSettings extends HTMLElement {
         this.settings.parent_notify = notify;
       }
     };
-    ['notify', 'device'].forEach(tab => {
+    ['family', 'notify', 'device'].forEach(tab => {
       const box = root.querySelector(`.tab-panel[data-panel="${tab}"]`);
       if (!box) return;
       box.addEventListener('input', sync);
@@ -2339,7 +2375,7 @@ class FamilyMissionSettings extends HTMLElement {
     }, true);
     on('.care-stock', 'change', (c, ev) => {
       const n = parseInt(ev.target.value);
-      if (ev.target.value === '' || isNaN(n)) { delete c.stock; delete c.per_dose; } else { c.stock = Math.max(0, Math.min(9999, n)); c.per_dose = c.per_dose || 1; }
+      if (ev.target.value === '' || isNaN(n)) { delete c.stock; delete c.per_dose; delete c.stock_set_at; } else { c.stock = Math.max(0, Math.min(9999, n)); c.per_dose = c.per_dose || 1; c.stock_set_at = new Date().toISOString(); /* a new token: the live counter restarts */ }
     }, true);
     on('.care-perdose', 'input', (c, ev) => { c.per_dose = Math.max(1, Math.min(20, parseInt(ev.target.value) || 1)); });
     on('.care-notify', 'change', (c, ev) => { c.notify_parents = !!ev.target.checked; });
@@ -2543,7 +2579,8 @@ class FamilyMissionSettings extends HTMLElement {
       family: [
         this._section('kids', this.localize('kids_title'), this._renderKidsBody()),
         this._section('parents', this.localize('parents_title'), this._renderParentsSection()),
-        this._section('fgoal', this.localize('family_goal'), this._renderFamilyGoalBody())
+        this._section('fgoal', this.localize('family_goal'), this._renderFamilyGoalBody()),
+        canManage ? this._section('schoolcal', '📚 ' + this.localize('school_cal_lbl'), this._renderSchoolCalendarBody()) : ''
       ],
       tasks: [
         this._section('templates', this.localize('templates'), templatesHtml, { collapsible: true, badge: this.localize('immediate_note') }),
@@ -2654,6 +2691,20 @@ class FamilyMissionSettings extends HTMLElement {
                       <select id="tmpl-available-until" class="form-select">${toSetTTimeOptions(template?.available_until || '', '—')}</select>
                   </div>
               </div>
+              <div class="form-row">
+                  <div class="form-col">
+                      <label class="form-label" for="tmpl-available-from-we">${this.localize('available_from_we_lbl')}</label>
+                      <select id="tmpl-available-from-we" class="form-select">${toSetTTimeOptions(template?.available_from_we || '', '—')}</select>
+                  </div>
+                  <div class="form-col">
+                      <label class="form-label" for="tmpl-available-until-we">${this.localize('available_until_we_lbl')}</label>
+                      <select id="tmpl-available-until-we" class="form-select">${toSetTTimeOptions(template?.available_until_we || '', '—')}</select>
+                  </div>
+              </div>
+              <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('weekend_window_hint')}</div>
+              ${Object.values(this.tasks || {}).some(x => x && !x.parent_task && (x.catalog_key === 'homework' || String(x.wizard_key || '').split(':')[0] === 'homework')) || template?.after_key === 'homework' ? `<ha-formfield label="${this.localize('after_homework_lbl')}">
+                  <ha-switch id="tmpl-after" ${template?.after_key === 'homework' ? 'checked' : ''}></ha-switch>
+              </ha-formfield>` : ''}
               <ha-formfield label="${this.localize('approval_lbl')}">
                   <ha-switch id="tmpl-approval" ${template?.requires_approval ? 'checked' : ''}></ha-switch>
               </ha-formfield>

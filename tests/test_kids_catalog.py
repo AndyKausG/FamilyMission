@@ -59,7 +59,7 @@ def test_david_tasks():
     assert david["age"] == 6
     assert keys(david) == {
         "morning", "evening", "room_blitz_small", "table_set",
-        "table_clear", "plants", "room_deep", "own_laundry"}
+        "table_clear", "plants", "room_deep", "own_laundry", "homework"}
     for missing in ("room_blitz", "dishwasher_load", "garden", "driveway", "bedding"):
         assert missing not in keys(david)
     deep = next(t for t in david["tasks"] if t["catalog_key"] == "room_deep")
@@ -159,8 +159,9 @@ def test_english_names():
 
 def test_goals_follow_formula():
     p = proposal(FIRST, "start")
-    # Anna: Σ points*30/interval over her basis tasks
-    expected = sum(t["points"] * 30 / t["interval"] for t in kid(p, ANNA)["tasks"])
+    # Anna: Σ points*30/interval over her basis tasks (a weekday schedule counts its share of the week)
+    expected = sum(t["points"] * 30 * (len(t["weekdays"]) / 7 if t["weekdays"] else 1) / t["interval"]
+                   for t in kid(p, ANNA)["tasks"])
     assert kid(p, ANNA)["max_points"] == pytest.approx(expected, abs=0.1)
     assert kid(p, ANNA)["goal"] == kc.round_to(expected * 0.6, 5)
     assert kid(p, ANNA)["goal"] % 5 == 0
@@ -170,8 +171,9 @@ def test_goals_follow_formula():
     assert normal["family_goal"] % 10 == 0
     assert kid(p, DAVID)["goal"] < kid(p, ANNA)["goal"]
     # Concrete numbers of the Eich family (hand-checked)
-    assert [k["goal"] for k in p["kids"]] == [215, 215, 215, 170]
-    assert p["family_goal"] == 650
+    # (2.6: +3 points on the 5 school days of the week for the homework task)
+    assert [k["goal"] for k in p["kids"]] == [255, 255, 255, 205]
+    assert p["family_goal"] == 780
 
 
 def test_goals_are_prorated_mid_month():
@@ -290,7 +292,7 @@ def selected(k):
 def test_suggestion_start_phase_keeps_core_and_stays_within_load():
     p = _suggested("start")
     for k in p["kids"]:
-        assert selected(k) == {"morning", "evening", "table_set"}   # three cards to start
+        assert selected(k) == {"morning", "evening", "table_set", "homework"}   # three chores cards + school duty to start
         assert k["minutes_per_day"] <= k["recommended_minutes"]
         # bigger chores and extras wait for the normal phase
         assert not selected(k) & {"dishwasher_load", "room_deep", "garden", "driveway", "bedding"}
@@ -352,10 +354,10 @@ def test_newly_unlocked_replaces_outgrown_entries():
 
 WINDOWS = {
     "morning": ("05:00", "10:00"), "evening": ("17:00", "21:00"),
-    "room_blitz": ("14:00", "19:30"), "room_blitz_small": ("14:00", "19:30"),
+    "room_blitz": ("16:00", "19:30"), "room_blitz_small": ("16:00", "19:30"), "homework": ("13:30", "18:00"),
     "table_set": ("17:00", "19:30"), "table_clear": ("18:00", "20:30"),
     "dishwasher_load": ("18:00", "21:00"), "plants": ("14:00", "19:00"),
-    "own_laundry": ("14:00", "19:30"), "room_deep": ("09:00", "18:00"),
+    "own_laundry": ("14:00", "19:30"), "room_deep": ("16:00", "19:00"),
     "bedding": ("09:00", "18:00"), "garden": ("10:00", "18:00"),
     "driveway": ("10:00", "18:00"), "pet_feed": ("07:00", "19:00"),
     "pet_clean": ("10:00", "18:00"),

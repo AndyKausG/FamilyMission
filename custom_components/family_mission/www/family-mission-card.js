@@ -43,6 +43,9 @@ const I18N_CARD = {
     category_lbl: "Category (kids mode)", cat_basis: "Basis (assigned duty)", cat_bonus: "Bonus (open for all)", cat_auftrag: "Order (one-time)",
     min_age_lbl: "Minimum age (0 = any)", approval_lbl: "Requires parent approval", routine_lbl: "Bonus only after the kid's due duties", together_lbl: "Doing it together allowed",
     available_from_lbl: "Only from (time)", available_until_lbl: "Only until (time)",
+    available_from_we_lbl: "Weekend: only from (time)", available_until_we_lbl: "Weekend: only until (time)",
+    weekend_window_hint: "Saturday / Sunday. Empty = the same window every day.",
+    after_homework_lbl: "Only after homework",
     reminder_lbl: "Reminder", reminder_time_lbl: "Remind at", reminder_target_lbl: "Notify via", reminder_event_only: "Event only",
     scope_lbl: "Scope (for absences)", scope_home: "Home (chores)", scope_personal: "Personal (own routines)",
     weekdays_lbl: "Weekdays (instead of the interval)", weekday_short: "Mo,Tu,We,Th,Fr,Sa,Su",
@@ -88,6 +91,9 @@ const I18N_CARD = {
     category_lbl: "Kategorie (Kindermodus)", cat_basis: "Basis (feste Pflicht)", cat_bonus: "Bonus (offen für alle)", cat_auftrag: "Auftrag (einmalig)",
     min_age_lbl: "Mindestalter (0 = egal)", approval_lbl: "Freigabe durch Eltern nötig", routine_lbl: "Bonus erst nach den fälligen Pflichten", together_lbl: "Zusammen erledigen erlaubt",
     available_from_lbl: "Erst ab (Uhrzeit)", available_until_lbl: "Nur bis (Uhrzeit)",
+    available_from_we_lbl: "Wochenende: erst ab (Uhrzeit)", available_until_we_lbl: "Wochenende: nur bis (Uhrzeit)",
+    weekend_window_hint: "Samstag / Sonntag. Leer = jeden Tag dasselbe Zeitfenster.",
+    after_homework_lbl: "Erst nach den Hausaufgaben",
     reminder_lbl: "Erinnerung", reminder_time_lbl: "Erinnern um", reminder_target_lbl: "Benachrichtigen über", reminder_event_only: "nur Ereignis",
     scope_lbl: "Bereich (für Abwesenheit)", scope_home: "Zuhause (Haushalt)", scope_personal: "Persönlich (eigene Routinen)",
     weekdays_lbl: "Wochentage (statt Intervall)", weekday_short: "Mo,Di,Mi,Do,Fr,Sa,So",
@@ -896,6 +902,7 @@ class FamilyMissionCard extends HTMLElement {
         }
         if (this.shadowRoot.getElementById('f-complexity')) this.shadowRoot.getElementById('f-complexity').value = t.complexity;
         this._setCategoryFields(t.category, t.min_age, t.requires_approval, t.available_from, t.available_until, t.requires_routine, t.reminder_at, t.reminder_target, t.allow_together);
+        this._setWeekendFields(t);
         this._setScope(t.scope);
         this._subtasks = t.subtasks ? [...t.subtasks] : [];
         this._currentIcon = t.icon || "mdi:broom";
@@ -932,6 +939,7 @@ class FamilyMissionCard extends HTMLElement {
         this.shadowRoot.getElementById('f-interval').value = 7;
         this.shadowRoot.getElementById('f-complexity').value = 5; 
         this._setCategoryFields('basis', 0, false);
+        this._setWeekendFields({});
         this._setScope('home');
         this._currentIcon = "mdi:broom";
         this._subtasks = [];
@@ -1046,6 +1054,28 @@ class FamilyMissionCard extends HTMLElement {
   _setScope(scope) {
     const sel = this.shadowRoot.getElementById('f-scope');
     if (sel) sel.value = scope === 'personal' ? 'personal' : 'home';
+  }
+
+  /** Weekend window and the "only after homework" switch (shown when a homework task exists). */
+  _setWeekendFields(t) {
+    const set = (id, value) => { const el = this.shadowRoot.getElementById(id); if (el) el.innerHTML = toCardTimeOptions(value || '', '—'); };
+    set('f-available-from-we', t.available_from_we);
+    set('f-available-until-we', t.available_until_we);
+    this._afterKey = typeof t.after_key === 'string' ? t.after_key : '';
+    const hasHomework = Object.values(this.tasks || {}).some(x => x && !x.parent_task &&
+      (x.catalog_key === 'homework' || String(x.wizard_key || '').split(':')[0] === 'homework'));
+    const wrap = this.shadowRoot.getElementById('f-after-wrap');
+    if (wrap) wrap.style.display = hasHomework || this._afterKey === 'homework' ? '' : 'none';
+    const sw = this.shadowRoot.getElementById('f-after');
+    if (sw) sw.checked = this._afterKey === 'homework';
+  }
+
+  /** `after_key` for the payload: the switch decides about "homework", any other stored key stays. */
+  _afterKeyValue() {
+    const wrap = this.shadowRoot.getElementById('f-after-wrap');
+    const sw = this.shadowRoot.getElementById('f-after');
+    if (wrap && wrap.style.display !== 'none' && sw) return sw.checked ? 'homework' : (this._afterKey && this._afterKey !== 'homework' ? this._afterKey : null);
+    return this._afterKey || null;
   }
 
   _setCategoryFields(category, minAge, requiresApproval = false, availableFrom = null, availableUntil = null, requiresRoutine = false, reminderAt = null, reminderTarget = '', allowTogether = undefined) {
@@ -1183,6 +1213,9 @@ class FamilyMissionCard extends HTMLElement {
       // time window for kids ("" = no limit); the backend stores an empty value as "no limit"
       available_from: this.shadowRoot.getElementById('f-available-from')?.value || "",
       available_until: this.shadowRoot.getElementById('f-available-until')?.value || "",
+      available_from_we: this.shadowRoot.getElementById('f-available-from-we')?.value || "",
+      available_until_we: this.shadowRoot.getElementById('f-available-until-we')?.value || "",
+      after_key: this._afterKeyValue(),
       // reminder: switch off = no reminder; "" target = only the event
       reminder_at: this.shadowRoot.getElementById('f-reminder')?.checked ? (this.shadowRoot.getElementById('f-reminder-at')?.value || "18:00") : "",
       reminder_target: this.shadowRoot.getElementById('f-reminder')?.checked ? (this.shadowRoot.getElementById('f-reminder-target')?.value || "") : "",
@@ -1427,6 +1460,20 @@ class FamilyMissionCard extends HTMLElement {
                             <select id="f-available-until" class="form-select">${toCardTimeOptions('', '—')}</select>
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="form-label" for="f-available-from-we">${this.localize('available_from_we_lbl')}</label>
+                            <select id="f-available-from-we" class="form-select">${toCardTimeOptions('', '—')}</select>
+                        </div>
+                        <div class="form-col">
+                            <label class="form-label" for="f-available-until-we">${this.localize('available_until_we_lbl')}</label>
+                            <select id="f-available-until-we" class="form-select">${toCardTimeOptions('', '—')}</select>
+                        </div>
+                    </div>
+                    <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('weekend_window_hint')}</div>
+                    <ha-formfield id="f-after-wrap" label="${this.localize('after_homework_lbl')}" style="display:none">
+                        <ha-switch id="f-after"></ha-switch>
+                    </ha-formfield>
                     <ha-formfield label="${this.localize('approval_lbl')}">
                         <ha-switch id="f-approval"></ha-switch>
                     </ha-formfield>
@@ -1703,6 +1750,7 @@ class FamilyMissionCard extends HTMLElement {
         this.shadowRoot.getElementById('f-complexity').value = t.complexity || 5;
         this.shadowRoot.getElementById('f-icon-picker').value = t.icon || 'mdi:broom';
         this._setCategoryFields(t.category, t.min_age, t.requires_approval, t.available_from, t.available_until, t.requires_routine, t.reminder_at, t.reminder_target, t.allow_together);
+        this._setWeekendFields(t);
         this._setScope(t.scope);
         this.shadowRoot.getElementById('template-suggestions').innerHTML = '';
         

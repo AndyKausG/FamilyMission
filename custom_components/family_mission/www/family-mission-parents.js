@@ -70,7 +70,9 @@ const I18N_PARENTS = {
     m_ptasks: "Parent tasks", m_ptasks_d: "Who does what, planning, duration", m_tasks: "Tasks", m_tasks_d: "Kids' tasks and templates",
     m_shop: "Shop", m_shop_d: "Redemptions and rewards", m_settings: "Settings", m_settings_d: "Kids, points, notifications",
     m_absence: "Absences", m_absence_d: "Vacation, kid away, sick",
-    abs_trip: "Family on a trip", abs_away: "Kid away", abs_sick: "Sick", abs_kids: "Who?", abs_from: "From", abs_to: "To (incl.)", abs_note: "Note (optional)",
+    abs_trip: "Family on a trip", abs_away: "Kid away", abs_sick: "Sick", abs_school_holiday: "School holidays",
+    abs_hint_school_holiday: "Only school things pause (homework, school bag, lunch box). Everything else keeps running. No kid chosen = all kids.",
+    abs_calendar: "Calendar", abs_banner_school: "📚 School holidays until {date} - homework and school steps are paused.", abs_kids: "Who?", abs_from: "From", abs_to: "To (incl.)", abs_note: "Note (optional)",
     abs_note_ph: "e.g. Grandma, class trip", abs_personal: "Keep personal tasks (missions, routines)", abs_care: "Medication continues",
     abs_hint_trip: "Chores and reminders pause. Medication continues.", abs_hint_away: "All tasks of the selected kids pause; rotations skip them.",
     abs_hint_sick: "Chores pause. Medication continues.", abs_create: "Save", abs_none: "No absences entered.", abs_new: "Add absence",
@@ -103,6 +105,8 @@ const I18N_PARENTS = {
     nt_each_d: "Every selected kid gets this task.", nt_rotation_d: "One task, the kids take turns.", nt_open_d: "A bonus for everyone; whoever is first.",
     nt_when: "When?", nt_daily: "Daily", nt_weekdays: "Weekdays", nt_every: "Every N days", nt_once: "Once", nt_every_l: "Every", nt_days_unit: "days", nt_date: "On",
     nt_days: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], nt_time: "Time window and reminder (optional)", nt_from: "From", nt_until: "Until", nt_remind: "Remind at",
+    nt_we_times: "Different window on the weekend (Sat/Sun)", nt_we_hint: "Empty = the same window every day.",
+    nt_after: "Only after homework", nt_after_d: "The task opens once the homework is done (or there is none today).",
     nt_from_tpl: "From the template:", nt_settings: "Settings:", nt_pts: "{n} points", nt_appr: "Approval needed", nt_home: "At home", nt_personal: "Personal",
     nt_points: "Points", nt_approval: "Parents approve it", nt_together: "May be done together", nt_kind: "Kind", nt_cat_basis: "Duty", nt_cat_bonus: "Bonus", nt_cat_auftrag: "Errand",
     nt_scope: "Applies to", nt_subs: "Steps", nt_sub_ph: "New step", nt_sub_add: "Add step", nt_sub_del: "Remove step",
@@ -174,7 +178,9 @@ const I18N_PARENTS = {
     m_ptasks: "Eltern-Aufgaben", m_ptasks_d: "Wer macht was, Planung, Dauer", m_tasks: "Aufgaben", m_tasks_d: "Kinder-Aufgaben und Vorlagen",
     m_shop: "Shop", m_shop_d: "Einlösungen und Belohnungen", m_settings: "Einstellungen", m_settings_d: "Kinder, Punkte, Benachrichtigungen",
     m_absence: "Abwesenheit", m_absence_d: "Urlaub, Kind weg, krank",
-    abs_trip: "Familie verreist", abs_away: "Kind weg", abs_sick: "Krank", abs_kids: "Wer?", abs_from: "Von", abs_to: "Bis (einschl.)", abs_note: "Notiz (optional)",
+    abs_trip: "Familie verreist", abs_away: "Kind weg", abs_sick: "Krank", abs_school_holiday: "Schulferien",
+    abs_hint_school_holiday: "Nur Schulisches pausiert (Hausaufgaben, Schulranzen, Brotdose). Alles andere läuft weiter. Kein Kind gewählt = alle Kinder.",
+    abs_calendar: "Kalender", abs_banner_school: "📚 Schulferien bis {date} - Hausaufgaben und Schulschritte pausieren.", abs_kids: "Wer?", abs_from: "Von", abs_to: "Bis (einschl.)", abs_note: "Notiz (optional)",
     abs_note_ph: "z. B. Oma, Klassenfahrt", abs_personal: "Persönliche Aufgaben behalten (Missionen, Routinen)", abs_care: "Medikamente laufen weiter",
     abs_hint_trip: "Haushaltsaufgaben und Erinnerungen pausieren. Medikamente laufen weiter.", abs_hint_away: "Alle Aufgaben der gewählten Kinder pausieren, Rotationen überspringen sie.",
     abs_hint_sick: "Haushaltsaufgaben pausieren. Medikamente laufen weiter.", abs_create: "Speichern", abs_none: "Keine Abwesenheit eingetragen.", abs_new: "Abwesenheit eintragen",
@@ -207,6 +213,8 @@ const I18N_PARENTS = {
     nt_each_d: "Jedes gewählte Kind bekommt die Aufgabe.", nt_rotation_d: "Eine Aufgabe, die Kinder wechseln sich ab.", nt_open_d: "Ein Bonus für alle; wer zuerst kommt.",
     nt_when: "Wann?", nt_daily: "Täglich", nt_weekdays: "Wochentage", nt_every: "Alle N Tage", nt_once: "Einmal", nt_every_l: "Alle", nt_days_unit: "Tage", nt_date: "Am",
     nt_days: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"], nt_time: "Zeitfenster und Erinnerung (optional)", nt_from: "Ab", nt_until: "Bis", nt_remind: "Erinnern um",
+    nt_we_times: "Anderes Zeitfenster am Wochenende (Sa/So)", nt_we_hint: "Leer = jeden Tag dasselbe Zeitfenster.",
+    nt_after: "Erst nach den Hausaufgaben", nt_after_d: "Die Aufgabe öffnet, sobald die Hausaufgaben erledigt sind (oder heute keine anstehen).",
     nt_from_tpl: "Aus der Vorlage:", nt_settings: "Einstellungen:", nt_pts: "{n} Punkte", nt_appr: "Freigabe nötig", nt_home: "Zuhause", nt_personal: "Persönlich",
     nt_points: "Punkte", nt_approval: "Eltern geben frei", nt_together: "Darf gemeinsam erledigt werden", nt_kind: "Art", nt_cat_basis: "Pflicht", nt_cat_bonus: "Bonus", nt_cat_auftrag: "Auftrag",
     nt_scope: "Gilt für", nt_subs: "Teilschritte", nt_sub_ph: "Neuer Schritt", nt_sub_add: "Schritt hinzufügen", nt_sub_del: "Schritt entfernen",
@@ -1558,7 +1566,8 @@ class FamilyMissionParents extends HTMLElement {
         name: e.name, points: e.points, minAge: e.min_age, category: e.category, scope: e.scope,
         together: !!e.allow_together, approval: !!e.requires_approval, icon: e.icon,
         from: e.available_from, until: e.available_until, remind: '', catalogKey: e.key,
-        subtasks: this._ntCatalogSteps(e), weekdays: [],
+        fromWe: e.available_from_we, untilWe: e.available_until_we, afterKey: e.after_key,
+        subtasks: this._ntCatalogSteps(e), weekdays: Array.isArray(e.weekdays) ? e.weekdays : [],
         interval: open && e.interval >= 365 ? 0 : e.interval
       };
       if (e.mode === 'rotation' && kids.length >= 2) mode = 'rotation';
@@ -1570,6 +1579,7 @@ class FamilyMissionParents extends HTMLElement {
         name: t.name, points: t.complexity, minAge: t.min_age, category: t.category, scope: t.scope,
         together: !!t.allow_together, approval: !!t.requires_approval, icon: t.icon,
         from: t.available_from, until: t.available_until, remind: t.reminder_at,
+        fromWe: t.available_from_we, untilWe: t.available_until_we, afterKey: t.after_key,
         catalogKey: t.catalog_key || null, subtasks: (t.subtasks || []).map(s => (s && s.title) || String(s || '')).filter(Boolean),
         weekdays: Array.isArray(t.weekdays) ? t.weekdays : [], interval: Number.isInteger(t.interval) ? t.interval : 7
       };
@@ -1588,6 +1598,9 @@ class FamilyMissionParents extends HTMLElement {
       nt.icon = /^mdi:[a-z0-9-]{1,60}$/.test(src_.icon || '') ? src_.icon : 'mdi:star';
       nt.from = this._ntTime(src_.from);
       nt.until = this._ntTime(src_.until);
+      nt.fromWe = this._ntTime(src_.fromWe);
+      nt.untilWe = this._ntTime(src_.untilWe);
+      nt.after = src_.afterKey === 'homework';
       nt.remind = this._ntTime(src_.remind);
       nt.catalogKey = src_.catalogKey;
       nt.subtasks = src_.subtasks.slice(0, 20);
@@ -1599,7 +1612,7 @@ class FamilyMissionParents extends HTMLElement {
     } else {
       Object.assign(nt, {
         tpl: { src: 'none', key: '' }, name: nt.q.trim().slice(0, 60), points: 2, minAge: 0, category: 'basis', scope: 'home',
-        together: false, approval: false, icon: 'mdi:star', from: '', until: '', remind: '', catalogKey: null, subtasks: [],
+        together: false, approval: false, icon: 'mdi:star', from: '', until: '', fromWe: '', untilWe: '', after: false, remind: '', catalogKey: null, subtasks: [],
         when: 'daily', wd: [], every: 2, date: this._todayKey()
       });
     }
@@ -1668,6 +1681,14 @@ class FamilyMissionParents extends HTMLElement {
     return '';
   }
 
+  /** Selected kids that have a homework task (the "only after homework" option needs one). */
+  _ntHomeworkKids() {
+    const nt = this._nt;
+    return (nt ? nt.kids : []).filter(id => this._taskList().some(t => !t.parent_task &&
+      ((t.generated_by === 'wizard' && String(t.wizard_key || '').split(':')[0] === 'homework') || t.catalog_key === 'homework') &&
+      (t.assignees || []).includes(id)));
+  }
+
   /** The websocket payloads (one add_task per kid for "each kid", else one). */
   _ntPayloads() {
     const nt = this._nt;
@@ -1684,6 +1705,9 @@ class FamilyMissionParents extends HTMLElement {
     if (nt.when === 'once') base.custom_due_date = nt.date;
     if (nt.from) base.available_from = nt.from;
     if (nt.until) base.available_until = nt.until;
+    if (nt.fromWe) base.available_from_we = nt.fromWe;
+    if (nt.untilWe) base.available_until_we = nt.untilWe;
+    if (nt.after && this._ntHomeworkKids().length) base.after_key = 'homework';
     if (nt.remind) base.reminder_at = nt.remind;
     if (nt.who === 'open') return [{ ...base, assignees: [] }];
     if (nt.who === 'rotation') return [{ ...base, assignees: kids, rotation: { members: kids, index: 0, every: 'occurrence' } }];
@@ -1828,6 +1852,15 @@ class FamilyMissionParents extends HTMLElement {
         <div class="nt-summary" id="nt-summary"><strong>${escParents(summaryTitle)}</strong> ${escParents(parts.join(' · '))}</div>
         <details class="fold" data-det="nt-more" ${this._open.has('det:nt-more') ? 'open' : ''}>
           <summary>${L('qa_more')}</summary>
+          <div class="lbl">${L('nt_we_times')}</div>
+          <div class="nt-times">
+            <label class="inl">${L('nt_from')} <select id="nt-from-we" class="txt time">${parTimeOptions(nt.fromWe, '—')}</select></label>
+            <label class="inl">${L('nt_until')} <select id="nt-until-we" class="txt time">${parTimeOptions(nt.untilWe, '—')}</select></label>
+          </div>
+          <p class="nt-hint">${L('nt_we_hint')}</p>
+          ${this._ntHomeworkKids().length && nt.who !== 'open' ? `<div class="row"><label class="lbl inline" for="nt-after">${L('nt_after')}</label>
+            <input id="nt-after" type="checkbox" class="chk" ${nt.after ? 'checked' : ''}></div>
+          <p class="nt-hint">${L('nt_after_d')}</p>` : ''}
           <div class="row"><div class="lbl inline">${L('nt_points')}</div>
             <div class="stepper"><button class="step" data-action="nt-points" data-delta="-1" aria-label="−" ${nt.points <= 1 ? 'disabled' : ''}>−</button>
               <span class="val">⭐ ${nt.points}</span>
@@ -1955,6 +1988,9 @@ class FamilyMissionParents extends HTMLElement {
     else if (id === 'nt-date') { nt.date = el.value; this._ntRefresh(); }
     else if (id === 'nt-from') nt.from = el.value;
     else if (id === 'nt-until') nt.until = el.value;
+    else if (id === 'nt-from-we') nt.fromWe = el.value;
+    else if (id === 'nt-until-we') nt.untilWe = el.value;
+    else if (id === 'nt-after') nt.after = el.checked;
     else if (id === 'nt-remind') nt.remind = el.value;
     else if (id === 'nt-approval') { nt.approval = el.checked; this._ntRefresh(true); }
     else if (id === 'nt-together') nt.together = el.checked;
@@ -1999,8 +2035,9 @@ class FamilyMissionParents extends HTMLElement {
   }
 
   _absenceTitle(a) {
-    const icon = { trip: '🌴', away: '🎒', sick: '🤒' }[a.kind] || '🌴';
-    return `${icon} ${this.localize('abs_' + a.kind)}${a.kind === 'trip' ? '' : ': ' + this._absenceKidNames(a)}`;
+    const icon = { trip: '🌴', away: '🎒', sick: '🤒', school_holiday: '📚' }[a.kind] || '🌴';
+    const who = a.kind === 'trip' || (a.kind === 'school_holiday' && a.kids === 'all') ? '' : ': ' + this._absenceKidNames(a);
+    return `${icon} ${this.localize('abs_' + a.kind)}${who}`;
   }
 
   /** Small banner on the Today tab while an absence is active. */
@@ -2010,6 +2047,7 @@ class FamilyMissionParents extends HTMLElement {
     const lines = active.map(a => {
       const date = this._formatDate(a.to);
       if (a.kind === 'trip') return this.localize('abs_banner_trip', { date });
+      if (a.kind === 'school_holiday') return this.localize('abs_banner_school', { date });
       return `${a.kind === 'sick' ? '🤒' : '🎒'} ${this.localize('abs_banner_kids', { names: this._absenceKidNames(a), kind: this.localize('abs_kind_' + a.kind), date })}`;
     });
     return `<button class="abs-banner" data-action="abs-open" aria-label="${escParents(this.localize('m_absence'))}">${lines.map(l => `<span>${escParents(l)}</span>`).join('')}</button>`;
@@ -2028,7 +2066,7 @@ class FamilyMissionParents extends HTMLElement {
             <span class="badge">${escParents(this.localize(a.active ? 'abs_active' : 'abs_upcoming'))}</span>
           </div>
           <div class="abs-act">
-            <button class="btn neutral sm" data-action="abs-end" data-id="${escParents(a.id)}" ${busy}>${escParents(this.localize(a.active ? 'abs_end' : 'abs_delete'))}</button>
+            ${a.calendar ? `<span class="badge">${escParents(this.localize('abs_calendar'))}</span>` : `<button class="btn neutral sm" data-action="abs-end" data-id="${escParents(a.id)}" ${busy}>${escParents(this.localize(a.active ? 'abs_end' : 'abs_delete'))}</button>`}
           </div>
         </article>`;
     }).join('');
@@ -2044,7 +2082,7 @@ class FamilyMissionParents extends HTMLElement {
 
   /** Switching the kind resets the toggles to the defaults of that kind. */
   _absKind(kind) {
-    if (!['trip', 'away', 'sick'].includes(kind)) return;
+    if (!['trip', 'away', 'sick', 'school_holiday'].includes(kind)) return;
     this._abs.kind = kind;
     this._abs.personal = false;
     this._abs.care = kind !== 'away';
@@ -2053,19 +2091,19 @@ class FamilyMissionParents extends HTMLElement {
 
   _renderAbsenceSheet() {
     const a = this._abs;
-    const kinds = [['trip', '🌴'], ['away', '🎒'], ['sick', '🤒']].map(([id, ico]) =>
+    const kinds = [['trip', '🌴'], ['away', '🎒'], ['sick', '🤒'], ['school_holiday', '📚']].map(([id, ico]) =>
       `<button class="chip ${a.kind === id ? 'on' : ''}" data-action="abs-kind" data-kind="${id}" aria-pressed="${a.kind === id}">${ico} ${escParents(this.localize('abs_' + id))}</button>`).join('');
     const kidChips = a.kind === 'trip' ? '' : `
       <div class="lbl">${escParents(this.localize('abs_kids'))}</div>
       <div class="chips">${this._kids().map(k => `<button class="chip kidchip ${a.kids.includes(k.id) ? 'on' : ''}" data-action="abs-kid" data-kid="${escParents(k.id)}" aria-pressed="${a.kids.includes(k.id)}" style="--kc:${k.color}">${this._avatar(k)}${escParents(k.name)}</button>`).join('')}</div>`;
     // away never keeps the personal tasks; the medication of a trip / sick kid always continues
-    const personal = a.kind === 'away' ? '' : `
+    const personal = a.kind === 'away' || a.kind === 'school_holiday' ? '' : `
       <div class="row"><label class="lbl inline" for="abs-personal">${escParents(this.localize('abs_personal'))}</label>
         <input id="abs-personal" type="checkbox" class="chk" ${a.personal ? 'checked' : ''}></div>`;
     const care = a.kind !== 'away' ? '' : `
       <div class="row"><label class="lbl inline" for="abs-care">${escParents(this.localize('abs_care'))}</label>
         <input id="abs-care" type="checkbox" class="chk" ${a.care ? 'checked' : ''}></div>`;
-    const ready = a.kind === 'trip' || a.kids.length > 0;
+    const ready = a.kind === 'trip' || a.kind === 'school_holiday' || a.kids.length > 0;
     return `
       <div class="scrim" data-action="dialog-close"></div>
       <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('abs_new'))}" style="--kc:#00897B">
@@ -2091,14 +2129,14 @@ class FamilyMissionParents extends HTMLElement {
   async _saveAbsence() {
     const a = this._abs;
     if (!a) return;
-    if (a.kind !== 'trip' && !a.kids.length) { this._toast(this.localize('abs_need_kids')); return; }
+    if (a.kind !== 'trip' && a.kind !== 'school_holiday' && !a.kids.length) { this._toast(this.localize('abs_need_kids')); return; }
     const days = (new Date(a.to) - new Date(a.from)) / 86400000 + 1;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(a.from || '') || !/^\d{4}-\d{2}-\d{2}$/.test(a.to || '') || !(days >= 1 && days <= 120)) {
       this._toast(this.localize('abs_bad_dates')); return;
     }
     const payload = { type: 'family_mission/absence_add', kind: a.kind, from: a.from, to: a.to, note: (a.note || '').trim().slice(0, 60) };
     if (a.kind !== 'trip') payload.kids = a.kids.slice();
-    if (a.kind !== 'away') payload.personal = !!a.personal;
+    if (a.kind !== 'away' && a.kind !== 'school_holiday') payload.personal = !!a.personal;
     if (a.kind === 'away') payload.care = !!a.care;
     this._abs = null;
     this._renderLayer();

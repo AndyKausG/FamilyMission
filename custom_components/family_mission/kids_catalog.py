@@ -38,11 +38,13 @@ FAMILY_GOAL_FACTOR = 0.8
 # proposes only the core routines, the normal phase up to priority 3 -
 # capped by the recommended daily load of the kid's age.
 TASK_PRIORITY = {
-    "morning": 1, "evening": 1, "table_set": 1,
+    "morning": 1, "evening": 1, "table_set": 1, "homework": 1,
     "room_blitz": 2, "room_blitz_small": 2, "table_clear": 2, "plants": 2, "pet_feed": 2,
     "dishwasher_load": 3, "room_deep": 3, "own_laundry": 3,
     "garden": 4, "driveway": 4, "bedding": 4, "pet_clean": 4,
 }
+# School duties are no household chores: always proposed (priority 1) and not counted against the daily chore load.
+NOT_A_CHORE = frozenset({"homework"})
 PHASE_MAX_PRIORITY = {PHASE_START: 1, PHASE_NORMAL: 3}
 # Kids: the number of cards matters as much as the minutes. Cap the average
 # number of tasks per day (sum of 1/interval) - small routines are bundled
@@ -88,6 +90,8 @@ def _entry(
     available_from: str | None = None, available_until: str | None = None,
     replaced_by: str | None = None, day_offset: int = 0,
     allow_together: bool | None = None, requires_approval: bool = False,
+    available_from_we: str | None = None, available_until_we: str | None = None,
+    weekdays: list | None = None, after_key: str | None = None, scope: str | None = None,
 ) -> dict:
     # Shareable chores (and everything that is not a personal basis duty) may be done together
     if allow_together is None:
@@ -99,6 +103,8 @@ def _entry(
         "mode": mode, "requires": requires, "subtasks": subtasks or [],
         "trigger_hint_de": trigger_hint_de, "trigger_hint_en": trigger_hint_en,
         "available_from": available_from, "available_until": available_until,
+        "available_from_we": available_from_we, "available_until_we": available_until_we,
+        "weekdays": list(weekdays or []), "after_key": after_key,
         "replaced_by": replaced_by, "day_offset": day_offset,
         "allow_together": allow_together,
         "requires_approval": requires_approval,
@@ -109,14 +115,14 @@ CATALOG: tuple[dict, ...] = (
     # --- daily basis, one task per kid ---------------------------------
     _entry("morning", "Morgen-Mission", "Morning mission", "mdi:weather-sunny", 2, 5, 6, 1,
            "basis", MODE_EACH,
-           available_from="05:00", available_until="10:00",
+           available_from="05:00", available_until="10:00", available_from_we="06:00", available_until_we="11:00",
            subtasks=[_st("Anziehen", "Get dressed"), _st("Frühstücken", "Have breakfast"),
                      _st("Zähne putzen", "Brush teeth"), _st("Bett machen", "Make the bed"),
                      _st("Schlafanzug weg", "Put pajamas away"),
                      _st("Brotdose & Trinkflasche einpacken", "Pack lunch box & water bottle", 8, "school")]),
     _entry("evening", "Abend-Mission", "Evening mission", "mdi:weather-night", 3, 7, 6, 1,
            "basis", MODE_EACH,
-           available_from="17:00", available_until="21:00",
+           available_from="17:00", available_until="21:00", available_from_we="17:00", available_until_we="21:00",
            subtasks=[_st("Schulranzen packen", "Pack school bag", requires="school"),
                      _st("Schuhe & Jacke an ihren Platz", "Shoes & jacket in their place"),
                      _st("Schmutzwäsche in den Korb", "Dirty laundry into the basket"),
@@ -124,16 +130,26 @@ CATALOG: tuple[dict, ...] = (
                      _st("Kleidung für morgen rauslegen", "Lay out clothes for tomorrow", 8)]),
     _entry("room_blitz", "Zimmer-Blitz (10 Minuten)", "Room blitz (10 minutes)", "mdi:timer-outline",
            3, 10, 8, 1, "basis", MODE_EACH,
-           available_from="14:00", available_until="19:30", replaced_by="room_deep", requires_approval=True,
+           available_from="16:00", available_until="19:30", available_from_we="10:00", available_until_we="18:00",
+           replaced_by="room_deep", requires_approval=True, after_key="homework",
            subtasks=[_st("Boden frei", "Clear the floor"),
                      _st("Spielzeug/Sachen in die Kisten", "Toys/things into the boxes"),
                      _st("Schreibtisch frei", "Clear the desk"),
                      _st("Kleidung in Schrank oder Wäschekorb", "Clothes into wardrobe or laundry basket")]),
     _entry("room_blitz_small", "Zimmer-Blitz (5 Minuten)", "Room blitz (5 minutes)", "mdi:timer-sand",
            2, 5, 6, 1, "basis", MODE_EACH, max_age=7,
-           available_from="14:00", available_until="19:30", replaced_by="room_deep", requires_approval=True,
+           available_from="16:00", available_until="19:30", available_from_we="10:00", available_until_we="18:00",
+           replaced_by="room_deep", requires_approval=True, after_key="homework",
            subtasks=[_st("Boden frei", "Clear the floor"), _st("Spielzeug in die Kisten", "Toys into the boxes"),
                      _st("Bücher ins Regal", "Books on the shelf")]),
+    _entry("homework", "Hausaufgaben / Lernzeit", "Homework / study time", "mdi:book-open-page-variant",
+           3, 0, 6, 1, "basis", MODE_EACH, requires="school",    # minutes 0: no chore load
+           available_from="13:30", available_until="18:00", weekdays=[0, 1, 2, 3, 4],
+           subtasks=[_st("Arbeitsplatz frei", "Clear the desk"),
+                     _st("Hausaufgaben erledigt", "Homework done"),
+                     _st("Hausaufgabenheft abhaken", "Tick off the homework book"),
+                     _st("15 min lesen oder üben", "Read or practice for 15 min", 8),
+                     _st("Mama/Papa kurz zeigen", "Show mom/dad briefly")]),
     # --- rotation basis, shared duties ---------------------------------
     _entry("table_set", "Tisch decken", "Set the table", "mdi:silverware-fork-knife", 2, 5, 6, 1,
            "basis", MODE_ROTATION,
@@ -173,7 +189,8 @@ CATALOG: tuple[dict, ...] = (
     # --- weekly basis, one task per kid --------------------------------
     _entry("room_deep", "Zimmer gründlich", "Thorough room clean", "mdi:bed-king", 6, 30, 6, 7,
            "basis", MODE_EACH,
-           available_from="09:00", available_until="18:00", requires_approval=True,
+           available_from="16:00", available_until="19:00", available_from_we="10:00", available_until_we="17:00",
+           requires_approval=True,
            subtasks=[_st("Boden frei", "Clear the floor"), _st("Regal ordnen", "Tidy the shelf"),
                      _st("Kleidung in den Schrank", "Clothes into the wardrobe"),
                      _st("Müll raus", "Take out the trash"), _st("Staub wischen", "Dust", 8),
@@ -286,6 +303,14 @@ LEGACY_SUBTASKS: dict[str, tuple[tuple[dict, ...], ...]] = {
     "car": ((),),
     "windows": ((),),
     "sink": ((),),
+}
+
+# Previous time windows ``(available_from, available_until)`` of catalog entries (frozen). A task generated with
+# one of them is still uncustomized (the 2.6 weekend windows and later room windows changed the catalog values).
+LEGACY_WINDOWS: dict[str, tuple[tuple[str | None, str | None], ...]] = {
+    "room_blitz": (("14:00", "19:30"),),
+    "room_blitz_small": (("14:00", "19:30"),),
+    "room_deep": (("09:00", "18:00"),),
 }
 
 CATALOG_BY_KEY = {e["key"]: e for e in CATALOG}
@@ -407,7 +432,8 @@ def flow_catalog(
     """Localized catalog entries with their defaults for the "new task" flow of the parents card.
 
     Each entry: ``key, name, icon, points, minutes, min_age, interval, category, mode,
-    allow_together, requires_approval, available_from, available_until, frequent, available,
+    allow_together, requires_approval, available_from, available_until, available_from_we,
+    available_until_we, weekdays, after_key, frequent, available,
     subtasks [{title, min_age}]``. ``features`` (household features of the wizard) hides the entries that
     need a feature the household lacks (``available`` False); ``None`` keeps everything available.
     A catalog subtask that needs a missing feature is left out, and so is one for older kids
@@ -438,6 +464,10 @@ def flow_catalog(
             "requires_approval": e["requires_approval"],
             "available_from": e["available_from"],
             "available_until": e["available_until"],
+            "available_from_we": e["available_from_we"],
+            "available_until_we": e["available_until_we"],
+            "weekdays": list(e["weekdays"]),
+            "after_key": e["after_key"],
             "frequent": e["key"] in FLOW_FREQUENT_KEYS,
             "available": e["requires"] is None or feature_set is None or e["requires"] in feature_set,
             "subtasks": subtasks,
@@ -474,12 +504,18 @@ def _available(entry: dict, features: set[str]) -> bool:
     return entry["requires"] is None or entry["requires"] in features
 
 
+def _weekday_share(task: dict) -> float:
+    """Share of the days a task is due: ``len(weekdays) / 7`` for a weekday schedule, else 1."""
+    days = task.get("weekdays")
+    return len(days) / 7 if isinstance(days, (list, tuple)) and days else 1.0
+
+
 def monthly_max_points(tasks: Iterable[dict]) -> float:
-    """Σ points × 30 / interval over the selected recurring basis tasks."""
+    """Σ points × 30 / interval over the selected recurring basis tasks (weekday schedules count their share)."""
     total = 0.0
     for t in tasks:
         if t.get("selected", True) and t["category"] == "basis" and t["interval"] > 0:
-            total += t["points"] * 30 / t["interval"]
+            total += t["points"] * 30 * _weekday_share(t) / t["interval"]
     return total
 
 
@@ -609,6 +645,10 @@ def build_proposal(
             "requires_approval": entry["requires_approval"],
             "available_from": entry["available_from"],
             "available_until": entry["available_until"],
+            "available_from_we": entry["available_from_we"],
+            "available_until_we": entry["available_until_we"],
+            "weekdays": list(entry["weekdays"]),
+            "after_key": entry["after_key"],
             "replaced_by_key": entry["replaced_by"],
             "kid_id": kid["id"] if kid else None,
             "subtasks": _subtasks_for(entry, age, lang, feats) if kid else
@@ -762,6 +802,8 @@ def suggest_excluded(proposal: dict, phase: str) -> list[str]:
             key=lambda t: (TASK_PRIORITY.get(t["catalog_key"], 4), t["minutes"] / max(t["interval"], 1)),
         )
         for t in tasks:
+            if t["catalog_key"] in NOT_A_CHORE:
+                continue
             prio = TASK_PRIORITY.get(t["catalog_key"], 4)
             cost = t["minutes"] / max(t["interval"], 1)
             per_day = 1 / max(t["interval"], 1)
@@ -815,8 +857,8 @@ def all_candidate_keys(proposal: dict) -> set[str]:
 # task is recorded in its ``customized`` list and protects it from the wizard.
 CUSTOM_FIELDS = (
     "name", "complexity", "icon", "category", "min_age", "allow_together", "interval", "weekdays",
-    "available_from", "available_until", "subtasks", "requires_approval", "description",
-    "reminder_at", "scope", "rotation",
+    "available_from", "available_until", "available_from_we", "available_until_we", "after_key",
+    "subtasks", "requires_approval", "description", "reminder_at", "scope", "rotation",
 )
 
 
@@ -889,12 +931,23 @@ def legacy_customized_fields(
         )
     if not expected_ok:
         result.add("interval")
-    if task.get("weekdays"):
+    if sorted(task.get("weekdays") or []) != sorted(entry["weekdays"]):
         result.add("weekdays")
-    if _norm_time(task.get("available_from")) != entry["available_from"]:
-        result.add("available_from")
-    if _norm_time(task.get("available_until")) != entry["available_until"]:
-        result.add("available_until")
+    # time window: the current catalog window or one of its frozen predecessors (LEGACY_WINDOWS)
+    window = (_norm_time(task.get("available_from")), _norm_time(task.get("available_until")))
+    accepted = [(entry["available_from"], entry["available_until"]), *LEGACY_WINDOWS.get(catalog_key, ())]
+    if window not in accepted:
+        # report the fields that differ from the current window
+        if window[0] != entry["available_from"]:
+            result.add("available_from")
+        if window[1] != entry["available_until"]:
+            result.add("available_until")
+    # fields that did not exist before 2.6 (weekend window, dependency): a task without them is uncustomized
+    for field in ("available_from_we", "available_until_we"):
+        if field in task and _norm_time(task.get(field)) != entry[field]:
+            result.add(field)
+    if "after_key" in task and (task.get("after_key") or None) != entry["after_key"]:
+        result.add("after_key")
     if bool(task.get("requires_approval", False)) != bool(entry["requires_approval"]):
         result.add("requires_approval")
 

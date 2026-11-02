@@ -83,6 +83,9 @@ const I18N_KIDS = {
     err_helper_too_young: "{name} is too young for this task.", err_helper_unknown_kid: "{name} is not set up yet.",
     pa_skipped: "Skipped for today", pa_postponed: "Postponed", pa_completed: "Done for {name}: +{n}", pa_undone: "Undone",
     replaced_today: "Today: {a} instead of {b}",
+    later_today: "Later today:", later_from: "{name} from {t}", later_after: "{name} after {what}",
+    after_what_homework: "homework", school_holiday_note: "📚 School holidays - no homework today",
+    err_after_pending: "Homework first, then this one!",
     rotation_turn: "It's your turn today",
     trip_title: "Vacation", trip_until: "🌴 Vacation until {date}", trip_text: "Enjoy the time together. The tasks are back afterwards.",
     trip_care: "💊 Medication continues - ask your parents.",
@@ -167,6 +170,9 @@ const I18N_KIDS = {
     err_helper_too_young: "{name} ist für diese Aufgabe noch zu jung.", err_helper_unknown_kid: "{name} ist noch nicht eingerichtet.",
     pa_skipped: "Für heute ausgesetzt", pa_postponed: "Zurückgestellt", pa_completed: "Für {name} erledigt: +{n}", pa_undone: "Rückgängig gemacht",
     replaced_today: "Heute: {a} statt {b}",
+    later_today: "Später heute:", later_from: "{name} ab {t}", later_after: "{name} nach {what}",
+    after_what_homework: "Hausaufgaben", school_holiday_note: "📚 Schulferien – heute keine Hausaufgaben",
+    err_after_pending: "Erst die Hausaufgaben, dann das hier!",
     rotation_turn: "Heute bist du dran",
     trip_title: "Urlaub", trip_until: "🌴 Urlaub bis {date}", trip_text: "Genießt die Zeit zusammen. Danach geht es mit den Aufgaben weiter.",
     trip_care: "💊 Die Medikamente laufen weiter - frag deine Eltern.",
@@ -761,14 +767,31 @@ class FamilyMissionKids extends HTMLElement {
   }
 
   /**
+   * The "HH:MM" window that applies today: on Saturday / Sunday the weekend window
+   * (available_from_we / available_until_we) when the task has one, else the normal one.
+   * Mirrors task_window() of the backend.
+   */
+  _windowTimes(task) {
+    const day = new Date().getDay();
+    if (day === 0 || day === 6) {
+      const f = this._hhmm(task.available_from_we) !== null ? task.available_from_we : null;
+      const u = this._hhmm(task.available_until_we) !== null ? task.available_until_we : null;
+      if (f !== null || u !== null) return { from: f, until: u };
+    }
+    return { from: this._hhmm(task.available_from) !== null ? task.available_from : null,
+             until: this._hhmm(task.available_until) !== null ? task.available_until : null };
+  }
+
+  /**
    * Time window of a task, mirrors window_state() of the backend.
    * @returns {{state: string, from: string|null, until: string|null, minutes: number|null}}
    *   state open | not_yet | too_late; minutes = minutes until the window opens (not_yet only).
    */
   _window(task) {
-    let from = this._hhmm(task.available_from);
-    let until = this._hhmm(task.available_until);
-    const info = (state, minutes = null) => ({ state, minutes, from: task.available_from || null, until: task.available_until || null });
+    const win = this._windowTimes(task);
+    let from = this._hhmm(win.from);
+    let until = this._hhmm(win.until);
+    const info = (state, minutes = null) => ({ state, minutes, from: win.from, until: win.until });
     if (from === 0) from = null;
     if (until === 0 && from === null) until = null;
     if (from === null && until === null) return info('open');
@@ -828,7 +851,7 @@ class FamilyMissionKids extends HTMLElement {
 
   /** The away / sick absence of a kid that is on today, or null (a trip is handled by the trip screen). */
   _absenceOf(kidId) {
-    return this._activeAbsences().find(a => a.kind !== 'trip' && (a.kids === 'all' || (a.kids || []).includes(kidId))) || null;
+    return this._activeAbsences().find(a => a.kind !== 'trip' && a.kind !== 'school_holiday' && (a.kids === 'all' || (a.kids || []).includes(kidId))) || null;
   }
 
   /** The task is paused for the kid because of an absence (the backend lists the kids in absent_for). */
@@ -1217,17 +1240,75 @@ class FamilyMissionKids extends HTMLElement {
    * the ones that start later (by start time), then the ones over for today.
    */
   _duties(kid) {
+    return this._dutySplit(kid).shown;
+  }
+
+  /** Tasks of the kid that only come later today, with the reason: [{ task, text }] (see _dutySplit). */
+  _laterToday(kid) {
+    return this._dutySplit(kid).later;
+  }
+
+  /** The kid's open task of the catalog key (e.g. homework) that has to come first, or null. */
+  _catalogKey(task) {
+    return task.catalog_key || String(task.wizard_key || '').split(':')[0];
+  }
+
+  /**
+   * The kid's tasks that stand in front of `task` (its after_key, e.g. room blitz after homework):
+   * due today, not paused, not over for today. Mirrors after_blockers() of the backend.
+   */
+  _afterBlockers(task, kidId) {
+    const key = task.after_key;
+    if (!key || typeof key !== 'string') return [];
+    return Object.values(this.tasks).filter(o => o !== task && !o.parent_task && this._catalogKey(o) === key &&
+      this._assignees(o).includes(kidId) && !this._pausedFor(o, kidId) && !o.absent_all &&
+      this._isOpen(o) && !this._expired(o) && this._window(o).state !== 'too_late');
+  }
+
+  /** Name of a task without the kid's name at the end ("Zimmer-Blitz Lena" -> "Zimmer-Blitz"). */
+  _shortName(task, kid) {
+    const name = String(task.name || '');
+    return kid && name.endsWith(` ${kid.name}`) ? name.slice(0, -(kid.name.length + 1)) : name;
+  }
+
+  /**
+   * Splits the kid's due duties: `shown` are the cards for right now (open, within 30 minutes of
+   * their start, or over for today); `later` are the ones that start later today or wait for
+   * another task (after_key), each with its short text ("Hausaufgaben ab 13:30" / "... nach Hausaufgaben").
+   * Currently available duties come first, then the ones that start later (by start time),
+   * then the ones over for today.
+   */
+  _dutySplit(kid) {
     const list = this._sortTasks(Object.values(this.tasks).filter(t =>
       ['basis', 'auftrag'].includes(this._category(t)) &&
       // parent tasks only appear for an adult on the own device, never in kid lists
       (!t.parent_task || kid.adult) &&
       this._assignees(t).includes(kid.id) && !this._pausedFor(t, kid.id) && !t.absent_all &&
       this._isOpen(t) && !this._expired(t) && this._oldEnough(t, kid) && !this._replacedBy(t)));
-    const start = (t) => this._hhmm(t.available_from) || 0;
+    const start = (t) => this._hhmm(this._windowTimes(t).from) || 0;
     const rank = new Map(list.map(t => [t, this._windowRank(t)]));
     // stable sort: inside a group the category / due date / name order stays
-    return list.sort((a, b) => (rank.get(a) - rank.get(b)) ||
+    list.sort((a, b) => (rank.get(a) - rank.get(b)) ||
       (rank.get(a) === 1 ? start(a) - start(b) : 0));
+    const shown = [];
+    const later = [];
+    for (const t of list) {
+      const win = this._window(t);
+      const far = win.state === 'not_yet' && win.minutes !== null && win.minutes > 30;
+      const waiting = win.state !== 'too_late' && !t.parent_task ? this._afterBlockers(t, kid.id) : [];
+      if (far) {
+        later.push({ task: t, order: start(t), text: this.localize('later_from', { name: this._shortName(t, kid), t: win.from }) });
+      } else if (waiting.length) {
+        const key = this._catalogKey(waiting[0]);
+        const label = this.localize(`after_what_${key}`);
+        const what = label === `after_what_${key}` ? this._shortName(waiting[0], kid) : label;
+        later.push({ task: t, order: 24 * 60 + start(t), text: this.localize('later_after', { name: this._shortName(t, kid), what }) });
+      } else {
+        shown.push(t);
+      }
+    }
+    later.sort((a, b) => a.order - b.order);
+    return { shown, later };
   }
 
   /** Muted lines for today's replaced duties: [{ text }] (kid view only). */
@@ -1975,6 +2056,14 @@ class FamilyMissionKids extends HTMLElement {
       if (p < subs.length) out.push({ sub: subs[p], index: p });
     }
     return out;
+  }
+
+  /** True for a mission step that needs school (school bag, lunch box) while the kid is on school holiday. */
+  _schoolFree(task, kid, step) {
+    if (!kid || !Array.isArray(task.school_free_for) || !task.school_free_for.includes(kid.id) || !step) return false;
+    if (step.requires === 'school') return true;
+    return ['brotdose & trinkflasche einpacken', 'pack lunch box & water bottle', 'schulranzen packen', 'pack school bag']
+      .includes(String(step.title || '').trim().toLowerCase());
   }
 
   /** Care items of a kid shown as a small card of their own (unanswered, or fixed-time items). */
@@ -3033,9 +3122,12 @@ class FamilyMissionKids extends HTMLElement {
     this._kids().forEach(k => { persons[k.id] = k; });
 
     const waiting = this._pendingFor(kid.id);
-    const dutyHtml = (mine && this._isParent() ? this._renderParentApprovals(persons) : '') + (duties.length
+    const later = adult ? [] : this._laterToday(kid);
+    // the "later today" line sits on top: below a long list it would be scrolled out of sight
+    const dutyHtml = (mine && this._isParent() ? this._renderParentApprovals(persons) : '') + this._renderLater(later)
+      + this._renderSchoolHoliday(kid) + (duties.length
       ? duties.map(t => this._renderTask(t, kid, 'duty', persons)).join('')
-      : this._absenceNote(kid))
+      : (later.length ? '' : this._absenceNote(kid)))
       + this._careStandalone(kid).map(c => this._renderCareCard(c)).join('')
       + this._renderReplaced(kid) + this._renderWaiting(waiting) + this._renderPrivate(kid)
       + (this._isParent() ? this._renderDoneToday(kid) : '');
@@ -3115,6 +3207,19 @@ class FamilyMissionKids extends HTMLElement {
       <h2>🎁 ${escKids(this.localize('adult_bonus_title'))} <span class="count">${list.length}</span></h2>
       <div class="col-scroll"><div class="t-note">${escKids(this.localize('adult_bonus_hint'))}</div>${items}</div>
     </section>`;
+  }
+
+  /** Compact line for tasks that come later today: "🕑 Später heute: Hausaufgaben ab 13:30 · Zimmer-Blitz ab 16:00". */
+  _renderLater(later) {
+    if (!later.length) return '';
+    return `<div class="later-note" role="status">🕑 ${escKids(this.localize('later_today'))} ${later.map(l => escKids(l.text)).join(' · ')}</div>`;
+  }
+
+  /** Muted note while the kid is on school holiday (homework and school steps rest). */
+  _renderSchoolHoliday(kid) {
+    if (kid.adult) return '';
+    const on = this._activeAbsences().some(a => a.kind === 'school_holiday' && (a.kids === 'all' || (a.kids || []).includes(kid.id)));
+    return on ? `<div class="later-note">${escKids(this.localize('school_holiday_note'))}</div>` : '';
   }
 
   /** Small muted lines for duties that are replaced today ("Today: thorough room clean instead of room blitz"). */
@@ -3261,7 +3366,7 @@ class FamilyMissionKids extends HTMLElement {
       action = `<button class="btn btn-claim" data-action="claim" data-task="${escKids(task.id)}" ${busy}>${escKids(this.localize('claim'))}</button>`;
     } else {
       // "Fertig!" only once every required step is ticked (optional steps never block)
-      const open = (Array.isArray(task.subtasks) ? task.subtasks : []).filter(st => st && !st.done && !st.optional).length +
+      const open = (Array.isArray(task.subtasks) ? task.subtasks : []).filter(st => st && !st.done && !st.optional && !this._schoolFree(task, kid, st)).length +
         this._careSteps(kid, task).filter(c => !c.answer).length;
       action = `<button class="btn btn-done" data-action="complete" data-task="${escKids(task.id)}" ${busy} ${open ? 'disabled' : ''}>${escKids(this.localize('done_btn'))} ✅</button>`;
       if (!this._isMine() && this._allowTogether(task) && this._helperCandidates(task, kid).length) {
@@ -3273,7 +3378,7 @@ class FamilyMissionKids extends HTMLElement {
     const careSteps = mode === 'window' ? [] : this._careSteps(kid, task);
     const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length;
     const subs = mode !== 'window' && (hasSubs || careSteps.length)
-      ? `<div class="subs">${this._missionSteps(hasSubs ? task.subtasks : [], careSteps).map(item => item.care
+      ? `<div class="subs">${this._missionSteps(hasSubs ? task.subtasks : [], careSteps).filter(item => item.care || !this._schoolFree(task, kid, item.sub)).map(item => item.care
           ? this._renderCareStep(item.care, mode === 'locked')
           : `
           <button class="sub ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
@@ -3491,6 +3596,7 @@ class FamilyMissionKids extends HTMLElement {
       .btn-claim { background: var(--k-blue); }
       .state-chip { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; line-height: 1; }
       .replaced-note { margin: 4px 4px 10px; font-size: 18px; font-weight: 700; color: var(--k-sub); opacity: 0.85; }
+      .later-note { margin: 6px 4px 10px; font-size: 18px; font-weight: 700; color: var(--k-sub); opacity: 0.9; }
       .t-note { margin-top: 4px; font-size: 22px; font-weight: 800; color: var(--k-sub); }
       .t-note.locked { color: var(--k-text); }
       .state-chip.locked { background: #455A64; color: #fff; }
@@ -3759,6 +3865,7 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .age, :host([narrow]) .mine-tag { font-size: 13px; padding: 1px 8px; }
       :host([narrow]) .t-note { font-size: 15px; }
       :host([narrow]) .replaced-note { font-size: 14px; margin: 2px 2px 8px; }
+      :host([narrow]) .later-note { font-size: 14px; margin: 2px 2px 8px; }
       :host([narrow]) .sub { min-height: 46px; padding: 6px 10px; font-size: 16px; border-width: 2px; border-radius: 16px; gap: 10px; }
       :host([narrow]) .care-step { padding: 6px 10px; font-size: 16px; border-width: 2px; border-radius: 16px; }
       :host([narrow]) .care-btn { min-height: 44px; min-width: 90px; font-size: 16px; border-width: 2px; }
