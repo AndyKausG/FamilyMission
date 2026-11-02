@@ -351,8 +351,6 @@ class FamilyMissionParents extends HTMLElement {
       if (ev.key === 'Enter' && ev.target && this._nt) {
         const id = ev.target.id;
         if (id === 'nt-q' && this._nt.q.trim()) { ev.preventDefault(); this._ntPick('none', ''); }
-        else if (id === 'nt-newsub') { ev.preventDefault(); this._ntAddSub(); this._renderLayer(); const i = this.shadowRoot.getElementById('nt-newsub'); if (i) i.focus(); }
-        else if (id === 'nt-name' && !this._ntProblem()) { ev.preventDefault(); this._ntSave(); }
       }
     });
   }
@@ -1459,13 +1457,12 @@ class FamilyMissionParents extends HTMLElement {
     if (!this._canManage()) { this._openAdhoc(); return; }
     const kids = this._kids();
     this._nt = {
-      step: 1, q: '', showAll: false, tpl: null, newSub: '',
+      step: 1, q: '', showAll: false, tpl: null,
       kids: kidId ? [kidId] : kids.map(k => k.id),
-      who: 'each', name: '', points: 2, approval: false, together: false, minAge: 0, category: 'basis', scope: 'home',
-      icon: 'mdi:star', catalogKey: null, subtasks: [],
-      when: 'daily', wd: [], every: 2, date: this._todayKey(), from: '', until: '', remind: '',
+      who: 'each',
       care: null
     };
+    this._ntEditor = null;
     this._renderLayer();
     const input = this.shadowRoot.getElementById('nt-q');
     if (input) input.focus();
@@ -1538,15 +1535,37 @@ class FamilyMissionParents extends HTMLElement {
   /** Time fields as the form state wants them: "HH:MM" or ''. */
   _ntTime(value) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(value || '') ? value : ''; }
 
-  /** Step titles of a catalog entry for the selected kids: steps with a higher min_age than the youngest kid are left out. */
+  /** Steps of a catalog entry for the selected kids ({title, min_age}): steps with a higher min_age than the youngest kid are left out. */
   _ntCatalogSteps(entry) {
     const ages = this._nt.kids.map(id => (this._flowKidAges || {})[id]).filter(a => Number.isInteger(a));
     const youngest = ages.length ? Math.min(...ages) : null;
-    return (entry.subtasks || []).filter(s => youngest === null || !(s.min_age > youngest)).map(s => s.title);
+    return (entry.subtasks || []).filter(s => youngest === null || !(s.min_age > youngest))
+      .map(s => (s.min_age > 0 ? { title: s.title, min_age: s.min_age } : { title: s.title }));
+  }
+
+  /** Creates the shared task editor once (loaded on demand); the flow keeps it while step 2 is open. */
+  async _ensureNtEditor() {
+    if (this._ntEditor) return this._ntEditor;
+    if (!customElements.get('family-mission-task-editor')) await import('/family_mission_frontend/family-mission-task-editor.js');
+    const ed = document.createElement('family-mission-task-editor');
+    ed.addEventListener('fm-editor-save', () => this._ntSave());
+    ed.addEventListener('fm-editor-change', () => this._ntRefresh());
+    this._ntEditor = ed;
+    return ed;
+  }
+
+  /** Options of the embedded editor (they depend on the "for whom" choice). */
+  _ntEditorConfig() {
+    const nt = this._nt;
+    return {
+      variant: 'inline', isNew: true, showDate: true, requireDate: true, dateMin: this._todayKey(),
+      homework: this._ntHomeworkKids().length > 0 && nt.who !== 'open',
+      lockCategory: nt.who === 'open' ? 'bonus' : null
+    };
   }
 
   /** Takes the defaults of a template (catalog entry, own template) or none and goes to step 2. */
-  _ntPick(src, key) {
+  async _ntPick(src, key) {
     const nt = this._nt;
     const kids = this._kids();
     if (src === 'care') {
@@ -1578,50 +1597,53 @@ class FamilyMissionParents extends HTMLElement {
       src_ = {
         name: t.name, points: t.complexity, minAge: t.min_age, category: t.category, scope: t.scope,
         together: !!t.allow_together, approval: !!t.requires_approval, icon: t.icon,
-        from: t.available_from, until: t.available_until, remind: t.reminder_at,
+        from: t.available_from, until: t.available_until, remind: t.reminder_at, remindTarget: t.reminder_target,
         fromWe: t.available_from_we, untilWe: t.available_until_we, afterKey: t.after_key,
-        catalogKey: t.catalog_key || null, subtasks: (t.subtasks || []).map(s => (s && s.title) || String(s || '')).filter(Boolean),
-        weekdays: Array.isArray(t.weekdays) ? t.weekdays : [], interval: Number.isInteger(t.interval) ? t.interval : 7
+        catalogKey: t.catalog_key || null, subtasks: (t.subtasks || []).map(st => (typeof st === 'string' ? { title: st } : st)).filter(st => st && st.title),
+        weekdays: Array.isArray(t.weekdays) ? t.weekdays : [], interval: Number.isInteger(t.interval) ? t.interval : 7,
+        description: t.description, requiresRoutine: !!t.requires_routine
       };
       const known = (t.assignees || []).filter(id => kids.some(k => k.id === id));
       if (known.length) nt.kids = known;
     }
+    // the definition (kind, rhythm, steps, reward, rules) lives in the shared task editor
+    let value;
     if (src_) {
       nt.tpl = { src, key };
-      nt.name = src_.name || '';
-      nt.points = Math.max(1, Math.min(10, parseInt(src_.points) || 2));
-      nt.minAge = Math.max(0, Math.min(18, parseInt(src_.minAge) || 0));
-      nt.category = ['basis', 'bonus', 'auftrag'].includes(src_.category) ? src_.category : 'basis';
-      nt.scope = src_.scope === 'personal' ? 'personal' : 'home';
-      nt.together = !!src_.together;
-      nt.approval = !!src_.approval;
-      nt.icon = /^mdi:[a-z0-9-]{1,60}$/.test(src_.icon || '') ? src_.icon : 'mdi:star';
-      nt.from = this._ntTime(src_.from);
-      nt.until = this._ntTime(src_.until);
-      nt.fromWe = this._ntTime(src_.fromWe);
-      nt.untilWe = this._ntTime(src_.untilWe);
-      nt.after = src_.afterKey === 'homework';
-      nt.remind = this._ntTime(src_.remind);
-      nt.catalogKey = src_.catalogKey;
-      nt.subtasks = src_.subtasks.slice(0, 20);
       const wd = (src_.weekdays || []).filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
-      if (wd.length) { nt.when = 'weekdays'; nt.wd = wd; }
-      else if (src_.interval === 0) { nt.when = 'once'; nt.date = this._todayKey(); }
-      else if (src_.interval === 1) nt.when = 'daily';
-      else { nt.when = 'every'; nt.every = Math.max(1, Math.min(365, src_.interval || 7)); }
+      let interval = 1;
+      let due = '';
+      if (wd.length) interval = 1;
+      else if (src_.interval === 0) { interval = 0; due = this._todayKey(); }
+      else if (src_.interval === 1) interval = 1;
+      else interval = Math.max(1, Math.min(365, src_.interval || 7));
+      value = {
+        name: String(src_.name || '').slice(0, 60), complexity: Math.max(1, Math.min(10, parseInt(src_.points) || 2)),
+        min_age: Math.max(0, Math.min(18, parseInt(src_.minAge) || 0)),
+        category: ['basis', 'bonus', 'auftrag'].includes(src_.category) ? src_.category : 'basis',
+        scope: src_.scope === 'personal' ? 'personal' : 'home', allow_together: !!src_.together, requires_approval: !!src_.approval,
+        requires_routine: !!src_.requiresRoutine, description: src_.description || '',
+        icon: /^mdi:[a-z0-9-]{1,60}$/.test(src_.icon || '') ? src_.icon : 'mdi:star',
+        available_from: this._ntTime(src_.from), available_until: this._ntTime(src_.until),
+        available_from_we: this._ntTime(src_.fromWe), available_until_we: this._ntTime(src_.untilWe),
+        after_key: src_.afterKey === 'homework' ? 'homework' : null,
+        reminder_at: this._ntTime(src_.remind), reminder_target: src_.remindTarget || '',
+        subtasks: src_.subtasks.slice(0, 20), weekdays: wd, interval, custom_due_date: due
+      };
+      if (src_.catalogKey) value.catalog_key = src_.catalogKey;
     } else {
-      Object.assign(nt, {
-        tpl: { src: 'none', key: '' }, name: nt.q.trim().slice(0, 60), points: 2, minAge: 0, category: 'basis', scope: 'home',
-        together: false, approval: false, icon: 'mdi:star', from: '', until: '', fromWe: '', untilWe: '', after: false, remind: '', catalogKey: null, subtasks: [],
-        when: 'daily', wd: [], every: 2, date: this._todayKey()
-      });
+      nt.tpl = { src: 'none', key: '' };
+      value = { name: nt.q.trim().slice(0, 60), complexity: 2, min_age: 0, category: 'basis', scope: 'home', icon: 'mdi:star', interval: 1, subtasks: [], custom_due_date: this._todayKey() };
     }
     nt.who = mode;
-    if (mode === 'open') nt.category = 'bonus';
+    const ed = await this._ensureNtEditor();
+    if (this._nt !== nt) return;   // the flow was closed while the editor loaded
+    ed.hass = this._hass;
+    ed.config = this._ntEditorConfig();
+    ed.value = value;
     nt.step = 2;
     this._renderLayer();
-    const input = this.shadowRoot.getElementById('nt-name');
-    if (input && !nt.name) input.focus();
+    if (!value.name) ed.focusName();
   }
 
   _ntAction(action, el) {
@@ -1630,25 +1652,12 @@ class FamilyMissionParents extends HTMLElement {
     if (action === 'nt-pick') { this._ntPick(el.dataset.src, el.dataset.key); return; }
     if (action === 'nt-free') { this._ntPick('none', ''); return; }
     if (action === 'nt-all') nt.showAll = !nt.showAll;
-    else if (action === 'nt-back') { nt.step = 1; nt.care = null; }
+    else if (action === 'nt-back') { nt.step = 1; nt.care = null; this._ntEditor = null; }
     else if (action === 'nt-kid') {
       const i = nt.kids.indexOf(el.dataset.kid);
       if (i >= 0) nt.kids.splice(i, 1); else nt.kids.push(el.dataset.kid);
     }
-    else if (action === 'nt-who') { nt.who = el.dataset.who; if (nt.who === 'open') nt.category = 'bonus'; }
-    else if (action === 'nt-when') nt.when = el.dataset.when;
-    else if (action === 'nt-wd') {
-      const d = parseInt(el.dataset.wd);
-      const i = nt.wd.indexOf(d);
-      if (i >= 0) nt.wd.splice(i, 1); else nt.wd.push(d);
-    }
-    else if (action === 'nt-points') nt.points = Math.max(1, Math.min(10, nt.points + parseInt(el.dataset.delta)));
-    else if (action === 'nt-age') nt.minAge = Math.max(0, Math.min(18, nt.minAge + parseInt(el.dataset.delta)));
-    else if (action === 'nt-cat') nt.category = el.dataset.cat;
-    else if (action === 'nt-scope') nt.scope = el.dataset.scope;
-    else if (action === 'nt-icon') nt.icon = el.dataset.icon;
-    else if (action === 'nt-sub-add') this._ntAddSub();
-    else if (action === 'nt-sub-del') nt.subtasks.splice(parseInt(el.dataset.idx), 1);
+    else if (action === 'nt-who') nt.who = el.dataset.who;
     else if (action === 'nt-c-anchor') { nt.care.anchor = el.dataset.anchor; delete nt.care.after; }
     else if (action === 'nt-c-wd') {
       const d = parseInt(el.dataset.wd);
@@ -1660,24 +1669,17 @@ class FamilyMissionParents extends HTMLElement {
     this._renderLayer();
   }
 
-  _ntAddSub() {
-    const nt = this._nt;
-    const title = (nt.newSub || '').trim().slice(0, 60);
-    if (title && nt.subtasks.length < 20) nt.subtasks.push(title);
-    nt.newSub = '';
-  }
-
   /** Why the form cannot be saved yet: an i18n key or '' when it can. */
   _ntProblem() {
     const nt = this._nt;
-    if (!nt.name.trim()) return 'nt_need_name';
+    const ed = this._ntEditor;
+    const edKey = ed ? ed.problemKey : 'need_name';
+    if (edKey === 'need_name') return 'nt_need_name';
     if (nt.who !== 'open') {
       if (!nt.kids.length) return 'nt_need_kid';
       if (nt.who === 'rotation' && nt.kids.length < 2) return 'nt_need_two';
     }
-    if (nt.when === 'weekdays' && !nt.wd.length) return 'nt_need_days';
-    if (nt.when === 'every' && !(nt.every >= 1 && nt.every <= 365)) return 'nt_need_every';
-    if (nt.when === 'once' && !/^\d{4}-\d{2}-\d{2}$/.test(nt.date || '')) return 'nt_need_date';
+    if (edKey) return 'nt_' + edKey;
     return '';
   }
 
@@ -1692,23 +1694,26 @@ class FamilyMissionParents extends HTMLElement {
   /** The websocket payloads (one add_task per kid for "each kid", else one). */
   _ntPayloads() {
     const nt = this._nt;
+    const v = this._ntEditor.value;
     const kids = this._kids().filter(k => nt.kids.includes(k.id)).map(k => k.id);
     const base = {
-      type: 'family_mission/add_task', name: nt.name.trim().slice(0, 60),
-      interval: nt.when === 'once' ? 0 : nt.when === 'every' ? nt.every : 1,
-      complexity: nt.points, icon: nt.icon, category: nt.who === 'open' ? 'bonus' : nt.category,
-      min_age: nt.minAge, requires_approval: !!nt.approval, allow_together: !!nt.together,
-      scope: nt.scope, subtasks: nt.subtasks.map(title => ({ title, done: false }))
+      type: 'family_mission/add_task', name: v.name.slice(0, 60),
+      interval: v.weekdays.length ? 1 : v.interval,
+      complexity: v.complexity, icon: v.icon, category: nt.who === 'open' ? 'bonus' : v.category,
+      min_age: v.min_age, requires_approval: !!v.requires_approval, allow_together: !!v.allow_together,
+      scope: v.scope, subtasks: v.subtasks.map(st => ({ ...st, done: false }))
     };
-    if (nt.catalogKey) base.catalog_key = nt.catalogKey;
-    if (nt.when === 'weekdays') base.weekdays = nt.wd.slice().sort((a, b) => a - b);
-    if (nt.when === 'once') base.custom_due_date = nt.date;
-    if (nt.from) base.available_from = nt.from;
-    if (nt.until) base.available_until = nt.until;
-    if (nt.fromWe) base.available_from_we = nt.fromWe;
-    if (nt.untilWe) base.available_until_we = nt.untilWe;
-    if (nt.after && this._ntHomeworkKids().length) base.after_key = 'homework';
-    if (nt.remind) base.reminder_at = nt.remind;
+    if (v.catalog_key) base.catalog_key = v.catalog_key;
+    if (v.weekdays.length) base.weekdays = v.weekdays.slice();
+    if (v.interval === 0 && !v.weekdays.length) base.custom_due_date = v.custom_due_date;
+    if (v.available_from) base.available_from = v.available_from;
+    if (v.available_until) base.available_until = v.available_until;
+    if (v.available_from_we) base.available_from_we = v.available_from_we;
+    if (v.available_until_we) base.available_until_we = v.available_until_we;
+    if (v.after_key === 'homework' && this._ntHomeworkKids().length && nt.who !== 'open') base.after_key = 'homework';
+    if (v.reminder_at) { base.reminder_at = v.reminder_at; if (v.reminder_target) base.reminder_target = v.reminder_target; }
+    if (v.requires_routine) base.requires_routine = true;
+    if (v.description && v.description.trim()) base.description = v.description.trim();
     if (nt.who === 'open') return [{ ...base, assignees: [] }];
     if (nt.who === 'rotation') return [{ ...base, assignees: kids, rotation: { members: kids, index: 0, every: 'occurrence' } }];
     return kids.map(id => ({ ...base, assignees: [id] }));
@@ -1806,30 +1811,6 @@ class FamilyMissionParents extends HTMLElement {
         `<button class="${nt.who === id ? 'on' : ''}" aria-pressed="${nt.who === id}" data-action="nt-who" data-who="${id}">${L(key)}</button>`).join('')}</div>
       <p class="nt-hint">${L('nt_' + nt.who + '_d')}</p>` : '';
     const kidRow = nt.who === 'open' ? '' : `<div class="chips">${this._ntKidChips()}</div>`;
-    const days = this.localize('nt_days');
-    const whenSeg = `<div class="chips">${[['daily', 'nt_daily'], ['weekdays', 'nt_weekdays'], ['every', 'nt_every'], ['once', 'nt_once']].map(([id, key]) =>
-      `<button class="chip ${nt.when === id ? 'on' : ''}" aria-pressed="${nt.when === id}" data-action="nt-when" data-when="${id}">${L(key)}</button>`).join('')}</div>`;
-    const whenDetail = nt.when === 'weekdays'
-      ? `<div class="chips" role="group" aria-label="${L('nt_weekdays')}">${days.map((d, i) =>
-        `<button class="chip ico ${nt.wd.includes(i) ? 'on' : ''}" aria-pressed="${nt.wd.includes(i)}" data-action="nt-wd" data-wd="${i}">${escParents(d)}</button>`).join('')}</div>`
-      : nt.when === 'every'
-        ? `<div class="row"><label class="lbl inline" for="nt-every">${L('nt_every_l')}</label><span class="inl"><input id="nt-every" class="txt num" type="number" min="1" max="365" inputmode="numeric" value="${escParents(nt.every)}"> ${L('nt_days_unit')}</span></div>`
-        : nt.when === 'once'
-          ? `<div class="row"><label class="lbl inline" for="nt-date">${L('nt_date')}</label><input id="nt-date" class="txt" type="date" min="${escParents(this._todayKey())}" value="${escParents(nt.date)}"></div>`
-          : '';
-    const catChips = nt.who === 'open' ? '' : `
-      <div class="lbl">${L('nt_kind')}</div>
-      <div class="chips">${['basis', 'bonus', 'auftrag'].map(c =>
-        `<button class="chip ${nt.category === c ? 'on' : ''}" aria-pressed="${nt.category === c}" data-action="nt-cat" data-cat="${c}">${L('nt_cat_' + c)}</button>`).join('')}</div>`;
-    const icons = PARENTS_ADHOC_ICONS.map(([emoji, icon, key]) =>
-      `<button class="chip ico ${nt.icon === icon ? 'on' : ''}" data-action="nt-icon" data-icon="${icon}" title="${L(key)}" aria-label="${L(key)}" aria-pressed="${nt.icon === icon}">${emoji}</button>`).join('');
-    const subs = nt.subtasks.map((title, i) =>
-      `<div class="nt-sub"><span>${escParents(title)}</span><button class="step sm" data-action="nt-sub-del" data-idx="${i}" aria-label="${L('nt_sub_del')}">×</button></div>`).join('');
-    const parts = [`⭐ ${this.localize('nt_pts', { n: nt.points })}`];
-    if (nt.approval) parts.push(`✅ ${this.localize('nt_appr')}`);
-    parts.push(nt.scope === 'personal' ? `🙋 ${this.localize('nt_personal')}` : `🏠 ${this.localize('nt_home')}`);
-    if (nt.category !== 'basis' || nt.who === 'open') parts.push(this.localize(nt.who === 'open' ? 'nt_cat_bonus' : 'nt_cat_' + nt.category));
-    const summaryTitle = this.localize(nt.tpl && nt.tpl.src !== 'none' ? 'nt_from_tpl' : 'nt_settings');
     const problem = this._ntProblem();
     const count = nt.who === 'each' ? nt.kids.length : 1;
     return `
@@ -1837,55 +1818,11 @@ class FamilyMissionParents extends HTMLElement {
       <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${L('nt_title')}" style="--kc:#F9A825">
         <div class="grab"></div>
         <h3>➕ ${L('nt_title')}</h3>
-        <label class="lbl" for="nt-name">${L('nt_name')}</label>
-        <input id="nt-name" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" value="${escParents(nt.name)}">
+        <div class="lbl">${L('nt_for')}</div>
         ${whoSeg}
         ${kidRow}
-        <div class="lbl">${L('nt_when')}</div>
-        ${whenSeg}${whenDetail}
-        <div class="lbl">${L('nt_time')}</div>
-        <div class="nt-times">
-          <label class="inl">${L('nt_from')} <select id="nt-from" class="txt time">${parTimeOptions(nt.from, '—')}</select></label>
-          <label class="inl">${L('nt_until')} <select id="nt-until" class="txt time">${parTimeOptions(nt.until, '—')}</select></label>
-          <label class="inl">${L('nt_remind')} <select id="nt-remind" class="txt time">${parTimeOptions(nt.remind, '—')}</select></label>
-        </div>
-        <div class="nt-summary" id="nt-summary"><strong>${escParents(summaryTitle)}</strong> ${escParents(parts.join(' · '))}</div>
-        <details class="fold" data-det="nt-more" ${this._open.has('det:nt-more') ? 'open' : ''}>
-          <summary>${L('qa_more')}</summary>
-          <div class="lbl">${L('nt_we_times')}</div>
-          <div class="nt-times">
-            <label class="inl">${L('nt_from')} <select id="nt-from-we" class="txt time">${parTimeOptions(nt.fromWe, '—')}</select></label>
-            <label class="inl">${L('nt_until')} <select id="nt-until-we" class="txt time">${parTimeOptions(nt.untilWe, '—')}</select></label>
-          </div>
-          <p class="nt-hint">${L('nt_we_hint')}</p>
-          ${this._ntHomeworkKids().length && nt.who !== 'open' ? `<div class="row"><label class="lbl inline" for="nt-after">${L('nt_after')}</label>
-            <input id="nt-after" type="checkbox" class="chk" ${nt.after ? 'checked' : ''}></div>
-          <p class="nt-hint">${L('nt_after_d')}</p>` : ''}
-          <div class="row"><div class="lbl inline">${L('nt_points')}</div>
-            <div class="stepper"><button class="step" data-action="nt-points" data-delta="-1" aria-label="−" ${nt.points <= 1 ? 'disabled' : ''}>−</button>
-              <span class="val">⭐ ${nt.points}</span>
-              <button class="step" data-action="nt-points" data-delta="1" aria-label="+" ${nt.points >= 10 ? 'disabled' : ''}>+</button></div></div>
-          <div class="row"><label class="lbl inline" for="nt-approval">${L('nt_approval')}</label>
-            <input id="nt-approval" type="checkbox" class="chk" ${nt.approval ? 'checked' : ''}></div>
-          <div class="row"><label class="lbl inline" for="nt-together">${L('nt_together')}</label>
-            <input id="nt-together" type="checkbox" class="chk" ${nt.together ? 'checked' : ''}></div>
-          <div class="row"><div class="lbl inline">${L('adhoc_min_age')}</div>
-            <div class="stepper"><button class="step" data-action="nt-age" data-delta="-1" aria-label="−" ${nt.minAge <= 0 ? 'disabled' : ''}>−</button>
-              <span class="val">${nt.minAge > 0 ? nt.minAge : L('adhoc_age_any')}</span>
-              <button class="step" data-action="nt-age" data-delta="1" aria-label="+" ${nt.minAge >= 18 ? 'disabled' : ''}>+</button></div></div>
-          ${catChips}
-          <div class="lbl">${L('nt_scope')}</div>
-          <div class="chips">${['home', 'personal'].map(s =>
-            `<button class="chip ${nt.scope === s ? 'on' : ''}" aria-pressed="${nt.scope === s}" data-action="nt-scope" data-scope="${s}">${s === 'home' ? '🏠' : '🙋'} ${L('nt_' + (s === 'home' ? 'home' : 'personal'))}</button>`).join('')}</div>
-          <div class="lbl">${L('adhoc_icon')}</div>
-          <div class="chips">${icons}</div>
-          <input id="nt-icon" class="txt" type="text" maxlength="64" autocomplete="off" aria-label="${L('adhoc_icon')}" value="${escParents(nt.icon)}">
-          <div class="lbl">${L('nt_subs')}</div>
-          ${subs}
-          <div class="nt-subadd"><input id="nt-newsub" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" placeholder="${L('nt_sub_ph')}" value="${escParents(nt.newSub)}">
-            <button class="step" data-action="nt-sub-add" aria-label="${L('nt_sub_add')}">+</button></div>
-        </details>
-        <div class="warn" id="nt-problem" ${problem ? '' : 'hidden'}>${problem ? L(problem) : ''}</div>
+        <div id="nt-editor-host" class="nt-editor"></div>
+        <div class="warn" id="nt-problem" ${problem && this._ntEditor && this._ntEditor.value.name ? '' : 'hidden'}>${problem ? L(problem) : ''}</div>
         <div class="dialog-actions">
           <button class="btn neutral" data-action="nt-back">‹ ${L('nt_back')}</button>
           <button class="btn ok solid" id="nt-create" data-action="nt-create" ${problem ? 'disabled' : ''}>${L(count > 1 ? 'nt_save_n' : 'nt_save', { n: count })}</button>
@@ -1983,19 +1920,7 @@ class FamilyMissionParents extends HTMLElement {
       nt.q = el.value;
       const host = this.shadowRoot.getElementById('nt-results');
       if (host) host.innerHTML = this._ntResultsHtml();
-    } else if (id === 'nt-name') { nt.name = el.value; this._ntRefresh(); }
-    else if (id === 'nt-every') { nt.every = parseInt(el.value) || 0; this._ntRefresh(); }
-    else if (id === 'nt-date') { nt.date = el.value; this._ntRefresh(); }
-    else if (id === 'nt-from') nt.from = el.value;
-    else if (id === 'nt-until') nt.until = el.value;
-    else if (id === 'nt-from-we') nt.fromWe = el.value;
-    else if (id === 'nt-until-we') nt.untilWe = el.value;
-    else if (id === 'nt-after') nt.after = el.checked;
-    else if (id === 'nt-remind') nt.remind = el.value;
-    else if (id === 'nt-approval') { nt.approval = el.checked; this._ntRefresh(true); }
-    else if (id === 'nt-together') nt.together = el.checked;
-    else if (id === 'nt-icon') nt.icon = el.value.trim();
-    else if (id === 'nt-newsub') nt.newSub = el.value;
+    }
     else if (id === 'nt-c-label' && nt.care) nt.care.label = el.value;
     else if (id === 'nt-c-emoji' && nt.care) nt.care.emoji = el.value;
     else if (id === 'nt-c-after' && nt.care) nt.care.after = el.value;
@@ -2008,15 +1933,14 @@ class FamilyMissionParents extends HTMLElement {
     return true;
   }
 
-  /** Updates the save button, the problem line and (when asked) the summary box. */
-  _ntRefresh(summary) {
-    const nt = this._nt;
+  /** Updates the save button and the problem line (also after the "for whom" choice changed). */
+  _ntRefresh() {
     const problem = this._ntProblem();
     const btn = this.shadowRoot.getElementById('nt-create');
     if (btn) btn.disabled = !!problem;
     const warn = this.shadowRoot.getElementById('nt-problem');
-    if (warn) { warn.hidden = !problem || !nt.name.trim(); warn.textContent = problem ? this.localize(problem) : ''; }
-    if (summary) this._renderLayer();
+    const named = !!(this._ntEditor && this._ntEditor.value.name);
+    if (warn) { warn.hidden = !problem || !named; warn.textContent = problem ? this.localize(problem) : ''; }
   }
 
 // ---- absences (vacation, kid away, sick) -------------------------------------
@@ -2909,7 +2833,16 @@ class FamilyMissionParents extends HTMLElement {
       if (host) host.appendChild(this._picker);
       return;
     }
-    if (this._nt) { layer.innerHTML = this._renderNtSheet(); return; }
+    if (this._nt) {
+      if (this._nt.step !== 2) this._ntEditor = null;
+      layer.innerHTML = this._renderNtSheet();
+      const host = layer.querySelector('#nt-editor-host');
+      if (host && this._ntEditor) {
+        this._ntEditor.config = this._ntEditorConfig();
+        host.appendChild(this._ntEditor);
+      }
+      return;
+    }
     if (this._abs) { layer.innerHTML = this._renderAbsenceSheet(); return; }
     if (this._own) { layer.innerHTML = this._renderOwnSheet(); return; }
     if (this._todo) { layer.innerHTML = this._renderTodoSheet(); return; }

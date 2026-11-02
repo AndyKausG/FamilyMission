@@ -301,33 +301,6 @@ function toSetBdayBind(root) {
   });
 }
 
-/**
- * Options for a time select ("HH:MM", 15-minute steps). Used instead of
- * <input type="time">, whose native picker crashes some browsers (Safari)
- * inside the dialogs. A value outside the steps is kept as its own option.
- */
-function toSetTTimeOptions(value, emptyLabel) {
-  const v = /^\d{2}:\d{2}$/.test(value || '') ? value : '';
-  const times = [];
-  for (let h = 0; h < 24; h++) for (let m = 0; m < 60; m += 15) times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-  if (v && !times.includes(v)) { times.push(v); times.sort(); }
-  return `<option value="" ${v ? '' : 'selected'}>${emptyLabel}</option>` +
-    times.map(t => `<option value="${t}" ${t === v ? 'selected' : ''}>${t}</option>`).join('');
-}
-
-
-/**
- * Options of the reminder target select: "event only" plus every `notify.*` service Home Assistant offers
- * (value `notify.<name>`). A saved target that is no longer offered is kept as its own option.
- */
-function toSetNotifyOptions(hass, selected, eventOnlyLabel) {
-  const names = Object.keys((hass && hass.services && hass.services.notify) || {}).filter(n => n !== 'send_message').sort();
-  const values = names.map(n => `notify.${n}`);
-  if (selected && !values.includes(selected)) values.push(selected);
-  return `<option value="" ${selected ? '' : 'selected'}>${eventOnlyLabel}</option>` +
-    values.map(v => `<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`).join('');
-}
-
 class FamilyMissionSettings extends HTMLElement {
   /**
    * Initializes the FamilyMissionSettings element.
@@ -348,7 +321,6 @@ class FamilyMissionSettings extends HTMLElement {
     this.monthly_history = {};
     this.current_month = null;
     this.current_period_start = null;
-    this._subtasks = [];
     this._dataLoaded = false; 
     this._tab = FamilyMissionSettings._storedTab();
     this._dirty = false;
@@ -879,11 +851,6 @@ class FamilyMissionSettings extends HTMLElement {
     else if (id === 'btn-help-open') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
     else if (id === 'btn-trig-add') this._addTrigger();
     else if (target.classList.contains('btn-trig-del')) this._removeTrigger(parseInt(target.dataset.index));
-    else if (target.classList.contains('wd-chip')) {
-      target.classList.toggle('active');
-      target.setAttribute('aria-pressed', String(target.classList.contains('active')));
-      this._syncTemplateSchedule();
-    }
     else if (target.classList.contains('kid-emoji-pick')) {
       if (this._canManage()) {
         this._kidDraft(target.dataset.uid).avatar = target.dataset.emoji;
@@ -901,13 +868,6 @@ class FamilyMissionSettings extends HTMLElement {
     else if (target.classList.contains('btn-delete-template')) this._deleteTemplate(target.dataset.id);
     else if (id === 'btn-reset') this._triggerReset();
     else if (id === 'btn-factory') this._factoryReset();
-    // Modal Handlers
-    else if (id === 'btn-modal-cancel') this._closeTemplateModal();
-    else if (id === 'btn-modal-save') this._saveTemplate();
-    else if (id === 'toggle-subtasks') this._toggleSection('subtasks-content');
-    else if (id === 'btn-add-subtask') this._addSubtask();
-    else if (target.classList.contains('btn-del-subtask')) this._removeSubtask(target.dataset.index);
-    else if (target.classList.contains('subtask-check')) this._toggleSubtaskStatus(target.dataset.index);
   }
 
   /**
@@ -948,122 +908,83 @@ class FamilyMissionSettings extends HTMLElement {
     }
   }
 
-  /**
-   * Adds a subtask to the local template editor.
-   */
-  _addSubtask() {
-    const input = this.shadowRoot.getElementById('new-subtask-title');
-    const title = input.value.trim();
-    if (!title) return;
-    this._subtasks.push({ title: title, done: false });
-    input.value = '';
-    this._renderModalSubtasks();
+  /** Creates the shared task editor once (loaded on demand) and wires its events. */
+  async _ensureTemplateEditor() {
+    if (this._tplEditor) return this._tplEditor;
+    if (!customElements.get('family-mission-task-editor')) await import('/family_mission_frontend/family-mission-task-editor.js');
+    const ed = document.createElement('family-mission-task-editor');
+    ed.addEventListener('fm-editor-save', (ev) => this._saveTemplate(ev.detail.value));
+    ed.addEventListener('fm-editor-cancel', () => this._closeTemplateModal());
+    ed.addEventListener('fm-editor-delete', () => { if (this._editingTemplateId) this._deleteTemplate(this._editingTemplateId, true); });
+    this._tplEditor = ed;
+    return ed;
   }
 
   /**
-   * Removes a subtask from the template editor.
-   * @param {number} index - Index of the subtask.
-   */
-  _removeSubtask(index) {
-    this._subtasks.splice(index, 1);
-    this._renderModalSubtasks();
-  }
-
-  /**
-   * Toggles completion status of a subtask in the template editor.
-   * @param {number} index - Index of the subtask.
-   */
-  _toggleSubtaskStatus(index) {
-    this._subtasks[index].done = !this._subtasks[index].done;
-    this._renderModalSubtasks();
-  }
-
-  /**
-   * Opens the modal for adding or editing a task template.
+   * Opens the shared task editor for adding or editing a task template.
    * @param {string|null} id - The template ID to edit, or null for new.
    */
-  _openTemplateModal(id = null) {
-    this._editingTemplateId = id;
+  async _openTemplateModal(id = null) {
+    const ed = await this._ensureTemplateEditor();
+    const template = id && this.templates[id] ? this.templates[id] : null;
+    this._editingTemplateId = template ? id : null;
     this._templateModalOpen = true;
-    this._subtasks = [];
-    if (id && this.templates[id]) {
-        this._subtasks = this.templates[id].subtasks ? JSON.parse(JSON.stringify(this.templates[id].subtasks)) : [];
-    }
+    const kids = this.settings.kids || {};
+    ed.hass = this._hass;
+    ed.config = {
+      variant: 'modal', isNew: !template, canDelete: !!template && this._canManage(),
+      title: this.localize(template ? 'edit_template' : 'add_template'),
+      showDate: false,
+      homework: Object.values(this.tasks || {}).some(x => x && !x.parent_task && (x.catalog_key === 'homework' || String(x.wizard_key || '').split(':')[0] === 'homework')),
+      who: { people: Object.entries(this.users || {}).map(([uid, name]) => ({ id: uid, name })), kids: Object.keys(kids) }
+    };
+    ed.value = template ? JSON.parse(JSON.stringify(template)) : { name: '', icon: 'mdi:star', category: 'basis', interval: 7, complexity: 5 };
+    ed.removeAttribute('open');
     this._render();
-    this._setSectionState('subtasks-content', this._subtasks.length > 0);
-    this._renderModalSubtasks();
+    ed.setAttribute('open', '');
   }
 
   /**
-   * Closes the template editor modal.
+   * Closes the template editor.
    */
   _closeTemplateModal() {
     this._templateModalOpen = false;
     this._editingTemplateId = null;
-    this._subtasks = [];
+    if (this._tplEditor) this._tplEditor.removeAttribute('open');
     this._render();
   }
 
-  /** Selected weekdays of the template editor (Mon=0 ... Sun=6). */
-  _templateWeekdays() {
-    return Array.from(this.shadowRoot.querySelectorAll('.wd-chip.active'))
-      .map(b => parseInt(b.dataset.wd)).sort((a, b) => a - b);
-  }
-
-  /** Weekdays replace the interval; the rotation switch needs two or more kids among the assignees. */
-  _syncTemplateSchedule() {
-    const interval = this.shadowRoot.getElementById('tmpl-interval');
-    if (interval) interval.disabled = this._templateWeekdays().length > 0;
-    const kids = this.settings.kids || {};
-    const members = Array.from(this.shadowRoot.querySelectorAll('.tmpl-assignee-cb')).filter(cb => cb.checked && kids[cb.value]).map(cb => cb.value);
-    const row = this.shadowRoot.getElementById('tmpl-rotation-row');
-    const sw = this.shadowRoot.getElementById('tmpl-rotation');
-    if (row) row.hidden = members.length < 2;
-    if (sw && members.length < 2) sw.checked = false;
-    return members;
-  }
-
   /**
-   * Saves the current template data to the backend via websocket.
+   * Saves a template (the value object of the shared editor) via websocket.
+   * @param {object} v - Value of the editor.
    */
-  _saveTemplate() {
-    const assignees = [];
-    this.shadowRoot.querySelectorAll('.tmpl-assignee-cb').forEach(cb => {
-        if (cb.checked) assignees.push(cb.value);
-    });
-
+  _saveTemplate(v) {
     const payload = {
-      name: this.shadowRoot.getElementById('tmpl-name').value,
-      description: this.shadowRoot.getElementById('tmpl-desc').value,
-      area: this.shadowRoot.getElementById('tmpl-area').value,
-      complexity: parseInt(this.shadowRoot.getElementById('tmpl-complexity').value),
-      icon: this.shadowRoot.getElementById('tmpl-icon').value,
-      interval: parseInt(this.shadowRoot.getElementById('tmpl-interval').value),
-      category: this.shadowRoot.getElementById('tmpl-category').value || 'basis',
-      scope: this.shadowRoot.getElementById('tmpl-scope')?.value === 'personal' ? 'personal' : 'home',
-      min_age: Math.max(0, Math.min(18, parseInt(this.shadowRoot.getElementById('tmpl-min-age').value) || 0)),
-      requires_approval: !!this.shadowRoot.getElementById('tmpl-approval')?.checked,
-      requires_routine: !!this.shadowRoot.getElementById('tmpl-routine')?.checked,
-      allow_together: !!this.shadowRoot.getElementById('tmpl-together')?.checked,
-      available_from: this.shadowRoot.getElementById('tmpl-available-from')?.value || '',
-      available_until: this.shadowRoot.getElementById('tmpl-available-until')?.value || '',
-      available_from_we: this.shadowRoot.getElementById('tmpl-available-from-we')?.value || '',
-      available_until_we: this.shadowRoot.getElementById('tmpl-available-until-we')?.value || '',
-      after_key: this.shadowRoot.getElementById('tmpl-after') ? (this.shadowRoot.getElementById('tmpl-after').checked ? 'homework' : null)
-        : ((this._editingTemplateId && this.templates[this._editingTemplateId] && this.templates[this._editingTemplateId].after_key) || null),
-      reminder_at: this.shadowRoot.getElementById('tmpl-reminder')?.checked ? (this.shadowRoot.getElementById('tmpl-reminder-at')?.value || '18:00') : '',
-      reminder_target: this.shadowRoot.getElementById('tmpl-reminder')?.checked ? (this.shadowRoot.getElementById('tmpl-reminder-target')?.value || '') : '',
-      assignees: assignees,
-      weekdays: this._templateWeekdays(),
-      rotation: (this.shadowRoot.getElementById('tmpl-rotation')?.checked && this._syncTemplateSchedule().length >= 2)
-        ? { members: this._syncTemplateSchedule() } : null,
-      subtasks: this._subtasks
+      name: v.name,
+      description: v.description,
+      area: v.area,
+      complexity: v.complexity,
+      icon: v.icon,
+      interval: v.interval,
+      category: v.category || 'basis',
+      scope: v.scope === 'personal' ? 'personal' : 'home',
+      min_age: v.min_age,
+      requires_approval: v.requires_approval,
+      requires_routine: v.requires_routine,
+      allow_together: v.allow_together,
+      available_from: v.available_from,
+      available_until: v.available_until,
+      available_from_we: v.available_from_we,
+      available_until_we: v.available_until_we,
+      after_key: v.after_key,
+      reminder_at: v.reminder_at,
+      reminder_target: v.reminder_target,
+      assignees: v.assignees || [],
+      weekdays: v.weekdays,
+      rotation: v.rotation || null,
+      subtasks: v.subtasks
     };
-
-    if (!payload.name || !payload.icon) {
-        alert("Name and Icon are required.");
-        return;
-    }
+    if (v.catalog_key) payload.catalog_key = v.catalog_key;
 
     const type = this._editingTemplateId ? 'family_mission/edit_template' : 'family_mission/add_template';
     if (this._editingTemplateId) {
@@ -1074,28 +995,10 @@ class FamilyMissionSettings extends HTMLElement {
       this._showToast(this.localize('template_saved'));
       this._closeTemplateModal();
       this._fetchData();
+    }).catch((err) => {
+      console.error('FamilyMission Settings: template could not be saved', err);
+      this._showToast(String((err && err.message) || err));
     });
-  }
-
-  /**
-   * Renders the subtask list inside the template modal.
-   */
-  _renderModalSubtasks() {
-    const container = this.shadowRoot.getElementById('subtask-list');
-    if (!container) return;
-    if (this._subtasks.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-    container.innerHTML = this._subtasks.map((st, index) => `
-        <div style="display: flex; align-items: center; gap: 8px; background: var(--secondary-background-color); padding: 4px 8px; border-radius: 4px;">
-            <ha-checkbox class="subtask-check" data-index="${index}" ${st.done ? 'checked' : ''}></ha-checkbox>
-            <span style="flex: 1; font-size: 14px; ${st.done ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${st.title}</span>
-            <button class="action-btn btn-del-subtask" data-index="${index}" style="width: 30px; height: 30px;">
-                <ha-icon icon="mdi:close" style="--mdc-icon-size: 18px;"></ha-icon>
-            </button>
-        </div>
-    `).join('');
   }
 
   /**
@@ -1119,13 +1022,15 @@ class FamilyMissionSettings extends HTMLElement {
   /**
    * Deletes a template from the backend.
    * @param {string} id - The ID of the template.
+   * @param {boolean} fromEditor - Close the editor after deleting.
    */
-  _deleteTemplate(id) {
+  _deleteTemplate(id, fromEditor = false) {
     if (confirm(this.localize('confirm_delete_template'))) {
       this._hass.callWS({ type: 'family_mission/delete_template', template_id: id })
         .then(() => {
           alert(this.localize('template_deleted'));
           this._showToast(this.localize('template_deleted'));
+          if (fromEditor) this._closeTemplateModal();
         });
     }
   }
@@ -2501,7 +2406,6 @@ class FamilyMissionSettings extends HTMLElement {
     }
     
     const displayTitle = this._config.title || this.localize('title');
-    const template = this._editingTemplateId ? this.templates[this._editingTemplateId] : null;
     const canManage = this._canManage();
     const tabs = [
       ['family', 'tab_family'], ['tasks', 'tab_tasks'], ['notify', 'tab_notify'], ['device', 'tab_device']
@@ -2633,140 +2537,6 @@ class FamilyMissionSettings extends HTMLElement {
         </div>
       </ha-card>
 
-      <div id="template-modal" class="modal ${this._templateModalOpen ? 'open' : ''}">
-        <div class="modal-content">
-            <h2>${this._editingTemplateId ? this.localize('edit_template') : this.localize('add_template')}</h2>
-            <div style="display:flex; flex-direction:column; gap:16px;">
-              <ha-input id="tmpl-name" label="${this.localize('template_name')}" value="${template?.name || ''}" required></ha-input>
-              <ha-input id="tmpl-desc" label="${this.localize('desc_lbl')}" value="${template?.description || ''}"></ha-input>
-              
-              <div class="form-row">
-                  <ha-input id="tmpl-interval" type="number" label="${this.localize('interval_lbl')}" class="form-col" value="${template?.interval ?? 7}"></ha-input>
-                  <ha-input id="tmpl-complexity" type="number" label="${this.localize('points_lbl')}" min="1" max="10" value="${template?.complexity || 5}" class="form-col"></ha-input>
-              </div>
-
-              <div>
-                  <label class="form-label">${this.localize('weekdays_lbl')}</label>
-                  <div class="wd-chips" role="group" aria-label="${this.localize('weekdays_lbl')}">
-                      ${this.localize('weekday_short').split(',').map((d, i) => {
-                          const on = (template?.weekdays || []).includes(i);
-                          return `<button type="button" class="wd-chip ${on ? 'active' : ''}" data-wd="${i}" aria-pressed="${on}">${d}</button>`;
-                      }).join('')}
-                  </div>
-              </div>
-
-              <div class="form-row">
-                  <div class="form-col">
-                      <label class="form-label">${this.localize('icon_lbl')}</label>
-                      <ha-icon-picker id="tmpl-icon" value="${template?.icon || 'mdi:label'}" required></ha-icon-picker>
-                  </div>
-                  <div class="form-col">
-                      <label class="form-label">${this.localize('area_lbl')}</label>
-                      <ha-area-picker id="tmpl-area" value="${template?.area || ''}"></ha-area-picker>
-                  </div>
-              </div>
-
-              <div class="form-row">
-                  <div class="form-col">
-                      <label class="form-label" for="tmpl-category">${this.localize('category_lbl')}</label>
-                      <select id="tmpl-category" class="form-select">
-                          ${['basis', 'bonus', 'auftrag'].map(c => `<option value="${c}" ${(template?.category || 'basis') === c ? 'selected' : ''}>${this.localize('cat_' + c)}</option>`).join('')}
-                      </select>
-                  </div>
-                  <ha-input id="tmpl-min-age" type="number" min="0" max="18" label="${this.localize('min_age_lbl')}" value="${template?.min_age || 0}" class="form-col"></ha-input>
-              </div>
-              <div class="form-row">
-                  <div class="form-col">
-                      <label class="form-label" for="tmpl-scope">${this.localize('scope_lbl')}</label>
-                      <select id="tmpl-scope" class="form-select">
-                          ${['home', 'personal'].map(c => `<option value="${c}" ${(template?.scope || 'home') === c ? 'selected' : ''}>${this.localize('scope_' + c)}</option>`).join('')}
-                      </select>
-                  </div>
-                  <div class="form-col">
-                      <label class="form-label" for="tmpl-available-from">${this.localize('available_from_lbl')}</label>
-                      <select id="tmpl-available-from" class="form-select">${toSetTTimeOptions(template?.available_from || '', '—')}</select>
-                  </div>
-                  <div class="form-col">
-                      <label class="form-label" for="tmpl-available-until">${this.localize('available_until_lbl')}</label>
-                      <select id="tmpl-available-until" class="form-select">${toSetTTimeOptions(template?.available_until || '', '—')}</select>
-                  </div>
-              </div>
-              <div class="form-row">
-                  <div class="form-col">
-                      <label class="form-label" for="tmpl-available-from-we">${this.localize('available_from_we_lbl')}</label>
-                      <select id="tmpl-available-from-we" class="form-select">${toSetTTimeOptions(template?.available_from_we || '', '—')}</select>
-                  </div>
-                  <div class="form-col">
-                      <label class="form-label" for="tmpl-available-until-we">${this.localize('available_until_we_lbl')}</label>
-                      <select id="tmpl-available-until-we" class="form-select">${toSetTTimeOptions(template?.available_until_we || '', '—')}</select>
-                  </div>
-              </div>
-              <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('weekend_window_hint')}</div>
-              ${Object.values(this.tasks || {}).some(x => x && !x.parent_task && (x.catalog_key === 'homework' || String(x.wizard_key || '').split(':')[0] === 'homework')) || template?.after_key === 'homework' ? `<ha-formfield label="${this.localize('after_homework_lbl')}">
-                  <ha-switch id="tmpl-after" ${template?.after_key === 'homework' ? 'checked' : ''}></ha-switch>
-              </ha-formfield>` : ''}
-              <ha-formfield label="${this.localize('approval_lbl')}">
-                  <ha-switch id="tmpl-approval" ${template?.requires_approval ? 'checked' : ''}></ha-switch>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('routine_lbl')}">
-                  <ha-switch id="tmpl-routine" ${template?.requires_routine ? 'checked' : ''}></ha-switch>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('together_lbl')}">
-                  <ha-switch id="tmpl-together" ${(template?.allow_together ?? ['bonus', 'auftrag'].includes(template?.category)) ? 'checked' : ''}></ha-switch>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('reminder_lbl')}">
-                  <ha-switch id="tmpl-reminder" ${template?.reminder_at ? 'checked' : ''}></ha-switch>
-              </ha-formfield>
-              <div class="form-row" id="tmpl-reminder-row" ${template?.reminder_at ? '' : 'hidden'}>
-                  <div class="form-col">
-                      <label class="form-label" for="tmpl-reminder-at">${this.localize('reminder_time_lbl')}</label>
-                      <select id="tmpl-reminder-at" class="form-select">${toSetTTimeOptions(template?.reminder_at || '18:00', '—')}</select>
-                  </div>
-                  <div class="form-col">
-                      <label class="form-label" for="tmpl-reminder-target">${this.localize('reminder_target_lbl')}</label>
-                      <select id="tmpl-reminder-target" class="form-select">${toSetNotifyOptions(this._hass, template?.reminder_target || '', this.localize('reminder_event_only'))}</select>
-                  </div>
-              </div>
-
-              <div>
-                  <label class="form-label">${this.localize('assignees_lbl')}</label>
-                  <div style="display:flex; flex-direction:column; gap:8px; padding-top:8px;">
-                      ${Object.entries(this.users).map(([uid, name]) => {
-                          const isChecked = template?.assignees?.includes(uid) || false;
-                          return `
-                              <ha-formfield label="${name}">
-                                  <ha-checkbox class="tmpl-assignee-cb" value="${uid}" ${isChecked ? 'checked' : ''}></ha-checkbox>
-                              </ha-formfield>
-                          `;
-                      }).join('')}
-                  </div>
-                  <div id="tmpl-rotation-row" hidden style="padding-top:8px;">
-                      <ha-formfield label="${this.localize('rotation_lbl')}">
-                          <ha-switch id="tmpl-rotation" ${template?.rotation ? 'checked' : ''}></ha-switch>
-                      </ha-formfield>
-                      <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('rotation_hint')}</div>
-                  </div>
-              </div>
-
-              <div id="toggle-subtasks" class="collapsible-header">
-                  <span>${this.localize('subtasks')}</span>
-                  <ha-icon icon="mdi:chevron-down"></ha-icon>
-              </div>
-              <div id="subtasks-content" class="collapsible-content">
-                  <div class="subtask-input-row">
-                      <ha-input id="new-subtask-title" placeholder="${this.localize('subtask_placeholder')}" style="flex: 1;"></ha-input>
-                      <ha-button id="btn-add-subtask">${this.localize('confirm')}</ha-button>
-                  </div>
-                  <div id="subtask-list" class="subtask-list"></div>
-              </div>
-            </div>
-            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:24px;">
-                <ha-button appearance="plain" variant="brand" id="btn-modal-cancel">${this.localize('cancel')}</ha-button>
-                <ha-button raised id="btn-modal-save">${this.localize('save')}</ha-button>
-            </div>
-        </div>
-      </div>
-
       <div id="import-modal" class="modal ${this._importModalOpen ? 'open' : ''}">
         <div class="modal-content">
             <h2>${this.localize('import_tasks_title')}</h2>
@@ -2807,18 +2577,6 @@ class FamilyMissionSettings extends HTMLElement {
     
     // Bind click events
     this.shadowRoot.querySelector('ha-card').addEventListener('click', (ev) => this._handleClick(ev));
-    this.shadowRoot.querySelector('#template-modal').addEventListener('click', (ev) => this._handleClick(ev));
-    this.shadowRoot.querySelector('#template-modal').addEventListener('change', (ev) => {
-      if (ev.target && ev.target.classList && ev.target.classList.contains('tmpl-assignee-cb')) this._syncTemplateSchedule();
-      if (ev.target && ev.target.id === 'tmpl-reminder') {
-        const row = this.shadowRoot.getElementById('tmpl-reminder-row');
-        if (row) row.hidden = !ev.target.checked;
-      }
-      if (ev.target && ev.target.id === 'tmpl-category') {
-        const together = this.shadowRoot.getElementById('tmpl-together');
-        if (together) together.checked = ev.target.value !== 'basis';
-      }
-    });
     this.shadowRoot.querySelector('#import-modal').addEventListener('click', (ev) => this._handleClick(ev));
 
     // Bind File Import
@@ -2847,13 +2605,10 @@ class FamilyMissionSettings extends HTMLElement {
     panelBox.addEventListener('input', markDirty);
     panelBox.addEventListener('change', markDirty);
 
-    if (this._templateModalOpen) {
-      this._syncTemplateSchedule();
-      const iconPicker = this.shadowRoot.getElementById('tmpl-icon');
-      if(iconPicker) iconPicker.hass = this._hass;
-
-      const areaPicker = this.shadowRoot.getElementById('tmpl-area');
-      if(areaPicker) areaPicker.hass = this._hass;
+    // The shared task editor lives outside of ha-card and survives re-renders (it keeps its own state).
+    if (this._templateModalOpen && this._tplEditor) {
+      this._tplEditor.hass = this._hass;
+      this.shadowRoot.appendChild(this._tplEditor);
     }
   }
 }

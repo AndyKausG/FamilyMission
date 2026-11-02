@@ -7767,7 +7767,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             f"{base_path}/family-mission-kids.js",
             f"{base_path}/family-mission-wizard.js",
             f"{base_path}/family-mission-parents.js",
-            f"{base_path}/family-mission-help.js"
+            f"{base_path}/family-mission-help.js",
+            f"{base_path}/family-mission-task-editor.js",
         ]
         
         current_resources = {

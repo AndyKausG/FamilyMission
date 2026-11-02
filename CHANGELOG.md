@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.0] - 2026-11-02
+
+- **One shared task editor.** New `www/family-mission-task-editor.js` (`<family-mission-task-editor>`, vanilla web component, registered as a Lovelace resource, loaded on demand by the cards) replaces three different forms: the template dialog of the settings card, the task dialog of the household card and step 2 / "Mehr Optionen" of the parents card's "Neue Aufgabe" flow (its step 1 and the "für wen" part stay).
+- **New layout:** header with a big icon button (emoji grid, "mdi-Icon wählen" fallback), inline name and live summary chips; sections Art (Pflicht / Bonus / Auftrag), Wann (only the matching control for daily / weekdays / every N days / once; time window; "Am Wochenende anders"), Schritte (drag & drop and up / down buttons, "ab N" / "Schultag" badges, medication placeholder row in morning / evening missions), Belohnung and Regeln (minimum age, home / personal, only after homework, reminder, note for parents). Sticky footer (Löschen / Abbrechen / Speichern); full-screen sheet with collapsed rows on phones; light / dark theme, 44 px touch targets, aria-pressed on segmented buttons.
+- **Removed from the forms:** the recurring / one-time switch of the task dialog (Wann > Einmalig covers it), the HA area picker (a stored `area` is kept on save) and the raw mdi text field. Pause, own overdue limit and a fixed due date stay available in the household card under "Erweitert".
+- **Compatible payloads:** the websocket commands and fields are unchanged. The parents flow now also keeps `min_age` / `requires` of steps and sends `description`, `reminder_target` and `requires_routine` when set.
+- Tests: `tests/test_frontend_assets.py` checks the new asset and its registration.
+
 ## [2.6.0] - 2026-11-01
 
 - **Fix: a quick-start re-run no longer resets your customizations.** Re-running the wizard with "Bisherige Assistent-Aufgaben abgleichen" (`replace_existing`) used to overwrite name, points, icon, category, age, times, interval and steps of every wizard task and to delete wizard tasks that were deselected. Now every edit of a wizard task (`edit_task`, `edit_task_by_name`, the task dialogs) records the changed definition fields in `task["customized"]`; the wizard only updates the fields that are not listed there. Progress toggles, completion, due date, pause, claim and the rotation turn are no customization. Wizard tasks from before are compared with the catalog once on load (`kids_catalog.legacy_customized_fields`, conservative: whatever is not the wizard's own value counts as customized).
