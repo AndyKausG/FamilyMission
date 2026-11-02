@@ -61,17 +61,64 @@ const I18N_PARENTS = {
     pt_all_done: "Nothing left for you today.", pt_partner: "With {name} today ({n})", pt_other: "the others", pt_done_today: "Done today ({n})",
     skip_btn: "Skip", skip_all: "Skip everything today", skip_title: "{name}: skip today", skip_none: "No open tasks today.",
     kid_today: "Today: {done} of {total} done", kid_no_tasks: "No tasks for today.",
+    rot_title: "🔁 Taking turns", rot_today: "Today: {a} · next time: {b}", rot_next: "Next: {a} · after that: {b}",
+    rot_swap: "Instead of {cur}: {name}", rot_skip: "Skip {cur}'s turn", toast_rot: "Turn changed",
+    care_title: "💊 Health today", care_none_today: "Nothing due today.", care_given: "✓ Given", care_given_title: "Mark as given",
+    care_st_taken: "taken", care_st_taken_by: "given by a parent", care_st_declined: "not today", care_st_unanswered: "no answer", care_st_open: "open",
+    care_history: "Last 7 days", care_hist_title: "💊 Health", care_legend: "✓ taken · – not today · ! no answer",
     st_open: "open", st_waiting: "awaiting approval", st_done: "done", for_kid: "Do it for {name}",
     m_ptasks: "Parent tasks", m_ptasks_d: "Who does what, planning, duration", m_tasks: "Tasks", m_tasks_d: "Kids' tasks and templates",
     m_shop: "Shop", m_shop_d: "Redemptions and rewards", m_settings: "Settings", m_settings_d: "Kids, points, notifications",
+    m_absence: "Absences", m_absence_d: "Vacation, kid away, sick",
+    abs_trip: "Family on a trip", abs_away: "Kid away", abs_sick: "Sick", abs_school_holiday: "School holidays",
+    abs_hint_school_holiday: "Only school things pause (homework, school bag, lunch box). Everything else keeps running. No kid chosen = all kids.",
+    abs_calendar: "Calendar", abs_banner_school: "📚 School holidays until {date} - homework and school steps are paused.", abs_kids: "Who?", abs_from: "From", abs_to: "To (incl.)", abs_note: "Note (optional)",
+    abs_note_ph: "e.g. Grandma, class trip", abs_personal: "Keep personal tasks (missions, routines)", abs_care: "Medication continues",
+    abs_hint_trip: "Chores and reminders pause. Medication continues.", abs_hint_away: "All tasks of the selected kids pause; rotations skip them.",
+    abs_hint_sick: "Chores pause. Medication continues.", abs_create: "Save", abs_none: "No absences entered.", abs_new: "Add absence",
+    abs_active: "Now", abs_upcoming: "Upcoming", abs_end: "End today", abs_delete: "Delete", abs_until: "until {date}", abs_range: "{from} – {to}",
+    abs_banner_trip: "🌴 Family trip until {date} - chores and reminders are paused.", abs_banner_kids: "{names} {kind} until {date} - tasks are paused.",
+    abs_kind_away: "away", abs_kind_sick: "sick", abs_need_kids: "Pick at least one kid.", abs_bad_dates: "Check the dates (end not before start, at most 120 days).",
+    toast_abs_saved: "Absence saved", toast_abs_ended: "Absence ended", toast_abs_deleted: "Absence deleted", abs_paused_note: "paused",
     m_help: "Help", m_help_d: "How everything works", embed_missing: "This part is not available. Reload the page.",
     mode_me: "Me", mode_you: "You", mode_alt: "Alternating", pt_minutes_lbl: "Minutes", pt_from_templates: "From templates", pt_own: "Own task",
     pick_kid: "For whom?", picker_apply: "Apply", picker_missing: "The template list could not be loaded.",
-    own_title: "Own parent task", own_name: "Name", own_name_ph: "e.g. Water the plants", own_interval: "Repeats", own_planning: "Planning task", own_who: "Who does it?", own_create: "Add",
+    pt_steps: "Checklist", own_steps: "Steps (one per line, optional)", own_steps_ph: "e.g. Pack the bags", own_days: "On these days",
+    pt_hint_bedding: "🛏 Strip the beds and wash the linen", pt_todo_btn: "🛒 To the shopping list", pt_todo_title: "Shopping list",
+    pt_todo_item: "What is missing?", pt_todo_item_ph: "e.g. Milk", pt_todo_add: "Add", toast_todo_added: "On the shopping list",
+    toast_todo_err: "The shopping list could not be reached", pt_ed_more: "Days, steps, shopping list", pt_ed_days: "Repeats on",
+    pt_ed_steps: "Steps (one per line)", pt_ed_todo: "Shopping list", pt_ed_todo_none: "— none —",
+    nt_c_stock: "Stock (pills, optional)", nt_c_perdose: "Pills per dose", nt_c_stock_d: "A week before it runs out you get the task \"Prescription / refill\".",
+    own_title: "New task", own_name: "Name", own_name_ph: "e.g. Call the dentist", own_interval: "Repeats", own_planning: "Planning task", own_who: "Who does it?", own_create: "Add",
+    pt_add: "Add task", pt_g_overdue: "Overdue", pt_g_today: "Today", pt_g_upcoming: "Coming up", pt_g_someday: "Someday",
+    pt_tomorrow: "Tomorrow", pt_postpone: "→ Tomorrow", toast_pt_postponed: "Moved to tomorrow", pt_overdue_since: "overdue since {day}",
+    qa_when: "When?", qa_today: "Today", qa_tomorrow: "Tomorrow", qa_weekend: "Weekend", qa_date: "Date", qa_someday: "Someday",
+    qa_more: "More options", qa_time: "Time (optional)", qa_need_date: "Please pick a date.",
     int_0: "once", int_1: "daily", int_2: "every 2 days", int_7: "weekly", int_14: "every 2 weeks", int_30: "monthly", int_91: "quarterly", int_182: "every 6 months", int_365: "yearly",
     toast_pt_done: "Done", toast_asked: "Asked", toast_ho_yes: "Great, it is yours", toast_ho_no: "Answered", toast_pt_saved: "Saved", toast_pt_deleted: "Deleted",
     toast_skipped: "Skipped for today", toast_applied: "Parent tasks saved", toast_kid_done: "Done",
     del_title: "Delete task?", del_text: "\"{task}\" is removed for good.", del_confirm: "Yes, delete",
+    nt_btn: "New task", nt_btn_for: "New task for {name}", nt_title: "New task", nt_what: "What needs to be done?", nt_search_ph: "Search or type a name…",
+    nt_frequent: "Frequent", nt_own: "Your templates", nt_none: "No template", nt_free: "\"{name}\" without a template", nt_med: "Medication",
+    nt_all: "Show all", nt_less: "Show fewer", nt_own_tag: "Template", nt_cat_tag: "Suggestion", nt_med_tag: "Care", nt_back: "Back",
+    nt_name: "Name", nt_for: "For whom?", nt_each: "Each kid", nt_rotation: "Taking turns", nt_open: "Together / open",
+    nt_each_d: "Every selected kid gets this task.", nt_rotation_d: "One task, the kids take turns.", nt_open_d: "A bonus for everyone; whoever is first.",
+    nt_when: "When?", nt_daily: "Daily", nt_weekdays: "Weekdays", nt_every: "Every N days", nt_once: "Once", nt_every_l: "Every", nt_days_unit: "days", nt_date: "On",
+    nt_days: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"], nt_time: "Time window and reminder (optional)", nt_from: "From", nt_until: "Until", nt_remind: "Remind at",
+    nt_we_times: "Different window on the weekend (Sat/Sun)", nt_we_hint: "Empty = the same window every day.",
+    nt_after: "Only after homework", nt_after_d: "The task opens once the homework is done (or there is none today).",
+    nt_from_tpl: "From the template:", nt_settings: "Settings:", nt_pts: "{n} points", nt_appr: "Approval needed", nt_home: "At home", nt_personal: "Personal",
+    nt_points: "Points", nt_approval: "Parents approve it", nt_together: "May be done together", nt_kind: "Kind", nt_cat_basis: "Duty", nt_cat_bonus: "Bonus", nt_cat_auftrag: "Errand",
+    nt_scope: "Applies to", nt_subs: "Steps", nt_sub_ph: "New step", nt_sub_add: "Add step", nt_sub_del: "Remove step",
+    nt_save: "Create task", nt_save_n: "Create {n} tasks", toast_nt: "Task created", toast_nt_n: "{n} tasks created",
+    nt_need_name: "Please enter a name.", nt_need_kid: "Please pick at least one kid.", nt_need_two: "Taking turns needs at least two kids.",
+    nt_need_days: "Please pick at least one weekday.", nt_need_every: "Please enter 1 to 365 days.", nt_need_date: "Please pick a date.",
+    nt_med_title: "Add medication", nt_med_hint: "Shown to the kid as a step of the morning / evening mission or at a fixed time. Never any points.",
+    nt_c_existing: "Already set up:", nt_c_label: "Name", nt_c_label_ph: "Tablet", nt_c_emoji: "Emoji", nt_c_anchor: "Shown with",
+    nt_c_anchor_morning: "Morning mission", nt_c_anchor_evening: "Evening mission", nt_c_anchor_time: "Fixed time", nt_c_time: "At", nt_c_after: "Position: after step", nt_c_after_end: "At the end",
+    nt_c_deadline: "Parents are told if unanswered at", nt_c_default: "Default", nt_c_days: "Days", nt_c_notify: "Tell parents when declined or unanswered",
+    nt_c_more: "More options (alerts, history): Settings > Kids.", nt_c_save: "Save medication", toast_nt_care: "Medication saved",
+    nt_c_max: "At most 6 medications per kid.",
     undo_text_parent: "The task is open again."
   },
   de: {
@@ -122,17 +169,64 @@ const I18N_PARENTS = {
     pt_all_done: "Heute ist nichts mehr offen.", pt_partner: "Bei {name} heute ({n})", pt_other: "den anderen", pt_done_today: "Heute erledigt ({n})",
     skip_btn: "Aussetzen", skip_all: "Heute alles aussetzen", skip_title: "{name}: heute aussetzen", skip_none: "Heute ist nichts offen.",
     kid_today: "Heute: {done} von {total} erledigt", kid_no_tasks: "Keine Aufgaben für heute.",
+    rot_title: "🔁 Im Wechsel", rot_today: "Heute: {a} · nächstes Mal: {b}", rot_next: "Als Nächstes: {a} · danach: {b}",
+    rot_swap: "Statt {cur}: {name}", rot_skip: "Dienst von {cur} überspringen", toast_rot: "Dienst geändert",
+    care_title: "💊 Gesundheit heute", care_none_today: "Heute ist nichts fällig.", care_given: "✓ gegeben", care_given_title: "Als gegeben eintragen",
+    care_st_taken: "genommen", care_st_taken_by: "von Eltern gegeben", care_st_declined: "heute nicht", care_st_unanswered: "keine Antwort", care_st_open: "offen",
+    care_history: "Letzte 7 Tage", care_hist_title: "💊 Gesundheit", care_legend: "✓ genommen · – heute nicht · ! keine Antwort",
     st_open: "offen", st_waiting: "wartet auf Freigabe", st_done: "erledigt", for_kid: "Für {name} erledigen",
     m_ptasks: "Eltern-Aufgaben", m_ptasks_d: "Wer macht was, Planung, Dauer", m_tasks: "Aufgaben", m_tasks_d: "Kinder-Aufgaben und Vorlagen",
     m_shop: "Shop", m_shop_d: "Einlösungen und Belohnungen", m_settings: "Einstellungen", m_settings_d: "Kinder, Punkte, Benachrichtigungen",
+    m_absence: "Abwesenheit", m_absence_d: "Urlaub, Kind weg, krank",
+    abs_trip: "Familie verreist", abs_away: "Kind weg", abs_sick: "Krank", abs_school_holiday: "Schulferien",
+    abs_hint_school_holiday: "Nur Schulisches pausiert (Hausaufgaben, Schulranzen, Brotdose). Alles andere läuft weiter. Kein Kind gewählt = alle Kinder.",
+    abs_calendar: "Kalender", abs_banner_school: "📚 Schulferien bis {date} - Hausaufgaben und Schulschritte pausieren.", abs_kids: "Wer?", abs_from: "Von", abs_to: "Bis (einschl.)", abs_note: "Notiz (optional)",
+    abs_note_ph: "z. B. Oma, Klassenfahrt", abs_personal: "Persönliche Aufgaben behalten (Missionen, Routinen)", abs_care: "Medikamente laufen weiter",
+    abs_hint_trip: "Haushaltsaufgaben und Erinnerungen pausieren. Medikamente laufen weiter.", abs_hint_away: "Alle Aufgaben der gewählten Kinder pausieren, Rotationen überspringen sie.",
+    abs_hint_sick: "Haushaltsaufgaben pausieren. Medikamente laufen weiter.", abs_create: "Speichern", abs_none: "Keine Abwesenheit eingetragen.", abs_new: "Abwesenheit eintragen",
+    abs_active: "Jetzt", abs_upcoming: "Geplant", abs_end: "Heute beenden", abs_delete: "Löschen", abs_until: "bis {date}", abs_range: "{from} – {to}",
+    abs_banner_trip: "🌴 Familie verreist bis {date} - Haushaltsaufgaben und Erinnerungen pausieren.", abs_banner_kids: "{names} {kind} bis {date} - Aufgaben pausieren.",
+    abs_kind_away: "weg", abs_kind_sick: "krank", abs_need_kids: "Mindestens ein Kind wählen.", abs_bad_dates: "Daten prüfen (Ende nicht vor Beginn, höchstens 120 Tage).",
+    toast_abs_saved: "Abwesenheit gespeichert", toast_abs_ended: "Abwesenheit beendet", toast_abs_deleted: "Abwesenheit gelöscht", abs_paused_note: "pausiert",
     m_help: "Hilfe", m_help_d: "So funktioniert alles", embed_missing: "Dieser Bereich ist nicht verfügbar. Bitte die Seite neu laden.",
     mode_me: "Ich", mode_you: "Du", mode_alt: "Abwechselnd", pt_minutes_lbl: "Minuten", pt_from_templates: "Aus Vorlagen", pt_own: "Eigene Aufgabe",
     pick_kid: "Für wen?", picker_apply: "Übernehmen", picker_missing: "Die Vorlagenliste konnte nicht geladen werden.",
-    own_title: "Eigene Eltern-Aufgabe", own_name: "Name", own_name_ph: "z. B. Pflanzen gießen", own_interval: "Wiederholung", own_planning: "Planungsaufgabe", own_who: "Wer macht es?", own_create: "Hinzufügen",
+    pt_steps: "Checkliste", own_steps: "Schritte (einer pro Zeile, optional)", own_steps_ph: "z. B. Taschen packen", own_days: "An diesen Tagen",
+    pt_hint_bedding: "🛏 Betten abziehen und Wäsche waschen", pt_todo_btn: "🛒 Auf die Einkaufsliste", pt_todo_title: "Einkaufsliste",
+    pt_todo_item: "Was fehlt?", pt_todo_item_ph: "z. B. Milch", pt_todo_add: "Hinzufügen", toast_todo_added: "Auf der Einkaufsliste",
+    toast_todo_err: "Die Einkaufsliste ist nicht erreichbar", pt_ed_more: "Tage, Schritte, Einkaufsliste", pt_ed_days: "Wiederholt sich am",
+    pt_ed_steps: "Schritte (einer pro Zeile)", pt_ed_todo: "Einkaufsliste", pt_ed_todo_none: "— keine —",
+    nt_c_stock: "Vorrat (Tabletten, optional)", nt_c_perdose: "Tabletten pro Gabe", nt_c_stock_d: "Eine Woche bevor er reicht, bekommt ihr die Aufgabe \"Rezept/Nachkauf\".",
+    own_title: "Neue Aufgabe", own_name: "Name", own_name_ph: "z. B. Zahnarzt anrufen", own_interval: "Wiederholung", own_planning: "Planungsaufgabe", own_who: "Wer macht es?", own_create: "Hinzufügen",
+    pt_add: "Aufgabe hinzufügen", pt_g_overdue: "Überfällig", pt_g_today: "Heute", pt_g_upcoming: "Demnächst", pt_g_someday: "Irgendwann",
+    pt_tomorrow: "Morgen", pt_postpone: "→ Morgen", toast_pt_postponed: "Auf morgen verschoben", pt_overdue_since: "überfällig seit {day}",
+    qa_when: "Wann?", qa_today: "Heute", qa_tomorrow: "Morgen", qa_weekend: "Wochenende", qa_date: "Datum", qa_someday: "Irgendwann",
+    qa_more: "Mehr Optionen", qa_time: "Uhrzeit (optional)", qa_need_date: "Bitte ein Datum wählen.",
     int_0: "einmalig", int_1: "täglich", int_2: "alle 2 Tage", int_7: "wöchentlich", int_14: "alle 2 Wochen", int_30: "monatlich", int_91: "vierteljährlich", int_182: "halbjährlich", int_365: "jährlich",
     toast_pt_done: "Erledigt", toast_asked: "Nachgefragt", toast_ho_yes: "Super, die Aufgabe gehört dir", toast_ho_no: "Antwort gesendet", toast_pt_saved: "Gespeichert", toast_pt_deleted: "Gelöscht",
     toast_skipped: "Für heute ausgesetzt", toast_applied: "Eltern-Aufgaben gespeichert", toast_kid_done: "Erledigt",
     del_title: "Aufgabe löschen?", del_text: "„{task}“ wird endgültig entfernt.", del_confirm: "Ja, löschen",
+    nt_btn: "Neue Aufgabe", nt_btn_for: "Neue Aufgabe für {name}", nt_title: "Neue Aufgabe", nt_what: "Was soll erledigt werden?", nt_search_ph: "Suchen oder Namen eingeben…",
+    nt_frequent: "Häufig", nt_own: "Eigene Vorlagen", nt_none: "Ohne Vorlage", nt_free: "„{name}“ ohne Vorlage", nt_med: "Medikament",
+    nt_all: "Alle anzeigen", nt_less: "Weniger anzeigen", nt_own_tag: "Vorlage", nt_cat_tag: "Vorschlag", nt_med_tag: "Gesundheit", nt_back: "Zurück",
+    nt_name: "Name", nt_for: "Für wen?", nt_each: "Jedes Kind", nt_rotation: "Im Wechsel", nt_open: "Gemeinsam / offen",
+    nt_each_d: "Jedes gewählte Kind bekommt die Aufgabe.", nt_rotation_d: "Eine Aufgabe, die Kinder wechseln sich ab.", nt_open_d: "Ein Bonus für alle; wer zuerst kommt.",
+    nt_when: "Wann?", nt_daily: "Täglich", nt_weekdays: "Wochentage", nt_every: "Alle N Tage", nt_once: "Einmal", nt_every_l: "Alle", nt_days_unit: "Tage", nt_date: "Am",
+    nt_days: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"], nt_time: "Zeitfenster und Erinnerung (optional)", nt_from: "Ab", nt_until: "Bis", nt_remind: "Erinnern um",
+    nt_we_times: "Anderes Zeitfenster am Wochenende (Sa/So)", nt_we_hint: "Leer = jeden Tag dasselbe Zeitfenster.",
+    nt_after: "Erst nach den Hausaufgaben", nt_after_d: "Die Aufgabe öffnet, sobald die Hausaufgaben erledigt sind (oder heute keine anstehen).",
+    nt_from_tpl: "Aus der Vorlage:", nt_settings: "Einstellungen:", nt_pts: "{n} Punkte", nt_appr: "Freigabe nötig", nt_home: "Zuhause", nt_personal: "Persönlich",
+    nt_points: "Punkte", nt_approval: "Eltern geben frei", nt_together: "Darf gemeinsam erledigt werden", nt_kind: "Art", nt_cat_basis: "Pflicht", nt_cat_bonus: "Bonus", nt_cat_auftrag: "Auftrag",
+    nt_scope: "Gilt für", nt_subs: "Teilschritte", nt_sub_ph: "Neuer Schritt", nt_sub_add: "Schritt hinzufügen", nt_sub_del: "Schritt entfernen",
+    nt_save: "Aufgabe anlegen", nt_save_n: "{n} Aufgaben anlegen", toast_nt: "Aufgabe angelegt", toast_nt_n: "{n} Aufgaben angelegt",
+    nt_need_name: "Bitte einen Namen eingeben.", nt_need_kid: "Bitte mindestens ein Kind wählen.", nt_need_two: "Im Wechsel braucht mindestens zwei Kinder.",
+    nt_need_days: "Bitte mindestens einen Wochentag wählen.", nt_need_every: "Bitte 1 bis 365 Tage eingeben.", nt_need_date: "Bitte ein Datum wählen.",
+    nt_med_title: "Medikament eintragen", nt_med_hint: "Erscheint beim Kind als Schritt der Morgen- / Abend-Mission oder zu einer festen Uhrzeit. Nie Punkte.",
+    nt_c_existing: "Schon eingetragen:", nt_c_label: "Name", nt_c_label_ph: "Tablette", nt_c_emoji: "Emoji", nt_c_anchor: "Erscheint bei",
+    nt_c_anchor_morning: "Morgen-Mission", nt_c_anchor_evening: "Abend-Mission", nt_c_anchor_time: "Feste Uhrzeit", nt_c_time: "Um", nt_c_after: "Position: nach Schritt", nt_c_after_end: "am Ende",
+    nt_c_deadline: "Eltern erfahren es, wenn bis dahin keine Antwort kommt", nt_c_default: "Standard", nt_c_days: "Tage", nt_c_notify: "Eltern benachrichtigen bei „Heute nicht“ oder keiner Antwort",
+    nt_c_more: "Weitere Optionen (Alarm, Verlauf): Einstellungen > Kinder.", nt_c_save: "Medikament speichern", toast_nt_care: "Medikament gespeichert",
+    nt_c_max: "Höchstens 6 Medikamente pro Kind.",
     undo_text_parent: "Die Aufgabe ist wieder offen."
   }
 };
@@ -230,7 +324,13 @@ class FamilyMissionParents extends HTMLElement {
     this._pickKid = null;         // kid chooser purpose: 'praise' | 'skip'
     this._skip = null;            // skip sheet { kidId }
     this._own = null;             // own parent task sheet
+    this._todo = null;            // "to the shopping list" sheet { id, item }
+    this._nt = null;              // new task flow state
+    this._flowCatalog = null;     // localized kids catalog (family_mission/kids_catalog)
+    this.templates = {};
     this._del = null;             // parent task id to delete
+    this._abs = null;             // absence sheet state
+    this.absences = [];
     this._picker = null;          // <family-mission-parents-picker> element while its sheet is open
     this._toastTimer = null;
     this._readyConn = null;       // connection whose "ready" (reconnected) event we listen to
@@ -245,6 +345,16 @@ class FamilyMissionParents extends HTMLElement {
     this.shadowRoot.addEventListener('input', (ev) => this._onInput(ev));
     this.shadowRoot.addEventListener('toggle', (ev) => this._onToggle(ev), true);
     this.shadowRoot.addEventListener('change', (ev) => this._onChange(ev));
+    this.shadowRoot.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' && ev.target && ev.target.id === 'own-name' && this._own && this._own.name.trim()) { ev.preventDefault(); this._submitOwn(); }
+      if (ev.key === 'Enter' && ev.target && ev.target.id === 'todo-item' && this._todo && this._todo.item.trim()) { ev.preventDefault(); this._submitTodo(); }
+      if (ev.key === 'Enter' && ev.target && this._nt) {
+        const id = ev.target.id;
+        if (id === 'nt-q' && this._nt.q.trim()) { ev.preventDefault(); this._ntPick('none', ''); }
+        else if (id === 'nt-newsub') { ev.preventDefault(); this._ntAddSub(); this._renderLayer(); const i = this.shadowRoot.getElementById('nt-newsub'); if (i) i.focus(); }
+        else if (id === 'nt-name' && !this._ntProblem()) { ev.preventDefault(); this._ntSave(); }
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -405,6 +515,10 @@ class FamilyMissionParents extends HTMLElement {
       this.wallet = data.wallet || {};
       this.redemptions = data.redemptions || {};
       this.tasks = data.tasks || {};
+      this.templates = data.templates || {};
+      this.careToday = data.care_today || {};
+      this.careLog = Array.isArray(data.care_log) ? data.care_log : [];
+      this.absences = Array.isArray(data.absences) ? data.absences : [];
       this.adults = Array.isArray(data.adults) ? data.adults : [];
       this.pushWarning = data.push_warning || null;
       this.me = data.me || null;
@@ -531,16 +645,28 @@ class FamilyMissionParents extends HTMLElement {
   _onChange(ev) {
     const el = ev.target;
     if (!el || !el.dataset) return;
+    if (this._nt && el.id && el.id.startsWith('nt-') && this._ntInput(el)) return;
     if (el.dataset.ptMin !== undefined) {
       const n = parseInt(el.value);
       if (n >= 1 && n <= 600) this._ptSet(el.dataset.ptMin, { minutes: n });
       else this._render();
-    } else if (el.id === 'own-int' && this._own) this._own.interval = parseInt(el.value);
+    } else if (el.dataset.ptSteps !== undefined) {
+      this._ptSet(el.dataset.ptSteps, { subtasks: this._stepLines(el.value) });
+    } else if (el.dataset.ptTodo !== undefined) {
+      this._ptSet(el.dataset.ptTodo, { todo_entity: el.value || null });
+    } else if (el.id === 'abs-from' && this._abs) { this._abs.from = el.value; if (this._abs.to < el.value) this._abs.to = el.value; this._renderLayer(); }
+    else if (el.id === 'abs-to' && this._abs) this._abs.to = el.value;
+    else if (el.id === 'abs-personal' && this._abs) this._abs.personal = el.checked;
+    else if (el.id === 'abs-care' && this._abs) this._abs.care = el.checked;
+    else if (el.id === 'own-int' && this._own) this._own.interval = parseInt(el.value);
+    else if (el.id === 'own-date' && this._own) { this._own.date = el.value; this._own.when = 'custom'; this._renderLayer(); }
+    else if (el.id === 'own-time' && this._own) this._own.time = el.value;
     else if (el.id === 'own-plan' && this._own) this._own.planning = el.checked;
   }
 
   _onInput(ev) {
     const el = ev.target;
+    if (this._nt && el.id && el.id.startsWith('nt-') && this._ntInput(el)) return;
     if (el.dataset && el.dataset.rw !== undefined && this._rw) {
       const row = this._rw.list[parseInt(el.dataset.rw)];
       if (!row) return;
@@ -550,6 +676,7 @@ class FamilyMissionParents extends HTMLElement {
       else row[f] = el.value;
       return;
     }
+    if (el.id === 'abs-note' && this._abs) { this._abs.note = el.value; return; }
     if (el.id === 'praise-input' && this._praise) {
       this._praise.message = el.value;
       this.shadowRoot.querySelectorAll('[data-action="praise-chip"]').forEach(c => c.classList.toggle('on', c.dataset.text === el.value));
@@ -562,6 +689,12 @@ class FamilyMissionParents extends HTMLElement {
       if (btn) btn.disabled = !el.value.trim();
     } else if (el.id === 'own-min' && this._own) {
       this._own.minutes = el.value;
+    } else if (el.id === 'own-steps' && this._own) {
+      this._own.steps = el.value;
+    } else if (el.id === 'todo-item' && this._todo) {
+      this._todo.item = el.value;
+      const btn = this.shadowRoot.getElementById('todo-add');
+      if (btn) btn.disabled = !el.value.trim();
     } else if (el.id === 'adhoc-name' && this._adhoc) {
       this._adhoc.name = el.value;
       this._updateAdhocState();
@@ -579,7 +712,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'not-done') this._reject(el.dataset.id, 'not_done');
     else if (action === 'cheated') { this._confirm = el.dataset.id; this._renderLayer(); }
     else if (action === 'cheated-confirm') { const id = this._confirm; this._confirm = null; this._renderLayer(); this._reject(id, 'cheated'); }
-    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._del = null; this._picker = null; this._renderLayer(); }
+    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._todo = null; this._nt = null; this._del = null; this._picker = null; this._abs = null; this._renderLayer(); }
     else if (action === 'tab') this._setTab(el.dataset.tab);
     else if (action === 'goto-approvals') { const sec = this.shadowRoot.getElementById('appr-section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     else if (action === 'pw-setup') {
@@ -590,12 +723,29 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'kid-select') { this._kidSel = el.dataset.kid; this._render(); }
     else if (action === 'more-open') { this._more = el.dataset.sub; this._render(); }
     else if (action === 'more-back') { this._more = null; this._render(); }
+    else if (action === 'abs-new') this._openAbsence();
+    else if (action === 'abs-kind' && this._abs) this._absKind(el.dataset.kind);
+    else if (action === 'abs-kid' && this._abs) { const k = el.dataset.kid; const i = this._abs.kids.indexOf(k); if (i >= 0) this._abs.kids.splice(i, 1); else this._abs.kids.push(k); this._renderLayer(); }
+    else if (action === 'abs-save') this._saveAbsence();
+    else if (action === 'abs-end') this._absCall('abs:' + el.dataset.id, { type: 'family_mission/absence_end', absence_id: el.dataset.id }, 'toast_abs_ended');
+    else if (action === 'abs-del') this._absCall('abs:' + el.dataset.id, { type: 'family_mission/absence_delete', absence_id: el.dataset.id }, 'toast_abs_deleted');
+    else if (action === 'abs-open') { this._setTab('more'); this._more = 'absence'; this._render(); }
     else if (action === 'pt-done') this._ptDone(el.dataset.id);
     else if (action === 'pt-ask') this._ptAsk(el.dataset.id);
     else if (action === 'ho-yes') this._hoAnswer(el.dataset.id, true);
     else if (action === 'ho-no') this._hoAnswer(el.dataset.id, false);
     else if (action === 'pt-plan') { const t = this._task(el.dataset.id); if (t) this._ptSet(t.id, { planning: !t.planning }); }
     else if (action === 'pt-mode') { if (this._ptMode(this._task(el.dataset.id) || {}) !== el.dataset.mode) this._ptSet(el.dataset.id, { mode: el.dataset.mode }); }
+    else if (action === 'pt-step') this._ptStep(el.dataset.id, parseInt(el.dataset.i));
+    else if (action === 'pt-todo') { this._todo = { id: el.dataset.id, item: '' }; this._renderLayer(); const i = this.shadowRoot.getElementById('todo-item'); if (i) i.focus(); }
+    else if (action === 'todo-add') this._submitTodo();
+    else if (action === 'pt-wd') this._ptWeekday(el.dataset.id, parseInt(el.dataset.d));
+    else if (action === 'own-wd' && this._own) {
+      const d = parseInt(el.dataset.d);
+      const i = this._own.wd.indexOf(d);
+      if (i >= 0) this._own.wd.splice(i, 1); else this._own.wd.push(d);
+      this._renderLayer();
+    }
     else if (action === 'pt-del') { this._del = el.dataset.id; this._renderLayer(); }
     else if (action === 'pt-del-confirm') this._ptDelete();
     else if (action === 'pt-picker') this._openPicker();
@@ -603,8 +753,13 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'pt-new') this._openOwn();
     else if (action === 'own-mode' && this._own) { this._own.mode = el.dataset.mode; this._renderLayer(); }
     else if (action === 'own-create') this._submitOwn();
+    else if (action === 'own-when' && this._own) { this._own.when = el.dataset.when; if (el.dataset.when === 'custom' && !this._own.date) this._own.date = this._addDays(this._todayKey(), 2); this._renderLayer(); }
+    else if (action === 'pt-postpone') this._ptPostpone(el.dataset.id);
     else if (action === 'kt-done') this._ktDone(el.dataset.id, el.dataset.kid);
+    else if (action === 'care-given') this._careGiven(el.dataset.kid, el.dataset.care);
     else if (action === 'kt-skip') this._ktSkip(el.dataset.id);
+    else if (action === 'rot-swap') this._rotAction(el.dataset.id, 'swap', el.dataset.member);
+    else if (action === 'rot-skip') this._rotAction(el.dataset.id, 'skip');
     else if (action === 'skip-all') this._skipAll(el.dataset.kid);
     else if (action === 'praise-pick') this._pickKidFor('praise');
     else if (action === 'skip-pick') this._pickKidFor('skip');
@@ -612,6 +767,8 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'undo') { this._undo = el.dataset.id; this._renderLayer(); }
     else if (action === 'undo-confirm') this._doUndo();
     else if (action === 'adhoc-open') this._openAdhoc();
+    else if (action === 'nt-open') this._openNewTask(el.dataset.kid || null);
+    else if (action.startsWith('nt-')) this._ntAction(action, el);
     else if (action.startsWith('adhoc-')) this._adhocAction(action, el);
     else if (action === 'adjust') this._openSheet(el.dataset.kid, parseInt(el.dataset.amount));
     else if (action === 'chip') this._pickChip(el.dataset.text);
@@ -1022,7 +1179,7 @@ class FamilyMissionParents extends HTMLElement {
   }
 
   _parentTasksToday() {
-    return this._parentTasksAll().filter(t => this._isOpen(t));
+    return this._parentTasksAll().filter(t => this._isOpen(t) && !t.absent_all);
   }
 
   _parentDoneToday() {
@@ -1041,10 +1198,57 @@ class FamilyMissionParents extends HTMLElement {
     return (this._persons()[uid] || {}).name || uid || '';
   }
 
+  /** Rotation members in turn order starting with the current one (same rule as the backend), or []. */
+  _rotationOrder(t) {
+    const r = t && t.rotation;
+    if (!r || !Array.isArray(r.members) || !r.members.length) return [];
+    const n = r.members.length;
+    const idx = Number.isInteger(r.index) && r.index >= 0 ? r.index : 0;
+    const order = r.members.map((_, i) => r.members[(idx + i) % n]);
+    // an absent member is passed over: the backend names the member whose turn it really is
+    const cur = order.indexOf(t.rotation_current);
+    return cur > 0 ? order.slice(cur).concat(order.slice(0, cur)) : order;
+  }
+
+  /** Who has the task as a duty: the member whose turn it is for a rotation task, else the assignees. */
+  _assigneesOf(t) {
+    const order = this._rotationOrder(t);
+    return order.length ? [order[0]] : (Array.isArray(t.assignees) ? t.assignees : (t.assignees ? [t.assignees] : []));
+  }
+
+  /** Rotation tasks the kid takes part in: "today: X, next time: Y" with swap / skip actions. */
+  _renderRotation(kid) {
+    const tasks = this._taskList().filter(t => !t.parent_task && this._rotationOrder(t).includes(kid.id));
+    if (!tasks.length) return '';
+    const name = (id) => this._kid(id).name;
+    const rows = tasks.map(t => {
+      const order = this._rotationOrder(t);
+      const busy = this._busy.has('rot:' + t.id) ? 'disabled' : '';
+      const line = this.localize(this._isOpen(t) ? 'rot_today' : 'rot_next', { a: name(order[0]), b: name(order[1] || order[0]) });
+      const swaps = order.slice(1).map(m =>
+        `<button class="btn neutral sm" data-action="rot-swap" data-id="${escParents(t.id)}" data-member="${escParents(m)}" ${busy}>${escParents(this.localize('rot_swap', { cur: name(order[0]), name: name(m) }))}</button>`).join('');
+      return `
+        <div class="trow">
+          <div class="trow-top"><span class="trow-name">${escParents(t.name)}</span></div>
+          <div class="rot-line">${escParents(line)}</div>
+          <div class="trow-actions">${swaps}
+            <button class="btn neutral sm" data-action="rot-skip" data-id="${escParents(t.id)}" ${busy}>⏭️ ${escParents(this.localize('rot_skip', { cur: name(order[0]) }))}</button>
+          </div>
+        </div>`;
+    }).join('');
+    return `<h3 class="sub">${escParents(this.localize('rot_title'))}</h3><div class="trows">${rows}</div>`;
+  }
+
+  _rotAction(taskId, action, member) {
+    const payload = { type: 'family_mission/rotation_action', task_id: taskId, action };
+    if (member) payload.member = member;
+    return this._call('rot:' + taskId, payload, this.localize('toast_rot'));
+  }
+
   /** Today's tasks of one kid: open ones, waiting for approval and done today. */
   _kidToday(kid) {
     const today = this._todayKey();
-    const open = this._taskList().filter(t => !t.parent_task && (t.assignees || []).includes(kid.id) && this._isOpen(t))
+    const open = this._taskList().filter(t => !t.parent_task && this._assigneesOf(t).includes(kid.id) && this._isOpen(t) && !(t.absent_for || []).includes(kid.id))
       .sort((a, b) => String(a.name).localeCompare(String(b.name)));
     const done = this.history.filter(h => h.type === 'task' && h.user_id === kid.id && this._dateKey(h.timestamp) === today);
     const waiting = this._pendingList().filter(p => p.kid_id === kid.id);
@@ -1081,6 +1285,44 @@ class FamilyMissionParents extends HTMLElement {
 
   _ptDone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_done', task_id: id }, this.localize('toast_pt_done')); }
 
+  _ptPostpone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_postpone', task_id: id }, this.localize('toast_pt_postponed')); }
+
+  /** Ticks a checklist step of a parent task (progress only, never blocks the tick-off). */
+  _ptStep(id, index) {
+    return this._call('pt:' + id, { type: 'family_mission/parent_toggle_step', task_id: id, index });
+  }
+
+  /** The lines of a textarea as step titles. */
+  _stepLines(text) { return String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).slice(0, 12); }
+
+  /** Switches one weekday of a parent task on / off. */
+  _ptWeekday(id, day) {
+    const t = this._task(id);
+    if (!t) return;
+    const days = (t.weekdays || []).slice();
+    const i = days.indexOf(day);
+    if (i >= 0) days.splice(i, 1); else days.push(day);
+    days.sort((a, b) => a - b);
+    return this._ptSet(id, { weekdays: days });
+  }
+
+  /** Number of open items of the shopping list linked to a parent task (null when not linked or unknown). */
+  _todoCount(t) {
+    const st = t && t.todo_entity && this._hass && this._hass.states ? this._hass.states[t.todo_entity] : null;
+    const n = st ? parseInt(st.state) : NaN;
+    return isNaN(n) ? null : n;
+  }
+
+  async _submitTodo() {
+    const td = this._todo;
+    if (!td || !td.item.trim()) return;
+    this._todo = null;
+    this._renderLayer();
+    const res = await this._call('todo:' + td.id, { type: 'family_mission/parent_todo_add', task_id: td.id, item: td.item.trim().slice(0, 100) });
+    if (res && res.success) this._toast(this.localize('toast_todo_added'));
+    else if (res) this._toast(this.localize('toast_todo_err'));
+  }
+
   _ptAsk(id) { return this._call('pt:' + id, { type: 'family_mission/handover_ask', task_id: id }, this.localize('toast_asked')); }
 
   _hoAnswer(id, accept) {
@@ -1103,6 +1345,11 @@ class FamilyMissionParents extends HTMLElement {
 
   _ktDone(taskId, kidId) {
     return this._call('kt:' + taskId, { type: 'family_mission/parent_complete_for', task_id: taskId, kid_id: kidId }, this.localize('toast_kid_done'));
+  }
+
+  /** A parent confirms that the medication was given (status taken, confirmed_by = the parent). */
+  _careGiven(kidId, careId) {
+    return this._call('care:' + kidId + ':' + careId, { type: 'family_mission/care_confirm', kid_id: kidId, care_id: careId }, this.localize('toast_kid_done'));
   }
 
   _ktSkip(taskId) {
@@ -1151,22 +1398,764 @@ class FamilyMissionParents extends HTMLElement {
   // ---- own parent task sheet ---------------------------------------------------
 
   _openOwn() {
-    this._own = { name: '', minutes: 20, interval: 7, planning: false, mode: 'me' };
+    this._own = { name: '', minutes: 20, interval: 0, planning: false, mode: 'me', when: 'today', date: '', time: '', wd: [], steps: '' };
     this._renderLayer();
     const input = this.shadowRoot.getElementById('own-name');
     if (input) input.focus();
   }
 
+  /** YYYY-MM-DD key of a local date. */
+  _keyOf(d) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  /** The key ``n`` days after the key ``key`` (local calendar days, DST safe). */
+  _addDays(key, n) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key || '');
+    if (!m) return null;
+    return this._keyOf(new Date(+m[1], +m[2] - 1, +m[3] + n));
+  }
+
+  /** Date chosen in the quick-add sheet as YYYY-MM-DD, '' for "someday" or an unfinished custom date. */
+  _ownDate(o) {
+    const today = this._todayKey();
+    if (o.when === 'today') return today;
+    if (o.when === 'tomorrow') return this._addDays(today, 1);
+    if (o.when === 'weekend') {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
+      const dow = new Date(+m[1], +m[2] - 1, +m[3]).getDay();   // 0 = Sunday
+      return dow === 0 ? today : this._addDays(today, (6 - dow) % 7);
+    }
+    if (o.when === 'custom') return /^\d{4}-\d{2}-\d{2}$/.test(o.date || '') ? o.date : '';
+    return '';
+  }
+
   async _submitOwn() {
     const o = this._own;
     if (!o || !o.name.trim()) return;
+    const due = this._ownDate(o);
+    if (o.when === 'custom' && !due) { this._toast(this.localize('qa_need_date')); return; }
     const payload = { type: 'family_mission/parent_task_add', name: o.name.trim().slice(0, 60), planning: !!o.planning, interval: o.interval, mode: this.partner ? o.mode : 'me' };
+    if (due) {
+      payload.due_date = due;
+      if (/^\d{2}:\d{2}$/.test(o.time || '')) payload.due_time = o.time;
+    }
     const minutes = parseInt(o.minutes);
     if (minutes >= 1 && minutes <= 600) payload.minutes = minutes;
+    if (o.wd.length) payload.weekdays = o.wd.slice().sort((a, b) => a - b);
+    const steps = this._stepLines(o.steps);
+    if (steps.length) payload.subtasks = steps;
     if (this.me) payload.me = this.me;
     this._own = null;
     this._renderLayer();
     await this._call('own', payload, this.localize('toast_pt_saved'));
+  }
+
+  // ---- new task flow ("Neue Aufgabe": template -> for whom / when -> save) ------------
+
+  /** Opens the flow (managers only; daily parents get the spontaneous bonus sheet as before). */
+  _openNewTask(kidId) {
+    if (!this._canManage()) { this._openAdhoc(); return; }
+    const kids = this._kids();
+    this._nt = {
+      step: 1, q: '', showAll: false, tpl: null, newSub: '',
+      kids: kidId ? [kidId] : kids.map(k => k.id),
+      who: 'each', name: '', points: 2, approval: false, together: false, minAge: 0, category: 'basis', scope: 'home',
+      icon: 'mdi:star', catalogKey: null, subtasks: [],
+      when: 'daily', wd: [], every: 2, date: this._todayKey(), from: '', until: '', remind: '',
+      care: null
+    };
+    this._renderLayer();
+    const input = this.shadowRoot.getElementById('nt-q');
+    if (input) input.focus();
+    if (!this._flowCatalog) this._loadFlowCatalog();
+  }
+
+  async _loadFlowCatalog() {
+    if (this._flowCatalogBusy) return;
+    this._flowCatalogBusy = true;
+    try {
+      const res = await this._hass.callWS({ type: 'family_mission/kids_catalog' });
+      this._flowCatalog = Array.isArray(res && res.entries) ? res.entries : [];
+      this._flowKidAges = (res && res.kid_ages) || {};
+    } catch (err) {
+      console.warn('FamilyMission Parents: catalog could not be loaded', err);
+      this._flowCatalog = [];
+    }
+    this._flowCatalogBusy = false;
+    if (this._nt && this._nt.step === 1) this._renderLayer();
+  }
+
+  _ntNorm(text) { return String(text || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, ''); }
+
+  /** Search hits for step 1: [{src: 'catalog'|'own'|'care', key, name}] (the free text row is added by the renderer). */
+  _ntMatches(q) {
+    const words = this._ntNorm(q).split(/\s+/).filter(Boolean);
+    const hit = (name) => { const n = this._ntNorm(name); return words.every(w => n.includes(w)); };
+    const out = [];
+    const medWords = ['medik', 'tablet', 'pill', 'medic', 'tropfen', 'drops', 'inhal', 'vitamin'];
+    if (!words.length || words.every(w => medWords.some(m => m.includes(w) || w.includes(m)))) {
+      if (this._kids().length) out.push({ src: 'care', key: 'care', name: '💊 ' + this.localize('nt_med') });
+    }
+    for (const t of this._ntOwnTemplates()) if (hit(t.name)) out.push({ src: 'own', key: t.id, name: t.name });
+    for (const e of (this._flowCatalog || [])) if (e.available !== false && hit(e.name)) out.push({ src: 'catalog', key: e.key, name: e.name });
+    return out.slice(0, 40);
+  }
+
+  _ntOwnTemplates() {
+    return Object.values(this.templates || {}).filter(t => t && t.name)
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), (this._hass && this._hass.language) || undefined));
+  }
+
+  /** The markup below the search field: chips without a query, a result list with one. */
+  _ntResultsHtml() {
+    const nt = this._nt;
+    const q = nt.q.trim();
+    const chip = (src, key, label, cls = '') =>
+      `<button class="chip ${cls}" data-action="nt-pick" data-src="${src}" data-key="${escParents(key)}">${escParents(label)}</button>`;
+    if (!q) {
+      const catalog = (this._flowCatalog || []).filter(e => e.available !== false);
+      const frequent = nt.showAll ? catalog : catalog.filter(e => e.frequent);
+      const own = this._ntOwnTemplates();
+      const top = [];
+      if (this._kids().length) top.push(chip('care', 'care', '💊 ' + this.localize('nt_med'), 'care'));
+      top.push(chip('none', '', this.localize('nt_none'), 'none'));
+      return `
+        <div class="chips">${top.join('')}</div>
+        ${frequent.length ? `<div class="lbl">${escParents(this.localize('nt_frequent'))}</div>
+          <div class="chips">${frequent.map(e => chip('catalog', e.key, e.name)).join('')}</div>` : (this._flowCatalog ? '' : `<div class="empty small">${escParents(this.localize('loading'))}</div>`)}
+        ${own.length ? `<div class="lbl">${escParents(this.localize('nt_own'))}</div>
+          <div class="chips">${own.map(t => chip('own', t.id, t.name)).join('')}</div>` : ''}
+        ${catalog.length > frequent.length || nt.showAll ? `<button class="chip" data-action="nt-all">${escParents(this.localize(nt.showAll ? 'nt_less' : 'nt_all'))}</button>` : ''}`;
+    }
+    const rows = this._ntMatches(q).map(m =>
+      `<button class="skip-row" data-action="nt-pick" data-src="${m.src}" data-key="${escParents(m.key)}"><span>${escParents(m.name)}</span><span class="skip-go">${escParents(this.localize(m.src === 'own' ? 'nt_own_tag' : m.src === 'care' ? 'nt_med_tag' : 'nt_cat_tag'))}</span></button>`).join('');
+    return `${rows}
+      <button class="skip-row free" data-action="nt-free"><span>${escParents(this.localize('nt_free', { name: q.slice(0, 60) }))}</span><span class="skip-go">↵</span></button>`;
+  }
+
+  /** Time fields as the form state wants them: "HH:MM" or ''. */
+  _ntTime(value) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(value || '') ? value : ''; }
+
+  /** Step titles of a catalog entry for the selected kids: steps with a higher min_age than the youngest kid are left out. */
+  _ntCatalogSteps(entry) {
+    const ages = this._nt.kids.map(id => (this._flowKidAges || {})[id]).filter(a => Number.isInteger(a));
+    const youngest = ages.length ? Math.min(...ages) : null;
+    return (entry.subtasks || []).filter(s => youngest === null || !(s.min_age > youngest)).map(s => s.title);
+  }
+
+  /** Takes the defaults of a template (catalog entry, own template) or none and goes to step 2. */
+  _ntPick(src, key) {
+    const nt = this._nt;
+    const kids = this._kids();
+    if (src === 'care') {
+      if (!nt.kids.length) nt.kids = kids.map(k => k.id);
+      nt.care = { label: '', emoji: '💊', anchor: 'morning', time: '08:00', deadline: '', weekdays: [0, 1, 2, 3, 4, 5, 6], notify: true, stock: '', perDose: 1 };
+      nt.step = 'care';
+      this._renderLayer();
+      return;
+    }
+    let src_ = null;
+    let mode = 'each';
+    if (src === 'catalog') {
+      const e = (this._flowCatalog || []).find(x => x.key === key);
+      if (!e) return;
+      const open = e.mode === 'open';
+      src_ = {
+        name: e.name, points: e.points, minAge: e.min_age, category: e.category, scope: e.scope,
+        together: !!e.allow_together, approval: !!e.requires_approval, icon: e.icon,
+        from: e.available_from, until: e.available_until, remind: '', catalogKey: e.key,
+        fromWe: e.available_from_we, untilWe: e.available_until_we, afterKey: e.after_key,
+        subtasks: this._ntCatalogSteps(e), weekdays: Array.isArray(e.weekdays) ? e.weekdays : [],
+        interval: open && e.interval >= 365 ? 0 : e.interval
+      };
+      if (e.mode === 'rotation' && kids.length >= 2) mode = 'rotation';
+      else if (open && kids.length >= 2 && e.category === 'bonus') mode = 'open';
+    } else if (src === 'own') {
+      const t = (this.templates || {})[key];
+      if (!t) return;
+      src_ = {
+        name: t.name, points: t.complexity, minAge: t.min_age, category: t.category, scope: t.scope,
+        together: !!t.allow_together, approval: !!t.requires_approval, icon: t.icon,
+        from: t.available_from, until: t.available_until, remind: t.reminder_at,
+        fromWe: t.available_from_we, untilWe: t.available_until_we, afterKey: t.after_key,
+        catalogKey: t.catalog_key || null, subtasks: (t.subtasks || []).map(s => (s && s.title) || String(s || '')).filter(Boolean),
+        weekdays: Array.isArray(t.weekdays) ? t.weekdays : [], interval: Number.isInteger(t.interval) ? t.interval : 7
+      };
+      const known = (t.assignees || []).filter(id => kids.some(k => k.id === id));
+      if (known.length) nt.kids = known;
+    }
+    if (src_) {
+      nt.tpl = { src, key };
+      nt.name = src_.name || '';
+      nt.points = Math.max(1, Math.min(10, parseInt(src_.points) || 2));
+      nt.minAge = Math.max(0, Math.min(18, parseInt(src_.minAge) || 0));
+      nt.category = ['basis', 'bonus', 'auftrag'].includes(src_.category) ? src_.category : 'basis';
+      nt.scope = src_.scope === 'personal' ? 'personal' : 'home';
+      nt.together = !!src_.together;
+      nt.approval = !!src_.approval;
+      nt.icon = /^mdi:[a-z0-9-]{1,60}$/.test(src_.icon || '') ? src_.icon : 'mdi:star';
+      nt.from = this._ntTime(src_.from);
+      nt.until = this._ntTime(src_.until);
+      nt.fromWe = this._ntTime(src_.fromWe);
+      nt.untilWe = this._ntTime(src_.untilWe);
+      nt.after = src_.afterKey === 'homework';
+      nt.remind = this._ntTime(src_.remind);
+      nt.catalogKey = src_.catalogKey;
+      nt.subtasks = src_.subtasks.slice(0, 20);
+      const wd = (src_.weekdays || []).filter(d => Number.isInteger(d) && d >= 0 && d <= 6);
+      if (wd.length) { nt.when = 'weekdays'; nt.wd = wd; }
+      else if (src_.interval === 0) { nt.when = 'once'; nt.date = this._todayKey(); }
+      else if (src_.interval === 1) nt.when = 'daily';
+      else { nt.when = 'every'; nt.every = Math.max(1, Math.min(365, src_.interval || 7)); }
+    } else {
+      Object.assign(nt, {
+        tpl: { src: 'none', key: '' }, name: nt.q.trim().slice(0, 60), points: 2, minAge: 0, category: 'basis', scope: 'home',
+        together: false, approval: false, icon: 'mdi:star', from: '', until: '', fromWe: '', untilWe: '', after: false, remind: '', catalogKey: null, subtasks: [],
+        when: 'daily', wd: [], every: 2, date: this._todayKey()
+      });
+    }
+    nt.who = mode;
+    if (mode === 'open') nt.category = 'bonus';
+    nt.step = 2;
+    this._renderLayer();
+    const input = this.shadowRoot.getElementById('nt-name');
+    if (input && !nt.name) input.focus();
+  }
+
+  _ntAction(action, el) {
+    const nt = this._nt;
+    if (!nt) return;
+    if (action === 'nt-pick') { this._ntPick(el.dataset.src, el.dataset.key); return; }
+    if (action === 'nt-free') { this._ntPick('none', ''); return; }
+    if (action === 'nt-all') nt.showAll = !nt.showAll;
+    else if (action === 'nt-back') { nt.step = 1; nt.care = null; }
+    else if (action === 'nt-kid') {
+      const i = nt.kids.indexOf(el.dataset.kid);
+      if (i >= 0) nt.kids.splice(i, 1); else nt.kids.push(el.dataset.kid);
+    }
+    else if (action === 'nt-who') { nt.who = el.dataset.who; if (nt.who === 'open') nt.category = 'bonus'; }
+    else if (action === 'nt-when') nt.when = el.dataset.when;
+    else if (action === 'nt-wd') {
+      const d = parseInt(el.dataset.wd);
+      const i = nt.wd.indexOf(d);
+      if (i >= 0) nt.wd.splice(i, 1); else nt.wd.push(d);
+    }
+    else if (action === 'nt-points') nt.points = Math.max(1, Math.min(10, nt.points + parseInt(el.dataset.delta)));
+    else if (action === 'nt-age') nt.minAge = Math.max(0, Math.min(18, nt.minAge + parseInt(el.dataset.delta)));
+    else if (action === 'nt-cat') nt.category = el.dataset.cat;
+    else if (action === 'nt-scope') nt.scope = el.dataset.scope;
+    else if (action === 'nt-icon') nt.icon = el.dataset.icon;
+    else if (action === 'nt-sub-add') this._ntAddSub();
+    else if (action === 'nt-sub-del') nt.subtasks.splice(parseInt(el.dataset.idx), 1);
+    else if (action === 'nt-c-anchor') { nt.care.anchor = el.dataset.anchor; delete nt.care.after; }
+    else if (action === 'nt-c-wd') {
+      const d = parseInt(el.dataset.wd);
+      const i = nt.care.weekdays.indexOf(d);
+      if (i >= 0) nt.care.weekdays.splice(i, 1); else nt.care.weekdays.push(d);
+    }
+    else if (action === 'nt-create') { this._ntSave(); return; }
+    else if (action === 'nt-c-save') { this._ntSaveCare(); return; }
+    this._renderLayer();
+  }
+
+  _ntAddSub() {
+    const nt = this._nt;
+    const title = (nt.newSub || '').trim().slice(0, 60);
+    if (title && nt.subtasks.length < 20) nt.subtasks.push(title);
+    nt.newSub = '';
+  }
+
+  /** Why the form cannot be saved yet: an i18n key or '' when it can. */
+  _ntProblem() {
+    const nt = this._nt;
+    if (!nt.name.trim()) return 'nt_need_name';
+    if (nt.who !== 'open') {
+      if (!nt.kids.length) return 'nt_need_kid';
+      if (nt.who === 'rotation' && nt.kids.length < 2) return 'nt_need_two';
+    }
+    if (nt.when === 'weekdays' && !nt.wd.length) return 'nt_need_days';
+    if (nt.when === 'every' && !(nt.every >= 1 && nt.every <= 365)) return 'nt_need_every';
+    if (nt.when === 'once' && !/^\d{4}-\d{2}-\d{2}$/.test(nt.date || '')) return 'nt_need_date';
+    return '';
+  }
+
+  /** Selected kids that have a homework task (the "only after homework" option needs one). */
+  _ntHomeworkKids() {
+    const nt = this._nt;
+    return (nt ? nt.kids : []).filter(id => this._taskList().some(t => !t.parent_task &&
+      ((t.generated_by === 'wizard' && String(t.wizard_key || '').split(':')[0] === 'homework') || t.catalog_key === 'homework') &&
+      (t.assignees || []).includes(id)));
+  }
+
+  /** The websocket payloads (one add_task per kid for "each kid", else one). */
+  _ntPayloads() {
+    const nt = this._nt;
+    const kids = this._kids().filter(k => nt.kids.includes(k.id)).map(k => k.id);
+    const base = {
+      type: 'family_mission/add_task', name: nt.name.trim().slice(0, 60),
+      interval: nt.when === 'once' ? 0 : nt.when === 'every' ? nt.every : 1,
+      complexity: nt.points, icon: nt.icon, category: nt.who === 'open' ? 'bonus' : nt.category,
+      min_age: nt.minAge, requires_approval: !!nt.approval, allow_together: !!nt.together,
+      scope: nt.scope, subtasks: nt.subtasks.map(title => ({ title, done: false }))
+    };
+    if (nt.catalogKey) base.catalog_key = nt.catalogKey;
+    if (nt.when === 'weekdays') base.weekdays = nt.wd.slice().sort((a, b) => a - b);
+    if (nt.when === 'once') base.custom_due_date = nt.date;
+    if (nt.from) base.available_from = nt.from;
+    if (nt.until) base.available_until = nt.until;
+    if (nt.fromWe) base.available_from_we = nt.fromWe;
+    if (nt.untilWe) base.available_until_we = nt.untilWe;
+    if (nt.after && this._ntHomeworkKids().length) base.after_key = 'homework';
+    if (nt.remind) base.reminder_at = nt.remind;
+    if (nt.who === 'open') return [{ ...base, assignees: [] }];
+    if (nt.who === 'rotation') return [{ ...base, assignees: kids, rotation: { members: kids, index: 0, every: 'occurrence' } }];
+    return kids.map(id => ({ ...base, assignees: [id] }));
+  }
+
+  async _ntSave() {
+    const nt = this._nt;
+    if (!nt || this._busy.has('nt')) return;
+    const problem = this._ntProblem();
+    if (problem) { this._toast(this.localize(problem)); return; }
+    const payloads = this._ntPayloads();
+    this._busy.add('nt');
+    let created = 0;
+    try {
+      for (const payload of payloads) {
+        await this._hass.callWS(payload);
+        created++;
+      }
+      this._nt = null;
+      this._renderLayer();
+      this._toast(this.localize(created > 1 ? 'toast_nt_n' : 'toast_nt', { n: created }));
+    } catch (err) {
+      this._toast(this.localize('err') + (err && err.message ? err.message : ''));
+    }
+    this._busy.delete('nt');
+    this._fetchData();
+  }
+
+  /** The care entry of the compact medication sheet appended to the care list of each selected kid. */
+  async _ntSaveCare() {
+    const nt = this._nt;
+    if (!nt || !nt.care || this._busy.has('nt')) return;
+    if (!nt.kids.length) { this._toast(this.localize('nt_need_kid')); return; }
+    const c = nt.care;
+    if (!c.weekdays.length) { this._toast(this.localize('nt_need_days')); return; }
+    const profiles = this.settings.kids || {};
+    const kids = this._kids().filter(k => nt.kids.includes(k.id));
+    if (kids.some(k => ((profiles[k.id] || {}).care || []).length >= 6)) { this._toast(this.localize('nt_c_max')); return; }
+    this._busy.add('nt');
+    try {
+      for (const kid of kids) {
+        const p = profiles[kid.id] || {};
+        const entry = {
+          id: '', label: (c.label || '').trim().slice(0, 30), emoji: (c.emoji || '').trim() || '💊', anchor: c.anchor,
+          time: c.time || '08:00', weekdays: c.weekdays.slice().sort((a, b) => a - b), notify_parents: !!c.notify,
+          decline_alert: { enabled: false, count: 3, days: 7 }
+        };
+        if (c.deadline) entry.deadline = c.deadline;
+        const stock = parseInt(c.stock);
+        if (c.stock !== '' && stock >= 0 && stock <= 9999) { entry.stock = stock; entry.per_dose = Math.max(1, Math.min(20, parseInt(c.perDose) || 1)); }
+        if (typeof c.after === 'string' && c.anchor !== 'time') entry.after = c.after.slice(0, 60);
+        const payload = {
+          type: 'family_mission/set_kid_profile', participant_id: kid.id, avatar: p.avatar || kid.avatar, color: p.color || kid.color,
+          birth_year: p.birth_year === undefined ? null : p.birth_year, care: (p.care || []).concat([entry])
+        };
+        if (p.birthday) payload.birthday = p.birthday;
+        await this._hass.callWS(payload);
+      }
+      this._nt = null;
+      this._renderLayer();
+      this._toast(this.localize('toast_nt_care'));
+    } catch (err) {
+      this._toast(this.localize('err') + (err && err.message ? err.message : ''));
+    }
+    this._busy.delete('nt');
+    this._fetchData();
+  }
+
+  _ntKidChips() {
+    const nt = this._nt;
+    return this._kids().map(k =>
+      `<button class="chip kidchip ${nt.kids.includes(k.id) ? 'on' : ''}" style="--kc:${k.color}" data-action="nt-kid" data-kid="${escParents(k.id)}" aria-pressed="${nt.kids.includes(k.id)}">${this._avatar(k)} ${escParents(k.name)}</button>`).join('');
+  }
+
+  _renderNtSheet() {
+    const nt = this._nt;
+    const L = (k, r) => escParents(this.localize(k, r));
+    if (nt.step === 'care') return this._renderNtCare();
+    if (nt.step === 1) {
+      return `
+        <div class="scrim" data-action="dialog-close"></div>
+        <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${L('nt_title')}" style="--kc:#F9A825">
+          <div class="grab"></div>
+          <h3>➕ ${L('nt_title')}</h3>
+          <label class="lbl" for="nt-q">${L('nt_what')}</label>
+          <input id="nt-q" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="go" placeholder="${L('nt_search_ph')}" value="${escParents(nt.q)}">
+          <div id="nt-results" class="nt-results">${this._ntResultsHtml()}</div>
+          <div class="dialog-actions"><button class="btn neutral" data-action="dialog-close">${L('cancel')}</button></div>
+        </div>`;
+    }
+    const kids = this._kids();
+    const multi = kids.length >= 2;
+    const whoSeg = multi ? `
+      <div class="seg wide" role="group" aria-label="${L('nt_for')}">${[['each', 'nt_each'], ['rotation', 'nt_rotation'], ['open', 'nt_open']].map(([id, key]) =>
+        `<button class="${nt.who === id ? 'on' : ''}" aria-pressed="${nt.who === id}" data-action="nt-who" data-who="${id}">${L(key)}</button>`).join('')}</div>
+      <p class="nt-hint">${L('nt_' + nt.who + '_d')}</p>` : '';
+    const kidRow = nt.who === 'open' ? '' : `<div class="chips">${this._ntKidChips()}</div>`;
+    const days = this.localize('nt_days');
+    const whenSeg = `<div class="chips">${[['daily', 'nt_daily'], ['weekdays', 'nt_weekdays'], ['every', 'nt_every'], ['once', 'nt_once']].map(([id, key]) =>
+      `<button class="chip ${nt.when === id ? 'on' : ''}" aria-pressed="${nt.when === id}" data-action="nt-when" data-when="${id}">${L(key)}</button>`).join('')}</div>`;
+    const whenDetail = nt.when === 'weekdays'
+      ? `<div class="chips" role="group" aria-label="${L('nt_weekdays')}">${days.map((d, i) =>
+        `<button class="chip ico ${nt.wd.includes(i) ? 'on' : ''}" aria-pressed="${nt.wd.includes(i)}" data-action="nt-wd" data-wd="${i}">${escParents(d)}</button>`).join('')}</div>`
+      : nt.when === 'every'
+        ? `<div class="row"><label class="lbl inline" for="nt-every">${L('nt_every_l')}</label><span class="inl"><input id="nt-every" class="txt num" type="number" min="1" max="365" inputmode="numeric" value="${escParents(nt.every)}"> ${L('nt_days_unit')}</span></div>`
+        : nt.when === 'once'
+          ? `<div class="row"><label class="lbl inline" for="nt-date">${L('nt_date')}</label><input id="nt-date" class="txt" type="date" min="${escParents(this._todayKey())}" value="${escParents(nt.date)}"></div>`
+          : '';
+    const catChips = nt.who === 'open' ? '' : `
+      <div class="lbl">${L('nt_kind')}</div>
+      <div class="chips">${['basis', 'bonus', 'auftrag'].map(c =>
+        `<button class="chip ${nt.category === c ? 'on' : ''}" aria-pressed="${nt.category === c}" data-action="nt-cat" data-cat="${c}">${L('nt_cat_' + c)}</button>`).join('')}</div>`;
+    const icons = PARENTS_ADHOC_ICONS.map(([emoji, icon, key]) =>
+      `<button class="chip ico ${nt.icon === icon ? 'on' : ''}" data-action="nt-icon" data-icon="${icon}" title="${L(key)}" aria-label="${L(key)}" aria-pressed="${nt.icon === icon}">${emoji}</button>`).join('');
+    const subs = nt.subtasks.map((title, i) =>
+      `<div class="nt-sub"><span>${escParents(title)}</span><button class="step sm" data-action="nt-sub-del" data-idx="${i}" aria-label="${L('nt_sub_del')}">×</button></div>`).join('');
+    const parts = [`⭐ ${this.localize('nt_pts', { n: nt.points })}`];
+    if (nt.approval) parts.push(`✅ ${this.localize('nt_appr')}`);
+    parts.push(nt.scope === 'personal' ? `🙋 ${this.localize('nt_personal')}` : `🏠 ${this.localize('nt_home')}`);
+    if (nt.category !== 'basis' || nt.who === 'open') parts.push(this.localize(nt.who === 'open' ? 'nt_cat_bonus' : 'nt_cat_' + nt.category));
+    const summaryTitle = this.localize(nt.tpl && nt.tpl.src !== 'none' ? 'nt_from_tpl' : 'nt_settings');
+    const problem = this._ntProblem();
+    const count = nt.who === 'each' ? nt.kids.length : 1;
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${L('nt_title')}" style="--kc:#F9A825">
+        <div class="grab"></div>
+        <h3>➕ ${L('nt_title')}</h3>
+        <label class="lbl" for="nt-name">${L('nt_name')}</label>
+        <input id="nt-name" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" value="${escParents(nt.name)}">
+        ${whoSeg}
+        ${kidRow}
+        <div class="lbl">${L('nt_when')}</div>
+        ${whenSeg}${whenDetail}
+        <div class="lbl">${L('nt_time')}</div>
+        <div class="nt-times">
+          <label class="inl">${L('nt_from')} <select id="nt-from" class="txt time">${parTimeOptions(nt.from, '—')}</select></label>
+          <label class="inl">${L('nt_until')} <select id="nt-until" class="txt time">${parTimeOptions(nt.until, '—')}</select></label>
+          <label class="inl">${L('nt_remind')} <select id="nt-remind" class="txt time">${parTimeOptions(nt.remind, '—')}</select></label>
+        </div>
+        <div class="nt-summary" id="nt-summary"><strong>${escParents(summaryTitle)}</strong> ${escParents(parts.join(' · '))}</div>
+        <details class="fold" data-det="nt-more" ${this._open.has('det:nt-more') ? 'open' : ''}>
+          <summary>${L('qa_more')}</summary>
+          <div class="lbl">${L('nt_we_times')}</div>
+          <div class="nt-times">
+            <label class="inl">${L('nt_from')} <select id="nt-from-we" class="txt time">${parTimeOptions(nt.fromWe, '—')}</select></label>
+            <label class="inl">${L('nt_until')} <select id="nt-until-we" class="txt time">${parTimeOptions(nt.untilWe, '—')}</select></label>
+          </div>
+          <p class="nt-hint">${L('nt_we_hint')}</p>
+          ${this._ntHomeworkKids().length && nt.who !== 'open' ? `<div class="row"><label class="lbl inline" for="nt-after">${L('nt_after')}</label>
+            <input id="nt-after" type="checkbox" class="chk" ${nt.after ? 'checked' : ''}></div>
+          <p class="nt-hint">${L('nt_after_d')}</p>` : ''}
+          <div class="row"><div class="lbl inline">${L('nt_points')}</div>
+            <div class="stepper"><button class="step" data-action="nt-points" data-delta="-1" aria-label="−" ${nt.points <= 1 ? 'disabled' : ''}>−</button>
+              <span class="val">⭐ ${nt.points}</span>
+              <button class="step" data-action="nt-points" data-delta="1" aria-label="+" ${nt.points >= 10 ? 'disabled' : ''}>+</button></div></div>
+          <div class="row"><label class="lbl inline" for="nt-approval">${L('nt_approval')}</label>
+            <input id="nt-approval" type="checkbox" class="chk" ${nt.approval ? 'checked' : ''}></div>
+          <div class="row"><label class="lbl inline" for="nt-together">${L('nt_together')}</label>
+            <input id="nt-together" type="checkbox" class="chk" ${nt.together ? 'checked' : ''}></div>
+          <div class="row"><div class="lbl inline">${L('adhoc_min_age')}</div>
+            <div class="stepper"><button class="step" data-action="nt-age" data-delta="-1" aria-label="−" ${nt.minAge <= 0 ? 'disabled' : ''}>−</button>
+              <span class="val">${nt.minAge > 0 ? nt.minAge : L('adhoc_age_any')}</span>
+              <button class="step" data-action="nt-age" data-delta="1" aria-label="+" ${nt.minAge >= 18 ? 'disabled' : ''}>+</button></div></div>
+          ${catChips}
+          <div class="lbl">${L('nt_scope')}</div>
+          <div class="chips">${['home', 'personal'].map(s =>
+            `<button class="chip ${nt.scope === s ? 'on' : ''}" aria-pressed="${nt.scope === s}" data-action="nt-scope" data-scope="${s}">${s === 'home' ? '🏠' : '🙋'} ${L('nt_' + (s === 'home' ? 'home' : 'personal'))}</button>`).join('')}</div>
+          <div class="lbl">${L('adhoc_icon')}</div>
+          <div class="chips">${icons}</div>
+          <input id="nt-icon" class="txt" type="text" maxlength="64" autocomplete="off" aria-label="${L('adhoc_icon')}" value="${escParents(nt.icon)}">
+          <div class="lbl">${L('nt_subs')}</div>
+          ${subs}
+          <div class="nt-subadd"><input id="nt-newsub" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" placeholder="${L('nt_sub_ph')}" value="${escParents(nt.newSub)}">
+            <button class="step" data-action="nt-sub-add" aria-label="${L('nt_sub_add')}">+</button></div>
+        </details>
+        <div class="warn" id="nt-problem" ${problem ? '' : 'hidden'}>${problem ? L(problem) : ''}</div>
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="nt-back">‹ ${L('nt_back')}</button>
+          <button class="btn ok solid" id="nt-create" data-action="nt-create" ${problem ? 'disabled' : ''}>${L(count > 1 ? 'nt_save_n' : 'nt_save', { n: count })}</button>
+        </div>
+      </div>`;
+  }
+
+  /** Step titles of the morning / evening missions of the selected kids (merged, without duplicates). */
+  _ntMissionSteps(anchor) {
+    if (anchor !== 'morning' && anchor !== 'evening') return [];
+    const nt = this._nt;
+    const out = [];
+    for (const kidId of nt.kids) {
+      const missions = this._taskList().filter(t => !t.parent_task &&
+        ((t.generated_by === 'wizard' && String(t.wizard_key || '').split(':')[0] === anchor) || t.catalog_key === anchor));
+      const mine = missions.find(t => (t.assignees || []).includes(kidId));
+      for (const st of (mine ? (mine.subtasks || []) : [])) {
+        const title = String((st && st.title) || st || '');
+        if (title && !out.some(x => x.toLowerCase() === title.toLowerCase())) out.push(title);
+      }
+    }
+    return out;
+  }
+
+  /** The "Position: after step ..." select of the medication sheet (the unset default is shown as what it does). */
+  _ntAfterSelect(c) {
+    const steps = this._ntMissionSteps(c.anchor);
+    if (!steps.length) return '';
+    const lower = steps.map(t => t.toLowerCase());
+    let value = '';
+    if (typeof c.after === 'string') value = c.after;
+    else if (c.anchor === 'morning') {
+      const i = lower.findIndex(t => t === 'frühstücken' || t === 'have breakfast');
+      if (i >= 0) value = steps[i];
+    }
+    return `<div class="row"><label class="lbl inline" for="nt-c-after">${escParents(this.localize('nt_c_after'))}</label>
+      <select id="nt-c-after" class="txt">
+        ${steps.map(t => `<option value="${escParents(t)}" ${value.toLowerCase() === t.toLowerCase() ? 'selected' : ''}>${escParents(t)}</option>`).join('')}
+        <option value="" ${value ? '' : 'selected'}>${escParents(this.localize('nt_c_after_end'))}</option>
+      </select></div>`;
+  }
+
+  /** Compact medication sheet: the entry is added to the care list of every selected kid. */
+  _renderNtCare() {
+    const nt = this._nt;
+    const c = nt.care;
+    const L = (k, r) => escParents(this.localize(k, r));
+    const days = this.localize('nt_days');
+    const profiles = this.settings.kids || {};
+    const existing = this._kids().filter(k => nt.kids.includes(k.id) && ((profiles[k.id] || {}).care || []).length).map(k =>
+      `${escParents(k.name)}: ${((profiles[k.id] || {}).care || []).map(e => escParents((e.emoji || '💊') + ' ' + e.label)).join(', ')}`).join('<br>');
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${L('nt_med_title')}" style="--kc:#E53935">
+        <div class="grab"></div>
+        <h3>💊 ${L('nt_med_title')}</h3>
+        <p class="nt-hint">${L('nt_med_hint')}</p>
+        <div class="lbl">${L('nt_for')}</div>
+        <div class="chips">${this._ntKidChips()}</div>
+        ${existing ? `<p class="nt-hint">${L('nt_c_existing')}<br>${existing}</p>` : ''}
+        <label class="lbl" for="nt-c-label">${L('nt_c_label')}</label>
+        <input id="nt-c-label" class="txt" type="text" maxlength="30" autocomplete="off" placeholder="${L('nt_c_label_ph')}" value="${escParents(c.label)}">
+        <div class="row"><label class="lbl inline" for="nt-c-emoji">${L('nt_c_emoji')}</label>
+          <input id="nt-c-emoji" class="txt num" type="text" maxlength="8" value="${escParents(c.emoji)}"></div>
+        <div class="lbl">${L('nt_c_anchor')}</div>
+        <div class="chips">${['morning', 'evening', 'time'].map(a =>
+          `<button class="chip ${c.anchor === a ? 'on' : ''}" aria-pressed="${c.anchor === a}" data-action="nt-c-anchor" data-anchor="${a}">${L('nt_c_anchor_' + a)}</button>`).join('')}</div>
+        ${c.anchor === 'time' ? '' : this._ntAfterSelect(c)}
+        ${c.anchor === 'time' ? `<div class="row"><label class="lbl inline" for="nt-c-time">${L('nt_c_time')}</label><select id="nt-c-time" class="txt time">${parTimeOptions(c.time, '08:00')}</select></div>` : ''}
+        <div class="row"><label class="lbl inline" for="nt-c-deadline">${L('nt_c_deadline')}</label><select id="nt-c-deadline" class="txt time">${parTimeOptions(c.deadline, L('nt_c_default'))}</select></div>
+        <div class="lbl">${L('nt_c_days')}</div>
+        <div class="chips" role="group">${days.map((d, i) =>
+          `<button class="chip ico ${c.weekdays.includes(i) ? 'on' : ''}" aria-pressed="${c.weekdays.includes(i)}" data-action="nt-c-wd" data-wd="${i}">${escParents(d)}</button>`).join('')}</div>
+        <div class="row"><label class="lbl inline" for="nt-c-stock">${L('nt_c_stock')}</label>
+          <input id="nt-c-stock" class="txt num" type="number" min="0" max="9999" inputmode="numeric" value="${escParents(c.stock)}"></div>
+        ${c.stock !== '' ? `<div class="row"><label class="lbl inline" for="nt-c-perdose">${L('nt_c_perdose')}</label>
+          <input id="nt-c-perdose" class="txt num" type="number" min="1" max="20" inputmode="numeric" value="${escParents(c.perDose)}"></div>` : ''}
+        <p class="nt-hint">${L('nt_c_stock_d')}</p>
+        <div class="row"><label class="lbl inline" for="nt-c-notify">${L('nt_c_notify')}</label>
+          <input id="nt-c-notify" type="checkbox" class="chk" ${c.notify ? 'checked' : ''}></div>
+        <p class="nt-hint">${L('nt_c_more')}</p>
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="nt-back">‹ ${L('nt_back')}</button>
+          <button class="btn ok solid" id="nt-c-save" data-action="nt-c-save" ${nt.kids.length ? '' : 'disabled'}>${L('nt_c_save')}</button>
+        </div>
+      </div>`;
+  }
+
+  /** Typing / selecting in the flow: keeps the state without rebuilding the sheet (focus stays). */
+  _ntInput(el) {
+    const nt = this._nt;
+    if (!nt) return false;
+    const id = el.id;
+    if (id === 'nt-q') {
+      nt.q = el.value;
+      const host = this.shadowRoot.getElementById('nt-results');
+      if (host) host.innerHTML = this._ntResultsHtml();
+    } else if (id === 'nt-name') { nt.name = el.value; this._ntRefresh(); }
+    else if (id === 'nt-every') { nt.every = parseInt(el.value) || 0; this._ntRefresh(); }
+    else if (id === 'nt-date') { nt.date = el.value; this._ntRefresh(); }
+    else if (id === 'nt-from') nt.from = el.value;
+    else if (id === 'nt-until') nt.until = el.value;
+    else if (id === 'nt-from-we') nt.fromWe = el.value;
+    else if (id === 'nt-until-we') nt.untilWe = el.value;
+    else if (id === 'nt-after') nt.after = el.checked;
+    else if (id === 'nt-remind') nt.remind = el.value;
+    else if (id === 'nt-approval') { nt.approval = el.checked; this._ntRefresh(true); }
+    else if (id === 'nt-together') nt.together = el.checked;
+    else if (id === 'nt-icon') nt.icon = el.value.trim();
+    else if (id === 'nt-newsub') nt.newSub = el.value;
+    else if (id === 'nt-c-label' && nt.care) nt.care.label = el.value;
+    else if (id === 'nt-c-emoji' && nt.care) nt.care.emoji = el.value;
+    else if (id === 'nt-c-after' && nt.care) nt.care.after = el.value;
+    else if (id === 'nt-c-time' && nt.care) nt.care.time = el.value || '08:00';
+    else if (id === 'nt-c-deadline' && nt.care) nt.care.deadline = el.value;
+    else if (id === 'nt-c-notify' && nt.care) nt.care.notify = el.checked;
+    else if (id === 'nt-c-stock' && nt.care) { const had = nt.care.stock !== ''; nt.care.stock = el.value; if (had !== (el.value !== '')) this._renderLayer(); }
+    else if (id === 'nt-c-perdose' && nt.care) nt.care.perDose = el.value;
+    else return false;
+    return true;
+  }
+
+  /** Updates the save button, the problem line and (when asked) the summary box. */
+  _ntRefresh(summary) {
+    const nt = this._nt;
+    const problem = this._ntProblem();
+    const btn = this.shadowRoot.getElementById('nt-create');
+    if (btn) btn.disabled = !!problem;
+    const warn = this.shadowRoot.getElementById('nt-problem');
+    if (warn) { warn.hidden = !problem || !nt.name.trim(); warn.textContent = problem ? this.localize(problem) : ''; }
+    if (summary) this._renderLayer();
+  }
+
+// ---- absences (vacation, kid away, sick) -------------------------------------
+
+  /** Absences of today or later, newest start first: [{...absence, active}]. */
+  _absenceList() {
+    const today = this._todayKey();
+    return (this.absences || []).filter(a => a.to >= today)
+      .map(a => ({ ...a, active: a.from <= today }))
+      .sort((a, b) => String(a.from).localeCompare(String(b.from)));
+  }
+
+  _absenceKidNames(a) {
+    const kids = a.kids === 'all' ? this._kids() : a.kids.map(id => this._kid(id));
+    return kids.map(k => k.name).join(', ');
+  }
+
+  _absenceTitle(a) {
+    const icon = { trip: '🌴', away: '🎒', sick: '🤒', school_holiday: '📚' }[a.kind] || '🌴';
+    const who = a.kind === 'trip' || (a.kind === 'school_holiday' && a.kids === 'all') ? '' : ': ' + this._absenceKidNames(a);
+    return `${icon} ${this.localize('abs_' + a.kind)}${who}`;
+  }
+
+  /** Small banner on the Today tab while an absence is active. */
+  _renderAbsenceBanner() {
+    const active = this._absenceList().filter(a => a.active);
+    if (!active.length) return '';
+    const lines = active.map(a => {
+      const date = this._formatDate(a.to);
+      if (a.kind === 'trip') return this.localize('abs_banner_trip', { date });
+      if (a.kind === 'school_holiday') return this.localize('abs_banner_school', { date });
+      return `${a.kind === 'sick' ? '🤒' : '🎒'} ${this.localize('abs_banner_kids', { names: this._absenceKidNames(a), kind: this.localize('abs_kind_' + a.kind), date })}`;
+    });
+    return `<button class="abs-banner" data-action="abs-open" aria-label="${escParents(this.localize('m_absence'))}">${lines.map(l => `<span>${escParents(l)}</span>`).join('')}</button>`;
+  }
+
+  _renderAbsences() {
+    const list = this._absenceList();
+    const rows = list.map(a => {
+      const busy = this._busy.has('abs:' + a.id) ? 'disabled' : '';
+      const range = this.localize('abs_range', { from: this._formatDate(a.from), to: this._formatDate(a.to) });
+      return `
+        <article class="abs-row ${a.active ? 'active' : ''}">
+          <div class="abs-main">
+            <span class="abs-t">${escParents(this._absenceTitle(a))}</span>
+            <span class="abs-d">${escParents(range)}${a.note ? ' · ' + escParents(a.note) : ''}</span>
+            <span class="badge">${escParents(this.localize(a.active ? 'abs_active' : 'abs_upcoming'))}</span>
+          </div>
+          <div class="abs-act">
+            ${a.calendar ? `<span class="badge">${escParents(this.localize('abs_calendar'))}</span>` : `<button class="btn neutral sm" data-action="abs-end" data-id="${escParents(a.id)}" ${busy}>${escParents(this.localize(a.active ? 'abs_end' : 'abs_delete'))}</button>`}
+          </div>
+        </article>`;
+    }).join('');
+    return `${rows || `<div class="empty">${escParents(this.localize('abs_none'))}</div>`}
+      <button class="adhoc-btn rw-btn" data-action="abs-new">➕ ${escParents(this.localize('abs_new'))}</button>`;
+  }
+
+  _openAbsence() {
+    const today = this._todayKey();
+    this._abs = { kind: 'trip', kids: [], from: today, to: this._addDays(today, 6), personal: false, care: true, note: '' };
+    this._renderLayer();
+  }
+
+  /** Switching the kind resets the toggles to the defaults of that kind. */
+  _absKind(kind) {
+    if (!['trip', 'away', 'sick', 'school_holiday'].includes(kind)) return;
+    this._abs.kind = kind;
+    this._abs.personal = false;
+    this._abs.care = kind !== 'away';
+    this._renderLayer();
+  }
+
+  _renderAbsenceSheet() {
+    const a = this._abs;
+    const kinds = [['trip', '🌴'], ['away', '🎒'], ['sick', '🤒'], ['school_holiday', '📚']].map(([id, ico]) =>
+      `<button class="chip ${a.kind === id ? 'on' : ''}" data-action="abs-kind" data-kind="${id}" aria-pressed="${a.kind === id}">${ico} ${escParents(this.localize('abs_' + id))}</button>`).join('');
+    const kidChips = a.kind === 'trip' ? '' : `
+      <div class="lbl">${escParents(this.localize('abs_kids'))}</div>
+      <div class="chips">${this._kids().map(k => `<button class="chip kidchip ${a.kids.includes(k.id) ? 'on' : ''}" data-action="abs-kid" data-kid="${escParents(k.id)}" aria-pressed="${a.kids.includes(k.id)}" style="--kc:${k.color}">${this._avatar(k)}${escParents(k.name)}</button>`).join('')}</div>`;
+    // away never keeps the personal tasks; the medication of a trip / sick kid always continues
+    const personal = a.kind === 'away' || a.kind === 'school_holiday' ? '' : `
+      <div class="row"><label class="lbl inline" for="abs-personal">${escParents(this.localize('abs_personal'))}</label>
+        <input id="abs-personal" type="checkbox" class="chk" ${a.personal ? 'checked' : ''}></div>`;
+    const care = a.kind !== 'away' ? '' : `
+      <div class="row"><label class="lbl inline" for="abs-care">${escParents(this.localize('abs_care'))}</label>
+        <input id="abs-care" type="checkbox" class="chk" ${a.care ? 'checked' : ''}></div>`;
+    const ready = a.kind === 'trip' || a.kind === 'school_holiday' || a.kids.length > 0;
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('abs_new'))}" style="--kc:#00897B">
+        <div class="grab"></div>
+        <h3>🌴 ${escParents(this.localize('abs_new'))}</h3>
+        <div class="chips">${kinds}</div>
+        <p class="abs-hint">${escParents(this.localize('abs_hint_' + a.kind))}</p>
+        ${kidChips}
+        <div class="row"><label class="lbl inline" for="abs-from">${escParents(this.localize('abs_from'))}</label>
+          <input id="abs-from" class="txt" type="date" value="${escParents(a.from)}"></div>
+        <div class="row"><label class="lbl inline" for="abs-to">${escParents(this.localize('abs_to'))}</label>
+          <input id="abs-to" class="txt" type="date" min="${escParents(a.from)}" value="${escParents(a.to)}"></div>
+        ${personal}${care}
+        <label class="lbl" for="abs-note">${escParents(this.localize('abs_note'))}</label>
+        <input id="abs-note" class="txt" type="text" maxlength="60" autocomplete="off" placeholder="${escParents(this.localize('abs_note_ph'))}" value="${escParents(a.note)}">
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
+          <button class="btn ok solid" id="abs-save" data-action="abs-save" ${ready ? '' : 'disabled'}>${escParents(this.localize('abs_create'))}</button>
+        </div>
+      </div>`;
+  }
+
+  async _saveAbsence() {
+    const a = this._abs;
+    if (!a) return;
+    if (a.kind !== 'trip' && a.kind !== 'school_holiday' && !a.kids.length) { this._toast(this.localize('abs_need_kids')); return; }
+    const days = (new Date(a.to) - new Date(a.from)) / 86400000 + 1;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(a.from || '') || !/^\d{4}-\d{2}-\d{2}$/.test(a.to || '') || !(days >= 1 && days <= 120)) {
+      this._toast(this.localize('abs_bad_dates')); return;
+    }
+    const payload = { type: 'family_mission/absence_add', kind: a.kind, from: a.from, to: a.to, note: (a.note || '').trim().slice(0, 60) };
+    if (a.kind !== 'trip') payload.kids = a.kids.slice();
+    if (a.kind !== 'away' && a.kind !== 'school_holiday') payload.personal = !!a.personal;
+    if (a.kind === 'away') payload.care = !!a.care;
+    this._abs = null;
+    this._renderLayer();
+    await this._absCall('abs:new', payload, 'toast_abs_saved');
+  }
+
+  async _absCall(busyKey, payload, okKey) {
+    if (this._busy.has(busyKey)) return;
+    this._busy.add(busyKey);
+    this._render();
+    try {
+      const res = await this._hass.callWS(payload);
+      if (res && res.success === false) this._toast(this.localize('toast_gone'));
+      else this._toast(this.localize(okKey));
+    } catch (err) {
+      this._toast(this.localize('err') + (err && err.message ? err.message : ''));
+    }
+    this._busy.delete(busyKey);
+    this._fetchData();
   }
 
   // ---- template picker (from family-mission-wizard.js) -------------------------
@@ -1251,29 +2240,63 @@ class FamilyMissionParents extends HTMLElement {
     const o = this._own;
     const intervals = [0, 1, 2, 7, 14, 30, 91, 182, 365].map(n =>
       `<option value="${n}" ${o.interval === n ? 'selected' : ''}>${escParents(this.localize('int_' + n))}</option>`).join('');
+    const chips = [['today', 'qa_today'], ['tomorrow', 'qa_tomorrow'], ['weekend', 'qa_weekend'], ['custom', 'qa_date'], ['none', 'qa_someday']].map(([id, key]) =>
+      `<button class="chip ${o.when === id ? 'on' : ''}" data-action="own-when" data-when="${id}" aria-pressed="${o.when === id}">${id === 'custom' ? '📅 ' : ''}${escParents(this.localize(key))}</button>`).join('');
     return `
       <div class="scrim" data-action="dialog-close"></div>
       <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('own_title'))}" style="--kc:#7E57C2">
         <div class="grab"></div>
         <h3>➕ ${escParents(this.localize('own_title'))}</h3>
         <label class="lbl" for="own-name">${escParents(this.localize('own_name'))}</label>
-        <input id="own-name" class="txt" type="text" maxlength="60" autocomplete="off" placeholder="${escParents(this.localize('own_name_ph'))}" value="${escParents(o.name)}">
-        <div class="row">
-          <label class="lbl inline" for="own-min">${escParents(this.localize('adhoc_minutes'))}</label>
-          <span class="inl"><input id="own-min" class="txt num" type="number" min="1" max="600" inputmode="numeric" value="${escParents(o.minutes)}"> ${escParents(this.localize('adhoc_min_unit'))}</span>
-        </div>
-        <div class="row">
-          <label class="lbl inline" for="own-int">${escParents(this.localize('own_interval'))}</label>
-          <select id="own-int" class="txt">${intervals}</select>
-        </div>
-        <div class="row">
-          <label class="lbl inline" for="own-plan">🧠 ${escParents(this.localize('own_planning'))}</label>
-          <input id="own-plan" type="checkbox" class="chk" ${o.planning ? 'checked' : ''}>
-        </div>
+        <input id="own-name" class="txt" type="text" maxlength="60" autocomplete="off" enterkeyhint="done" placeholder="${escParents(this.localize('own_name_ph'))}" value="${escParents(o.name)}">
+        <div class="lbl">${escParents(this.localize('qa_when'))}</div>
+        <div class="chips">${chips}</div>
+        ${o.when === 'custom' ? `<input id="own-date" class="txt" type="date" min="${escParents(this._todayKey())}" value="${escParents(o.date)}" aria-label="${escParents(this.localize('qa_date'))}">` : ''}
         ${this.partner ? `<div class="lbl">${escParents(this.localize('own_who'))}</div>${this._modeSegment(o.mode, 'data-action="own-mode"')}` : ''}
+        <details class="fold" data-det="own-more" ${this._open.has('det:own-more') ? 'open' : ''}>
+          <summary>${escParents(this.localize('qa_more'))}</summary>
+          ${o.when !== 'none' ? `<div class="row">
+            <label class="lbl inline" for="own-time">${escParents(this.localize('qa_time'))}</label>
+            <input id="own-time" class="txt" type="time" value="${escParents(o.time)}">
+          </div>` : ''}
+          <div class="row">
+            <label class="lbl inline" for="own-int">${escParents(this.localize('own_interval'))}</label>
+            <select id="own-int" class="txt">${intervals}</select>
+          </div>
+          <div class="row">
+            <label class="lbl inline" for="own-min">${escParents(this.localize('adhoc_minutes'))}</label>
+            <span class="inl"><input id="own-min" class="txt num" type="number" min="1" max="600" inputmode="numeric" value="${escParents(o.minutes)}"> ${escParents(this.localize('adhoc_min_unit'))}</span>
+          </div>
+          <div class="row">
+            <label class="lbl inline" for="own-plan">🧠 ${escParents(this.localize('own_planning'))}</label>
+            <input id="own-plan" type="checkbox" class="chk" ${o.planning ? 'checked' : ''}>
+          </div>
+          <div class="lbl">${escParents(this.localize('own_days'))}</div>
+          <div class="chips" role="group">${this.localize('nt_days').map((d, i) =>
+            `<button class="chip ico ${o.wd.includes(i) ? 'on' : ''}" data-action="own-wd" data-d="${i}" aria-pressed="${o.wd.includes(i)}">${escParents(d)}</button>`).join('')}</div>
+          <label class="lbl" for="own-steps">${escParents(this.localize('own_steps'))}</label>
+          <textarea id="own-steps" class="txt" rows="3" placeholder="${escParents(this.localize('own_steps_ph'))}">${escParents(o.steps)}</textarea>
+        </details>
         <div class="dialog-actions">
           <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
           <button class="btn ok solid" id="own-create" data-action="own-create" ${o.name.trim() ? '' : 'disabled'}>${escParents(this.localize('own_create'))}</button>
+        </div>
+      </div>`;
+  }
+
+  /** Small sheet: one item for the shopping list that is linked to a parent task. */
+  _renderTodoSheet() {
+    const td = this._todo;
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('pt_todo_title'))}" style="--kc:#7E57C2">
+        <div class="grab"></div>
+        <h3>🛒 ${escParents(this.localize('pt_todo_title'))}</h3>
+        <label class="lbl" for="todo-item">${escParents(this.localize('pt_todo_item'))}</label>
+        <input id="todo-item" class="txt" type="text" maxlength="100" autocomplete="off" enterkeyhint="done" placeholder="${escParents(this.localize('pt_todo_item_ph'))}" value="${escParents(td.item)}">
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
+          <button class="btn ok solid" id="todo-add" data-action="todo-add" ${td.item.trim() ? '' : 'disabled'}>${escParents(this.localize('pt_todo_add'))}</button>
         </div>
       </div>`;
   }
@@ -1372,7 +2395,70 @@ class FamilyMissionParents extends HTMLElement {
   // ---- tab "Heute" -------------------------------------------------------------
 
   _renderToday() {
-    return `${this._renderPushWarning()}${this._renderKidStatus()}${this._renderWaiting()}${this._renderOwnTasks()}${this._renderQuick()}`;
+    return `${this._renderPushWarning()}${this._renderAbsenceBanner()}${this._renderKidStatus()}${this._renderWaiting()}${this._renderCare()}${this._renderOwnTasks()}${this._renderQuick()}`;
+  }
+
+  /** Care entries (medication) of a kid profile. */
+  _careEntries(kidId) {
+    const profile = (this.settings.kids || {})[kidId];
+    return profile && Array.isArray(profile.care) ? profile.care : [];
+  }
+
+  /** Log entry of one kid / care entry / day. */
+  _careLogItem(kidId, careId, day) {
+    return (this.careLog || []).find(i => i.kid_id === kidId && i.care_id === careId && i.date === day) || null;
+  }
+
+  /** Status text of a care item of today. */
+  _careStatusText(item) {
+    if (item.answer === 'taken') {
+      const logged = this._careLogItem(item.kid_id || '', item.id, this._todayKey());
+      return this.localize(logged && logged.confirmed_by ? 'care_st_taken_by' : 'care_st_taken');
+    }
+    if (item.answer === 'declined') return this.localize('care_st_declined');
+    return this.localize(item.status === 'unanswered' ? 'care_st_unanswered' : 'care_st_open');
+  }
+
+  /** "Health today": status per kid and entry with a "given" button (only when a kid has care entries). */
+  _renderCare() {
+    const kids = this._kids().filter(k => this._careEntries(k.id).length);
+    if (!kids.length) return '';
+    const today = this.careToday || {};
+    const rows = kids.map(kid => (today[kid.id] || []).map(item => {
+      const taken = item.answer === 'taken';
+      const busy = this._busy.has('care:' + kid.id + ':' + item.id) ? 'disabled' : '';
+      const state = this._careStatusText({ ...item, kid_id: kid.id });
+      const cls = taken ? 'taken' : item.answer === 'declined' ? 'declined' : item.status === 'unanswered' ? 'unanswered' : 'open';
+      return `
+        <div class="care-row" style="--kc:${kid.color}">
+          ${this._avatar(kid)}
+          <span class="care-main"><span class="care-name">${escParents(kid.name)}: ${escParents(item.emoji)} ${escParents(item.label)}</span>
+            <span class="care-st ${cls}">${escParents(state)}</span></span>
+          ${taken ? '' : `<button class="btn ok sm care-give" data-action="care-given" data-kid="${escParents(kid.id)}" data-care="${escParents(item.id)}" title="${escParents(this.localize('care_given_title'))}" ${busy}>${escParents(this.localize('care_given'))}</button>`}
+        </div>`;
+    }).join('')).join('');
+    return `<section id="care-section"><h2>${escParents(this.localize('care_title'))}</h2>
+      <div class="care-rows">${rows || `<div class="empty small">${escParents(this.localize('care_none_today'))}</div>`}</div></section>`;
+  }
+
+  /** Seven-day history per care entry of a kid (Kids tab, parents only). */
+  _renderCareHistory(kid) {
+    const entries = this._careEntries(kid.id);
+    if (!entries.length) return '';
+    const days = [];
+    for (let i = 6; i >= 0; i--) days.push(this._addDays(this._todayKey(), -i));
+    const mark = { taken: '✓', declined: '–', unanswered: '!' };
+    const rows = entries.map(entry => `
+      <div class="care-hist-row">
+        <span class="care-hist-name">${escParents(entry.emoji)} ${escParents(entry.label)}</span>
+        <span class="care-dots">${days.map(day => {
+          const item = this._careLogItem(kid.id, entry.id, day);
+          const st = item ? item.status : '';
+          return `<span class="care-dot ${st}" title="${escParents(this._formatDate(day))}">${mark[st] || '·'}</span>`;
+        }).join('')}</span>
+      </div>`).join('');
+    return `<h3 class="sub">${escParents(this.localize('care_hist_title'))} · ${escParents(this.localize('care_history'))}</h3>
+      <div class="care-hist">${rows}<div class="care-legend">${escParents(this.localize('care_legend'))}</div></div>`;
   }
 
   /** Yellow hint while no adult can receive the approval push. */
@@ -1466,11 +2552,48 @@ class FamilyMissionParents extends HTMLElement {
     }).join('');
   }
 
-  /** "~20 Min.", the planning badge and the quiet carried-over hint of a parent task. */
+  /** Where a parent task shows up: overdue | today | upcoming | someday | hidden (mirrors parents_catalog.list_state). */
+  _ptBucket(t) {
+    const today = this._todayKey();
+    const paused = this._dateKey(t.paused_until);
+    if (paused && today <= paused) return 'hidden';
+    if (t.absent_all) return 'hidden';
+    const due = this._dateKey(t.due_date);
+    const once = (t.interval === 0);
+    if (t.someday || !due) return once ? 'someday' : 'hidden';
+    if (due < today) return 'overdue';
+    if (due === today) return 'today';
+    return once ? 'upcoming' : 'hidden';
+  }
+
+  /** "Morgen", a short weekday within a week, otherwise the date (for future dates). */
+  _dueLabel(key) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key || '');
+    if (!m) return key || '';
+    if (key === this._addDays(this._todayKey(), 1)) return this.localize('pt_tomorrow');
+    const d = new Date(+m[1], +m[2] - 1, +m[3]);
+    const lang = (this._hass && this._hass.language) || undefined;
+    const ahead = Math.round((d.getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000);
+    return ahead < 7 ? d.toLocaleDateString(lang, { weekday: 'short' }) : d.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' });
+  }
+
+  /** "~20 Min.", the planning badge, due date / time and the quiet carried-over hint of a parent task. */
   _parentBadges(t) {
     const out = [];
+    const bucket = this._ptBucket(t);
+    const due = this._dateKey(t.due_date);
+    if (bucket === 'overdue' && t.dated) out.push(`<span class="badge late">⚠ ${escParents(this.localize('pt_overdue_since', { day: this._dayLabel(due) }))}</span>`);
+    else if (bucket === 'upcoming') out.push(`<span class="badge due">📅 ${escParents(this._dueLabel(due))}${t.due_time ? ' ' + escParents(t.due_time) : ''}</span>`);
+    else if (t.due_time && (bucket === 'today' || bucket === 'overdue')) out.push(`<span class="badge due">🕐 ${escParents(t.due_time)}</span>`);
     if (t.planning) out.push(`<span class="badge plan" title="${escParents(this.localize('pt_planning'))}">🧠 ${escParents(this.localize('pt_planning'))}</span>`);
     if (t.minutes) out.push(`<span class="badge">${escParents(this.localize('pt_minutes', { n: t.minutes }))}</span>`);
+    const wd = Array.isArray(t.weekdays) ? t.weekdays : [];
+    if (wd.length) out.push(`<span class="badge days">🔁 ${escParents(wd.map(d => this.localize('nt_days')[d]).join(' '))}</span>`);
+    const steps = (t.subtasks || []).filter(st => st && st.title);
+    if (steps.length) out.push(`<span class="badge steps">☑ ${steps.filter(st => st.done).length}/${steps.length}</span>`);
+    const todo = this._todoCount(t);
+    if (todo !== null) out.push(`<span class="badge todo">🛒 ${todo}</span>`);
+    if (t.hint === 'bedding') out.push(`<span class="badge hint">${escParents(this.localize('pt_hint_bedding'))}</span>`);
     if (t.carried_since) out.push(`<span class="badge carried">↷ ${escParents(this.localize('pt_since', { day: this._dayLabel(t.carried_since) }))}</span>`);
     return out.length ? `<div class="badges">${out.join('')}</div>` : '';
   }
@@ -1485,29 +2608,61 @@ class FamilyMissionParents extends HTMLElement {
     return days < 7 ? d.toLocaleDateString(lang, { weekday: 'short' }) : d.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' });
   }
 
-  /** A parent task with the big tick button; ``mine`` adds the "Kannst du?" button. */
+  /** A parent task with the big tick button; ``mine`` adds the "Kannst du?" button, every task gets "→ Morgen". */
   _renderParentTask(t, mine) {
     const busy = this._busy.has('pt:' + t.id) ? 'disabled' : '';
     const h = t.handover;
     const asked = !!(h && h.state === 'asked' && mine && h.from === this.me);
     const canAsk = mine && this.partner && this.me && !asked;
+    const due = this._dateKey(t.due_date);
+    const canPostpone = due !== this._addDays(this._todayKey(), 1);
     return `
       <article class="ptask">
         <div class="pt-name">${escParents(t.name)}</div>
         ${this._parentBadges(t)}
+        ${this._renderSteps(t)}
         <div class="pt-actions">
           <button class="btn ok pt-done" data-action="pt-done" data-id="${escParents(t.id)}" ${busy}>✓ ${escParents(this.localize('pt_done'))}</button>
+          ${canPostpone ? `<button class="btn neutral pt-ask pt-later" data-action="pt-postpone" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_postpone'))}</button>` : ''}
           ${asked ? `<span class="pt-asked">${escParents(this.localize('pt_asked', { name: this._adultName(h.to) }))}</span>` : ''}
           ${canAsk ? `<button class="btn neutral pt-ask" data-action="pt-ask" data-id="${escParents(t.id)}" ${busy}>🙋 ${escParents(this.localize('pt_ask'))}</button>` : ''}
+          ${t.parent_key === 'fridge' && t.todo_entity ? `<button class="btn neutral pt-ask" data-action="pt-todo" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_todo_btn'))}</button>` : ''}
         </div>
       </article>`;
   }
 
+  /** The checklist of a parent task: tick the steps (progress only - the tick-off button always works). */
+  _renderSteps(t) {
+    const steps = (t.subtasks || []).filter(st => st && st.title);
+    if (!steps.length) return '';
+    const done = steps.filter(st => st.done).length;
+    const busy = this._busy.has('pt:' + t.id) ? 'disabled' : '';
+    return `<details class="fold pt-steps" data-det="steps:${escParents(t.id)}" ${this._open.has('det:steps:' + t.id) ? 'open' : ''}>
+      <summary>☑ ${escParents(this.localize('pt_steps'))} ${done}/${steps.length}</summary>
+      ${steps.map((st, i) => `<label class="pt-step ${st.done ? 'done' : ''}"><input type="checkbox" class="chk" data-action="pt-step" data-id="${escParents(t.id)}" data-i="${i}" ${st.done ? 'checked' : ''} ${busy}> <span>${escParents(st.title)}</span></label>`).join('')}
+    </details>`;
+  }
+
+  /** The tasks of one adult (or of all) as groups Überfällig / Heute / Demnächst / Irgendwann. */
+  _renderPtGroups(list, mine) {
+    const order = ['overdue', 'today', 'upcoming', 'someday'];
+    const groups = {};
+    for (const t of list) (groups[this._ptBucket(t)] = groups[this._ptBucket(t)] || []).push(t);
+    const dueKey = (t) => (this._dateKey(t.due_date) || '9999') + (t.due_time || '');
+    const present = order.filter(g => (groups[g] || []).length);
+    return present.map(g => {
+      const items = groups[g].slice().sort((a, b) => dueKey(a).localeCompare(dueKey(b)));
+      const head = (present.length === 1 && g === 'today') ? '' : `<h3 class="sub pt-group ${g}">${escParents(this.localize('pt_g_' + g))}</h3>`;
+      return head + items.map(t => this._renderParentTask(t, mine)).join('');
+    }).join('');
+  }
+
   _renderOwnTasks() {
-    const all = this._parentTasksToday();
+    const all = this._parentTasksAll().filter(t => this._ptBucket(t) !== 'hidden');
     const done = this._parentDoneToday();
     const hasAny = this._parentTasksAll().length > 0;
     const incoming = this._incomingHandovers();
+    const isOpenBucket = (t) => ['overdue', 'today'].includes(this._ptBucket(t));
     let inner = '';
     // Not a task: only a pointer to the approvals section (no history, nothing to complete)
     const nWait = this._pendingList().length;
@@ -1530,11 +2685,11 @@ class FamilyMissionParents extends HTMLElement {
       if (this.me) {
         const mine = all.filter(t => (t.assignees || []).includes(this.me));
         const theirs = all.filter(t => !(t.assignees || []).includes(this.me));
-        inner += mine.length ? mine.map(t => this._renderParentTask(t, true)).join('')
-          : `<div class="empty">🎉 ${escParents(this.localize('pt_all_done'))}</div>`;
+        if (!mine.some(isOpenBucket)) inner += `<div class="empty">🎉 ${escParents(this.localize('pt_all_done'))}</div>`;
+        inner += this._renderPtGroups(mine, true);
         if (theirs.length) {
           const label = this.localize('pt_partner', { name: this.partner ? this._adultName(this.partner) : this.localize('pt_other'), n: theirs.length });
-          inner += `<details class="fold" data-det="partner" ${this._open.has('det:partner') ? 'open' : ''}><summary>${escParents(label)}</summary>${theirs.map(t => this._renderParentTask(t, false)).join('')}</details>`;
+          inner += `<details class="fold" data-det="partner" ${this._open.has('det:partner') ? 'open' : ''}><summary>${escParents(label)}</summary>${this._renderPtGroups(theirs, false)}</details>`;
         }
       } else {
         // The caller is not an adult with a person: show everything grouped by the responsible adult.
@@ -1544,8 +2699,8 @@ class FamilyMissionParents extends HTMLElement {
           (groups[key] = groups[key] || []).push(t);
         }
         const keys = Object.keys(groups).sort((a, b) => this._adultName(a).localeCompare(this._adultName(b)));
-        inner += keys.map(k => `<h3 class="sub">${escParents(k ? this._adultName(k) : '—')}</h3>${groups[k].map(t => this._renderParentTask(t, false)).join('')}`).join('');
-        if (!all.length) inner += `<div class="empty">🎉 ${escParents(this.localize('pt_all_done'))}</div>`;
+        inner += keys.map(k => `<h3 class="sub">${escParents(k ? this._adultName(k) : '—')}</h3>${this._renderPtGroups(groups[k], false)}`).join('');
+        if (!all.some(isOpenBucket)) inner += `<div class="empty">🎉 ${escParents(this.localize('pt_all_done'))}</div>`;
       }
       if (done.length) {
         inner += `<details class="fold" data-det="done" ${this._open.has('det:done') ? 'open' : ''}><summary>${escParents(this.localize('pt_done_today', { n: done.length }))}</summary>
@@ -1553,12 +2708,14 @@ class FamilyMissionParents extends HTMLElement {
             <button class="undo" data-action="undo" data-id="${escParents(h.id)}">↩️ ${escParents(this.localize('undo'))}</button></div>`).join('')}</details>`;
       }
     }
-    return `<section><h2>${escParents(this.localize('own_tasks'))}</h2>${inner}</section>`;
+    return `<section><h2><span class="h2-t">${escParents(this.localize('own_tasks'))}</span><button class="h2-add" data-action="pt-new" aria-label="${escParents(this.localize('pt_add'))}" title="${escParents(this.localize('pt_add'))}">＋</button></h2>${inner}</section>`;
   }
 
   _renderQuick() {
     if (!this._kids().length) return '';
-    return `<section><div class="quickrow">
+    const create = this._canManage()
+      ? `<button class="adhoc-btn nt-btn" data-action="nt-open">➕ ${escParents(this.localize('nt_btn'))}</button>` : '';
+    return `<section>${create}<div class="quickrow">
       <button class="qk" data-action="praise-pick">❤️<span>${escParents(this.localize('praise_btn'))}</span></button>
       <button class="qk" data-action="adhoc-open">⭐<span>${escParents(this.localize('adhoc_btn'))}</span></button>
       <button class="qk" data-action="skip-pick">⏸️<span>${escParents(this.localize('skip_btn'))}</span></button>
@@ -1601,6 +2758,7 @@ class FamilyMissionParents extends HTMLElement {
     return `
       <section>
         <div class="chips">${chips}</div>
+        ${this._canManage() ? `<button class="adhoc-btn nt-btn" data-action="nt-open" data-kid="${escParents(kid.id)}">➕ ${escParents(this.localize('nt_btn_for', { name: kid.name }))}</button>` : ''}
         <article class="kid" style="--kc:${kid.color}">
           <div class="kid-top">
             ${this._avatar(kid)}
@@ -1614,6 +2772,8 @@ class FamilyMissionParents extends HTMLElement {
           <h3 class="sub">${escParents(this.localize('kid_today', { done: t.done.length, total: t.total }))}</h3>
           <div class="trows">${rows || `<div class="empty small">${escParents(this.localize('kid_no_tasks'))}</div>`}</div>
           ${t.open.length ? `<button class="btn neutral" data-action="skip-all" data-kid="${escParents(kid.id)}">⏸️ ${escParents(this.localize('skip_all'))}</button>` : ''}
+          ${this._renderRotation(kid)}
+          ${this._renderCareHistory(kid)}
           <div class="quick">${quick}</div>
           <button class="praise-btn" data-action="praise-open" data-kid="${escParents(kid.id)}">❤️ ${escParents(this.localize('praise_btn'))}</button>
           <details class="hist" data-kid-history="${escParents(kid.id)}" ${this._open.has(kid.id) ? 'open' : ''}>
@@ -1631,11 +2791,12 @@ class FamilyMissionParents extends HTMLElement {
     const back = (key) => `<button class="back" data-action="more-back">‹ ${escParents(this.localize('tab_more'))}</button><h2>${escParents(this.localize(key))}</h2>`;
     if (sub === 'ptasks') return `<section>${back('m_ptasks')}${this._renderParentTaskEditor()}</section>`;
     if (sub === 'shop') return `<section>${back('m_shop')}${this._renderShop()}</section>`;
+    if (sub === 'absence') return `<section>${back('m_absence')}${this._renderAbsences()}</section>`;
     if (sub === 'tasks' || sub === 'settings') {
       const key = sub === 'tasks' ? 'm_tasks' : 'm_settings';
       return `<section>${back(key)}${this._embedAvailable(sub) ? '' : `<div class="note">${escParents(this.localize('embed_missing'))}</div>`}</section>`;
     }
-    const rows = [['ptasks', '🧩', 'm_ptasks', 'm_ptasks_d'], ['tasks', '📋', 'm_tasks', 'm_tasks_d'], ['shop', '🛍️', 'm_shop', 'm_shop_d']];
+    const rows = [['ptasks', '🧩', 'm_ptasks', 'm_ptasks_d'], ['tasks', '📋', 'm_tasks', 'm_tasks_d'], ['shop', '🛍️', 'm_shop', 'm_shop_d'], ['absence', '🌴', 'm_absence', 'm_absence_d']];
     if (this._canManage()) rows.push(['settings', '⚙️', 'm_settings', 'm_settings_d']);
     const list = rows.map(([id, icon, key, desc]) => `
       <button class="mrow" data-action="more-open" data-sub="${id}">
@@ -1665,6 +2826,27 @@ class FamilyMissionParents extends HTMLElement {
       `<button class="${mode === id ? 'on' : ''}" aria-pressed="${mode === id}" ${attrs} data-mode="${id}">${escParents(this.localize(key))}</button>`).join('')}</div>`;
   }
 
+  /** Editor fold of a parent task: weekdays, checklist steps and (shopping tasks) the linked todo list. */
+  _renderPtMore(t, busy) {
+    const wd = Array.isArray(t.weekdays) ? t.weekdays : [];
+    const todos = Object.keys((this._hass && this._hass.states) || {}).filter(e => e.startsWith('todo.')).sort();
+    const shopping = ['shopping_list', 'shopping', 'fridge'].includes(t.parent_key) || !!t.todo_entity;
+    const todo = shopping ? `<label class="lbl inline" for="pt-todo-${escParents(t.id)}">${escParents(this.localize('pt_ed_todo'))}</label>
+      <select id="pt-todo-${escParents(t.id)}" class="txt" data-pt-todo="${escParents(t.id)}" ${busy}>
+        <option value="">${escParents(this.localize('pt_ed_todo_none'))}</option>
+        ${todos.map(e => `<option value="${escParents(e)}" ${t.todo_entity === e ? 'selected' : ''}>${escParents(((this._hass.states[e] || {}).attributes || {}).friendly_name || e)}</option>`).join('')}
+      </select>` : '';
+    return `<details class="fold" data-det="ed:${escParents(t.id)}" ${this._open.has('det:ed:' + t.id) ? 'open' : ''}>
+      <summary>${escParents(this.localize('pt_ed_more'))}</summary>
+      ${t.auto_key ? '' : `<div class="lbl">${escParents(this.localize('pt_ed_days'))}</div>
+      <div class="chips" role="group">${this.localize('nt_days').map((d, i) =>
+        `<button class="chip ico ${wd.includes(i) ? 'on' : ''}" data-action="pt-wd" data-id="${escParents(t.id)}" data-d="${i}" aria-pressed="${wd.includes(i)}" ${busy}>${escParents(d)}</button>`).join('')}</div>`}
+      <label class="lbl" for="pt-steps-${escParents(t.id)}">${escParents(this.localize('pt_ed_steps'))}</label>
+      <textarea id="pt-steps-${escParents(t.id)}" class="txt" rows="3" data-pt-steps="${escParents(t.id)}" ${busy}>${escParents((t.subtasks || []).map(st => st.title).join('\n'))}</textarea>
+      ${todo}
+    </details>`;
+  }
+
   _renderParentTaskEditor() {
     const list = this._parentTasksAll();
     const rows = list.map(t => {
@@ -1681,6 +2863,7 @@ class FamilyMissionParents extends HTMLElement {
             ${this.me ? this._modeSegment(this._ptMode(t), `data-action="pt-mode" data-id="${escParents(t.id)}" ${busy}`) : `<span class="badge">${escParents(who)}</span>`}
             <label class="rw-f"><input type="number" min="1" max="600" inputmode="numeric" data-pt-min="${escParents(t.id)}" value="${parseInt(t.minutes) || ''}" aria-label="${escParents(this.localize('pt_minutes_lbl'))}"> ${escParents(this.localize('adhoc_min_unit'))}</label>
           </div>
+          ${this._renderPtMore(t, busy)}
         </article>`;
     }).join('');
     return `
@@ -1726,7 +2909,10 @@ class FamilyMissionParents extends HTMLElement {
       if (host) host.appendChild(this._picker);
       return;
     }
+    if (this._nt) { layer.innerHTML = this._renderNtSheet(); return; }
+    if (this._abs) { layer.innerHTML = this._renderAbsenceSheet(); return; }
     if (this._own) { layer.innerHTML = this._renderOwnSheet(); return; }
+    if (this._todo) { layer.innerHTML = this._renderTodoSheet(); return; }
     if (this._pickKid) { layer.innerHTML = this._renderPickKidSheet(); return; }
     if (this._skip) { layer.innerHTML = this._renderSkipSheet(); return; }
     if (this._del) {
@@ -1911,6 +3097,19 @@ class FamilyMissionParents extends HTMLElement {
       .adhoc-btn { width: 100%; min-height: 52px; margin-bottom: 12px; border-radius: 12px; border: 2px dashed #F9A825; background: color-mix(in srgb, #F9A825 12%, var(--card-background-color, #fff)); color: var(--primary-text-color); font-size: 16px; font-weight: 700; }
       .undo { align-self: flex-start; margin-top: 4px; min-height: 36px; padding: 0 12px; border-radius: 18px; border: 1px solid var(--p-line); background: transparent; color: var(--primary-text-color); font-size: 13px; font-weight: 600; }
       .sheet.adhoc { max-height: 92vh; }
+      .nt-btn { border-style: solid; font-size: 17px; min-height: 56px; }
+      .nt-hint { margin: 4px 0 8px; font-size: 13px; color: var(--p-sub); }
+      .nt-results { margin-top: 8px; }
+      .nt-summary { margin: 12px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--secondary-background-color, #f0f0f0); font-size: 14px; }
+      .nt-times { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+      .nt-times .txt { min-height: 44px; }
+      .nt-sub { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; font-size: 15px; border-bottom: 1px solid var(--p-line); }
+      .nt-subadd { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+      .step.sm { width: 40px; height: 40px; font-size: 20px; flex: none; }
+      .seg.wide { display: flex; width: 100%; }
+      .seg.wide button { flex: 1; padding: 0 6px; }
+      .skip-row.free { border-style: dashed; }
+      .chip.care { border-color: #E53935; }
       .lbl { font-size: 13px; font-weight: 700; color: var(--p-sub); margin: 10px 0 6px; }
       .lbl.inline { margin: 0; font-size: 14px; }
       .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; }
@@ -1976,6 +3175,13 @@ class FamilyMissionParents extends HTMLElement {
       .badges { display: flex; flex-wrap: wrap; gap: 6px; }
       .badge { padding: 3px 10px; border-radius: 12px; font-size: 13px; font-weight: 600; background: var(--secondary-background-color, #f0f0f0); color: var(--p-sub); }
       .badge.plan { background: color-mix(in srgb, #7E57C2 16%, transparent); color: var(--primary-text-color); }
+      .badge.late { background: color-mix(in srgb, var(--p-danger) 16%, transparent); color: var(--primary-text-color); }
+      .badge.due { background: color-mix(in srgb, var(--primary-color, #03a9f4) 14%, transparent); color: var(--primary-text-color); }
+      .h2-t { flex: 1; min-width: 0; }
+      .h2-add { flex: none; width: 44px; height: 44px; margin: -8px -4px -8px 0; border-radius: 22px; border: 2px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 24px; font-weight: 700; line-height: 1; touch-action: manipulation; }
+      h3.pt-group { margin: 12px 0 8px; font-size: 14px; }
+      h3.pt-group.overdue { color: var(--p-danger); }
+      .pt-later { flex: 0 1 auto; min-height: 60px; padding: 0 14px; }
       .badge.carried { background: transparent; border: 1px solid var(--p-line); font-weight: 500; }
       .pt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
       .pt-done { flex: 1 1 160px; min-height: 60px; font-size: 20px; }
@@ -1984,20 +3190,53 @@ class FamilyMissionParents extends HTMLElement {
       .fold { margin-bottom: 10px; }
       .fold > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 15px; font-weight: 700; color: var(--p-sub); }
       .fold .ptask { margin-top: 8px; }
+      .pt-steps { margin: 4px 0 0; }
+      .pt-steps > summary { min-height: 36px; font-size: 14px; }
+      .pt-step { display: flex; align-items: center; gap: 10px; min-height: 40px; font-size: 15px; }
+      .pt-step.done span { text-decoration: line-through; color: var(--p-sub); }
+      .badge.todo, .badge.steps, .badge.days { background: color-mix(in srgb, #7E57C2 14%, transparent); }
+      .badge.hint { background: color-mix(in srgb, var(--warning-color, #E65100) 18%, transparent); }
+      textarea.txt { display: block; width: 100%; box-sizing: border-box; min-height: 72px; padding: 8px 10px; resize: vertical; font-family: inherit; }
+      .fold > label.lbl { display: block; margin-top: 8px; }
       .quickrow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
       .qk { min-height: 72px; padding: 6px; border-radius: 14px; border: 2px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
       .qk span { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; text-align: center; }
       .qk:active { transform: scale(0.97); }
+      .care-rows { display: flex; flex-direction: column; gap: 8px; }
+      .care-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; border: 1px solid var(--p-line); border-left: 5px solid var(--kc); }
+      .care-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+      .care-name { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+      .care-st { font-size: 13px; color: var(--p-sub); }
+      .care-st.taken { color: var(--p-ok); }
+      .care-st.unanswered { color: var(--warning-color, #E65100); font-weight: 700; }
+      .care-give { flex: none; min-width: 96px; }
+      .care-hist { display: flex; flex-direction: column; gap: 6px; }
+      .care-hist-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .care-hist-name { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+      .care-dots { display: flex; gap: 4px; flex: none; }
+      .care-dot { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; font-weight: 800; background: var(--secondary-background-color, #f0f0f0); color: var(--p-sub); }
+      .care-dot.taken { background: color-mix(in srgb, var(--p-ok) 22%, transparent); color: var(--p-ok); }
+      .care-dot.declined { color: var(--primary-text-color); }
+      .care-dot.unanswered { background: color-mix(in srgb, var(--warning-color, #E65100) 22%, transparent); color: var(--warning-color, #E65100); }
+      .care-legend { font-size: 12px; color: var(--p-sub); }
       .trows { display: flex; flex-direction: column; gap: 8px; }
       .trow { padding: 8px 10px; border-radius: 12px; border: 1px solid var(--p-line); display: flex; flex-direction: column; gap: 8px; }
       .trow-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
       .trow-name { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
       .st { flex: none; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--secondary-background-color, #f0f0f0); color: var(--p-sub); }
       .st.done { color: var(--p-ok); }
+      .rot-line { font-size: 14px; color: var(--p-sub); }
       .trow-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .btn.sm { min-height: 44px; font-size: 14px; white-space: normal; line-height: 1.2; padding: 4px 8px; }
       .btn.ok.sm { font-size: 14px; min-height: 44px; }
       .mlist { display: flex; flex-direction: column; gap: 8px; }
+      .abs-banner { display: flex; flex-direction: column; gap: 4px; width: 100%; text-align: left; padding: 10px 14px; border-radius: 12px; border: 1px solid color-mix(in srgb, #00897B 45%, transparent); background: color-mix(in srgb, #00897B 12%, var(--card-background-color, #fff)); color: var(--primary-text-color); font-size: 14px; font-weight: 600; }
+      .abs-row { display: flex; align-items: center; gap: 12px; padding: 12px; margin-bottom: 10px; border-radius: 14px; border: 1px solid var(--p-line); background: var(--card-background-color, #fff); }
+      .abs-row.active { border-left: 6px solid #00897B; }
+      .abs-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+      .abs-t { font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+      .abs-d { font-size: 13px; color: var(--p-sub); }
+      .abs-hint { margin: 8px 0 0; font-size: 13px; color: var(--p-sub); }
       .mrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px; padding: 8px 14px; text-align: left; border-radius: 14px; border: 1px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); }
       .mrow-ico { flex: none; font-size: 24px; width: 32px; text-align: center; }
       .mrow-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }

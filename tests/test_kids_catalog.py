@@ -59,15 +59,17 @@ def test_david_tasks():
     assert david["age"] == 6
     assert keys(david) == {
         "morning", "evening", "room_blitz_small", "table_set",
-        "table_clear", "plants", "room_deep", "own_laundry"}
+        "table_clear", "plants", "room_deep", "own_laundry", "homework"}
     for missing in ("room_blitz", "dishwasher_load", "garden", "driveway", "bedding"):
         assert missing not in keys(david)
     deep = next(t for t in david["tasks"] if t["catalog_key"] == "room_deep")
-    assert [s["title"] for s in deep["subtasks"]] == ["Boden frei", "Regal ordnen", "Müll raus"]
+    assert [s["title"] for s in deep["subtasks"]] == [
+        "Boden frei", "Regal ordnen", "Kleidung in den Schrank", "Müll raus"]   # no dust / vacuum for a 6-year-old
     assert deep["name"] == "Zimmer gründlich David" and deep["kid_id"] == DAVID
     evening = next(t for t in david["tasks"] if t["catalog_key"] == "evening")
     assert [s["title"] for s in evening["subtasks"]] == [
-        "Schulranzen packen", "Schuhe & Jacke an ihren Platz", "Schmutzwäsche in den Korb"]
+        "Schulranzen packen", "Schuhe & Jacke an ihren Platz", "Schmutzwäsche in den Korb",
+        "Zähne putzen", "Schlafanzug an"]   # "Kleidung für morgen rauslegen" starts at 8
     anna_deep = next(t for t in kid(p, ANNA)["tasks"] if t["catalog_key"] == "room_deep")
     assert "Staubsaugen" in [s["title"] for s in anna_deep["subtasks"]]
 
@@ -157,8 +159,9 @@ def test_english_names():
 
 def test_goals_follow_formula():
     p = proposal(FIRST, "start")
-    # Anna: Σ points*30/interval over her basis tasks
-    expected = sum(t["points"] * 30 / t["interval"] for t in kid(p, ANNA)["tasks"])
+    # Anna: Σ points*30/interval over her basis tasks (a weekday schedule counts its share of the week)
+    expected = sum(t["points"] * 30 * (len(t["weekdays"]) / 7 if t["weekdays"] else 1) / t["interval"]
+                   for t in kid(p, ANNA)["tasks"])
     assert kid(p, ANNA)["max_points"] == pytest.approx(expected, abs=0.1)
     assert kid(p, ANNA)["goal"] == kc.round_to(expected * 0.6, 5)
     assert kid(p, ANNA)["goal"] % 5 == 0
@@ -168,8 +171,9 @@ def test_goals_follow_formula():
     assert normal["family_goal"] % 10 == 0
     assert kid(p, DAVID)["goal"] < kid(p, ANNA)["goal"]
     # Concrete numbers of the Eich family (hand-checked)
-    assert [k["goal"] for k in p["kids"]] == [215, 215, 215, 170]
-    assert p["family_goal"] == 650
+    # (2.6: +3 points on the 5 school days of the week for the homework task)
+    assert [k["goal"] for k in p["kids"]] == [255, 255, 255, 205]
+    assert p["family_goal"] == 780
 
 
 def test_goals_are_prorated_mid_month():
@@ -288,7 +292,7 @@ def selected(k):
 def test_suggestion_start_phase_keeps_core_and_stays_within_load():
     p = _suggested("start")
     for k in p["kids"]:
-        assert selected(k) == {"morning", "evening", "table_set"}   # three cards to start
+        assert selected(k) == {"morning", "evening", "table_set", "homework"}   # three chores cards + school duty to start
         assert k["minutes_per_day"] <= k["recommended_minutes"]
         # bigger chores and extras wait for the normal phase
         assert not selected(k) & {"dishwasher_load", "room_deep", "garden", "driveway", "bedding"}
@@ -350,10 +354,10 @@ def test_newly_unlocked_replaces_outgrown_entries():
 
 WINDOWS = {
     "morning": ("05:00", "10:00"), "evening": ("17:00", "21:00"),
-    "room_blitz": ("14:00", "19:30"), "room_blitz_small": ("14:00", "19:30"),
+    "room_blitz": ("16:00", "19:30"), "room_blitz_small": ("16:00", "19:30"), "homework": ("13:30", "18:00"),
     "table_set": ("17:00", "19:30"), "table_clear": ("18:00", "20:30"),
     "dishwasher_load": ("18:00", "21:00"), "plants": ("14:00", "19:00"),
-    "own_laundry": ("14:00", "19:30"), "room_deep": ("09:00", "18:00"),
+    "own_laundry": ("14:00", "19:30"), "room_deep": ("16:00", "19:00"),
     "bedding": ("09:00", "18:00"), "garden": ("10:00", "18:00"),
     "driveway": ("10:00", "18:00"), "pet_feed": ("07:00", "19:00"),
     "pet_clean": ("10:00", "18:00"),
@@ -408,3 +412,151 @@ def test_catalog_allow_together_flags():
     assert all(by_key[k]["allow_together"] for k in shared)
     assert not any(by_key[k]["allow_together"] for k in personal)
     assert all(e["allow_together"] for e in kc.CATALOG if e["category"] != "basis")
+
+
+def test_flow_catalog_localized_defaults():
+    de = {e["key"]: e for e in kc.flow_catalog("de")}
+    en = {e["key"]: e for e in kc.flow_catalog("en")}
+    assert set(de) == {e["key"] for e in kc.CATALOG}
+    assert de["morning"]["name"] == "Morgen-Mission" and en["morning"]["name"] == "Morning mission"
+    assert de["morning"]["subtasks"][0] == {"title": "Anziehen", "min_age": 0}
+    assert de["morning"]["frequent"] is True and de["car"]["frequent"] is False
+    assert de["room_blitz"]["requires_approval"] is True and de["trash"]["category"] == "bonus"
+
+
+def test_flow_catalog_features_hide_entries_and_subtasks():
+    entries = {e["key"]: e for e in kc.flow_catalog("en", [])}
+    assert entries["dishwasher_load"]["available"] is False and entries["trash"]["available"] is True
+    assert "Pack school bag" not in [s["title"] for s in entries["evening"]["subtasks"]]
+    entries = {e["key"]: e for e in kc.flow_catalog("en", ["school", "dishwasher"])}
+    assert entries["dishwasher_load"]["available"] is True
+    assert "Pack school bag" in [s["title"] for s in entries["evening"]["subtasks"]]
+    assert all(e["available"] for e in kc.flow_catalog("en"))
+
+
+def test_flow_catalog_filters_steps_by_age():
+    older = {e["key"]: e for e in kc.flow_catalog("en", None, 10)}
+    younger = {e["key"]: e for e in kc.flow_catalog("en", None, 6)}
+    titles = lambda entries, key: [s["title"] for s in entries[key]["subtasks"]]   # noqa: E731
+    assert "Chop" in titles(older, "cooking") and "Chop" not in titles(younger, "cooking")
+    assert "Add tab & start" in titles(older, "dishwasher_load") and "Add tab & start" not in titles(younger, "dishwasher_load")
+    # without an age every step stays (the client filters by min_age)
+    everything = {e["key"]: e for e in kc.flow_catalog("en")}
+    assert {"title": "Chop", "min_age": 10} in everything["cooking"]["subtasks"]
+
+
+def test_morning_and_evening_missions_steps():
+    morning = kc.CATALOG_BY_KEY["morning"]
+    assert [s["title_de"] for s in morning["subtasks"]] == [
+        "Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg",
+        "Brotdose & Trinkflasche einpacken"]
+    assert [s["title_en"] for s in morning["subtasks"]] == [
+        "Get dressed", "Have breakfast", "Brush teeth", "Make the bed", "Put pajamas away",
+        "Pack lunch box & water bottle"]
+    lunch = morning["subtasks"][-1]
+    assert lunch["min_age"] == 8 and lunch["requires"] == "school"
+    evening = kc.CATALOG_BY_KEY["evening"]
+    assert [s["title_en"] for s in evening["subtasks"]][-3:] == [
+        "Brush teeth", "Put on pajamas", "Lay out clothes for tomorrow"]
+
+
+def test_every_catalog_entry_but_the_unload_has_steps_and_they_are_filtered_by_age_and_feature():
+    for key, entry in kc.CATALOG_BY_KEY.items():
+        assert entry["subtasks"], key
+    p = proposal()
+    anna = kid(p, ANNA)         # 12 years, with school
+    david = kid(p, DAVID)       # 6 years
+    def steps(k, key):
+        return [s["title"] for s in next(t for t in k["tasks"] if t["catalog_key"] == key)["subtasks"]]
+    assert "Brotdose & Trinkflasche einpacken" in steps(anna, "morning")
+    assert "Brotdose & Trinkflasche einpacken" not in steps(david, "morning")
+    assert "Kleidung für morgen rauslegen" in steps(anna, "evening")
+    assert "Staub wischen" in steps(anna, "room_deep") and "Staub wischen" not in steps(david, "room_deep")
+    no_school = kc.build_proposal(KIDS, ["dishwasher"], FIRST, "start", current_year=2026)
+    assert "Brotdose & Trinkflasche einpacken" not in [
+        s["title"] for s in next(t for t in kid(no_school, ANNA)["tasks"] if t["catalog_key"] == "morning")["subtasks"]]
+
+
+def test_legacy_subtasks_cover_the_previous_step_lists():
+    # the pre-1504f00 morning list and the one before this change are frozen
+    assert [s["title_de"] for s in kc.LEGACY_SUBTASKS["morning"][0]] == ["Anziehen", "Bett machen", "Schlafanzug weg"]
+    assert len(kc.LEGACY_SUBTASKS["morning"][1]) == 5
+    assert set(kc.LEGACY_SUBTASKS) <= set(kc.CATALOG_BY_KEY)
+    assert "dishwasher_unload" not in kc.LEGACY_SUBTASKS
+
+
+def test_tasks_generated_with_old_step_lists_are_not_customized():
+    def task(key, titles):
+        return {**_generated(key), "subtasks": [{"title": t, "done": False} for t in titles]}
+
+    # every previous list, in both languages, stays "uncustomized"
+    for lang_key in ("title_de", "title_en"):
+        for key, lists in kc.LEGACY_SUBTASKS.items():
+            generated_key = f"{key}:open" if kc.CATALOG_BY_KEY[key]["mode"] == kc.MODE_OPEN else f"{key}:person.anna"
+            try:
+                base = _generated(generated_key)
+            except StopIteration:
+                continue        # not part of the standard test proposal
+            for steps in lists:
+                old = {**base, "subtasks": [{"title": s[lang_key], "done": False} for s in steps]}
+                assert kc.legacy_customized_fields(old) == [], (key, lang_key)
+    # an old list with an own step is customized, an old list without steps of today's list too
+    assert kc.legacy_customized_fields(task("morning:person.anna", ["Anziehen", "Mein Schritt"])) == ["subtasks"]
+
+
+def _generated(key="morning:person.anna", lang="de"):
+    """A task as the wizard generates it (first matching proposal item)."""
+    p = proposal(lang=lang)
+    items = [t for k in p["kids"] for t in k["tasks"]] + p["open_tasks"]
+    item = next(t for t in items if t["wizard_key"] == key)
+    return {
+        "wizard_key": key, "name": item["name"], "complexity": item["points"], "icon": item["icon"],
+        "category": item["category"], "min_age": item["min_age"], "allow_together": item["allow_together"],
+        "interval": item["interval"], "available_from": item["available_from"],
+        "available_until": item["available_until"], "requires_approval": item["requires_approval"],
+        "subtasks": item["subtasks"], "description": "",
+    }
+
+
+def test_legacy_customized_fields_of_generated_tasks_is_empty():
+    for key in ("morning:person.anna", "table_set:person.ben", "trash:open", "room_blitz:person.anna", "evening:person.david"):
+        for lang in ("de", "en"):
+            assert kc.legacy_customized_fields(_generated(key, lang)) == [], (key, lang)
+
+
+def test_legacy_customized_fields_detects_each_difference():
+    def fields(**change):
+        return kc.legacy_customized_fields({**_generated(), **change})
+
+    assert fields(name="Etwas anderes") == ["name"]
+    assert fields(complexity=9) == ["complexity"]
+    assert fields(icon="mdi:star") == ["icon"]
+    assert fields(category="bonus") == ["category"]
+    assert fields(min_age=3) == ["min_age"]
+    assert fields(allow_together=True) == ["allow_together"]
+    assert fields(interval=2) == ["interval"]
+    assert fields(weekdays=[0]) == ["weekdays"]
+    assert fields(available_until="11:00") == ["available_until"]
+    assert fields(available_from=None) == ["available_from"]
+    assert fields(requires_approval=True) == ["requires_approval"]
+    assert fields(description="x") == ["description"]
+    assert fields(reminder_at="07:00") == ["reminder_at"]
+    assert fields(rotation={"members": ["a", "b"]}) == ["rotation"]
+    assert fields(subtasks=[{"title": "Anziehen", "done": True}]) == ["subtasks"]          # steps removed
+    assert fields(subtasks=[{"title": "Neu", "done": False}]) == ["subtasks"]
+    assert kc.legacy_customized_fields({**_generated(), "scope": "personal"}, expected_scope="home") == ["scope"]
+
+
+def test_legacy_customized_fields_tolerances():
+    # progress is no customization; points overrides of the wizard and rotation lengths are fine
+    task = _generated()
+    task["subtasks"] = [{**s, "done": True} for s in task["subtasks"]]
+    assert kc.legacy_customized_fields(task) == []
+    assert kc.legacy_customized_fields({**task, "complexity": 6}, {"morning:person.anna": 6}) == []
+    rot = _generated("table_set:person.ben")
+    assert kc.legacy_customized_fields({**rot, "interval": rot["interval"] * 2}) == []
+    # steps that depend on the age / a feature may be missing
+    evening = _generated("evening:person.david")
+    assert kc.legacy_customized_fields({**evening, "subtasks": evening["subtasks"][1:]}) == []
+    # an unknown catalog key is customized completely
+    assert kc.legacy_customized_fields({"wizard_key": "gone:person.x"}) == sorted(kc.CUSTOM_FIELDS)

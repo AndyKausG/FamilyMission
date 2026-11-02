@@ -622,8 +622,8 @@ async def test_wizard_tasks_carry_catalog_windows_and_replaced_by(hass, hass_ws_
     assert (await _call(ws, "family_mission/wizard_apply", **WIZ))["success"]
     tasks = _by_key(hass)
     assert (tasks["room_blitz:person.anna"]["available_from"], tasks["room_blitz:person.anna"]["available_until"]) \
-        == ("14:00", "19:30")
-    assert tasks["room_deep:person.anna"]["available_from"] == "09:00"
+        == ("16:00", "19:30")
+    assert tasks["room_deep:person.anna"]["available_from"] == "16:00"
     assert tasks["room_blitz:person.anna"]["replaced_by_key"] == "room_deep"
     assert "replaced_by_key" not in tasks["room_deep:person.anna"]
     # in-place update applies the catalog windows to older wizard tasks
@@ -631,7 +631,7 @@ async def test_wizard_tasks_carry_catalog_windows_and_replaced_by(hass, hass_ws_
     old.update({"available_from": None, "available_until": None})
     old.pop("replaced_by_key")
     assert (await _call(ws, "family_mission/wizard_apply", replace_existing=True, **WIZ))["success"]
-    assert old["available_from"] == "14:00" and old["replaced_by_key"] == "room_deep"
+    assert old["available_from"] == "16:00" and old["replaced_by_key"] == "room_deep"
 
 
 async def test_replaced_blitz_is_skipped_without_missed_entry(hass, hass_ws_client, setup, freezer):

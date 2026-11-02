@@ -92,6 +92,7 @@ ERR_DUPLICATE_HELPER = "duplicate_helper"
 ERR_UNKNOWN_REWARD = "unknown_reward"
 ERR_REWARD_INACTIVE = "reward_inactive"
 ERR_NOT_ENOUGH = "not_enough_points"
+ERR_AFTER_PENDING = "after_pending"
 
 # Window states of a task (see window_state)
 WINDOW_OPEN = "open"
@@ -171,6 +172,269 @@ def allow_together(task: dict) -> bool:
     return bool(value)
 
 
+# ---------------------------------------------------------------------------
+# Task scope (home / personal) and absences (2.6)
+# ---------------------------------------------------------------------------
+
+SCOPE_HOME = "home"
+SCOPE_PERSONAL = "personal"
+SCOPES = (SCOPE_HOME, SCOPE_PERSONAL)
+# Catalog keys (and the ``<key>:<kid>`` prefix of ``wizard_key``) that are a kid's own routines.
+# Household chores and everything unknown / hand-made count as "home".
+PERSONAL_CATALOG_KEYS = frozenset({
+    "morning", "evening", "room_blitz", "room_blitz_small", "room_deep", "own_laundry", "bedding",
+    "reading", "teeth", "homework", "practice",
+})
+
+
+def normalize_scope(value: Any, default: str = SCOPE_HOME) -> str:
+    """``"home"`` | ``"personal"``; anything else -> ``default``."""
+    return value if value in SCOPES else default
+
+
+def scope_for_key(catalog_key: Any) -> str:
+    """Scope of a catalog key: the kid's own routines are personal, chores and unknown keys are home."""
+    return SCOPE_PERSONAL if isinstance(catalog_key, str) and catalog_key in PERSONAL_CATALOG_KEYS else SCOPE_HOME
+
+
+def derive_scope(item: dict) -> str:
+    """The stored ``scope`` of a task / template, else derived from its catalog key (unknown -> home)."""
+    scope = (item or {}).get("scope")
+    if scope in SCOPES:
+        return scope
+    key = (item or {}).get("catalog_key") or str((item or {}).get("wizard_key") or "").split(":", 1)[0]
+    return scope_for_key(key)
+
+
+def task_scope(task: dict) -> str:
+    """Scope of a task (a missing field counts as home)."""
+    return normalize_scope((task or {}).get("scope"))
+
+
+ABSENCE_KINDS = ("trip", "away", "sick", "school_holiday")
+MAX_ABSENCE_DAYS = 120
+MAX_ABSENCES = 60
+MAX_ABSENCE_NOTE = 60
+
+
+def absence_defaults(kind: str) -> dict:
+    """Default options of an absence kind: ``personal`` (personal tasks keep running), ``care`` (medication continues)."""
+    return {"personal": False, "care": kind != "away"}
+
+
+def _iso_day(value: Any) -> date | None:
+    if not isinstance(value, str) or not _DATE_RE.match(value):
+        return None
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        return None
+
+
+def normalize_absence(raw: Any, kid_ids: Iterable[str] | None = None) -> dict | None:
+    """A validated absence ``{id, kind, kids, from, to, personal, care, note}`` or ``None``.
+
+    A trip always covers everybody (``kids == "all"``); ``away`` / ``sick`` need
+    at least one kid (every one of ``kid_ids`` when given). ``to`` is inclusive and
+    must not be before ``from``; at most ``MAX_ABSENCE_DAYS`` days. ``away`` never
+    keeps the personal tasks; medication follows ``care`` for ``away`` and always
+    continues for trip / sick / school holidays. ``school_holiday`` (all kids or the
+    chosen ones) pauses only what needs school (see ``task_requires_school``).
+    """
+    if not isinstance(raw, dict):
+        return None
+    kind = raw.get("kind")
+    if kind not in ABSENCE_KINDS:
+        return None
+    start, end = _iso_day(raw.get("from")), _iso_day(raw.get("to"))
+    if start is None or end is None or end < start or (end - start).days + 1 > MAX_ABSENCE_DAYS:
+        return None
+    if kind == "trip":
+        kids: Any = "all"
+    else:
+        value = raw.get("kids")
+        if value == "all":
+            kids = "all"
+        elif isinstance(value, (list, tuple)):
+            clean = []
+            for k in value:
+                if not isinstance(k, str) or not k or k in clean or (kid_ids is not None and k not in set(kid_ids)):
+                    return None
+                clean.append(k)
+            if not clean:
+                return None
+            kids = clean
+        else:
+            return None
+    defaults = absence_defaults(kind)
+    personal = raw.get("personal")
+    care = raw.get("care")
+    ident = raw.get("id")
+    return {
+        "id": ident if isinstance(ident, str) and ident else "",
+        "kind": kind,
+        "kids": kids,
+        "from": start.isoformat(),
+        "to": end.isoformat(),
+        "personal": False if kind in ("away", "school_holiday") else (personal if isinstance(personal, bool) else defaults["personal"]),
+        "care": care if kind == "away" and isinstance(care, bool) else (False if kind == "away" else True),
+        "note": str(raw.get("note") or "").strip()[:MAX_ABSENCE_NOTE],
+    }
+
+
+def absence_active(absence: dict, day: date) -> bool:
+    """True when ``day`` lies inside ``from..to`` (inclusive)."""
+    start, end = _iso_day(absence.get("from")), _iso_day(absence.get("to"))
+    return start is not None and end is not None and start <= day <= end
+
+
+def _absence_covers(absence: dict, kid_id: str) -> bool:
+    kids = absence.get("kids")
+    return kids == "all" or (isinstance(kids, (list, tuple)) and kid_id in kids)
+
+
+def is_paused(task: dict, kid_id: str, day: date, absences: Iterable[dict] | None) -> bool:
+    """True when ``task`` is paused for ``kid_id`` on ``day`` because of an absence.
+
+    * trip: home tasks pause; personal tasks pause unless the trip keeps them (``personal``).
+    * away: everything of the kid pauses.
+    * sick: home tasks pause; personal tasks pause unless ``personal``.
+    * school_holiday: only tasks that need school (homework) pause.
+    """
+    scope = task_scope(task)
+    for absence in absences or ():
+        if not isinstance(absence, dict) or not absence_active(absence, day) or not _absence_covers(absence, kid_id):
+            continue
+        if absence.get("kind") == "school_holiday":
+            if task_requires_school(task):
+                return True
+            continue
+        if absence.get("kind") == "away" or scope == SCOPE_HOME or not absence.get("personal"):
+            return True
+    return False
+
+
+# Catalog keys of tasks that only make sense on school days (see the ``school`` household feature).
+SCHOOL_CATALOG_KEYS = frozenset({"homework"})
+# Titles (German / English) of catalog steps that need school ("requires": "school"); a stored step carries
+# no feature flag, so it is recognized by its title (or by an explicit ``requires: "school"``).
+SCHOOL_STEP_TITLES = frozenset(t.casefold() for t in (
+    "Brotdose & Trinkflasche einpacken", "Pack lunch box & water bottle",
+    "Schulranzen packen", "Pack school bag",
+))
+
+
+def task_catalog_key(task: dict) -> str:
+    """Catalog key of a task: its ``catalog_key`` or the prefix of its wizard key (``""`` for a plain task)."""
+    key = (task or {}).get("catalog_key")
+    if isinstance(key, str) and key:
+        return key
+    return str((task or {}).get("wizard_key") or "").split(":", 1)[0]
+
+
+def task_requires_school(task: dict) -> bool:
+    """True for a task that only runs on school days (it pauses in school holidays)."""
+    return task_catalog_key(task) in SCHOOL_CATALOG_KEYS
+
+
+def is_school_step(step: Any) -> bool:
+    """True for a mission step that needs school (school bag, lunch box)."""
+    if isinstance(step, dict):
+        if step.get("requires") == "school":
+            return True
+        title = step.get("title")
+    else:
+        title = step
+    return isinstance(title, str) and title.strip().casefold() in SCHOOL_STEP_TITLES
+
+
+def day_ranges(days: Iterable[date]) -> list[tuple[date, date]]:
+    """Consecutive days merged into ``(first, last)`` ranges, sorted."""
+    result: list[tuple[date, date]] = []
+    for day in sorted(set(days)):
+        if result and day == result[-1][1] + timedelta(days=1):
+            result[-1] = (result[-1][0], day)
+        else:
+            result.append((day, day))
+    return result
+
+
+def all_day_event_days(events: Iterable[dict], first: date, last: date) -> list[date]:
+    """Days within ``first..last`` covered by the all-day events of a calendar.
+
+    An all-day event has date-only ``start`` / ``end`` (``YYYY-MM-DD``, ``end`` exclusive like in
+    Home Assistant); timed events are ignored. A missing / earlier ``end`` makes it a single day.
+    """
+    days: set[date] = set()
+    for event in events or ():
+        if not isinstance(event, dict):
+            continue
+        start, end = event.get("start"), event.get("end")
+        if not isinstance(start, str) or not _DATE_RE.match(start):
+            continue
+        begin = _iso_day(start)
+        finish = _iso_day(end) if isinstance(end, str) and _DATE_RE.match(end) else None
+        if begin is None:
+            continue
+        if finish is None or finish <= begin:
+            finish = begin + timedelta(days=1)
+        probe = max(begin, first)
+        while probe < finish and probe <= last:
+            days.add(probe)
+            probe += timedelta(days=1)
+    return sorted(days)
+
+
+def school_holiday(kid_id: str, day: date, absences: Iterable[dict] | None) -> bool:
+    """True when ``day`` is a school holiday for the kid (an active ``school_holiday`` absence covers the kid)."""
+    return any(
+        isinstance(a, dict) and a.get("kind") == "school_holiday" and absence_active(a, day) and _absence_covers(a, kid_id)
+        for a in absences or ()
+    )
+
+
+def absent_kids(day: date, absences: Iterable[dict] | None, scope: str = SCOPE_HOME, all_kids: Iterable[str] = ()) -> set[str]:
+    """Kids whose tasks of ``scope`` are paused on ``day`` (``all_kids`` stands for ``kids == "all"``)."""
+    absences = [a for a in (absences or ()) if isinstance(a, dict) and absence_active(a, day)]
+    if not absences:
+        return set()
+    candidates = set(all_kids or ())
+    for absence in absences:
+        if isinstance(absence.get("kids"), (list, tuple)):
+            candidates.update(k for k in absence["kids"] if isinstance(k, str))
+    probe = {"scope": normalize_scope(scope)}
+    return {k for k in candidates if is_paused(probe, k, day, absences)}
+
+
+def trip_active(day: date, absences: Iterable[dict] | None) -> dict | None:
+    """The family trip (``kids == "all"``, kind trip) active on ``day``, else ``None``."""
+    for absence in absences or ():
+        if (isinstance(absence, dict) and absence.get("kind") == "trip" and absence.get("kids") == "all"
+                and absence_active(absence, day)):
+            return absence
+    return None
+
+
+def care_paused(kid_id: str, day: date, absences: Iterable[dict] | None) -> bool:
+    """True when the kid's medication is suspended on ``day`` (an absence covering the kid without ``care``)."""
+    for absence in absences or ():
+        if (isinstance(absence, dict) and absence_active(absence, day) and _absence_covers(absence, kid_id)
+                and not absence.get("care", absence.get("kind") != "away")):
+            return True
+    return False
+
+
+def first_unpaused_day(task: dict, kid_ids: Iterable[str], day: date, absences: Iterable[dict] | None) -> date:
+    """First day ``>= day`` on which ``task`` is not paused for at least one of ``kid_ids`` (``day`` if none is paused)."""
+    kid_ids = list(kid_ids) or [""]
+    probe = day
+    for _ in range(MAX_ABSENCE_DAYS * 3):
+        if not all(is_paused(task, k, probe, absences) for k in kid_ids):
+            return probe
+        probe += timedelta(days=1)
+    return probe
+
+
 def migrate_task_like(item: dict) -> None:
     """Additively add ``category`` / ``min_age`` defaults to a task/template."""
     item["category"] = normalize_category(item.get("category"))
@@ -180,8 +444,14 @@ def migrate_task_like(item: dict) -> None:
     item["allow_together"] = allow_together(item)
     item["available_from"] = normalize_time(item.get("available_from"))
     item["available_until"] = normalize_time(item.get("available_until"))
+    for key in ("available_from_we", "available_until_we"):
+        if key in item:
+            item[key] = normalize_time(item.get(key))
+    if "after_key" in item:
+        item["after_key"] = normalize_after_key(item.get("after_key"))
     item["reminder_at"] = normalize_time(item.get("reminder_at"))
     item["reminder_target"] = normalize_reminder_target(item.get("reminder_target"))
+    item["scope"] = derive_scope(item)
 
 
 _NOTIFY_RE = re.compile(r"^(?:notify\.)?([a-z0-9_]{1,64})$")
@@ -266,6 +536,22 @@ def is_night_time(
     return sleep_min <= minute < wake_today
 
 
+def task_window(task: dict, weekday: int | None = None) -> tuple[str | None, str | None]:
+    """The ``(from, until)`` window (``"HH:MM"`` or ``None``) that applies on a weekday (Mon=0).
+
+    On Saturday / Sunday the optional weekend window (``available_from_we`` /
+    ``available_until_we``) replaces the normal one as soon as one of its two
+    times is set; without it the same window applies every day.
+    """
+    task = task or {}
+    if weekday is not None and weekday >= 5:
+        start_we = normalize_time(task.get("available_from_we"))
+        end_we = normalize_time(task.get("available_until_we"))
+        if start_we or end_we:
+            return start_we, end_we
+    return normalize_time(task.get("available_from")), normalize_time(task.get("available_until"))
+
+
 def window_state(task: dict, now: datetime) -> str:
     """Whether ``now`` (local time) is inside the task's time window.
 
@@ -279,9 +565,9 @@ def window_state(task: dict, now: datetime) -> str:
       the gap in between counts as ``not_yet``.
     * ``from == until`` or no valid time at all: no restriction.
     * an ``until`` of ``00:00`` means "end of the day".
+    * on Saturday / Sunday the weekend window applies when the task has one (see ``task_window``).
     """
-    start = normalize_time((task or {}).get("available_from"))
-    end = normalize_time((task or {}).get("available_until"))
+    start, end = task_window(task, now.weekday())
     if start == "00:00":
         start = None
     if end == "00:00" and start is None:
@@ -689,6 +975,7 @@ def public_kids(kids: dict | None) -> dict:
             "approval_sample_rate": normalize_sample_rate(profile.get("approval_sample_rate")),
             "strict_until": profile.get("strict_until"),
             "goal_reward": profile.get("goal_reward"),
+            "care": normalize_care(profile.get("care")),
             "has_pin": bool(profile.get("pin_hash") and profile.get("pin_salt")),
         }
         result[kid_id] = entry
@@ -735,6 +1022,8 @@ def merge_imported_kids(existing: dict | None, incoming: Any) -> dict:
         strict = parse_birthday(profile.get("strict_until"))
         if strict is not None:
             target["strict_until"] = strict.isoformat()
+        if "care" in profile:
+            target["care"] = normalize_care(profile.get("care"))
         target.setdefault("avatar", DEFAULT_KID_AVATAR)
         target.setdefault("color", DEFAULT_KID_COLOR)
         target.setdefault("birth_year", None)
@@ -753,6 +1042,7 @@ def build_kid_profile(
     clear_pin: bool = False,
     birthday: Any = _UNSET,
     approval_sample_rate: Any = _UNSET,
+    care: Any = _UNSET,
 ) -> dict:
     """Return the new stored profile. An empty ``pin`` keeps the old one.
 
@@ -780,6 +1070,12 @@ def build_kid_profile(
 
     if approval_sample_rate is not _UNSET:
         profile["approval_sample_rate"] = normalize_sample_rate(approval_sample_rate)
+    if care is not _UNSET:
+        entries = normalize_care(care)
+        if entries:
+            profile["care"] = entries
+        else:
+            profile.pop("care", None)
     if clear_pin:
         profile.pop("pin_hash", None)
         profile.pop("pin_salt", None)
@@ -812,10 +1108,219 @@ def claim_active(task: dict, now: datetime) -> bool:
 
 
 def _assignee_list(task: dict) -> list:
+    """Assignee ids of a task (for a rotation task: all members, see ``effective_assignees``)."""
     assignees = task.get("assignees") or []
     if isinstance(assignees, str):
         assignees = [assignees]
     return list(assignees)
+
+
+# ---------------------------------------------------------------------------
+# Weekday schedule and real rotation (2.6)
+# ---------------------------------------------------------------------------
+
+MAX_ROTATION_MEMBERS = 12
+
+
+def normalize_weekdays(value: Any) -> list[int]:
+    """Sorted unique weekdays (Mon=0 ... Sun=6) of a schedule; anything invalid -> ``[]`` (= use ``interval``)."""
+    if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple, set, frozenset)):
+        return []
+    days = set()
+    for item in value:
+        if isinstance(item, bool) or not isinstance(item, int) or not 0 <= item <= 6:
+            return []
+        days.add(item)
+    return sorted(days)
+
+
+def valid_weekdays(value: Any) -> bool:
+    """True for ``None`` / an empty list (no weekday schedule) or a list of ints 0-6."""
+    if value is None or value == []:
+        return True
+    return bool(normalize_weekdays(value)) and len(normalize_weekdays(value)) == len(value)
+
+
+def next_weekday_on_or_after(weekdays: Iterable[int], day: date) -> date:
+    """First day ``>= day`` whose weekday is in ``weekdays`` (``day`` itself when no valid schedule)."""
+    days = normalize_weekdays(list(weekdays))
+    if not days:
+        return day
+    for offset in range(7):
+        if (day + timedelta(days=offset)).weekday() in days:
+            return day + timedelta(days=offset)
+    return day  # pragma: no cover - days is not empty
+
+
+def next_weekday_after(weekdays: Iterable[int], day: date) -> date:
+    """First listed weekday strictly after ``day`` (a completion today -> the next occurrence)."""
+    return next_weekday_on_or_after(weekdays, day + timedelta(days=1))
+
+
+def normalize_rotation(value: Any, allowed: Iterable[str] | None = None) -> dict | None:
+    """Validated rotation ``{members, index}`` or ``None``.
+
+    ``members`` are unique ids (at least two); with ``allowed`` every member
+    has to be one of them. Invalid input -> ``None`` (= no rotation).
+    """
+    if not isinstance(value, dict):
+        return None
+    members = value.get("members")
+    if not isinstance(members, (list, tuple)):
+        return None
+    clean = []
+    for m in members:
+        if not isinstance(m, str) or not m or m in clean:
+            return None
+        clean.append(m)
+    if not 2 <= len(clean) <= MAX_ROTATION_MEMBERS:
+        return None
+    if allowed is not None and not set(clean) <= set(allowed):
+        return None
+    index = value.get("index", 0)
+    if isinstance(index, bool) or not isinstance(index, int) or index < 0:
+        index = 0
+    rotation = {"members": clean, "index": index % len(clean), "every": "occurrence"}
+    back = value.get("return_to")
+    if isinstance(back, str) and back in clean:
+        rotation["return_to"] = back
+    return rotation
+
+
+def rotation_member(rotation: Any, skip: Iterable[str] = ()) -> str | None:
+    """The member whose turn it is: ``members[index % len]``, the next one when that one is in ``skip``.
+
+    ``skip`` is the hook for absences: skipped members are passed over without
+    changing the stored index. ``None`` for no valid rotation or when everybody is skipped.
+    """
+    if not isinstance(rotation, dict):
+        return None
+    members = [m for m in (rotation.get("members") or []) if isinstance(m, str)]
+    if not members:
+        return None
+    index = rotation.get("index", 0)
+    index = index if isinstance(index, int) and not isinstance(index, bool) else 0
+    skip = set(skip or ())
+    for offset in range(len(members)):
+        member = members[(index + offset) % len(members)]
+        if member not in skip:
+            return member
+    return None
+
+
+def rotation_upcoming(rotation: Any, count: int = 2, skip: Iterable[str] = ()) -> list[str]:
+    """The next ``count`` members in turn order (current first), skipped members left out."""
+    if not isinstance(rotation, dict):
+        return []
+    members = [m for m in (rotation.get("members") or []) if isinstance(m, str)]
+    if not members:
+        return []
+    skip = set(skip or ())
+    index = rotation.get("index", 0)
+    index = index if isinstance(index, int) and not isinstance(index, bool) else 0
+    order = [members[(index + i) % len(members)] for i in range(len(members))]
+    order = [m for m in order if m not in skip]
+    return [order[i % len(order)] for i in range(count)] if order else []
+
+
+def rotation_advanced(rotation: dict) -> dict:
+    """The rotation after an occurrence was completed or expired (a copy).
+
+    After a swap the member who gave up the turn (``return_to``) is next.
+    Otherwise the next member in line.
+    """
+    new = copy.deepcopy(rotation)
+    members = new.get("members") or []
+    if not members:
+        return new
+    back = new.pop("return_to", None)
+    if back in members:
+        new["index"] = members.index(back)
+    else:
+        index = new.get("index", 0)
+        new["index"] = (index + 1) % len(members)
+    return new
+
+
+def rotation_swapped(rotation: dict, member: str) -> dict | None:
+    """The rotation with ``member`` taking over the current occurrence (a copy), ``None`` for a non-member.
+
+    The member whose turn it was is next after the swap (``return_to``).
+    """
+    members = rotation.get("members") or []
+    if member not in members:
+        return None
+    new = copy.deepcopy(rotation)
+    current = rotation_member(rotation)
+    if member != current and "return_to" not in new:
+        new["return_to"] = current
+    new["index"] = members.index(member)
+    if member == new.get("return_to"):
+        new.pop("return_to", None)
+    return new
+
+
+def effective_assignees(task: dict, skip: Iterable[str] = ()) -> list:
+    """Who has the task as a duty right now: the current member of a rotation, else the assignees."""
+    rotation = task.get("rotation")
+    if isinstance(rotation, dict):
+        member = rotation_member(rotation, skip)
+        return [member] if member else []
+    return _assignee_list(task)
+
+
+_AFTER_KEY_RE = re.compile(r"^[a-z0-9_]{1,40}$")
+
+
+def normalize_after_key(value: Any) -> str | None:
+    """Catalog key of the task that has to be done first (``after_key``), ``None`` for anything else."""
+    return value if isinstance(value, str) and _AFTER_KEY_RE.match(value) else None
+
+
+def after_blockers(
+    task: dict,
+    kid_id: str,
+    tasks: dict,
+    now: datetime,
+    default_overdue_days: int = DEFAULT_OVERDUE_DAYS,
+    absences: Iterable[dict] | None = None,
+) -> list[dict]:
+    """The kid's tasks that still stand in front of ``task`` (``after_key``), empty when nothing waits.
+
+    ``after_key`` is a catalog key (e.g. ``homework``). The task is released once the kid's task
+    with that key is done today or is not due today at all (weekend, school holiday, absence,
+    schedule). A blocker whose time window is over for today cannot be done any more and does
+    not block either.
+    """
+    key = normalize_after_key((task or {}).get("after_key"))
+    if not key:
+        return []
+    result = []
+    for other in tasks.values():
+        if (
+            other is task or not isinstance(other, dict) or other.get("parent_task")
+            or task_catalog_key(other) != key
+            or kid_id not in effective_assignees(other)
+            or is_paused(other, kid_id, now.date(), absences)
+            or not is_open(other, now, default_overdue_days)
+            or is_expired(other, now)
+            or window_state(other, now) == WINDOW_TOO_LATE
+        ):
+            continue
+        result.append(other)
+    return result
+
+
+def after_pending(
+    task: dict,
+    kid_id: str,
+    tasks: dict,
+    now: datetime,
+    default_overdue_days: int = DEFAULT_OVERDUE_DAYS,
+    absences: Iterable[dict] | None = None,
+) -> bool:
+    """True while ``task`` has to wait for the kid's task of its ``after_key``."""
+    return bool(after_blockers(task, kid_id, tasks, now, default_overdue_days, absences))
 
 
 def open_basis_tasks_for(
@@ -824,22 +1329,28 @@ def open_basis_tasks_for(
     now: datetime,
     default_overdue_days: int,
     age: int | None = None,
+    absences: Iterable[dict] | None = None,
 ) -> list[dict]:
     """Due/overdue ``basis`` tasks assigned to the kid that the kid can do.
 
+    Tasks paused for the kid by an absence (``absences``) are not open either.
+
     Tasks the kid is too young for are ignored: they can never be completed by
     this kid and must not block the bonus tasks forever. Tasks outside their
-    time window (not yet available / window over) are not "open" either.
+    time window (not yet available / window over) or that still wait for another
+    task (``after_key``) are not "open" either.
     """
     return [
         t
         for t in tasks.values()
         if normalize_category(t.get("category")) == "basis"
-        and kid_id in _assignee_list(t)
+        and kid_id in effective_assignees(t, absent_kids(now.date(), absences, task_scope(t), _assignee_list(t)) if absences else ())
+        and not is_paused(t, kid_id, now.date(), absences)
         and is_open(t, now, default_overdue_days)
         and in_window(t, now)
         and not _too_young(t, age)
         and not is_replaced(t, tasks, now, default_overdue_days)
+        and not after_pending(t, kid_id, tasks, now, default_overdue_days, absences)
     ]
 
 
@@ -850,7 +1361,7 @@ def _replaces(replaced: dict, replacing: dict) -> bool:
         return False
     if not str(replacing.get("wizard_key") or "").startswith(f"{key}:"):
         return False
-    return bool(set(_assignee_list(replaced)) & set(_assignee_list(replacing)))
+    return bool(set(effective_assignees(replaced)) & set(effective_assignees(replacing)))
 
 
 def is_replaced(
@@ -915,15 +1426,24 @@ def bonus_needs_routine(task: dict) -> bool:
     )
 
 
-def open_required_steps(task: dict) -> list[dict]:
-    """Subtasks that still have to be ticked before a kid may finish the task.
+def open_required_steps(
+    task: dict, care_steps: Iterable[dict] | None = None, school_free: bool = False,
+) -> list[dict]:
+    """Steps that still have to be done before a kid may finish the task.
 
-    Subtasks marked ``optional`` (e.g. a medication reminder) never block.
+    Stored subtasks block until ticked, except those marked ``optional``.
+    ``care_steps`` are the virtual medication steps of the kid's morning /
+    evening mission (never stored in ``subtasks``, see ``care_steps_for``): both
+    answers ("taken" and "not today") count as done, only an unanswered step
+    blocks. ``school_free`` (school holiday): steps that need school do not block.
     """
-    return [
+    steps = [
         st for st in (task.get("subtasks") or [])
         if isinstance(st, dict) and not st.get("done") and not st.get("optional")
+        and not (school_free and is_school_step(st))
     ]
+    steps.extend(st for st in (care_steps or ()) if isinstance(st, dict) and not st.get("answer"))
+    return steps
 
 
 def check_eligibility(
@@ -933,8 +1453,12 @@ def check_eligibility(
     tasks: dict,
     settings: dict,
     now: datetime,
+    absences: Iterable[dict] | None = None,
 ) -> str | None:
-    """Return ``None`` when the kid may work on the task, else an error code."""
+    """Return ``None`` when the kid may work on the task, else an error code.
+
+    A task paused for the kid by an absence (``absences``) is not eligible.
+    """
     overdue_days = settings.get("overdue_days", DEFAULT_OVERDUE_DAYS)
 
     if task.get("parent_task"):
@@ -944,8 +1468,11 @@ def check_eligibility(
     if is_replaced(task, tasks, now, overdue_days):
         return ERR_NOT_ELIGIBLE
 
-    assignees = _assignee_list(task)
-    if assignees and kid_id not in assignees:
+    if is_paused(task, kid_id, now.date(), absences):
+        return ERR_NOT_ELIGIBLE
+    skip = absent_kids(now.date(), absences, task_scope(task), _assignee_list(task)) if absences else ()
+    assignees = effective_assignees(task, skip)
+    if (assignees or isinstance(task.get("rotation"), dict)) and kid_id not in assignees:
         return ERR_NOT_ELIGIBLE
 
     # Unknown birth year: the parents did not restrict this kid -> allowed
@@ -959,10 +1486,13 @@ def check_eligibility(
     if window == WINDOW_TOO_LATE:
         return ERR_TOO_LATE
 
+    if after_pending(task, kid_id, tasks, now, overdue_days, absences):
+        return ERR_AFTER_PENDING
+
     if claim_active(task, now) and task.get("claimed_by") != kid_id:
         return ERR_CLAIMED
 
-    if bonus_needs_routine(task) and open_basis_tasks_for(tasks, kid_id, now, overdue_days, age):
+    if bonus_needs_routine(task) and open_basis_tasks_for(tasks, kid_id, now, overdue_days, age, absences):
         return ERR_BASIS_OPEN
 
     return None
@@ -1026,6 +1556,8 @@ def missed_grace_days(base_interval: Any) -> int | None:
 
 def is_missed(task: dict, now: datetime, base_interval: Any, default_overdue_days: int = DEFAULT_OVERDUE_DAYS) -> bool:
     """True when the duty is still open from a previous day beyond its grace period."""
+    if normalize_weekdays(task.get("weekdays")):
+        base_interval = 1  # a missed weekday occurrence expires like a daily duty
     grace = missed_grace_days(base_interval)
     if grace is None or not is_open(task, now, default_overdue_days):
         return False
@@ -1033,6 +1565,15 @@ def is_missed(task: dict, now: datetime, base_interval: Any, default_overdue_day
     if due_dt is None:
         return False
     return (now.date() - _local_date(due_dt, now)).days > grace
+
+
+def next_due_for_task(task: dict, due: date, today: date) -> date:
+    """Next occurrence of a missed duty: the next listed weekday (on or after ``today``) or ``next_due_day``."""
+    weekdays = normalize_weekdays(task.get("weekdays"))
+    if weekdays:
+        return next_weekday_on_or_after(weekdays, today)
+    interval = task.get("interval", 7)
+    return next_due_day(due, interval if isinstance(interval, int) else 7, today)
 
 
 def next_due_day(due: date, interval: int, today: date) -> date:
@@ -1047,6 +1588,146 @@ def next_due_day(due: date, interval: int, today: date) -> date:
     if nxt < today:
         nxt += timedelta(days=interval * math.ceil((today - nxt).days / interval))
     return nxt
+
+
+# ---------------------------------------------------------------------------
+# Family goal in percent (2.6)
+# ---------------------------------------------------------------------------
+
+GOAL_MODES = ("points", "percent")
+GOAL_PERCENT_MIN = 10
+GOAL_PERCENT_MAX = 150
+GOAL_PERCENT_DEFAULT = 75
+
+
+def normalize_goal_mode(value: Any) -> str:
+    """``"percent"`` or ``"points"`` (default and fallback)."""
+    return value if value in GOAL_MODES else "points"
+
+
+def normalize_goal_percent(value: Any) -> int:
+    """Percent of the possible points as int 10-150, invalid -> 75."""
+    if isinstance(value, bool):
+        return GOAL_PERCENT_DEFAULT
+    try:
+        number = int(round(float(value)))
+    except (TypeError, ValueError):
+        return GOAL_PERCENT_DEFAULT
+    if not GOAL_PERCENT_MIN <= number <= GOAL_PERCENT_MAX:
+        return GOAL_PERCENT_DEFAULT
+    return number
+
+
+def goal_target(percent: Any, possible: float) -> int:
+    """Target points: ``percent`` of ``possible`` rounded to 5, at least 5."""
+    try:
+        raw = float(possible) * normalize_goal_percent(percent) / 100.0
+    except (TypeError, ValueError):
+        raw = 0.0
+    return max(5, int(math.floor(raw / 5.0 + 0.5)) * 5)
+
+
+def goal_ratchet(snapshot: dict, option_percent: Any, possible_now: float) -> dict:
+    """The snapshot after applying the "only ever down" rule (a copy).
+
+    The percent can only fall within a period (raising it applies to the next
+    one); the new target is ``min(stored target, target of the recomputed
+    possible points)``. Adding tasks or raising the percent never raises it.
+    """
+    new = dict(snapshot)
+    percent = min(normalize_goal_percent(snapshot.get("percent")), normalize_goal_percent(option_percent))
+    new["percent"] = percent
+    try:
+        stored = int(snapshot.get("target"))
+    except (TypeError, ValueError):
+        stored = goal_target(percent, possible_now)
+    new["target"] = min(stored, goal_target(percent, possible_now))
+    return new
+
+
+def _goal_task_days(task: dict, start: date, end: date, now: datetime) -> list[date]:
+    """Days in ``start..end`` on which a duty is due (weekday schedule, or the interval projected from ``due_date``)."""
+    weekdays = normalize_weekdays(task.get("weekdays"))
+    days = (end - start).days + 1
+    if days <= 0:
+        return []
+    if weekdays:
+        return [d for d in (start + timedelta(days=i) for i in range(days)) if d.weekday() in weekdays]
+    due_dt = parse_dt(task.get("due_date"))
+    if due_dt is None:
+        return []  # a task without a date ("someday") has no schedule
+    anchor = _local_date(due_dt, now)
+    interval = task.get("interval", 7)
+    if isinstance(interval, bool) or not isinstance(interval, int):
+        interval = 7
+    if interval <= 0:
+        return [anchor] if start <= anchor <= end else []
+    first = start + timedelta(days=(anchor - start).days % interval)
+    return [first + timedelta(days=i * interval) for i in range(((end - first).days // interval) + 1)] if first <= end else []
+
+
+def possible_points(
+    tasks: dict,
+    kids: dict | None,
+    start: date,
+    end: date,
+    now: datetime,
+    settings: dict | None = None,
+    skip_days: dict | None = None,
+    exclude_ids: Iterable[str] = (),
+    absences: Iterable[dict] | None = None,
+) -> float:
+    """Points the kids could earn with their basis duties on ``start..end`` (inclusive).
+
+    Sum of ``complexity`` x due occurrences per task. A task with several
+    assignees or a rotation counts once per occurrence. Not counted: bonus and
+    ad-hoc tasks, waste jobs, trigger tasks (``exclude_ids``), parents' tasks,
+    days a task is paused, days all its kids are absent (``absences``), days all its kids are too young, birthday duty-free
+    days (single assignee) and the days of ``skip_days`` (``{task_id: {date}}``).
+    ``now`` only supplies the time zone.
+    """
+    kids = kids or {}
+    excluded = set(exclude_ids or ())
+    free = birthday_duty_free(settings)
+    total = 0.0
+    for task_id, task in (tasks or {}).items():
+        if (
+            not isinstance(task, dict)
+            or task_id in excluded
+            or task.get("parent_task")
+            or task.get("adhoc")
+            or task.get("waste_key")
+            or normalize_category(task.get("category")) != "basis"
+        ):
+            continue
+        try:
+            points = float(task.get("complexity") or 0)
+        except (TypeError, ValueError):
+            continue
+        if points <= 0:
+            continue
+        rotation = task.get("rotation")
+        members = list(rotation.get("members") or []) if isinstance(rotation, dict) else _assignee_list(task)
+        members = [m for m in members if m in kids]
+        if not members:
+            continue
+        single = members[0] if len(members) == 1 and not isinstance(rotation, dict) else None
+        paused_dt = parse_dt(task.get("paused_until"))
+        paused_to = _local_date(paused_dt, now) if paused_dt is not None else None
+        skipped = (skip_days or {}).get(task_id) or ()
+        for day in _goal_task_days(task, start, end, now):
+            if paused_to is not None and day <= paused_to:
+                continue
+            if day in skipped:
+                continue
+            if absences and all(is_paused(task, m, day, absences) for m in members):
+                continue
+            if all(_too_young(task, kid_age(kids.get(m), day)) for m in members):
+                continue
+            if free and single and is_birthday(kids.get(single), day):
+                continue
+            total += points
+    return round(total, 1)
 
 
 # ---------------------------------------------------------------------------
@@ -1111,3 +1792,372 @@ def find_reward(rewards: Any, reward_id: Any) -> dict | None:
         if isinstance(reward, dict) and reward.get("id") == reward_id:
             return reward
     return None
+
+
+# ---------------------------------------------------------------------------
+# Care (medication) per kid
+# ---------------------------------------------------------------------------
+# A kid profile may carry ``care`` entries (a daily tablet, drops, an inhaler ...).
+# They are shown as a virtual step in the morning / evening mission or as a small
+# item of their own; the answers are logged per day in ``data["care_log"]``.
+# Never points, never an approval, never a penalty.
+
+CARE_ANCHORS = ("morning", "evening", "time")
+CARE_TAKEN = "taken"
+CARE_DECLINED = "declined"
+CARE_UNANSWERED = "unanswered"
+CARE_STATUSES = (CARE_TAKEN, CARE_DECLINED, CARE_UNANSWERED)
+CARE_ANSWERS = (CARE_TAKEN, CARE_DECLINED)
+MAX_CARE_ENTRIES = 6
+MAX_CARE_LABEL = 30
+MAX_CARE_AFTER = 60
+# Without an explicit position the step of a morning entry follows the breakfast step (if the mission has one)
+CARE_DEFAULT_AFTER = {"morning": ("Frühstücken", "Have breakfast")}
+DEFAULT_CARE_LABEL = "Tablette"
+DEFAULT_CARE_EMOJI = "💊"
+DEFAULT_CARE_TIME = "08:00"
+DEFAULT_CARE_DEADLINES = {"morning": "10:00", "evening": "21:00"}
+# Without a matching mission the item is shown from this time on
+CARE_VISIBLE_FROM = {"morning": "05:00", "evening": "17:00"}
+DEFAULT_ALERT_COUNT = 3
+DEFAULT_ALERT_DAYS = 7
+CARE_LOG_KEEP_DAYS = 60
+
+
+def _care_weekdays(value: Any) -> list[int]:
+    """Sorted unique weekdays 0-6 (Monday = 0); everything unusable means every day."""
+    if isinstance(value, (list, tuple)):
+        days = {d for d in value if isinstance(d, int) and not isinstance(d, bool) and 0 <= d <= 6}
+        if days:
+            return sorted(days)
+    return list(range(7))
+
+
+def _care_deadline(value: Any, anchor: str, time_value: str) -> str:
+    deadline = normalize_time(value)
+    if deadline:
+        return deadline
+    if anchor in DEFAULT_CARE_DEADLINES:
+        return DEFAULT_CARE_DEADLINES[anchor]
+    minutes = min(23 * 60 + 59, _minutes_of_day(time_value) + 120)
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def normalize_care(raw: Any) -> list[dict]:
+    """Validate the care entries of a kid profile; invalid values fall back to the defaults.
+
+    Entry: ``{id, label, emoji, anchor morning|evening|time, time, weekdays, deadline,
+    notify_parents, decline_alert {enabled, count, days}, after}``. Anything that is not a
+    list gives ``[]``, entries that are not dicts are dropped (at most 6 are kept).
+    ``stock`` / ``per_dose`` / ``stock_set_at`` are the pill stock the parents ENTERED (the live,
+    counted-down stock is kept in the data store, see ``care_stock_reconcile``).
+    ``after`` (optional, at most 60 characters) is the title of the mission step the care
+    step follows; ``""`` means "at the end", a missing key the default (see ``care_insert_index``).
+    """
+    if not isinstance(raw, (list, tuple)):
+        return []
+    result: list[dict] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, dict) or len(result) >= MAX_CARE_ENTRIES:
+            continue
+        label = item.get("label")
+        label = label.strip()[:MAX_CARE_LABEL] if isinstance(label, str) else ""
+        emoji = item.get("emoji")
+        emoji = emoji.strip() if isinstance(emoji, str) else ""
+        if not emoji or len(emoji) > 16:
+            emoji = DEFAULT_CARE_EMOJI
+        anchor = item.get("anchor") if item.get("anchor") in CARE_ANCHORS else "morning"
+        time_value = normalize_time(item.get("time")) or DEFAULT_CARE_TIME
+        cid = item.get("id")
+        if not isinstance(cid, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,40}", cid) or cid in seen:
+            cid = secrets.token_hex(4)
+        seen.add(cid)
+        alert = item.get("decline_alert") if isinstance(item.get("decline_alert"), dict) else {}
+        count = _int_in(alert.get("count"), 1, 30)
+        days = _int_in(alert.get("days"), 1, CARE_LOG_KEEP_DAYS)
+        after = item.get("after")
+        entry = {
+            "id": cid,
+            "label": label or DEFAULT_CARE_LABEL,
+            "emoji": emoji,
+            "anchor": anchor,
+            "time": time_value,
+            "weekdays": _care_weekdays(item.get("weekdays")),
+            "deadline": _care_deadline(item.get("deadline"), anchor, time_value),
+            "notify_parents": item.get("notify_parents") is not False,
+            "decline_alert": {
+                "enabled": alert.get("enabled") is True,
+                "count": count if count is not None else DEFAULT_ALERT_COUNT,
+                "days": days if days is not None else DEFAULT_ALERT_DAYS,
+            },
+        }
+        if isinstance(after, str):
+            entry["after"] = after.strip()[:MAX_CARE_AFTER]
+        stock = care_stock_of(item.get("stock"))
+        if stock is not None:
+            entry["stock"] = stock
+            entry["per_dose"] = care_per_dose(item.get("per_dose"))
+            entry["stock_set_at"] = care_stock_token(item.get("stock_set_at"))
+        result.append(entry)
+    return result
+
+
+MAX_CARE_STOCK = 9999
+MAX_CARE_PER_DOSE = 20
+CARE_LOW_STOCK_DAYS = 7
+CARE_STOCK_HORIZON = 400
+
+
+def care_stock_of(value: Any) -> int | None:
+    """The pill stock of a care entry: an int 0-9999, ``None`` (= tracking off) for anything else."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, float) and value != int(value):
+        return None
+    if isinstance(value, str):
+        value = value.strip()
+        if not value.lstrip("-").isdigit():
+            return None
+    try:
+        number = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    return number if 0 <= number <= MAX_CARE_STOCK else None
+
+
+def care_stock_token(value: Any) -> str:
+    """The ``stock_set_at`` token of an entered stock: a short string (an ISO timestamp), ``""`` for anything else."""
+    return value.strip()[:40] if isinstance(value, str) else ""
+
+
+def care_stock_reconcile(old: Any, new: Any, now_iso: str) -> tuple[list[dict], dict]:
+    """Merge the care entries of a profile save with the stored ones; decide which live stocks restart.
+
+    The profile keeps the stock the parents entered (``stock``) with a token (``stock_set_at``); the
+    counted-down stock lives in the data store. A save only restarts the live counter of an entry when
+    the entered stock really changed: a new tracking, a different value, or a newer token. A save whose token
+    is OLDER than the stored one (a stale settings draft) keeps the stored stock and token completely.
+
+    :return: ``(entries, live)``; ``live`` maps the care id of every entry that restarts to its new
+        ``{"remaining", "set_at"}``.
+    """
+    old_by_id = {e["id"]: e for e in normalize_care(old) if "stock" in e}
+    entries = normalize_care(new)
+    live: dict[str, dict] = {}
+    for entry in entries:
+        if "stock" not in entry:
+            continue
+        stored = old_by_id.get(entry["id"])
+        token = entry.get("stock_set_at", "")
+        if stored is None:
+            entry["stock_set_at"] = token or now_iso
+            live[entry["id"]] = {"remaining": entry["stock"], "set_at": entry["stock_set_at"]}
+            continue
+        stored_token = stored.get("stock_set_at", "")
+        if token and stored_token and token < stored_token:
+            entry["stock"], entry["stock_set_at"] = stored["stock"], stored_token    # stale draft
+        elif entry["stock"] != stored["stock"] or (token and token != stored_token):
+            entry["stock_set_at"] = token if token and token != stored_token else now_iso
+            live[entry["id"]] = {"remaining": entry["stock"], "set_at": entry["stock_set_at"]}
+        else:
+            entry["stock_set_at"] = stored_token or token or now_iso
+    return entries, live
+
+
+def care_per_dose(value: Any) -> int:
+    """Pills per dose (1-20), default 1."""
+    if isinstance(value, bool):
+        return 1
+    try:
+        number = int(value)
+    except (TypeError, ValueError, OverflowError):
+        return 1
+    return number if 1 <= number <= MAX_CARE_PER_DOSE else 1
+
+
+def care_stock_change(entry: dict, delta_doses: int) -> int | None:
+    """New stock after ``delta_doses`` doses were taken (+1) or taken back (-1); ``None`` without tracking.
+
+    Never below 0 or above 9999.
+    """
+    stock = care_stock_of(entry.get("stock"))
+    if stock is None:
+        return None
+    return max(0, min(MAX_CARE_STOCK, stock - delta_doses * care_per_dose(entry.get("per_dose"))))
+
+
+def care_days_left(entry: dict, start: date) -> int | None:
+    """How many days from ``start`` on (``start`` included) the stock lasts; ``None`` without tracking.
+
+    One dose of ``per_dose`` pills is taken on every scheduled weekday of the entry (an entry that is
+    only due Mon/Wed/Fri lasts longer in calendar days). Capped at 400 days.
+    """
+    stock = care_stock_of(entry.get("stock"))
+    if stock is None:
+        return None
+    per_dose = care_per_dose(entry.get("per_dose"))
+    weekdays = _care_weekdays(entry.get("weekdays"))
+    left = stock
+    for offset in range(CARE_STOCK_HORIZON):
+        if (start + timedelta(days=offset)).weekday() in weekdays:
+            if left < per_dose:
+                return offset
+            left -= per_dose
+    return CARE_STOCK_HORIZON
+
+
+def care_stock_low(entry: dict, start: date) -> bool:
+    """True when the tracked stock lasts at most ``CARE_LOW_STOCK_DAYS`` days."""
+    days = care_days_left(entry, start)
+    return days is not None and days <= CARE_LOW_STOCK_DAYS
+
+
+def care_insert_index(titles: Iterable[Any], after: Any, anchor: str) -> int:
+    """Position of a care step inside a mission with the step ``titles``: the care step goes before this index.
+
+    ``after`` is the title of the step it follows (case-insensitive, German or English
+    title as stored in the mission); an empty string means "at the end". Without
+    ``after`` (``None``) the step of a ``morning`` entry follows the breakfast step; every
+    other case, and a title the mission does not have, puts the care step at the end.
+    """
+    names = [str(t or "").strip().casefold() for t in titles]
+    if after is None:
+        wanted = [w.casefold() for w in CARE_DEFAULT_AFTER.get(anchor, ())]
+    elif isinstance(after, str) and after.strip():
+        wanted = [after.strip().casefold()]
+    else:
+        wanted = []
+    for index, name in enumerate(names):
+        if name in wanted:
+            return index + 1
+    return len(names)
+
+
+def care_merge_steps(subtasks: Iterable[Any], care_steps: Iterable[dict], anchor: str) -> list[dict]:
+    """The steps of a mission in display order: ``{"kind": "sub", "index", "step"}`` / ``{"kind": "care", "step"}``.
+
+    ``care_steps`` are the virtual steps of ``care_steps_for``; each may carry ``after``.
+    Care steps with the same position keep their order.
+    """
+    subs = list(subtasks or ())
+    titles = [(st.get("title") if isinstance(st, dict) else st) for st in subs]
+    slots: dict[int, list[dict]] = {}
+    for step in care_steps or ():
+        slots.setdefault(care_insert_index(titles, step.get("after"), anchor), []).append(step)
+    merged: list[dict] = []
+    for position in range(len(subs) + 1):
+        merged.extend({"kind": "care", "step": c} for c in slots.get(position, ()))
+        if position < len(subs):
+            merged.append({"kind": "sub", "index": position, "step": subs[position]})
+    return merged
+
+
+def care_due_on(entry: dict, day: date) -> bool:
+    """True when the care entry applies on ``day`` (its weekdays)."""
+    return day.weekday() in (entry.get("weekdays") or range(7))
+
+
+def care_find(log: Iterable[dict] | None, day: str, kid_id: str, care_id: str) -> dict | None:
+    """The log entry of one kid / care entry / day (``day`` = ``YYYY-MM-DD``)."""
+    for item in log or ():
+        if (isinstance(item, dict) and item.get("date") == day
+                and item.get("kid_id") == kid_id and item.get("care_id") == care_id):
+            return item
+    return None
+
+
+def care_answer_of(log: Iterable[dict] | None, day: str, kid_id: str, care_id: str) -> str | None:
+    """``taken`` / ``declined`` when answered, else ``None`` (``unanswered`` is no answer)."""
+    item = care_find(log, day, kid_id, care_id)
+    return item["status"] if item and item.get("status") in CARE_ANSWERS else None
+
+
+def care_record(
+    log: list, day: str, kid_id: str, care_id: str, status: str, at: str, confirmed_by: str | None = None,
+) -> dict:
+    """Set the status of one entry/day in ``log`` (in place) and return the log entry.
+
+    A changed status resets the ``pushed`` marker, so the parents hear about the
+    new status once.
+    """
+    item = care_find(log, day, kid_id, care_id)
+    if item is None:
+        item = {"date": day, "kid_id": kid_id, "care_id": care_id, "status": status, "at": at,
+                "confirmed_by": confirmed_by, "pushed": False}
+        log.append(item)
+        return item
+    if item.get("status") != status:
+        item["pushed"] = False
+    item.update(status=status, at=at, confirmed_by=confirmed_by)
+    return item
+
+
+def care_prune(log: Iterable[dict] | None, today: date, keep_days: int = CARE_LOG_KEEP_DAYS) -> list[dict]:
+    """The log without entries older than ``keep_days``."""
+    limit = (today - timedelta(days=keep_days)).isoformat()
+    return [i for i in (log or ()) if isinstance(i, dict) and str(i.get("date", "")) >= limit]
+
+
+def care_steps_for(
+    care: Iterable[dict] | None, anchor: str, day: date, log: Iterable[dict] | None, kid_id: str,
+) -> list[dict]:
+    """The virtual steps of a kid's ``anchor`` mission on ``day``.
+
+    ``{kind: "care", care_id, title, emoji, answer}``; ``answer`` is ``taken`` /
+    ``declined`` / ``None``. Not stored in the task's ``subtasks``.
+    """
+    steps = []
+    for entry in care or ():
+        if entry.get("anchor") != anchor or not care_due_on(entry, day):
+            continue
+        steps.append({
+            "kind": "care", "care_id": entry["id"], "title": entry.get("label") or DEFAULT_CARE_LABEL,
+            "emoji": entry.get("emoji") or DEFAULT_CARE_EMOJI,
+            "answer": care_answer_of(log, day.isoformat(), kid_id, entry["id"]),
+            **({"after": entry["after"]} if "after" in entry else {}),
+        })
+    return steps
+
+
+def care_deadline_passed(entry: dict, now: datetime) -> bool:
+    """True once the local time of ``now`` has reached the deadline of the entry."""
+    deadline = normalize_time(entry.get("deadline"))
+    return deadline is not None and now.hour * 60 + now.minute >= _minutes_of_day(deadline)
+
+
+def decline_alert_due(
+    log: Iterable[dict] | None, kid_id: str, entry: dict, today: date, last_alert: str | None = None,
+) -> bool:
+    """True when the entry was declined ``count`` times within ``days`` days (counter restarts after an alert).
+
+    Only declines after ``last_alert`` (``YYYY-MM-DD``) count; always False while
+    the alert is off.
+    """
+    alert = entry.get("decline_alert") or {}
+    if alert.get("enabled") is not True:
+        return False
+    count = _int_in(alert.get("count"), 1, 30) or DEFAULT_ALERT_COUNT
+    days = _int_in(alert.get("days"), 1, CARE_LOG_KEEP_DAYS) or DEFAULT_ALERT_DAYS
+    first = (today - timedelta(days=days - 1)).isoformat()
+    after = last_alert or ""
+    declined = [
+        i for i in (log or ())
+        if isinstance(i, dict) and i.get("kid_id") == kid_id and i.get("care_id") == entry.get("id")
+        and i.get("status") == CARE_DECLINED and first <= str(i.get("date", "")) <= today.isoformat()
+        and str(i.get("date", "")) > after
+    ]
+    return len(declined) >= count
+
+
+def care_texts(kind: str, kid_name: str, label: str, lang: str, count: int = 0, days: int = 0) -> tuple[str, str]:
+    """``(title, message)`` of a push to the parents; ``kind`` = declined | unanswered | alert."""
+    de = lang == "de"
+    title = "💊 Gesundheit" if de else "💊 Health"
+    if kind == "declined":
+        return title, (f"{kid_name}: {label} heute nicht genommen." if de else f"{kid_name}: {label} not taken today.")
+    if kind == "unanswered":
+        return title, (f"{kid_name}: {label} ist noch offen (keine Antwort)." if de
+                       else f"{kid_name}: {label} is still open (no answer).")
+    return title, (f"{kid_name}: {label} {count}x in {days} Tagen abgelehnt." if de
+                   else f"{kid_name}: {label} declined {count}x in {days} days.")

@@ -598,3 +598,245 @@ def test_open_required_steps():
     t["subtasks"][1]["done"] = True
     assert kids.open_required_steps(t) == []
     assert kids.open_required_steps({}) == []
+
+
+# -- care (medication) --------------------------------------------------------
+
+def test_open_required_steps_with_care_steps():
+    t = _task(subtasks=[{"title": "a", "done": True}])
+    open_care = {"kind": "care", "care_id": "p", "title": "Tablette", "answer": None}
+    taken = {**open_care, "care_id": "q", "answer": "taken"}
+    declined = {**open_care, "care_id": "r", "answer": "declined"}
+    # both answers count as done, only the unanswered step blocks
+    assert kids.open_required_steps(t, [taken, declined]) == []
+    assert kids.open_required_steps(t, [taken, open_care, declined]) == [open_care]
+    assert kids.open_required_steps(t) == []
+
+
+def test_normalize_care_defaults_and_limits():
+    assert kids.normalize_care(None) == [] and kids.normalize_care("x") == [] and kids.normalize_care([1, None]) == []
+    [e] = kids.normalize_care([{}])
+    assert (e["label"], e["emoji"], e["anchor"], e["time"], e["deadline"]) == ("Tablette", "💊", "morning", "08:00", "10:00")
+    assert e["weekdays"] == list(range(7)) and e["notify_parents"] is True
+    assert e["decline_alert"] == {"enabled": False, "count": 3, "days": 7}
+    [e] = kids.normalize_care([{"id": "x y", "anchor": "evening", "weekdays": [6, 1, 1, True, 7, -1],
+                                "deadline": "25:00", "notify_parents": False,
+                                "decline_alert": {"enabled": True, "count": 99, "days": 14}}])
+    assert e["id"] != "x y" and e["anchor"] == "evening" and e["deadline"] == "21:00"
+    assert e["weekdays"] == [1, 6] and e["notify_parents"] is False
+    assert e["decline_alert"] == {"enabled": True, "count": 3, "days": 14}
+    [e] = kids.normalize_care([{"anchor": "time", "time": "23:30"}])
+    assert e["deadline"] == "23:59"
+    many = kids.normalize_care([{"id": "same"}] * 10)
+    assert len(many) == kids.MAX_CARE_ENTRIES and len({m["id"] for m in many}) == len(many)
+
+
+def test_care_profile_roundtrip_and_public():
+    profile = kids.build_kid_profile(None, "🦊", "#ff0000", 2016, care=[{"label": "Inhalator"}])
+    assert profile["care"][0]["label"] == "Inhalator"
+    assert kids.public_kids({"k": profile})["k"]["care"][0]["label"] == "Inhalator"
+    assert "care" in kids.build_kid_profile(profile, "🦊", "#ff0000", 2016)          # kept when not sent
+    assert "care" not in kids.build_kid_profile(profile, "🦊", "#ff0000", 2016, care=[])
+    merged = kids.merge_imported_kids({}, {"k": {"avatar": "🦊", "care": [{"label": "A"}, "junk"]}})
+    assert [c["label"] for c in merged["k"]["care"]] == ["A"]
+
+
+def test_normalize_care_after_is_optional_trimmed_and_limited():
+    [unset, text, end, junk, long] = kids.normalize_care([
+        {"id": "a"}, {"id": "b", "after": "  Zähne putzen "}, {"id": "c", "after": ""},
+        {"id": "d", "after": 5}, {"id": "e", "after": "x" * 100}])
+    assert "after" not in unset and "after" not in junk
+    assert text["after"] == "Zähne putzen" and end["after"] == "" and long["after"] == "x" * 60
+
+
+def test_care_insert_index_positions():
+    steps = ["Anziehen", "Frühstücken", "Zähne putzen", "Bett machen"]
+    index = kids.care_insert_index
+    assert index(steps, "zähne PUTZEN", "morning") == 3                 # case-insensitive, directly after it
+    assert index(steps, "Anziehen", "evening") == 1
+    assert index(steps, "", "morning") == 4                             # explicit: at the end
+    assert index(steps, None, "morning") == 2                           # default: after breakfast
+    assert index(["Get dressed", "Have breakfast", "Brush teeth"], None, "morning") == 2   # English title
+    assert index(steps, None, "evening") == 4 and index(steps, None, "time") == 4
+    assert index(["Anziehen", "Bett machen"], None, "morning") == 2     # no breakfast step: the end
+    assert index(steps, "Gibt es nicht", "morning") == 4                # unknown title: the end
+    assert index([], None, "morning") == 0
+    assert index([None, "Frühstücken"], None, "morning") == 2           # tolerant of odd entries
+
+
+def test_care_merge_steps_order():
+    subs = [{"title": "Anziehen", "done": False}, {"title": "Frühstücken", "done": True}, {"title": "Zähne putzen", "done": False}]
+    entries = kids.normalize_care([
+        {"id": "p", "anchor": "morning"}, {"id": "q", "anchor": "morning", "after": "Anziehen"},
+        {"id": "r", "anchor": "morning", "after": ""}, {"id": "s", "anchor": "morning", "after": "Frühstücken"}])
+    steps = kids.care_steps_for(entries, "morning", datetime(2026, 10, 29).date(), [], "k")
+    assert [s.get("after") for s in steps] == [None, "Anziehen", "", "Frühstücken"]
+    merged = kids.care_merge_steps(subs, steps, "morning")
+    labels = [(m["kind"], m["step"].get("care_id") or m["step"]["title"]) for m in merged]
+    assert labels == [
+        ("sub", "Anziehen"), ("care", "q"), ("sub", "Frühstücken"), ("care", "p"), ("care", "s"),
+        ("sub", "Zähne putzen"), ("care", "r")]
+    assert [m["index"] for m in merged if m["kind"] == "sub"] == [0, 1, 2]    # indexes stay the stored ones
+    assert [m["kind"] for m in kids.care_merge_steps([], steps, "morning")] == ["care"] * 4
+
+
+def test_care_log_helpers_and_steps():
+    log = []
+    monday = datetime(2026, 10, 26).date()
+    entry = kids.normalize_care([{"id": "p", "weekdays": [0], "anchor": "morning"}, {"id": "e", "anchor": "evening"}])
+    assert [s["care_id"] for s in kids.care_steps_for(entry, "morning", monday, log, "k")] == ["p"]
+    assert kids.care_steps_for(entry, "morning", monday + timedelta(days=1), log, "k") == []   # Tuesday
+    item = kids.care_record(log, "2026-10-26", "k", "p", "declined", "t1")
+    assert item["pushed"] is False and kids.care_answer_of(log, "2026-10-26", "k", "p") == "declined"
+    item["pushed"] = True
+    kids.care_record(log, "2026-10-26", "k", "p", "declined", "t2")
+    assert item["pushed"] is True                                        # same status: no new push
+    kids.care_record(log, "2026-10-26", "k", "p", "taken", "t3", "parent")
+    assert item["pushed"] is False and item["confirmed_by"] == "parent" and len(log) == 1
+    assert kids.care_steps_for(entry, "morning", monday, log, "k")[0]["answer"] == "taken"
+    kids.care_record(log, "2026-10-26", "k", "e", "unanswered", "t4")
+    assert kids.care_answer_of(log, "2026-10-26", "k", "e") is None      # unanswered is no answer
+    old = {"date": "2026-01-01", "kid_id": "k", "care_id": "p", "status": "taken"}
+    assert kids.care_prune(log + [old], monday) == log
+
+
+def test_care_deadline_and_decline_alert():
+    [e] = kids.normalize_care([{"id": "p", "deadline": "10:00",
+                                "decline_alert": {"enabled": True, "count": 3, "days": 5}}])
+    assert not kids.care_deadline_passed(e, datetime(2026, 10, 29, 9, 59))
+    assert kids.care_deadline_passed(e, datetime(2026, 10, 29, 10, 0))
+    today = datetime(2026, 10, 29).date()
+
+    def declined(*days):
+        return [{"date": f"2026-10-{d}", "kid_id": "k", "care_id": "p", "status": "declined"} for d in days]
+
+    assert not kids.decline_alert_due(declined(28, 29), "k", e, today)
+    assert kids.decline_alert_due(declined(27, 28, 29), "k", e, today)
+    assert not kids.decline_alert_due(declined(20, 28, 29), "k", e, today)               # outside the 5 days
+    assert not kids.decline_alert_due(declined(27, 28, 29), "k", e, today, last_alert="2026-10-28")
+    assert not kids.decline_alert_due(declined(27, 28, 29), "other", e, today)
+    off = {**e, "decline_alert": {**e["decline_alert"], "enabled": False}}
+    assert not kids.decline_alert_due(declined(27, 28, 29), "k", off, today)
+
+
+def test_care_texts():
+    assert "Lena" in kids.care_texts("declined", "Lena", "💊 Tablette", "de")[1]
+    assert "3x" in kids.care_texts("alert", "Lena", "T", "en", 3, 7)[1]
+    assert "open" in kids.care_texts("unanswered", "Lena", "T", "en")[1]
+
+
+# -- weekday schedule and rotation (2.6) ---------------------------------------
+
+def test_normalize_weekdays_and_validation():
+    assert kids.normalize_weekdays([4, 0, 2, 2]) == [0, 2, 4]
+    assert kids.normalize_weekdays([]) == [] and kids.normalize_weekdays(None) == []
+    for bad in ([7], [-1], ["1"], [True], "0", [1.5], 3):
+        assert kids.normalize_weekdays(bad) == []
+    assert kids.valid_weekdays(None) and kids.valid_weekdays([]) and kids.valid_weekdays([0, 6])
+    assert not kids.valid_weekdays([7]) and not kids.valid_weekdays([1, 1]) and not kids.valid_weekdays("1")
+
+
+def test_next_weekday_helpers():
+    thu = date(2026, 10, 29)
+    mwf = [0, 2, 4]
+    assert kids.next_weekday_on_or_after(mwf, thu) == date(2026, 10, 30)             # Fri
+    assert kids.next_weekday_on_or_after(mwf, date(2026, 10, 30)) == date(2026, 10, 30)
+    assert kids.next_weekday_after(mwf, date(2026, 10, 30)) == date(2026, 11, 2)     # Mon
+    assert kids.next_weekday_after([3], thu) == date(2026, 11, 5)                    # same weekday: next week
+    assert kids.next_weekday_after([], thu) == thu + timedelta(days=1)               # no schedule: tomorrow
+
+
+def test_missed_weekday_occurrence_expires_like_a_daily_duty():
+    # weekly interval stored, but the weekday schedule makes it expire after the day
+    task = _task(interval=7, weekdays=[0, 3], due_date=(NOW - timedelta(days=1)).astimezone(timezone.utc).isoformat())
+    assert kids.is_missed(task, NOW, 7)
+    assert not kids.is_missed({**task, "weekdays": []}, NOW, 7)                      # weekly grace without weekdays
+    # next occurrence: next listed weekday on or after today (Thu, Oct 29 -> today is listed)
+    assert kids.next_due_for_task(task, date(2026, 10, 28), date(2026, 10, 29)) == date(2026, 10, 29)
+    assert kids.next_due_for_task({**task, "weekdays": [0]}, date(2026, 10, 28), date(2026, 10, 29)) == date(2026, 11, 2)
+    assert kids.next_due_for_task({"interval": 3}, date(2026, 10, 27), date(2026, 10, 29)) == date(2026, 10, 30)
+
+
+def test_rotation_member_and_skip():
+    rot = {"members": ["a", "b", "c"], "index": 4}
+    assert kids.rotation_member(rot) == "b"                                           # members[4 % 3]
+    assert kids.rotation_member(rot, skip={"b"}) == "c"
+    assert kids.rotation_member(rot, skip={"b", "c"}) == "a"
+    assert kids.rotation_member(rot, skip={"a", "b", "c"}) is None
+    assert kids.rotation_member(None) is None and kids.rotation_member({"members": []}) is None
+    assert kids.rotation_upcoming(rot, 2) == ["b", "c"]
+    assert kids.rotation_upcoming(rot, 2, skip={"c"}) == ["b", "a"]
+
+
+def test_rotation_normalize_advance_and_swap():
+    assert kids.normalize_rotation({"members": ["a"]}) is None                       # needs two kids
+    assert kids.normalize_rotation({"members": ["a", "a"]}) is None
+    assert kids.normalize_rotation({"members": ["a", "x"]}, allowed=["a", "b"]) is None
+    assert kids.normalize_rotation({"members": ["a", "b"], "index": 5})["index"] == 1
+    assert kids.normalize_rotation({"members": ["a", "b"], "index": -1})["index"] == 0
+    rot = kids.normalize_rotation({"members": ["a", "b", "c"], "index": 2})
+    assert kids.rotation_advanced(rot)["index"] == 0                                  # wraps
+    assert rot["index"] == 2                                                          # input untouched
+    swapped = kids.rotation_swapped(rot, "a")
+    assert kids.rotation_member(swapped) == "a" and swapped["return_to"] == "c"
+    assert kids.rotation_advanced(swapped)["index"] == 2                              # the one who gave up is next
+    assert "return_to" not in kids.rotation_advanced(swapped)
+    assert kids.rotation_swapped(rot, "zzz") is None
+
+
+def test_effective_assignees_and_eligibility_of_rotation():
+    task = _task(assignees=["a", "b"], rotation={"members": ["a", "b"], "index": 1})
+    assert kids.effective_assignees(task) == ["b"]
+    assert kids.effective_assignees(_task(assignees=["a", "b"])) == ["a", "b"]
+    kid = _kid()
+    settings = {"overdue_days": 5}
+    assert kids.check_eligibility(task, "a", kid, {}, settings, NOW) == kids.ERR_NOT_ELIGIBLE
+    assert kids.check_eligibility(task, "b", kid, {}, settings, NOW) is None
+    # only the current member has the duty open (bonus gating)
+    tasks = {"t": task}
+    assert kids.open_basis_tasks_for(tasks, "b", NOW, 5) == [task]
+    assert kids.open_basis_tasks_for(tasks, "a", NOW, 5) == []
+
+
+# ---------------------------------------------------------------------------
+# 2.6: medication stock
+# ---------------------------------------------------------------------------
+
+def test_care_stock_and_per_dose_validation():
+    for raw, expected in ((12, 12), (0, 0), (9999, 9999), ("7", 7), (4.0, 4)):
+        assert kids.care_stock_of(raw) == expected, raw
+    for bad in (None, True, False, -1, 10000, "x", "", 3.5, [], {}):
+        assert kids.care_stock_of(bad) is None, bad
+    assert [kids.care_per_dose(v) for v in (1, 3, 20, 0, 21, "x", None, True, "2")] == [1, 3, 20, 1, 1, 1, 1, 1, 2]
+    entries = kids.normalize_care([
+        {"id": "a", "stock": 10, "per_dose": 2}, {"id": "b", "stock": "nope", "per_dose": 5}, {"id": "c"},
+    ])
+    assert entries[0]["stock"] == 10 and entries[0]["per_dose"] == 2
+    assert "stock" not in entries[1] and "per_dose" not in entries[1] and "stock" not in entries[2]
+
+
+def test_care_stock_change():
+    entry = {"stock": 10, "per_dose": 2}
+    assert kids.care_stock_change(entry, 1) == 8 and kids.care_stock_change(entry, -1) == 12
+    assert kids.care_stock_change({"stock": 1, "per_dose": 2}, 1) == 0                 # never below 0
+    assert kids.care_stock_change({"stock": 9999}, -1) == 9999                         # never above 9999
+    assert kids.care_stock_change({"label": "x"}, 1) is None
+
+
+def test_care_days_left_uses_weekdays_and_per_dose():
+    thursday = datetime(2026, 10, 29).date()
+    assert kids.care_days_left({"label": "x"}, thursday) is None
+    assert kids.care_days_left({"stock": 7, "weekdays": list(range(7))}, thursday) == 7
+    assert kids.care_days_left({"stock": 0}, thursday) == 0
+    assert kids.care_days_left({"stock": 14, "per_dose": 2}, thursday) == 7
+    assert kids.care_days_left({"stock": 15, "per_dose": 2}, thursday) == 7            # the 8th dose does not fit
+    # Mon/Wed/Fri: 6 pills cover Fri, Mon, Wed, Fri, Mon, Wed; the next Friday (15 days on) has none left
+    assert kids.care_days_left({"stock": 6, "weekdays": [0, 2, 4]}, thursday) == 15
+    assert kids.care_days_left({"stock": 9999}, thursday) == 400                       # capped
+
+
+def test_care_stock_low_threshold_is_seven_days():
+    thursday = datetime(2026, 10, 29).date()
+    assert kids.care_stock_low({"stock": 7}, thursday) and not kids.care_stock_low({"stock": 8}, thursday)
+    assert not kids.care_stock_low({"label": "no tracking"}, thursday)
+    assert not kids.care_stock_low({"stock": 6, "weekdays": [0, 2, 4]}, thursday)

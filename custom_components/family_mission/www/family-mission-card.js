@@ -43,7 +43,13 @@ const I18N_CARD = {
     category_lbl: "Category (kids mode)", cat_basis: "Basis (assigned duty)", cat_bonus: "Bonus (open for all)", cat_auftrag: "Order (one-time)",
     min_age_lbl: "Minimum age (0 = any)", approval_lbl: "Requires parent approval", routine_lbl: "Bonus only after the kid's due duties", together_lbl: "Doing it together allowed",
     available_from_lbl: "Only from (time)", available_until_lbl: "Only until (time)",
+    available_from_we_lbl: "Weekend: only from (time)", available_until_we_lbl: "Weekend: only until (time)",
+    weekend_window_hint: "Saturday / Sunday. Empty = the same window every day.",
+    after_homework_lbl: "Only after homework",
     reminder_lbl: "Reminder", reminder_time_lbl: "Remind at", reminder_target_lbl: "Notify via", reminder_event_only: "Event only",
+    scope_lbl: "Scope (for absences)", scope_home: "Home (chores)", scope_personal: "Personal (own routines)",
+    weekdays_lbl: "Weekdays (instead of the interval)", weekday_short: "Mo,Tu,We,Th,Fr,Sa,Su",
+    rotation_lbl: "Take turns (one kid per occurrence)", rotation_hint: "Each occurrence belongs to one kid; the turn moves on after it is done or missed.",
     help_link: "Configuration Guide (README)"
   },
   de: { 
@@ -85,7 +91,13 @@ const I18N_CARD = {
     category_lbl: "Kategorie (Kindermodus)", cat_basis: "Basis (feste Pflicht)", cat_bonus: "Bonus (offen für alle)", cat_auftrag: "Auftrag (einmalig)",
     min_age_lbl: "Mindestalter (0 = egal)", approval_lbl: "Freigabe durch Eltern nötig", routine_lbl: "Bonus erst nach den fälligen Pflichten", together_lbl: "Zusammen erledigen erlaubt",
     available_from_lbl: "Erst ab (Uhrzeit)", available_until_lbl: "Nur bis (Uhrzeit)",
+    available_from_we_lbl: "Wochenende: erst ab (Uhrzeit)", available_until_we_lbl: "Wochenende: nur bis (Uhrzeit)",
+    weekend_window_hint: "Samstag / Sonntag. Leer = jeden Tag dasselbe Zeitfenster.",
+    after_homework_lbl: "Erst nach den Hausaufgaben",
     reminder_lbl: "Erinnerung", reminder_time_lbl: "Erinnern um", reminder_target_lbl: "Benachrichtigen über", reminder_event_only: "nur Ereignis",
+    scope_lbl: "Bereich (für Abwesenheit)", scope_home: "Zuhause (Haushalt)", scope_personal: "Persönlich (eigene Routinen)",
+    weekdays_lbl: "Wochentage (statt Intervall)", weekday_short: "Mo,Di,Mi,Do,Fr,Sa,So",
+    rotation_lbl: "Im Wechsel (ein Kind pro Termin)", rotation_hint: "Jeder Termin gehört einem Kind; nach Erledigen oder Verpassen ist das nächste dran.",
     help_link: "Konfigurations-Handbuch (README)"
   }
 };
@@ -355,6 +367,7 @@ class FamilyMissionCard extends HTMLElement {
             el.classList.contains('suggestion-item') ||
             el.classList.contains('subtask-check') ||
             el.classList.contains('sub-complete-check') ||
+            el.classList.contains('wd-chip') ||
             el.classList.contains('dist-btn')))
     );
     
@@ -403,6 +416,7 @@ class FamilyMissionCard extends HTMLElement {
         this.currentPage++;
         this._renderTaskList();
     }
+    else if (target.classList?.contains('wd-chip')) this._toggleWeekday(target);
     else if (target.id === 'btn-type-recurring') this._updateTaskTypeUI(false);
     else if (target.id === 'btn-type-onetime') this._updateTaskTypeUI(true);
     // Subtask Handlers
@@ -888,6 +902,8 @@ class FamilyMissionCard extends HTMLElement {
         }
         if (this.shadowRoot.getElementById('f-complexity')) this.shadowRoot.getElementById('f-complexity').value = t.complexity;
         this._setCategoryFields(t.category, t.min_age, t.requires_approval, t.available_from, t.available_until, t.requires_routine, t.reminder_at, t.reminder_target, t.allow_together);
+        this._setWeekendFields(t);
+        this._setScope(t.scope);
         this._subtasks = t.subtasks ? [...t.subtasks] : [];
         this._currentIcon = t.icon || "mdi:broom";
         
@@ -895,8 +911,12 @@ class FamilyMissionCard extends HTMLElement {
             cb.checked = t.assignees && t.assignees.includes(cb.value);
         });
         
-        const isOnetime = t.interval === 0;
+        const isOnetime = t.interval === 0 && !(t.weekdays && t.weekdays.length);
         this._updateTaskTypeUI(isOnetime);
+        this._setWeekdays(t.weekdays);
+        this._syncScheduleUI();
+        const rot = this.shadowRoot.getElementById('f-rotation');
+        if (rot) rot.checked = !!(t.rotation && Array.isArray(t.rotation.members)) && !this.shadowRoot.getElementById('f-rotation-row').hidden;
         this.shadowRoot.getElementById('template-suggestions').style.display = 'none';
         this._fillTemplateSelect(false);
         
@@ -919,14 +939,19 @@ class FamilyMissionCard extends HTMLElement {
         this.shadowRoot.getElementById('f-interval').value = 7;
         this.shadowRoot.getElementById('f-complexity').value = 5; 
         this._setCategoryFields('basis', 0, false);
+        this._setWeekendFields({});
+        this._setScope('home');
         this._currentIcon = "mdi:broom";
         this._subtasks = [];
         
         this._updateTaskTypeUI(false); // Default to recurring
+        this._setWeekdays([]);
+        if (this.shadowRoot.getElementById('f-rotation')) this.shadowRoot.getElementById('f-rotation').checked = false;
         this.shadowRoot.getElementById('template-suggestions').style.display = 'block';
         this.shadowRoot.getElementById('template-suggestions').innerHTML = '';
         this._fillTemplateSelect(true);
         this.shadowRoot.querySelectorAll('.assignee-cb').forEach(cb => cb.checked = false);        
+        this._syncScheduleUI();
 
         this.shadowRoot.getElementById('f-pause-cb').checked = false;
         this.shadowRoot.getElementById('f-pause-date').value = "";
@@ -1025,6 +1050,34 @@ class FamilyMissionCard extends HTMLElement {
    * @param {number} minAge - Minimum age in years (0 = any).
    * @param {boolean} requiresApproval - A parent has to approve completions by kids.
    */
+  /** Scope select of the task editor ("home" | "personal"; anything else = home). */
+  _setScope(scope) {
+    const sel = this.shadowRoot.getElementById('f-scope');
+    if (sel) sel.value = scope === 'personal' ? 'personal' : 'home';
+  }
+
+  /** Weekend window and the "only after homework" switch (shown when a homework task exists). */
+  _setWeekendFields(t) {
+    const set = (id, value) => { const el = this.shadowRoot.getElementById(id); if (el) el.innerHTML = toCardTimeOptions(value || '', '—'); };
+    set('f-available-from-we', t.available_from_we);
+    set('f-available-until-we', t.available_until_we);
+    this._afterKey = typeof t.after_key === 'string' ? t.after_key : '';
+    const hasHomework = Object.values(this.tasks || {}).some(x => x && !x.parent_task &&
+      (x.catalog_key === 'homework' || String(x.wizard_key || '').split(':')[0] === 'homework'));
+    const wrap = this.shadowRoot.getElementById('f-after-wrap');
+    if (wrap) wrap.style.display = hasHomework || this._afterKey === 'homework' ? '' : 'none';
+    const sw = this.shadowRoot.getElementById('f-after');
+    if (sw) sw.checked = this._afterKey === 'homework';
+  }
+
+  /** `after_key` for the payload: the switch decides about "homework", any other stored key stays. */
+  _afterKeyValue() {
+    const wrap = this.shadowRoot.getElementById('f-after-wrap');
+    const sw = this.shadowRoot.getElementById('f-after');
+    if (wrap && wrap.style.display !== 'none' && sw) return sw.checked ? 'homework' : (this._afterKey && this._afterKey !== 'homework' ? this._afterKey : null);
+    return this._afterKey || null;
+  }
+
   _setCategoryFields(category, minAge, requiresApproval = false, availableFrom = null, availableUntil = null, requiresRoutine = false, reminderAt = null, reminderTarget = '', allowTogether = undefined) {
     this._setReminderFields(reminderAt, reminderTarget);
     const routine = this.shadowRoot.getElementById('f-routine');
@@ -1160,10 +1213,17 @@ class FamilyMissionCard extends HTMLElement {
       // time window for kids ("" = no limit); the backend stores an empty value as "no limit"
       available_from: this.shadowRoot.getElementById('f-available-from')?.value || "",
       available_until: this.shadowRoot.getElementById('f-available-until')?.value || "",
+      available_from_we: this.shadowRoot.getElementById('f-available-from-we')?.value || "",
+      available_until_we: this.shadowRoot.getElementById('f-available-until-we')?.value || "",
+      after_key: this._afterKeyValue(),
       // reminder: switch off = no reminder; "" target = only the event
       reminder_at: this.shadowRoot.getElementById('f-reminder')?.checked ? (this.shadowRoot.getElementById('f-reminder-at')?.value || "18:00") : "",
       reminder_target: this.shadowRoot.getElementById('f-reminder')?.checked ? (this.shadowRoot.getElementById('f-reminder-target')?.value || "") : "",
       assignees: assignees,
+      scope: this.shadowRoot.getElementById('f-scope')?.value === 'personal' ? 'personal' : 'home',
+      // weekday schedule replaces the interval ([] = none); rotation null = kids do not take turns
+      weekdays: isOnetime ? [] : this._getWeekdays(),
+      rotation: this._getRotation(),
       custom_due_date: customDueDate,
       paused_until: pausedUntil,
       override_overdue_days: overrideOverdueDays,
@@ -1255,6 +1315,9 @@ class FamilyMissionCard extends HTMLElement {
           .form-row { display: flex; gap: 16px; }
           .form-row[hidden] { display: none; }
           .form-col { flex: 1; }
+          .wd-chips { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 6px; }
+          .wd-chip { min-width: 40px; min-height: 36px; padding: 0 8px; border-radius: 18px; border: 1px solid var(--divider-color); background: transparent; color: var(--primary-text-color); font: inherit; cursor: pointer; }
+          .wd-chip.active { background: var(--primary-color); color: var(--text-primary-color, #fff); border-color: var(--primary-color); }
           .form-select { width: 100%; box-sizing: border-box; height: 56px; padding: 0 12px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-family: inherit; font-size: 16px; }
           .template-suggestions { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
           .suggestion-item { background: transparent; border: none; color: var(--primary-color); cursor: pointer; text-align: left; padding: 4px 0; font-size: 14px; }
@@ -1349,6 +1412,12 @@ class FamilyMissionCard extends HTMLElement {
                         <ha-input id="f-interval" type="number" label="${this.localize('interval_lbl')}" class="form-col"></ha-input>
                         <ha-input id="f-complexity" type="number" label="${this.localize('points_lbl')}" min="1" max="10" class="form-col"></ha-input>
                     </div>
+                    <div>
+                        <label class="form-label">${this.localize('weekdays_lbl')}</label>
+                        <div class="wd-chips" role="group" aria-label="${this.localize('weekdays_lbl')}">
+                            ${this.localize('weekday_short').split(',').map((d, i) => `<button type="button" class="wd-chip" data-wd="${i}" aria-pressed="false">${d}</button>`).join('')}
+                        </div>
+                    </div>
 
                     <div class="form-row">
                         <div class="form-col">
@@ -1374,6 +1443,15 @@ class FamilyMissionCard extends HTMLElement {
                     </div>
                     <div class="form-row">
                         <div class="form-col">
+                            <label class="form-label" for="f-scope">${this.localize('scope_lbl')}</label>
+                            <select id="f-scope" class="form-select">
+                                <option value="home">${this.localize('scope_home')}</option>
+                                <option value="personal">${this.localize('scope_personal')}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-col">
                             <label class="form-label" for="f-available-from">${this.localize('available_from_lbl')}</label>
                             <select id="f-available-from" class="form-select">${toCardTimeOptions('', '—')}</select>
                         </div>
@@ -1382,6 +1460,20 @@ class FamilyMissionCard extends HTMLElement {
                             <select id="f-available-until" class="form-select">${toCardTimeOptions('', '—')}</select>
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-col">
+                            <label class="form-label" for="f-available-from-we">${this.localize('available_from_we_lbl')}</label>
+                            <select id="f-available-from-we" class="form-select">${toCardTimeOptions('', '—')}</select>
+                        </div>
+                        <div class="form-col">
+                            <label class="form-label" for="f-available-until-we">${this.localize('available_until_we_lbl')}</label>
+                            <select id="f-available-until-we" class="form-select">${toCardTimeOptions('', '—')}</select>
+                        </div>
+                    </div>
+                    <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('weekend_window_hint')}</div>
+                    <ha-formfield id="f-after-wrap" label="${this.localize('after_homework_lbl')}" style="display:none">
+                        <ha-switch id="f-after"></ha-switch>
+                    </ha-formfield>
                     <ha-formfield label="${this.localize('approval_lbl')}">
                         <ha-switch id="f-approval"></ha-switch>
                     </ha-formfield>
@@ -1413,6 +1505,12 @@ class FamilyMissionCard extends HTMLElement {
                                     <ha-checkbox class="assignee-cb" id="cb-${uid}" value="${uid}"></ha-checkbox>
                                 </ha-formfield>
                             `).join('')}
+                        </div>
+                        <div id="f-rotation-row" hidden style="padding-top:8px;">
+                            <ha-formfield label="${this.localize('rotation_lbl')}">
+                                <ha-switch id="f-rotation"></ha-switch>
+                            </ha-formfield>
+                            <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('rotation_hint')}</div>
                         </div>
                     </div>
                     
@@ -1525,6 +1623,8 @@ class FamilyMissionCard extends HTMLElement {
         if (together) together.checked = e.target.value !== 'basis';
     });
 
+    this.shadowRoot.querySelectorAll('.assignee-cb').forEach(cb => cb.addEventListener('change', () => this._syncScheduleUI()));
+
     const reminderSw = this.shadowRoot.getElementById('f-reminder');
     if (reminderSw) reminderSw.addEventListener('change', (e) => {
         const row = this.shadowRoot.getElementById('f-reminder-row');
@@ -1543,6 +1643,50 @@ class FamilyMissionCard extends HTMLElement {
     }
   }
 
+  /** Selected weekdays of the task editor (Mon=0 ... Sun=6), sorted. */
+  _getWeekdays() {
+    return Array.from(this.shadowRoot.querySelectorAll('.wd-chip.active'))
+      .map(b => parseInt(b.dataset.wd)).sort((a, b) => a - b);
+  }
+
+  /** Marks the weekday chips of `days` and updates the dependent fields. */
+  _setWeekdays(days) {
+    const set = new Set(Array.isArray(days) ? days : []);
+    this.shadowRoot.querySelectorAll('.wd-chip').forEach(b => {
+      b.classList.toggle('active', set.has(parseInt(b.dataset.wd)));
+      b.setAttribute('aria-pressed', String(b.classList.contains('active')));
+    });
+    this._syncScheduleUI();
+  }
+
+  _toggleWeekday(btn) {
+    btn.classList.toggle('active');
+    btn.setAttribute('aria-pressed', String(btn.classList.contains('active')));
+    if (this._getWeekdays().length) this._updateTaskTypeUI(false);   // weekdays only make sense for a recurring task
+    this._syncScheduleUI();
+  }
+
+  /** Weekdays replace the interval; the rotation switch needs two or more kids among the assignees. */
+  _syncScheduleUI() {
+    const interval = this.shadowRoot.getElementById('f-interval');
+    const onetime = this.shadowRoot.getElementById('btn-type-onetime')?.classList.contains('active');
+    if (interval) interval.disabled = !!onetime || this._getWeekdays().length > 0;
+    const kids = this.settings && this.settings.kids ? this.settings.kids : {};
+    const picked = Array.from(this.shadowRoot.querySelectorAll('.assignee-cb')).filter(cb => cb.checked && kids[cb.value]);
+    const row = this.shadowRoot.getElementById('f-rotation-row');
+    const sw = this.shadowRoot.getElementById('f-rotation');
+    if (row) row.hidden = picked.length < 2;
+    if (sw && picked.length < 2) sw.checked = false;
+  }
+
+  /** Rotation of the editor: the selected kids take turns, or null. */
+  _getRotation() {
+    const kids = this.settings && this.settings.kids ? this.settings.kids : {};
+    const sw = this.shadowRoot.getElementById('f-rotation');
+    const members = Array.from(this.shadowRoot.querySelectorAll('.assignee-cb')).filter(cb => cb.checked && kids[cb.value]).map(cb => cb.value);
+    return (sw && sw.checked && members.length >= 2) ? { members } : null;
+  }
+
   /**
    * Updates the UI state when switching between recurring and one-time tasks.
    * @param {boolean} isOnetime - Whether the task is one-time.
@@ -1553,16 +1697,16 @@ class FamilyMissionCard extends HTMLElement {
     const btnRecurring = this.shadowRoot.getElementById('btn-type-recurring');
 
     if (isOnetime) {
-        intervalField.disabled = true;
         intervalField.value = 0;
+        this._setWeekdays([]);
         btnOnetime.classList.add('active');
         btnRecurring.classList.remove('active');
     } else {
-        intervalField.disabled = false;
         if (intervalField.value == 0) intervalField.value = 7;
         btnOnetime.classList.remove('active');
         btnRecurring.classList.add('active');
     }
+    this._syncScheduleUI();
   }
 
   /**
@@ -1606,6 +1750,8 @@ class FamilyMissionCard extends HTMLElement {
         this.shadowRoot.getElementById('f-complexity').value = t.complexity || 5;
         this.shadowRoot.getElementById('f-icon-picker').value = t.icon || 'mdi:broom';
         this._setCategoryFields(t.category, t.min_age, t.requires_approval, t.available_from, t.available_until, t.requires_routine, t.reminder_at, t.reminder_target, t.allow_together);
+        this._setWeekendFields(t);
+        this._setScope(t.scope);
         this.shadowRoot.getElementById('template-suggestions').innerHTML = '';
         
         this._subtasks = t.subtasks ? JSON.parse(JSON.stringify(t.subtasks)) : [];
@@ -1622,6 +1768,10 @@ class FamilyMissionCard extends HTMLElement {
         this.shadowRoot.querySelectorAll('.assignee-cb').forEach(cb => {
             cb.checked = t.assignees && t.assignees.includes(cb.value);
         });
+        this._setWeekdays(isOnetimeSelected ? [] : t.weekdays);
+        this._syncScheduleUI();
+        const rot = this.shadowRoot.getElementById('f-rotation');
+        if (rot) rot.checked = !!(t.rotation && Array.isArray(t.rotation.members)) && !this.shadowRoot.getElementById('f-rotation-row').hidden;
     }
   }
 
@@ -1849,7 +1999,8 @@ class FamilyMissionCard extends HTMLElement {
                     <div class="task-title">
                         <span ${descTooltip ? `title="${descTooltip}"` : 'style="cursor: default;"'}>${task.name}</span>
                         ${task.subtasks?.length > 0 ? `<ha-icon icon="mdi:book-multiple-outline" style="--mdc-icon-size: 14px; flex-shrink: 0; opacity: 0.7;" title="${subtaskTooltip}"></ha-icon>` : ''}
-                        ${task.interval === 0 ? `<ha-icon icon="mdi:numeric-1-circle-outline" style="--mdc-icon-size: 14px; flex-shrink: 0; opacity: 0.7;" title="${this.localize('onetime')}"></ha-icon>` : ''}
+                        ${task.rotation && task.rotation.members ? `<ha-icon icon="mdi:sync" style="--mdc-icon-size: 14px; flex-shrink: 0; opacity: 0.7;" title="${this.localize('rotation_lbl')}"></ha-icon>` : ''}
+                        ${task.interval === 0 && !(task.weekdays && task.weekdays.length) ? `<ha-icon icon="mdi:numeric-1-circle-outline" style="--mdc-icon-size: 14px; flex-shrink: 0; opacity: 0.7;" title="${this.localize('onetime')}"></ha-icon>` : ''}
                     </div>
                     <div class="task-meta">${areaName ? areaName + ' • ' : ''}${timeText} • ${task.complexity} ${this.localize('points')}${progressText}</div>
                     <div class="assignees-icons">${assigneeHtml}</div>

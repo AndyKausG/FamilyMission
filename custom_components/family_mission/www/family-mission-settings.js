@@ -5,8 +5,13 @@
  */
 const I18N_SETTINGS = {
   en: { 
-    title: "Settings", colors: "Colors (Done, Due, Overdue)", c_done: "Done", c_due: "Due", c_overdue: "Overdue", 
-    days_overdue: "Overdue after (Days)", save: "Save Settings", advanced: "ADVANCED SETTINGS", cancel: "Cancel",
+    title: "Settings", save: "Save Settings", advanced: "Advanced", cancel: "Cancel",
+    tab_family: "Family", tab_tasks: "Tasks & points", tab_notify: "Notifications", tab_device: "Tablet & devices",
+    dirty_msg: "Unsaved changes", discard: "Discard", discard_confirm: "Discard all unsaved changes?",
+    immediate_note: "⚡ Saved immediately", adv_note: "These actions take effect immediately and are not part of the Save button.",
+    h_push: "Push messages", h_remind: "Summaries & reminders", night_title: "Night mode", rocket_title: "Rocket launch",
+    band_title: "Role-model band", claim_title: "Bonus reservation", expire_title: "Missed duties",
+    kid_profiles_note: "Kid profiles, PINs and medication are stored with Save.",
     archive_btn: "Archive and reset monthly points now", factory_btn: "🔥 Factory reset (Delete everything)", 
     success: "Settings saved!", confirm_reset: "Do you really want to reset all points? Data will be archived.", 
     confirm_factory: "WARNING: This permanently deletes ALL tasks, points, and history!",
@@ -16,29 +21,26 @@ const I18N_SETTINGS = {
     add_template: "Add Template", edit_template: "Edit Template", template_name: "Template Name",
     confirm_delete_template: "Do you really want to delete this template? It cannot be recovered.",
     template_saved: "Template saved!", template_deleted: "Template deleted!", no_templates: "No templates found. Create a new one!",
-    point_goals: "Monthly Point Goals",
-    goal_lbl: "Goal for {user}",
     template_name_placeholder: "e.g. Take out trash",
     subtasks: "Subtasks", 
     add_subtask: "Add Subtask", 
     confirm: "Add", 
     subtask_placeholder: "Subtask title...",
     edit_template_hover: "Edit template", delete_template_hover: "Delete template",
-    save_hover: "Saves the current color and day settings.",
     export_hover: "Downloads all current tasks as a JSON file.",
     import_hover: "Opens a dialog to select a JSON file for importing tasks.", 
     desc_lbl: "Description (optional)", area_lbl: "Area", points_lbl: "Points (1-10)", icon_lbl: "Icon",
     interval_lbl: "Days (Interval)", assignees_lbl: "Assignees",
+    scope_lbl: "Scope (for absences)", scope_home: "Home (chores)", scope_personal: "Personal (own routines)",
+    pe_abs: "Suggest a vacation entry", pe_abs_d: "When everybody has been away for the given hours and no vacation is entered, the adults get one push: \"Are you on a trip?\". Off by default.", pe_abs_hours: "Hours away",
+    weekdays_lbl: "Weekdays (instead of the interval)", weekday_short: "Mo,Tu,We,Th,Fr,Sa,Su",
+    rotation_lbl: "Take turns (one kid per occurrence)", rotation_hint: "Each occurrence belongs to one kid; the turn moves on after it is done or missed.",
     cancel: "Cancel", save: "Save",
     export_tasks_cb: "Tasks", export_templates_cb: "Templates", export_history_cb: "History & Points", export_settings_cb: "Settings",
     no_desc: "No description", onetime: "One-time",
-    show_advanced_lbl: "Show Advanced Settings",
     height_lbl: "Height",
     width_lbl: "Width",
     title_lbl: "Title",
-    color_done_lbl: "Color Done", color_due_lbl: "Color Due", color_overdue_lbl: "Color Overdue",
-    transparency_lbl: "Transparency", color_adjustments: "Color Adjustments",
-    set_default: "Set Default",
     import_tasks_title: "Import Tasks", metadata_title: "Import Overview", tasks_lbl: "Tasks", 
     templates_lbl: "Templates", history_lbl: "History Entries", settings_included: "Settings", 
     yes: "Yes", no: "No", start_import: "Start Import", confirm_reload: "Confirm & Reload",
@@ -52,31 +54,47 @@ const I18N_SETTINGS = {
     kids_save_error: "Could not save the kid profiles: ",
     kid_birthday: "Birthday", kid_birth_year_fallback: "Birth year (if no birthday)", kid_sample: "Spot checks by parents: {n} %",
     kid_sample_hint: "Share of completions that a parent checks at random before points are awarded (0 = none).",
+    care_title: "💊 Medication", care_hint: "A daily tablet, drops or an inhaler: shown to the kid as a step of the morning / evening mission (or at a fixed time). Never any points; \"not today\" counts as answered.",
+    care_add: "+ Add medication", care_remove: "Remove", care_label: "Name", care_emoji: "Emoji", care_anchor: "Shown with",
+    care_anchor_morning: "Morning mission", care_anchor_evening: "Evening mission", care_anchor_time: "Fixed time", care_time: "At",
+    care_deadline: "Parents are told if unanswered at", care_weekdays: "Days", care_notify: "Tell parents when declined or unanswered",
+    care_alert: "Extra alert when declined often", care_alert_count: "times", care_alert_days: "within days",
+    care_days: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+    care_after: "Position: after step", care_after_end: "At the end",
+    care_stock: "Stock (pills)", care_stock_ph: "off", care_per_dose: "Pills per dose",
+    care_stock_d: "Optional: every \"taken\" counts one dose down. A week before it runs out, the parents get a task \"Prescription / refill\". Empty = off.",
     invalid_birthday: "The birthday must be a valid date in the past.",
     approval_title: "Approval & consequences",
     cheat_penalty_factor: "Deduction when cheating (x task points)", cheat_strict_days: "Strict mode after cheating (days, 0 = off)",
     birthday_title: "Birthday", birthday_bonus_points: "Birthday bonus (points, 0 = off)",
     team_title: "Teamwork", team_bonus: "Team bonus per kid when doing a task together (points, 0 = off)",
     birthday_duty_free: "Duty-free birthday: skip the kid's own due tasks",
-    family_goal: "Family goal", family_goal_points: "Points per month (all kids together)", family_goal_reward: "Reward", family_goal_reward_ph: "e.g. Ice cream trip", fg_suggest: "Suggestion: {n} (80 % of the kids' monthly goals)", fg_last: "last month: {n} task points", fg_take: "Use {n}",
+    family_goal: "Family goal", family_goal_points: "Points per month (all kids together)", family_goal_reward: "Reward", family_goal_reward_ph: "e.g. Ice cream trip", fg_suggest: "Suggestion: {n} (80 % of the kids' monthly goals)", fg_last: "last month: {n} task points", fg_take: "Use {n}", fg_mode: "Goal type", fg_mode_points: "Fixed points", fg_mode_percent: "Percent of possible points", fg_percent: "Percent of the possible points", fg_percent_hint: "Calculated once a month from the kids' duties. During the month the goal can only go down (tasks removed, days skipped, lower percent); a higher percent applies from next month.", fg_info: "{month}: {target} points ({percent} % of {possible}, as of {asof}) · from {nextdate} probably {next}", fg_info_none: "The goal is calculated as soon as you save.",
 claim_minutes: "Bonus reservation (minutes)",
     category_lbl: "Category (kids mode)", cat_basis: "Basis (assigned duty)", cat_bonus: "Bonus (open for all)", cat_auftrag: "Order (one-time)",
     min_age_lbl: "Minimum age (0 = any)", min_age_short: "age {age}+", approval_lbl: "Requires parent approval", routine_lbl: "Bonus only after the kid's due duties", together_lbl: "Doing it together allowed",
     available_from_lbl: "Only from (time)", available_until_lbl: "Only until (time)",
+    available_from_we_lbl: "Weekend: only from (time)", available_until_we_lbl: "Weekend: only until (time)",
+    weekend_window_hint: "Saturday / Sunday. Empty = the same window every day.",
+    after_homework_lbl: "Only after homework",
+    school_cal_lbl: "School holiday calendar", school_cal_off: "none",
+    school_cal_d: "Optional: a calendar whose all-day events are school holidays (homework and school steps pause on those days). Needs the calendar integration of Home Assistant.",
     reminder_lbl: "Reminder", reminder_time_lbl: "Remind at", reminder_target_lbl: "Notify via", reminder_event_only: "Event only",
     expire_missed: "Missed duties expire at midnight (daily duties right away, weekly ones after 2 days) - no points, no deduction",
     help_btn: "Help", wizard_btn: "🚀 Kids mode quick start", wizard_hint: "Proposes an age-appropriate set of tasks, points and goals for your kids and creates everything in one click.",
     wizard_missing: "The wizard could not be loaded. Reload the page (Ctrl+F5) and try again.",
     triggers_title: "Bonus triggers", triggers_desc: "Open a bonus task automatically when an entity changes to a state, e.g. when the dishwasher is finished. Fires the event family_mission_bonus_opened.",
     trig_task: "Bonus task", trig_pick_task: "— choose a bonus task —", trig_add: "Add trigger", trig_remove: "Remove trigger", trig_none: "No triggers yet.", trig_no_bonus: "No bonus task yet. Create a task without assignee and category \"Bonus\" (or let the quick start create them).",
-    trig_when: "when {entity} becomes \"{state}\"", trig_error: "Could not save the triggers: ",
-    pe_title: "We parents", pe_desc: "Optional. Everything here has a sensible default; nothing is required.",
+    trig_when: "when {entity} becomes \"{state}\"", trig_error: "Could not save the triggers: ", 
     pe_band: "Show role-model band on the tablet", pe_band_d: "Quiet line on the kids tablet: \"Mom and Dad also have N missions today\" (no points, no names).",
     pe_label: "Wording for the band (optional)", pe_label_ph: "Mom and Dad",
     pe_summary: "Sunday summary", pe_summary_d: "A neutral weekly note to each adult: hours per person and what is still open.", pe_time: "Time",
-    pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. No other parent task sends reminders.",
-    pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.",
-    tb_title: "Tablet", tb_desc: "Night mode and rocket launch for the wall tablet. Everything has a sensible default.",
+    pe_digest: "Morning overview", pe_digest_d: "One push per adult in the morning: \"Today: 3 tasks, 1 overdue\". Only when something is due. Never at night.",
+    pe_bins: "Bins: remind when the kids have not put them out", pe_bins_d: "Only with the waste collection. The parents' task \"Put the bins out\" is then due on the evening before a collection; if the kids' bonus is not done by this time, the parents get a push. Never at night.",
+    pe_battery: "Create tasks for low batteries", pe_battery_d: "Sensors with the device class battery below the limit become a parents' task \"🔋 Battery ...\" (once per sensor, checked every 30 minutes).",
+    pe_battery_pct: "Limit in %",
+    pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. Other parent tasks only remind at their own time (if you set one).",
+    pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.", 
     tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
     tb_approval_push: "Push to the parents when a task waits for approval",
     tb_push_status: "Who gets the push?", tb_push_auto: "✓ Push to {t} (automatic)", tb_push_manual: "✓ Push to {t}",
@@ -103,8 +121,13 @@ claim_minutes: "Bonus reservation (minutes)",
     an_test_none: "Choose an engine and at least one speaker.", an_test_fail: "Announcement failed: {e}", an_choose: "- choose -"
   },
   de: { 
-    title: "Einstellungen", colors: "Farben (Erledigt, Fällig, Überfällig)", c_done: "Erledigt", c_due: "Fällig", c_overdue: "Überfällig", 
-    days_overdue: "Überfällig nach (Tagen)", save: "Einstellungen speichern", advanced: "ERWEITERTE EINSTELLUNGEN", cancel: "Abbrechen",
+    title: "Einstellungen", save: "Einstellungen speichern", advanced: "Erweitert", cancel: "Abbrechen",
+    tab_family: "Familie", tab_tasks: "Aufgaben & Punkte", tab_notify: "Benachrichtigungen", tab_device: "Tablet & Geräte",
+    dirty_msg: "Ungespeicherte Änderungen", discard: "Verwerfen", discard_confirm: "Alle ungespeicherten Änderungen verwerfen?",
+    immediate_note: "⚡ Wird sofort gespeichert", adv_note: "Diese Aktionen wirken sofort und gehören nicht zum Speichern-Button.",
+    h_push: "Push-Nachrichten", h_remind: "Zusammenfassungen & Erinnerungen", night_title: "Nachtmodus", rocket_title: "Raketenstart",
+    band_title: "Vorbild-Band", claim_title: "Bonus-Reservierung", expire_title: "Verpasste Pflichten",
+    kid_profiles_note: "Kinderprofile, PINs und Medikamente werden mit Speichern abgelegt.",
     archive_btn: "Monats-Punkte archivieren und zurücksetzen", factory_btn: "🔥 Werkseinstellungen setzen (Alles löschen)", 
     success: "Einstellungen erfolgreich gespeichert!", confirm_reset: "Möchtest du alle monatlichen Punkte wirklich auf 0 setzen? Die Daten werden archiviert.", 
     confirm_factory: "ACHTUNG: Dies löscht unwiderruflich ALLE Aufgaben, Punkte und die Historie!", 
@@ -114,29 +137,26 @@ claim_minutes: "Bonus reservation (minutes)",
     add_template: "Vorlage hinzufügen", edit_template: "Vorlage bearbeiten", template_name: "Name der Vorlage",
     confirm_delete_template: "Möchtest du diese Vorlage wirklich löschen? Sie kann nicht wiederhergestellt werden.",
     template_saved: "Vorlage gespeichert!", template_deleted: "Vorlage gelöscht!", no_templates: "Keine Vorlagen vorhanden. Erstelle eine neue!",
-    point_goals: "Monatliche Punktziele",
-    goal_lbl: "Ziel für {user}",
     template_name_placeholder: "z.B. Müll rausbringen",
     subtasks: "Unteraufgaben", 
     add_subtask: "Unteraufgabe hinzufügen", 
     confirm: "Hinzufügen", 
     subtask_placeholder: "Titel der Unteraufgabe...",
     edit_template_hover: "Vorlage bearbeiten", delete_template_hover: "Vorlage löschen",
-    save_hover: "Speichert die aktuellen Farb- und Tageseinstellungen.",
     export_hover: "Lädt alle aktuellen Aufgaben als JSON-Datei herunter.",
     import_hover: "Öffnet einen Dialog zur Auswahl einer JSON-Datei für den Import von Aufgaben.", 
     desc_lbl: "Beschreibung (optional)", area_lbl: "Bereich", points_lbl: "Punkte (1-10)", icon_lbl: "Icon",
     interval_lbl: "Tage (Intervall)", assignees_lbl: "Bearbeiter",
+    scope_lbl: "Bereich (für Abwesenheit)", scope_home: "Zuhause (Haushalt)", scope_personal: "Persönlich (eigene Routinen)",
+    pe_abs: "Urlaub vorschlagen", pe_abs_d: "Sind alle länger als die angegebenen Stunden unterwegs und ist kein Urlaub eingetragen, bekommen die Erwachsenen einmal eine Push-Nachricht: \"Seid ihr verreist?\". Standardmäßig aus.", pe_abs_hours: "Stunden unterwegs",
+    weekdays_lbl: "Wochentage (statt Intervall)", weekday_short: "Mo,Di,Mi,Do,Fr,Sa,So",
+    rotation_lbl: "Im Wechsel (ein Kind pro Termin)", rotation_hint: "Jeder Termin gehört einem Kind; nach Erledigen oder Verpassen ist das nächste dran.",
     cancel: "Abbrechen", save: "Speichern",
     export_tasks_cb: "Aufgaben", export_templates_cb: "Vorlagen", export_history_cb: "Protokoll & Historie", export_settings_cb: "Einstellungen",
     no_desc: "Keine Beschreibung", onetime: "Einmalig",
-    show_advanced_lbl: "Erweiterte Einstellungen anzeigen",
     height_lbl: "Höhe",
     width_lbl: "Breite",
     title_lbl: "Titel",
-    color_done_lbl: "Farbe Erledigt", color_due_lbl: "Farbe Fällig", color_overdue_lbl: "Farbe Überfällig",
-    transparency_lbl: "Transparenz", color_adjustments: "Farbanpassungen",
-    set_default: "Standard setzen",
     import_tasks_title: "Aufgaben importieren", metadata_title: "Import Übersicht", tasks_lbl: "Aufgaben", 
     templates_lbl: "Vorlagen", history_lbl: "Historien-Einträge", settings_included: "Einstellungen", 
     yes: "Ja", no: "Nein", start_import: "Import starten", confirm_reload: "Bestätigen & Neuladen",
@@ -150,31 +170,47 @@ claim_minutes: "Bonus reservation (minutes)",
     kids_save_error: "Kinder-Profile konnten nicht gespeichert werden: ",
     kid_birthday: "Geburtstag", kid_birth_year_fallback: "Geburtsjahr (falls kein Geburtstag)", kid_sample: "Stichproben durch Eltern: {n} %",
     kid_sample_hint: "Anteil der Erledigungen, die Mama oder Papa zufällig prüfen, bevor Punkte gutgeschrieben werden (0 = keine).",
+    care_title: "💊 Medikamente", care_hint: "Eine Tablette, Tropfen oder ein Inhalator pro Tag: erscheint beim Kind als Schritt der Morgen- / Abend-Mission (oder zu einer festen Uhrzeit). Nie Punkte; \"Heute nicht\" zählt als beantwortet.",
+    care_add: "+ Medikament hinzufügen", care_remove: "Entfernen", care_label: "Name", care_emoji: "Emoji", care_anchor: "Erscheint bei",
+    care_anchor_morning: "Morgen-Mission", care_anchor_evening: "Abend-Mission", care_anchor_time: "Feste Uhrzeit", care_time: "Um",
+    care_deadline: "Eltern erfahren es, wenn bis dahin keine Antwort kommt", care_weekdays: "Tage", care_notify: "Eltern benachrichtigen bei \"Heute nicht\" oder keiner Antwort",
+    care_alert: "Zusätzlicher Alarm bei häufigem Ablehnen", care_alert_count: "mal", care_alert_days: "innerhalb von Tagen",
+    care_days: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+    care_after: "Position: nach Schritt", care_after_end: "am Ende",
+    care_stock: "Vorrat (Tabletten)", care_stock_ph: "aus", care_per_dose: "Tabletten pro Gabe",
+    care_stock_d: "Optional: jedes \"Genommen\" zählt eine Gabe herunter. Eine Woche bevor der Vorrat reicht, bekommen die Eltern die Aufgabe \"Rezept/Nachkauf\". Leer = aus.",
     invalid_birthday: "Der Geburtstag muss ein gültiges Datum in der Vergangenheit sein.",
     approval_title: "Freigabe & Konsequenzen",
     cheat_penalty_factor: "Abzug bei Schummeln (x Aufgabenpunkte)", cheat_strict_days: "Strenge Phase nach Schummeln (Tage, 0 = aus)",
     birthday_title: "Geburtstag", birthday_bonus_points: "Geburtstags-Bonus (Punkte, 0 = aus)",
     team_title: "Teamarbeit", team_bonus: "Team-Bonus pro Kind bei gemeinsam erledigten Aufgaben (Punkte, 0 = aus)",
     birthday_duty_free: "Pflichtfreier Geburtstag: eigene fällige Aufgaben überspringen",
-    family_goal: "Familienziel", family_goal_points: "Punkte pro Monat (alle Kinder zusammen)", family_goal_reward: "Belohnung", family_goal_reward_ph: "z.B. Eis essen gehen", fg_suggest: "Vorschlag: {n} (80 % der Monatsziele der Kinder)", fg_last: "letzter Monat: {n} Aufgabenpunkte", fg_take: "{n} übernehmen",
+    family_goal: "Familienziel", family_goal_points: "Punkte pro Monat (alle Kinder zusammen)", family_goal_reward: "Belohnung", family_goal_reward_ph: "z.B. Eis essen gehen", fg_suggest: "Vorschlag: {n} (80 % der Monatsziele der Kinder)", fg_last: "letzter Monat: {n} Aufgabenpunkte", fg_take: "{n} übernehmen", fg_mode: "Zielart", fg_mode_points: "Feste Punkte", fg_mode_percent: "Prozent der möglichen Punkte", fg_percent: "Prozent der möglichen Punkte", fg_percent_hint: "Wird einmal im Monat aus den Pflichten der Kinder berechnet. Im Monat kann das Ziel nur sinken (Aufgaben entfernt, Tage ausgesetzt, weniger Prozent); mehr Prozent gilt ab dem nächsten Monat.", fg_info: "{month}: {target} Punkte ({percent} % von {possible}, Stand {asof}) · ab {nextdate} voraussichtlich {next}", fg_info_none: "Das Ziel wird berechnet, sobald du speicherst.",
 claim_minutes: "Bonus-Reservierung (Minuten)",
     category_lbl: "Kategorie (Kindermodus)", cat_basis: "Basis (feste Pflicht)", cat_bonus: "Bonus (offen für alle)", cat_auftrag: "Auftrag (einmalig)",
     min_age_lbl: "Mindestalter (0 = egal)", min_age_short: "ab {age}", approval_lbl: "Freigabe durch Eltern nötig", routine_lbl: "Bonus erst nach den fälligen Pflichten", together_lbl: "Zusammen erledigen erlaubt",
     available_from_lbl: "Erst ab (Uhrzeit)", available_until_lbl: "Nur bis (Uhrzeit)",
+    available_from_we_lbl: "Wochenende: erst ab (Uhrzeit)", available_until_we_lbl: "Wochenende: nur bis (Uhrzeit)",
+    weekend_window_hint: "Samstag / Sonntag. Leer = jeden Tag dasselbe Zeitfenster.",
+    after_homework_lbl: "Erst nach den Hausaufgaben",
+    school_cal_lbl: "Schulferien-Kalender", school_cal_off: "keiner",
+    school_cal_d: "Optional: ein Kalender, dessen ganztägige Termine Schulferien sind (Hausaufgaben und Schulschritte pausieren an diesen Tagen). Braucht die Kalender-Integration von Home Assistant.",
     reminder_lbl: "Erinnerung", reminder_time_lbl: "Erinnern um", reminder_target_lbl: "Benachrichtigen über", reminder_event_only: "nur Ereignis",
     expire_missed: "Verpasste Pflichten verfallen um Mitternacht (tägliche sofort, wöchentliche nach 2 Tagen) – ohne Punkte, ohne Abzug",
     help_btn: "Hilfe", wizard_btn: "🚀 Kindermodus-Schnellstart", wizard_hint: "Schlägt altersgerechte Aufgaben, Punkte und Ziele für eure Kinder vor und legt alles mit einem Klick an.",
     wizard_missing: "Der Assistent konnte nicht geladen werden. Seite neu laden (Strg+F5) und erneut versuchen.",
     triggers_title: "Bonus-Auslöser / Bonus triggers", triggers_desc: "Öffnet eine Bonus-Aufgabe automatisch, wenn eine Entität einen Zustand annimmt, z.B. wenn die Spülmaschine fertig ist. Löst das Ereignis family_mission_bonus_opened aus.",
     trig_task: "Bonus-Aufgabe", trig_pick_task: "— Bonus-Aufgabe wählen —", trig_add: "Auslöser hinzufügen", trig_remove: "Auslöser entfernen", trig_none: "Noch keine Auslöser.", trig_no_bonus: "Noch keine Bonus-Aufgabe vorhanden. Lege eine Aufgabe ohne Bearbeiter mit Kategorie „Bonus“ an (oder lass sie vom Schnellstart anlegen).",
-    trig_when: "wenn {entity} auf \"{state}\" wechselt", trig_error: "Auslöser konnten nicht gespeichert werden: ",
-    pe_title: "Wir Eltern", pe_desc: "Optional. Alles hat einen sinnvollen Standard, nichts ist Pflicht.",
+    trig_when: "wenn {entity} auf \"{state}\" wechselt", trig_error: "Auslöser konnten nicht gespeichert werden: ", 
     pe_band: "Vorbild-Band auf dem Tablet zeigen", pe_band_d: "Ruhige Zeile auf dem Kinder-Tablet: \"Auch Mama und Papa haben heute N Missionen\" (ohne Punkte, ohne Namen).",
     pe_label: "Wortlaut für das Band (optional)", pe_label_ph: "Mama und Papa",
     pe_summary: "Sonntags-Zusammenfassung", pe_summary_d: "Eine neutrale Wochen-Notiz an jeden Erwachsenen: Stunden pro Person und was noch offen ist.", pe_time: "Uhrzeit",
-    pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nie.",
-    pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.",
-    tb_title: "Tablet", tb_desc: "Nachtmodus und Raketenstart für das Wand-Tablet. Alles hat einen sinnvollen Standard.",
+    pe_digest: "Morgen-Übersicht", pe_digest_d: "Eine Push-Nachricht pro Erwachsenem am Morgen: \"Heute: 3 Aufgaben, 1 überfällig\". Nur wenn etwas ansteht. Nie nachts.",
+    pe_bins: "Tonnen: erinnern, wenn die Kinder sie nicht rausgestellt haben", pe_bins_d: "Nur mit der Müllabfuhr. Die Eltern-Aufgabe \"Mülltonnen rausstellen\" ist dann am Abend vor einer Leerung fällig; ist der Bonus der Kinder bis zu dieser Uhrzeit nicht erledigt, bekommen die Eltern eine Push-Nachricht. Nie nachts.",
+    pe_battery: "Aufgaben für schwache Batterien anlegen", pe_battery_d: "Sensoren mit der Geräteklasse Batterie unter der Grenze werden zur Eltern-Aufgabe \"🔋 Batterie ...\" (einmal pro Sensor, geprüft alle 30 Minuten).",
+    pe_battery_pct: "Grenze in %",
+    pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nur zu ihrer eigenen Uhrzeit (falls gesetzt).",
+    pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.", 
     tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
     tb_approval_push: "Push an die Eltern, wenn eine Aufgabe auf Freigabe wartet",
     tb_push_status: "Wer bekommt den Push?", tb_push_auto: "✓ Push an {t} (automatisch)", tb_push_manual: "✓ Push an {t}",
@@ -299,22 +335,24 @@ class FamilyMissionSettings extends HTMLElement {
     constructor() {
     super(); 
     this.attachShadow({ mode: 'open' });
-    this._themeView = 'light';
-    
-    // Global properties
-    this.settings = { color_done: '#4CAF50', color_due: '#FFC107', color_overdue: '#F44336', overdue_days: 5 };
+
+    // Global properties. The colour / overdue keys of the old TaskOrganizer UI are no longer edited here;
+    // stored values stay untouched and are sent back unchanged on save.
+    this.settings = {};
     this.tasks = {};
     this.users = {};
     this.templates = {};
     this.history = [];
+    this.goalInfo = null;
     this.points = {};
     this.monthly_history = {};
     this.current_month = null;
     this.current_period_start = null;
     this._subtasks = [];
     this._dataLoaded = false; 
-    this._advancedOpen = false; 
-    this._ieOpen = false; 
+    this._tab = FamilyMissionSettings._storedTab();
+    this._dirty = false;
+    this._open = {};
     this._templatesOpen = false;
     this._templateModalOpen = false;
     this._importModalOpen = false;
@@ -325,21 +363,27 @@ class FamilyMissionSettings extends HTMLElement {
     this._kidDrafts = {};
     this._goalDrafts = {};
     this._familyDraft = {};
-    this._kidsOpen = false;
     this._myRole = null;
     this._haUsers = [];
     this._parentsDraft = null;
-    this._trigOpen = false;
-    this._peOpen = false;
-    this._tbOpen = false;
-    this._wsOpen = false;
-    this._anOpen = false;
     this._wasteSrc = null;
     this._adults = [];
     this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '' };
     this._wizard = null;
     this._unsubEvents = null;
     this.addEventListener('click', (ev) => this._handleClick(ev));
+  }
+
+  /** Tabs of the card in display order. */
+  static get TABS() { return ['family', 'tasks', 'notify', 'device']; }
+
+  /** Last used tab from localStorage (the storage may be blocked, so every access is guarded). */
+  static _storedTab() {
+    try {
+      const v = window.localStorage.getItem('family_mission_settings_tab');
+      if (FamilyMissionSettings.TABS.includes(v)) return v;
+    } catch (e) { /* storage unavailable */ }
+    return 'family';
   }
 
   /**
@@ -376,8 +420,7 @@ class FamilyMissionSettings extends HTMLElement {
   static getStubConfig(hass) { 
     return { 
       type: "custom:family-mission-settings", 
-      title: this._localize(hass, 'title'),
-      show_advanced: false 
+      title: this._localize(hass, 'title')
     }; 
   }
 
@@ -530,12 +573,16 @@ class FamilyMissionSettings extends HTMLElement {
    */
   _fetchData() { 
     this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => { 
-      if (data.settings && Object.keys(data.settings).length > 0) { 
-        this.settings = { ...this.settings, ...data.settings }; 
+      if (data.settings && Object.keys(data.settings).length > 0) {
+        // Unsaved edits of the form fields survive a background refresh (e.g. after adding a trigger)
+        const keep = this._dirty ? { ...this.settings } : {};
+        for (const k of ['kids', 'bonus_triggers', 'wizard', 'parents', 'parents_manage']) delete keep[k];
+        this.settings = { ...this.settings, ...data.settings, ...keep };
       } 
       this.tasks = data.tasks || {};
       this.templates = data.templates || {};
       this.history = data.history || [];
+      this.goalInfo = data.family_goal_info || null;
       this.points = data.points || {};
       this.monthly_history = data.monthly_history || {};
       this.current_month = data.current_month;
@@ -565,6 +612,7 @@ class FamilyMissionSettings extends HTMLElement {
         birth_year: (k && k.birth_year) || '',
         birthday: (k && k.birthday) || '',
         approval_sample_rate: (k && parseInt(k.approval_sample_rate)) || 0,
+        care: JSON.parse(JSON.stringify((k && Array.isArray(k.care)) ? k.care : [])),
         pin: '',
         clear_pin: false
       };
@@ -619,9 +667,10 @@ class FamilyMissionSettings extends HTMLElement {
         const birthYear = (!isNaN(year) && year >= 1900 && year <= 2100) ? year : null;
         const rate = Math.max(0, Math.min(100, parseInt(d.approval_sample_rate) || 0));
         const old = stored[uid];
+        const careChanged = JSON.stringify(d.care || []) !== JSON.stringify((old && old.care) || []);
         const changed = !old || old.avatar !== d.avatar || old.color !== d.color ||
           (old.birth_year || null) !== birthYear || (old.birthday || null) !== (birthday || null) ||
-          (parseInt(old.approval_sample_rate) || 0) !== rate || !!d.pin || d.clear_pin;
+          (parseInt(old.approval_sample_rate) || 0) !== rate || !!d.pin || d.clear_pin || careChanged;
         if (changed) {
           const payload = {
             type: 'family_mission/set_kid_profile',
@@ -632,6 +681,7 @@ class FamilyMissionSettings extends HTMLElement {
             birthday: birthday || null,
             approval_sample_rate: rate
           };
+          if (careChanged) payload.care = d.care || [];
           if (d.pin) payload.pin = d.pin;
           if (d.clear_pin) payload.clear_pin = true;
           calls.push(payload);
@@ -663,25 +713,17 @@ class FamilyMissionSettings extends HTMLElement {
    * Gathers modified settings from the UI and saves them via websocket.
    */
   async _saveSettings() { 
-    const pointGoals = {};
+    // Monthly goals are edited per kid only; goals stored for other persons stay as they are.
+    const pointGoals = { ...(this.settings.point_goals || {}) };
     this.shadowRoot.querySelectorAll('.user-goal-input').forEach(input => {
       const val = parseInt(input.value);
-      if (!isNaN(val) && val > 0) pointGoals[input.dataset.uid] = val;
-    });
-
-    // We merge the currently visible values into this.settings first
-    ['done', 'due', 'overdue'].forEach(status => {
-      const cInput = this.shadowRoot.getElementById(`c-${status}`);
-      if (cInput) this.settings[`color_${status}_${this._themeView}`] = cInput.value;
-      const tInput = this.shadowRoot.getElementById(`t-${status}`);
-      if (tInput) this.settings[`transparency_${status}_${this._themeView}`] = parseInt(tInput.value);
+      if (!isNaN(val) && val > 0) pointGoals[input.dataset.uid] = val; else delete pointGoals[input.dataset.uid];
     });
 
     // Read ALL form values before the first await: saving a kid profile fires an
     // update event which re-renders the card and would reset unsaved inputs.
     const newSettings = { 
       ...this.settings,
-      overdue_days: parseInt(this.shadowRoot.getElementById('num-overdue').value),
       point_goals: pointGoals,
       // A manually entered goal replaces the prorated start-month goal: it is also the full goal
       point_goals_full: this._fullGoals(pointGoals)
@@ -698,7 +740,9 @@ class FamilyMissionSettings extends HTMLElement {
     if (fgPoints) {
       newSettings.family_goal = {
         points: Math.max(0, parseInt(fgPoints.value) || 0),
-        reward: (this.shadowRoot.getElementById('fg-reward')?.value || '').trim()
+        reward: (this.shadowRoot.getElementById('fg-reward')?.value || '').trim(),
+        mode: this.shadowRoot.getElementById('fg-mode')?.value === 'percent' ? 'percent' : 'points',
+        percent: Math.max(10, Math.min(150, parseInt(this.shadowRoot.getElementById('fg-percent')?.value) || 75))
       };
       newSettings.claim_minutes = Math.max(1, parseInt(this.shadowRoot.getElementById('claim-minutes')?.value) || 10);
       const num = (id, lo, hi, def) => {
@@ -728,9 +772,66 @@ class FamilyMissionSettings extends HTMLElement {
       this._parentsDraft = null;
       this._goalDrafts = {};
       this._familyDraft = {};
+      this._dirty = false;
       alert(this.localize('success')); 
       this._fetchData(); 
     }); 
+  }
+
+  /** Marks the form as changed: the sticky save bar appears. */
+  _markDirty() {
+    this._dirty = true;
+    const bar = this.shadowRoot && this.shadowRoot.getElementById('save-bar');
+    if (bar) bar.hidden = false;
+  }
+
+  /** Throws away all unsaved edits and reloads the stored settings. */
+  _discardChanges() {
+    if (!confirm(this.localize('discard_confirm'))) return;
+    this._kidDrafts = {};
+    this._goalDrafts = {};
+    this._familyDraft = {};
+    this._parentsDraft = null;
+    this._dirty = false;
+    this.settings = {};
+    this._fetchData();
+  }
+
+  /**
+   * Switches to a tab without re-rendering (all panels stay in the DOM, so every field is still read on save).
+   * @param {string} tab - Tab id.
+   */
+  _switchTab(tab) {
+    if (!FamilyMissionSettings.TABS.includes(tab)) return;
+    this._tab = tab;
+    try { window.localStorage.setItem('family_mission_settings_tab', tab); } catch (e) { /* storage unavailable */ }
+    const root = this.shadowRoot;
+    root.querySelectorAll('.tab-btn').forEach(b => {
+      const on = b.dataset.tab === tab;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', String(on));
+      b.tabIndex = on ? 0 : -1;
+      if (on && b.scrollIntoView) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    root.querySelectorAll('.tab-panel').forEach(p => { p.hidden = p.dataset.panel !== tab; });
+  }
+
+  /**
+   * Opens / closes a collapsible section in place.
+   * @param {string} id - Section id (data-sec).
+   */
+  _toggleSec(id) {
+    this._open[id] = !this._open[id];
+    const root = this.shadowRoot;
+    const head = root.querySelector(`.sec-head[data-sec="${id}"]`);
+    const body = root.querySelector(`.sec-body[data-sec="${id}"]`);
+    if (body) body.classList.toggle('open', !!this._open[id]);
+    if (head) {
+      head.setAttribute('aria-expanded', String(!!this._open[id]));
+      const icon = head.querySelector('ha-icon');
+      if (icon) icon.setAttribute('icon', this._open[id] ? 'mdi:chevron-up' : 'mdi:chevron-right');
+    }
+    if (id === 'waste' && this._open[id] && !this._wasteSrc) this._loadWasteSources();
   }
   
   /**
@@ -756,21 +857,13 @@ class FamilyMissionSettings extends HTMLElement {
   }
   
   /**
-   * Toggles the visibility of the advanced settings section.
-   */
-  _toggleAdvanced() { 
-    this._advancedOpen = !this._advancedOpen; 
-    this._render(); 
-  }
-
-  /**
    * Central click handler for the settings card.
    */
   _handleClick(ev) {
     const path = ev.composedPath();
     const target = path.find(el =>
-        (el.id && (el.id.startsWith('btn-') || el.id.startsWith('toggle-') || el.id === 'theme-toggle' || el.id.endsWith('-toggle'))) ||
-        (el.classList && (el.classList.contains('action-btn') || el.classList.contains('subtask-check') || el.classList.contains('kid-emoji-pick')))
+        (el.id && (el.id.startsWith('btn-') || el.id.startsWith('toggle-'))) ||
+        (el.classList && (el.classList.contains('action-btn') || el.classList.contains('tab-btn') || el.classList.contains('sec-head') || el.classList.contains('subtask-check') || el.classList.contains('kid-emoji-pick') || el.classList.contains('wd-chip')))
     );
 
     if (!target) return;
@@ -778,40 +871,23 @@ class FamilyMissionSettings extends HTMLElement {
     
     const id = target.id;
     if (id === 'btn-save') this._saveSettings();
-    else if (id === 'theme-toggle') {
-      this._themeView = target.checked ? 'dark' : 'light';
-      this._render();
-    }
-    else if (id === 'btn-default-colors') {
-      ['done', 'due', 'overdue'].forEach(status => {
-        delete this.settings[`color_${status}_light`];
-        delete this.settings[`transparency_${status}_light`];
-        delete this.settings[`color_${status}_dark`];
-        delete this.settings[`transparency_${status}_dark`];
-        delete this.settings[`color_${status}`];
-      });
-      this._render();
-    }
-    else if (id === 'color-toggle') { this._colorOpen = !this._colorOpen; this._render(); }
-    else if (id === 'overdue-toggle') { this._overdueOpen = !this._overdueOpen; this._render(); }
-    else if (id === 'ie-toggle') { this._ieOpen = !this._ieOpen; this._render(); }
-    else if (id === 'templates-toggle') { this._templatesOpen = !this._templatesOpen; this._render(); }
-    else if (id === 'adv-toggle') { this._advancedOpen = !this._advancedOpen; this._render(); }
-    else if (id === 'goals-toggle') { this._goalsOpen = !this._goalsOpen; this._render(); }
-    else if (id === 'kids-toggle') { this._kidsOpen = !this._kidsOpen; this._render(); }
-    else if (id === 'pe-toggle') { this._peOpen = !this._peOpen; this._render(); }
-    else if (id === 'tb-toggle') { this._tbOpen = !this._tbOpen; this._render(); }
-    else if (id === 'ws-toggle') { this._wsOpen = !this._wsOpen; if (this._wsOpen && !this._wasteSrc) this._loadWasteSources(); this._render(); }
-    else if (id === 'ws-reload') this._loadWasteSources();
-    else if (id === 'an-toggle') { this._anOpen = !this._anOpen; this._render(); }
-    else if (id === 'trig-toggle') { this._trigOpen = !this._trigOpen; this._render(); }
+    else if (id === 'btn-discard') this._discardChanges();
+    else if (target.classList.contains('tab-btn')) this._switchTab(target.dataset.tab);
+    else if (target.classList.contains('sec-head')) this._toggleSec(target.dataset.sec);
+    else if (id === 'btn-ws-reload') this._loadWasteSources();
     else if (id === 'btn-wizard-open') this._openWizard();
     else if (id === 'btn-help-open') { if (window.FamilyMissionHelp) window.FamilyMissionHelp.open(this._hass, 'setup'); }
     else if (id === 'btn-trig-add') this._addTrigger();
     else if (target.classList.contains('btn-trig-del')) this._removeTrigger(parseInt(target.dataset.index));
+    else if (target.classList.contains('wd-chip')) {
+      target.classList.toggle('active');
+      target.setAttribute('aria-pressed', String(target.classList.contains('active')));
+      this._syncTemplateSchedule();
+    }
     else if (target.classList.contains('kid-emoji-pick')) {
       if (this._canManage()) {
         this._kidDraft(target.dataset.uid).avatar = target.dataset.emoji;
+        this._markDirty();
         this._render();
       }
     }
@@ -903,22 +979,6 @@ class FamilyMissionSettings extends HTMLElement {
   }
 
   /**
-   * Toggles the visibility of the import/export section.
-   */
-  _toggleIE() { 
-    this._ieOpen = !this._ieOpen; 
-    this._render(); 
-  }
-
-  /**
-   * Toggles the template management section.
-   */
-  _toggleTemplates() {
-    this._templatesOpen = !this._templatesOpen;
-    this._render();
-  }
-
-  /**
    * Opens the modal for adding or editing a task template.
    * @param {string|null} id - The template ID to edit, or null for new.
    */
@@ -944,6 +1004,25 @@ class FamilyMissionSettings extends HTMLElement {
     this._render();
   }
 
+  /** Selected weekdays of the template editor (Mon=0 ... Sun=6). */
+  _templateWeekdays() {
+    return Array.from(this.shadowRoot.querySelectorAll('.wd-chip.active'))
+      .map(b => parseInt(b.dataset.wd)).sort((a, b) => a - b);
+  }
+
+  /** Weekdays replace the interval; the rotation switch needs two or more kids among the assignees. */
+  _syncTemplateSchedule() {
+    const interval = this.shadowRoot.getElementById('tmpl-interval');
+    if (interval) interval.disabled = this._templateWeekdays().length > 0;
+    const kids = this.settings.kids || {};
+    const members = Array.from(this.shadowRoot.querySelectorAll('.tmpl-assignee-cb')).filter(cb => cb.checked && kids[cb.value]).map(cb => cb.value);
+    const row = this.shadowRoot.getElementById('tmpl-rotation-row');
+    const sw = this.shadowRoot.getElementById('tmpl-rotation');
+    if (row) row.hidden = members.length < 2;
+    if (sw && members.length < 2) sw.checked = false;
+    return members;
+  }
+
   /**
    * Saves the current template data to the backend via websocket.
    */
@@ -961,15 +1040,23 @@ class FamilyMissionSettings extends HTMLElement {
       icon: this.shadowRoot.getElementById('tmpl-icon').value,
       interval: parseInt(this.shadowRoot.getElementById('tmpl-interval').value),
       category: this.shadowRoot.getElementById('tmpl-category').value || 'basis',
+      scope: this.shadowRoot.getElementById('tmpl-scope')?.value === 'personal' ? 'personal' : 'home',
       min_age: Math.max(0, Math.min(18, parseInt(this.shadowRoot.getElementById('tmpl-min-age').value) || 0)),
       requires_approval: !!this.shadowRoot.getElementById('tmpl-approval')?.checked,
       requires_routine: !!this.shadowRoot.getElementById('tmpl-routine')?.checked,
       allow_together: !!this.shadowRoot.getElementById('tmpl-together')?.checked,
       available_from: this.shadowRoot.getElementById('tmpl-available-from')?.value || '',
       available_until: this.shadowRoot.getElementById('tmpl-available-until')?.value || '',
+      available_from_we: this.shadowRoot.getElementById('tmpl-available-from-we')?.value || '',
+      available_until_we: this.shadowRoot.getElementById('tmpl-available-until-we')?.value || '',
+      after_key: this.shadowRoot.getElementById('tmpl-after') ? (this.shadowRoot.getElementById('tmpl-after').checked ? 'homework' : null)
+        : ((this._editingTemplateId && this.templates[this._editingTemplateId] && this.templates[this._editingTemplateId].after_key) || null),
       reminder_at: this.shadowRoot.getElementById('tmpl-reminder')?.checked ? (this.shadowRoot.getElementById('tmpl-reminder-at')?.value || '18:00') : '',
       reminder_target: this.shadowRoot.getElementById('tmpl-reminder')?.checked ? (this.shadowRoot.getElementById('tmpl-reminder-target')?.value || '') : '',
       assignees: assignees,
+      weekdays: this._templateWeekdays(),
+      rotation: (this.shadowRoot.getElementById('tmpl-rotation')?.checked && this._syncTemplateSchedule().length >= 2)
+        ? { members: this._syncTemplateSchedule() } : null,
       subtasks: this._subtasks
     };
 
@@ -1166,12 +1253,29 @@ class FamilyMissionSettings extends HTMLElement {
     return `
       <style> 
         :host { display: block; width: ${width}; margin: 0 auto; } * { box-sizing: border-box; } 
-        ha-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: ${height}; overflow-y: auto; } 
+        ha-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; height: ${height}; overflow-y: ${this._config.card_height ? 'auto' : 'visible'}; max-width: 100%; } 
         .header { font-size: 20px; font-weight: bold; margin-bottom: 10px; } 
         .fm-footer { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 16px; font-size: 12px; color: var(--secondary-text-color); opacity: 0.7; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--card-background-color); border-radius: 8px; border: 1px solid var(--divider-color); box-shadow: var(--ha-card-box-shadow, 0 2px 2px rgba(0,0,0,0.1)); margin-bottom: 8px; } 
         .setting-label { font-weight: bold; font-size: 14px; color: var(--primary-text-color); } 
         .section-card { background: var(--card-background-color); border-radius: 8px; border: 1px solid var(--divider-color); box-shadow: var(--ha-card-box-shadow, 0 2px 2px rgba(0,0,0,0.1)); margin-bottom: 12px; padding: 12px; width: 100%; box-sizing: border-box; }
+        .tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--divider-color); scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+        .tab-btn { flex: 0 0 auto; min-height: 44px; padding: 0 14px; border: none; border-bottom: 3px solid transparent; background: transparent; color: var(--secondary-text-color); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+        .tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-btn:focus-visible { outline: 2px solid var(--primary-color); outline-offset: -2px; }
+        .tab-panel { display: flex; flex-direction: column; min-width: 0; }
+        .tab-panel[hidden] { display: none; }
+        .sec-static { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+        .sec-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--primary-text-color); }
+        .sec-inner { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; min-width: 0; }
+        .sec-flow { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+        .sec-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; cursor: pointer; }
+        .sec-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--secondary-background-color); color: var(--secondary-text-color); }
+        .save-bar { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 12px; margin: 0 -4px; border-radius: 10px; background: var(--card-background-color); border: 1px solid var(--primary-color); box-shadow: 0 -2px 10px rgba(0,0,0,0.25); }
+        .save-bar[hidden] { display: none; }
+        .save-bar .save-msg { flex: 1 1 140px; font-weight: 500; font-size: 14px; color: var(--primary-text-color); }
+        .save-bar .btn { width: auto; flex: 0 0 auto; padding: 10px 18px; margin: 0; }
+        .btn-discard { background: var(--secondary-background-color); color: var(--primary-text-color); }
         .section-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
         .section-title { display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 14px; color: var(--primary-text-color); }
         .section-content { display: none; margin-top: 16px; flex-direction: column; gap: 10px; }
@@ -1191,6 +1295,9 @@ class FamilyMissionSettings extends HTMLElement {
         .form-row { display: flex; gap: 16px; }
         .form-row[hidden] { display: none; }
         .form-col { flex: 1; }
+        .wd-chips { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 6px; }
+        .wd-chip { min-width: 40px; min-height: 36px; padding: 0 8px; border-radius: 18px; border: 1px solid var(--divider-color); background: transparent; color: var(--primary-text-color); font: inherit; cursor: pointer; }
+        .wd-chip.active { background: var(--primary-color); color: var(--text-primary-color, #fff); border-color: var(--primary-color); }
         .templates-header { display: flex; justify-content: space-between; align-items: center; }
         .template-card { display: flex; align-items: center; justify-content: space-between; background: var(--card-background-color); padding: 12px; border-radius: 8px; border: 1px solid var(--divider-color); }
         .template-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
@@ -1232,8 +1339,10 @@ class FamilyMissionSettings extends HTMLElement {
         .kid-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 500; font-size: 14px; color: var(--primary-text-color); }
         .kid-head .kid-avatar-preview { font-size: 24px; margin-right: 8px; }
         .kid-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; align-items: end; }
+        .family-box [hidden] { display: none !important; }
         .kid-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--secondary-text-color); }
         .kid-field input[type="text"], .kid-field input[type="password"], .kid-field input[type="number"], .kid-field input[type="time"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; text-align: left; }
+        .kid-field select { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; }
         .kid-field input[type="color"] { width: 100%; height: 36px; }
         .kid-slider { gap: 6px; }
         .kid-slider input[type="range"] { width: 100%; accent-color: var(--primary-color); }
@@ -1241,6 +1350,16 @@ class FamilyMissionSettings extends HTMLElement {
         .kid-hint { font-size: 11px; opacity: 0.8; }
         .kid-field input[type="date"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; box-sizing: border-box; }
         .kid-emojis { display: flex; flex-wrap: wrap; gap: 4px; }
+        .care-editor { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--divider-color); padding-top: 8px; }
+        .care-editor h4 { margin: 0; }
+        .care-entry { display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--divider-color); border-radius: 8px; }
+        .care-days { display: flex; flex-wrap: wrap; gap: 6px; }
+        .care-day { min-width: 40px; min-height: 36px; border-radius: 18px; border: 1px solid var(--divider-color); background: transparent; color: var(--primary-text-color); cursor: pointer; }
+        .care-day.on { background: var(--primary-color); border-color: var(--primary-color); color: var(--text-primary-color, #fff); }
+        .care-stock-row { display: flex; flex-wrap: wrap; gap: 8px; }
+        .care-stock-row input[type=number] { width: 110px; }
+        .care-alert-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+        .care-alert-row input[type=number] { width: 64px; }
         .kid-emoji-pick { background: transparent; border: 1px solid var(--divider-color); border-radius: 8px; font-size: 20px; width: 36px; height: 36px; cursor: pointer; padding: 0; }
         .kid-emoji-pick.active { border-color: var(--primary-color); background: var(--secondary-background-color); }
         .kid-emoji-pick:disabled { opacity: 0.5; cursor: default; }
@@ -1299,6 +1418,25 @@ class FamilyMissionSettings extends HTMLElement {
     return { suggest, last: seen ? Math.round(last) : null };
   }
 
+  /** Info line of the percent goal: "November: 410 points (75 % of 547, as of 1.11.) · from 1.12. probably 460". */
+  _familyPercentInfo() {
+    const info = this.goalInfo;
+    const snap = info && info.snapshot;
+    if (!info || info.mode !== 'percent' || !snap) return this.localize('fg_info_none');
+    const lang = (this._hass && this._hass.language) ? this._hass.language.substring(0, 2) : 'en';
+    const [y, m] = String(snap.period).split('-').map(n => parseInt(n));
+    const month = new Date(y, m - 1, 1).toLocaleDateString(lang, { month: 'long' });
+    const short = (d) => d.toLocaleDateString(lang, { day: 'numeric', month: 'numeric' });
+    const asof = short(new Date(String(snap.asof || snap.from) + 'T00:00:00'));
+    const next = info.next;
+    const nextDate = short(new Date(y, m, 1));
+    let text = this.localize('fg_info')
+      .replace('{month}', month).replace('{target}', Math.round(snap.target))
+      .replace('{percent}', snap.percent).replace('{possible}', Math.round(snap.possible))
+      .replace('{asof}', asof).replace('{nextdate}', nextDate).replace('{next}', next ? Math.round(next.target) : '?');
+    return text;
+  }
+
   /** HTML of the suggestion line below the family goal points (empty without data). */
   _familySuggestionHtml() {
     const { suggest, last } = this._familySuggestion();
@@ -1311,19 +1449,144 @@ class FamilyMissionSettings extends HTMLElement {
   }
 
   /**
-   * Renders the collapsible "Kids" section (kid profiles + family goal).
+   * Step titles of the kid's morning / evening mission (wizard task or task with that catalog key).
+   * @returns {string[]} - The titles (empty without such a mission).
+   */
+  _careMissionSteps(uid, anchor) {
+    if (anchor !== 'morning' && anchor !== 'evening') return [];
+    const missions = Object.values(this.tasks || {}).filter(t => t && !t.parent_task &&
+      ((t.generated_by === 'wizard' && String(t.wizard_key || '').split(':')[0] === anchor) || t.catalog_key === anchor));
+    const mine = missions.find(t => (t.assignees || []).includes(uid)) || missions[0];
+    return mine ? (mine.subtasks || []).map(st => String((st && st.title) || st || '')).filter(Boolean) : [];
+  }
+
+  /** The position select of a care entry ("after step ..." / at the end); the unset default is shown as what it does. */
+  _careAfterSelect(c, steps, at, dis, esc) {
+    const lower = steps.map(t => t.toLowerCase());
+    let value = '';
+    if (typeof c.after === 'string') value = c.after;
+    else if (c.anchor === 'morning') {
+      const i = lower.findIndex(t => t === 'frühstücken' || t === 'have breakfast');
+      if (i >= 0) value = steps[i];
+    }
+    const known = !value || lower.includes(value.toLowerCase());
+    return `<label class="kid-field">${this.localize('care_after')}
+        <select class="care-after" ${at} ${dis}>
+          ${steps.map(t => `<option value="${esc(t)}" ${value.toLowerCase() === t.toLowerCase() ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+          ${known ? '' : `<option value="${esc(value)}" selected>${esc(value)}</option>`}
+          <option value="" ${value ? '' : 'selected'}>${this.localize('care_after_end')}</option>
+        </select>
+      </label>`;
+  }
+
+  /**
+   * Medication editor of a kid row: one block per entry (label, emoji, anchor, time, weekdays, deadline, notify, decline alert).
    * @returns {string} - The HTML.
    */
-  _renderKidsSection() {
+  _renderCareEditor(uid, d, dis, esc) {
+    const days = this.localize('care_days');
+    const entries = (d.care || []).map((c, i) => {
+      const alert = c.decline_alert || {};
+      const at = `data-uid="${esc(uid)}" data-ci="${i}"`;
+      return `
+        <div class="care-entry">
+          <div class="kid-fields">
+            <label class="kid-field">${this.localize('care_emoji')}
+              <input type="text" class="care-emoji" ${at} maxlength="8" value="${esc(c.emoji || '💊')}" ${dis}>
+            </label>
+            <label class="kid-field">${this.localize('care_label')}
+              <input type="text" class="care-label" ${at} maxlength="30" placeholder="Tablette" value="${esc(c.label || '')}" ${dis}>
+            </label>
+            <label class="kid-field">${this.localize('care_anchor')}
+              <select class="care-anchor" ${at} ${dis}>
+                ${['morning', 'evening', 'time'].map(a => `<option value="${a}" ${c.anchor === a ? 'selected' : ''}>${this.localize('care_anchor_' + a)}</option>`).join('')}
+              </select>
+            </label>
+            ${c.anchor !== 'time' && this._careMissionSteps(uid, c.anchor).length ? this._careAfterSelect(c, this._careMissionSteps(uid, c.anchor), at, dis, esc) : ''}
+            ${c.anchor === 'time' ? `<label class="kid-field">${this.localize('care_time')}
+              <input type="time" class="care-time" ${at} value="${esc(c.time || '08:00')}" ${dis}>
+            </label>` : ''}
+            <label class="kid-field">${this.localize('care_deadline')}
+              <input type="time" class="care-deadline" ${at} value="${esc(c.deadline || '10:00')}" ${dis}>
+            </label>
+          </div>
+          <div class="care-days" role="group" aria-label="${esc(this.localize('care_weekdays'))}">
+            ${days.map((name, wd) => `<button type="button" class="care-day ${(c.weekdays || []).includes(wd) ? 'on' : ''}" ${at} data-wd="${wd}"
+                aria-pressed="${(c.weekdays || []).includes(wd) ? 'true' : 'false'}" ${dis}>${esc(name)}</button>`).join('')}
+          </div>
+          <div class="care-stock-row">
+            <label class="kid-field">${this.localize('care_stock')}
+              <input type="number" class="care-stock" ${at} min="0" max="9999" step="1" placeholder="${esc(this.localize('care_stock_ph'))}" value="${c.stock === undefined || c.stock === null ? '' : esc(c.stock)}" ${dis}></label>
+            ${c.stock === undefined || c.stock === null ? '' : `<label class="kid-field">${this.localize('care_per_dose')}
+              <input type="number" class="care-perdose" ${at} min="1" max="20" step="1" value="${esc(c.per_dose || 1)}" ${dis}></label>`}
+          </div>
+          <p class="kids-note">${this.localize('care_stock_d')}</p>
+          <ha-formfield label="${esc(this.localize('care_notify'))}">
+            <ha-checkbox class="care-notify" ${at} ${c.notify_parents !== false ? 'checked' : ''} ${dis}></ha-checkbox>
+          </ha-formfield>
+          <div class="care-alert-row">
+            <ha-formfield label="${esc(this.localize('care_alert'))}">
+              <ha-checkbox class="care-alert" ${at} ${alert.enabled ? 'checked' : ''} ${dis}></ha-checkbox>
+            </ha-formfield>
+            ${alert.enabled ? `<input type="number" class="care-alert-count" ${at} min="1" max="30" value="${esc(alert.count || 3)}" ${dis}> ${this.localize('care_alert_count')}
+              <input type="number" class="care-alert-days" ${at} min="1" max="60" value="${esc(alert.days || 7)}" ${dis}> ${this.localize('care_alert_days')}` : ''}
+          </div>
+          <button type="button" class="btn care-remove" ${at} ${dis}>${this.localize('care_remove')}</button>
+        </div>`;
+    }).join('');
+    return `
+      <div class="care-editor">
+        <h4>${this.localize('care_title')}</h4>
+        <p class="kids-note">${this.localize('care_hint')}</p>
+        ${entries}
+        ${(d.care || []).length < 6 ? `<button type="button" class="btn care-add" data-uid="${esc(uid)}" ${dis}>${this.localize('care_add')}</button>` : ''}
+      </div>`;
+  }
+
+  /** HTML escape for attribute / text values. */
+  _esc(v) {
+    return String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  /**
+   * Wraps a settings block in a card. Collapsible blocks (long ones) start closed and toggle in place.
+   * @param {string} id - Section id.
+   * @param {string} title - Heading.
+   * @param {string} body - Inner HTML.
+   * @param {object} [opt] - { collapsible, badge } (badge: small note next to the heading).
+   * @returns {string} - The HTML.
+   */
+  _section(id, title, body, opt = {}) {
+    const badge = opt.badge ? `<span class="sec-badge">${opt.badge}</span>` : '';
+    if (!opt.collapsible) {
+      return `
+        <div class="section-card" data-card="${id}">
+          <div class="sec-static"><h3 class="sec-title">${title}</h3>${badge}</div>
+          <div class="sec-inner">${body}</div>
+        </div>`;
+    }
+    const open = !!this._open[id];
+    return `
+        <div class="section-card" data-card="${id}">
+          <div class="sec-head" data-sec="${id}" role="button" tabindex="0" aria-expanded="${open}">
+            <div class="section-title">
+              <ha-icon icon="${open ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
+              <span>${title}</span>
+            </div>${badge}
+          </div>
+          <div class="sec-body section-content ${open ? 'open' : ''}" data-sec="${id}">${body}</div>
+        </div>`;
+  }
+
+  /**
+   * Kid profiles (incl. medication editor): the "Kids" block of the Family tab.
+   * @returns {string} - The HTML.
+   */
+  _renderKidsBody() {
     const isAdmin = this._canManage();
     const dis = isAdmin ? '' : 'disabled';
     const emojis = ['🦊', '🐼', '🦁', '🐯', '🐸', '🐵', '🦄', '🐶', '🐱', '🐰', '🐻', '🐧', '🚀'];
-    const fg = this.settings.family_goal || {};
-    const fd = this._familyDraft;
-    const fgPointsVal = fd.points !== undefined ? fd.points : (fg.points || '');
-    const fgRewardVal = fd.reward !== undefined ? fd.reward : (fg.reward || '');
-    const claimVal = fd.claim !== undefined ? fd.claim : (this.settings.claim_minutes || 10);
-    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const esc = (v) => this._esc(v);
 
     const rows = Object.entries(this.users).map(([uid, name]) => {
       const d = this._kidDraft(uid);
@@ -1371,20 +1634,14 @@ class FamilyMissionSettings extends HTMLElement {
               <span class="kid-sample-label">${this.localize('kid_sample').replace('{n}', `<b>${d.approval_sample_rate}</b>`)}</span>
               <input type="range" class="kid-sample" data-uid="${esc(uid)}" min="0" max="100" step="5" value="${esc(d.approval_sample_rate)}" ${dis}>
               <span class="kid-hint">${this.localize('kid_sample_hint')}</span>
-            </label>` : ''}
+            </label>
+            ${this._renderCareEditor(uid, d, dis, esc)}` : ''}
         </div>`;
     }).join('');
 
     return `
-        <div class="section-card">
-          <div class="section-header" id="kids-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._kidsOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('kids_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._kidsOpen ? 'open' : ''}" id="kids-content">
             <p class="kids-note">${this.localize('kids_desc')}</p>
+            <p class="kids-note">${this.localize('kid_profiles_note')}</p>
             ${window.FamilyMissionHelp ? `<button class="btn btn-help" id="btn-help-open">❓ ${this.localize('help_btn')}</button>` : ''}
             ${isAdmin ? '' : `<p class="kids-note" style="color: var(--warning-color, #FFA000);">${this.localize('kids_admin_only')}</p>`}
             ${isAdmin ? `
@@ -1392,58 +1649,102 @@ class FamilyMissionSettings extends HTMLElement {
                 <button class="btn btn-wizard" id="btn-wizard-open">${this.localize('wizard_btn')}</button>
                 <p class="kids-note">${this.localize('wizard_hint')}</p>
               </div>` : ''}
-            ${rows}
-            ${this._renderParentsSection()}
-            <div class="family-box">
-              <h4>${this.localize('family_goal')}</h4>
+            ${rows}`;
+  }
+
+  /** Family goal (points or percent) and reward. */
+  _renderFamilyGoalBody() {
+    const dis = this._canManage() ? '' : 'disabled';
+    const fg = this.settings.family_goal || {};
+    const fd = this._familyDraft;
+    const esc = (v) => this._esc(v);
+    const fgPointsVal = fd.points !== undefined ? fd.points : (fg.points || '');
+    const fgRewardVal = fd.reward !== undefined ? fd.reward : (fg.reward || '');
+    const fgMode = (fd.fg_mode !== undefined ? fd.fg_mode : fg.mode) === 'percent' ? 'percent' : 'points';
+    const fgPercentVal = fd.fg_percent !== undefined ? fd.fg_percent : (fg.percent || 75);
+    return `
               <div class="kid-fields">
-                <label class="kid-field">${this.localize('family_goal_points')}
+                <label class="kid-field">${this.localize('fg_mode')}
+                  <select id="fg-mode" ${dis}>
+                    <option value="points" ${fgMode === 'points' ? 'selected' : ''}>${this.localize('fg_mode_points')}</option>
+                    <option value="percent" ${fgMode === 'percent' ? 'selected' : ''}>${this.localize('fg_mode_percent')}</option>
+                  </select>
+                </label>
+                <label class="kid-field fg-percent-box" ${fgMode === 'percent' ? '' : 'hidden'}>${this.localize('fg_percent')}
+                  <input type="number" id="fg-percent" min="10" max="150" ${dis} value="${esc(fgPercentVal)}">
+                </label>
+                <p class="kids-note fg-percent-box" id="fg-info" style="grid-column:1 / -1" ${fgMode === 'percent' ? '' : 'hidden'}>${esc(this._familyPercentInfo())}<br>${esc(this.localize('fg_percent_hint'))}</p>
+                <label class="kid-field fg-points-box" ${fgMode === 'points' ? '' : 'hidden'}>${this.localize('family_goal_points')}
                   <input type="number" id="fg-points" min="0" placeholder="0" value="${esc(fgPointsVal)}">
                 </label>
-                <p class="kids-note fg-suggest" id="fg-suggest" style="grid-column:1 / -1">${this._familySuggestionHtml()}</p>
+                <p class="kids-note fg-suggest fg-points-box" id="fg-suggest" style="grid-column:1 / -1" ${fgMode === 'points' ? '' : 'hidden'}>${this._familySuggestionHtml()}</p>
                 <label class="kid-field">${this.localize('family_goal_reward')}
                   <input type="text" id="fg-reward" maxlength="80" placeholder="${this.localize('family_goal_reward_ph')}" value="${esc(fgRewardVal)}">
                 </label>
-                <label class="kid-field">${this.localize('claim_minutes')}
-                  <input type="number" id="claim-minutes" min="1" max="240" value="${esc(claimVal)}">
-                </label>
-              </div>
-              <ha-formfield label="${this.localize('expire_missed')}">
-                <ha-switch id="expire-missed" ${(fd.expire_missed !== undefined ? fd.expire_missed : this.settings.expire_missed !== false) ? 'checked' : ''}></ha-switch>
-              </ha-formfield>
-            </div>
-            <div class="family-box">
-              <h4>${this.localize('approval_title')}</h4>
+              </div>`;
+  }
+
+  /** Numeric value of a task-and-points option: the draft first, then the stored setting, then the default. */
+  _optVal(draftKey, settingKey, def) {
+    const fd = this._familyDraft;
+    if (fd[draftKey] !== undefined) return this._esc(fd[draftKey]);
+    return this._esc(this.settings[settingKey] !== undefined ? this.settings[settingKey] : def);
+  }
+
+  /** Approval and consequences. */
+  _renderApprovalBody() {
+    return `
               <div class="kid-fields">
                 <label class="kid-field">${this.localize('cheat_penalty_factor')}
-                  <input type="number" id="cheat-factor" min="0" max="2" step="0.5" value="${esc(fd.cheat_factor !== undefined ? fd.cheat_factor : (this.settings.cheat_penalty_factor !== undefined ? this.settings.cheat_penalty_factor : 1))}">
+                  <input type="number" id="cheat-factor" min="0" max="2" step="0.5" value="${this._optVal('cheat_factor', 'cheat_penalty_factor', 1)}">
                 </label>
                 <label class="kid-field">${this.localize('cheat_strict_days')}
-                  <input type="number" id="cheat-days" min="0" max="30" step="1" value="${esc(fd.cheat_days !== undefined ? fd.cheat_days : (this.settings.cheat_strict_days !== undefined ? this.settings.cheat_strict_days : 7))}">
+                  <input type="number" id="cheat-days" min="0" max="30" step="1" value="${this._optVal('cheat_days', 'cheat_strict_days', 7)}">
                 </label>
-              </div>
-            </div>
-            <div class="family-box">
-              <h4>👫 ${this.localize('team_title')}</h4>
+              </div>`;
+  }
+
+  /** Teamwork bonus. */
+  _renderTeamBody() {
+    return `
               <div class="kid-fields">
                 <label class="kid-field">${this.localize('team_bonus')}
-                  <input type="number" id="team-bonus" min="0" max="3" step="1" value="${esc(fd.team_bonus !== undefined ? fd.team_bonus : (this.settings.team_bonus !== undefined ? this.settings.team_bonus : 1))}">
+                  <input type="number" id="team-bonus" min="0" max="3" step="1" value="${this._optVal('team_bonus', 'team_bonus', 1)}">
                 </label>
-              </div>
-            </div>
-            <div class="family-box">
-              <h4>🎂 ${this.localize('birthday_title')}</h4>
+              </div>`;
+  }
+
+  /** Birthday bonus and duty-free birthday. */
+  _renderBirthdayBody() {
+    const fd = this._familyDraft;
+    return `
               <div class="kid-fields">
                 <label class="kid-field">${this.localize('birthday_bonus_points')}
-                  <input type="number" id="bday-bonus" min="0" max="50" step="1" value="${esc(fd.bday_bonus !== undefined ? fd.bday_bonus : (this.settings.birthday_bonus_points !== undefined ? this.settings.birthday_bonus_points : 10))}">
+                  <input type="number" id="bday-bonus" min="0" max="50" step="1" value="${this._optVal('bday_bonus', 'birthday_bonus_points', 10)}">
                 </label>
               </div>
               <ha-formfield label="${this.localize('birthday_duty_free')}">
                 <ha-switch id="bday-free" ${(fd.bday_free !== undefined ? fd.bday_free : this.settings.birthday_duty_free !== false) ? 'checked' : ''}></ha-switch>
-              </ha-formfield>
-            </div>
-          </div>
-        </div>`;
+              </ha-formfield>`;
+  }
+
+  /** Bonus reservation time. */
+  _renderClaimBody() {
+    return `
+              <div class="kid-fields">
+                <label class="kid-field">${this.localize('claim_minutes')}
+                  <input type="number" id="claim-minutes" min="1" max="240" value="${this._optVal('claim', 'claim_minutes', 10)}">
+                </label>
+              </div>`;
+  }
+
+  /** Expire option for missed duties. */
+  _renderExpireBody() {
+    const fd = this._familyDraft;
+    return `
+              <ha-formfield label="${this.localize('expire_missed')}">
+                <ha-switch id="expire-missed" ${(fd.expire_missed !== undefined ? fd.expire_missed : this.settings.expire_missed !== false) ? 'checked' : ''}></ha-switch>
+              </ha-formfield>`;
   }
 
   /**
@@ -1466,13 +1767,10 @@ class FamilyMissionSettings extends HTMLElement {
         </div>`;
     }).join('');
     return `
-            <div class="family-box" id="parents-box">
-              <h4>${this.localize('parents_title')}</h4>
               <p class="kids-note">${this.localize('parents_desc')}</p>
               <p class="kids-note" style="color: var(--warning-color, #FFA000);">⚠️ ${this.localize('parents_warn')}</p>
               ${canEdit ? '' : `<p class="kids-note">${this.localize('parents_admin_only')}</p>`}
-              ${rows || `<p class="kids-note">${this.localize('parents_none')}</p>`}
-            </div>`;
+              ${rows || `<p class="kids-note">${this.localize('parents_none')}</p>`}`;
   }
 
   /**
@@ -1558,15 +1856,7 @@ class FamilyMissionSettings extends HTMLElement {
         </div>`;
     }).join('');
     const d = this._trigDraft;
-    return `
-        <div class="section-card">
-          <div class="section-header" id="trig-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._trigOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('triggers_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._trigOpen ? 'open' : ''}" id="trig-content">
+    const body = `
             <p class="kids-note">${this.localize('triggers_desc')}</p>
             ${rows || `<p class="kids-note">${this.localize('trig_none')}</p>`}
             ${isAdmin ? `
@@ -1580,9 +1870,10 @@ class FamilyMissionSettings extends HTMLElement {
                 ${this._bonusTasks().length ? '' : `<p class="kids-note">${this.localize('trig_no_bonus')}</p>`}
                 <family-mission-trigger-picker id="trig-picker"></family-mission-trigger-picker>
                 <button class="btn btn-save" id="btn-trig-add" style="margin-top: 0;" ${d.task && d.entity_id && d.to_state ? '' : 'disabled'}>${this.localize('trig_add')}</button>
-              </div>` : ''}
-          </div>
-        </div>`;
+              </div>` : ''}`;
+    // Triggers are stored by their own command at once: the inputs never mark the form as changed
+    return this._section('trig', this.localize('triggers_title'), `<div data-nodirty="1" class="sec-flow">${body}</div>`,
+      { collapsible: true, badge: this.localize('immediate_note') });
   }
 
   /** Notify services (notify.xyz) offered as push targets; the current value is always included. */
@@ -1593,102 +1884,10 @@ class FamilyMissionSettings extends HTMLElement {
     return list.sort();
   }
 
-  /**
-   * Renders the "We parents" section: role-model band, Sunday summary,
-   * planning reminder and the optional push target per adult.
-   * @returns {string} - The HTML.
-   */
-  _renderParentsCentralSection() {
-    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  /** Push messages: target per adult (with test), approval / reward push, approval reminder. */
+  _renderPushBody() {
     const st = this.settings || {};
-    const notify = st.parent_notify || {};
-    const time = (v, def) => (/^\d{2}:\d{2}$/.test(v || '') ? v : def);
-    const adults = (this._adults || []).map(a => `
-      <label class="kid-field">${esc(a.name)}
-        <select class="form-select pe-push" data-uid="${esc(a.id)}" style="height: 36px; font-size: 14px;">
-          <option value="">${this.localize('pe_auto')}</option>
-          ${this._notifyTargets(notify[a.id]).map(n => `<option value="${esc(n)}" ${notify[a.id] === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}
-        </select>
-      </label>`).join('');
-    return `
-        <div class="section-card">
-          <div class="section-header" id="pe-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._peOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('pe_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._peOpen ? 'open' : ''}" id="pe-content">
-            <p class="kids-note">${this.localize('pe_desc')}</p>
-            <div class="family-box">
-              <label class="parent-check"><input type="checkbox" id="pe-band" ${st.role_model_band !== false ? 'checked' : ''}> ${this.localize('pe_band')}</label>
-              <p class="kids-note">${this.localize('pe_band_d')}</p>
-              <label class="kid-field">${this.localize('pe_label')}
-                <input type="text" id="pe-label" maxlength="40" placeholder="${esc(this.localize('pe_label_ph'))}" value="${esc(st.role_model_label || '')}"></label>
-            </div>
-            <div class="family-box">
-              <label class="parent-check"><input type="checkbox" id="pe-summary" ${st.weekly_summary !== false ? 'checked' : ''}> ${this.localize('pe_summary')}</label>
-              <p class="kids-note">${this.localize('pe_summary_d')}</p>
-              <label class="kid-field">${this.localize('pe_time')}
-                <input type="time" id="pe-summary-time" value="${time(st.weekly_summary_time, '19:00')}"></label>
-            </div>
-            <div class="family-box">
-              <label class="parent-check"><input type="checkbox" id="pe-reminder" ${st.planning_reminders !== false ? 'checked' : ''}> ${this.localize('pe_reminder')}</label>
-              <p class="kids-note">${this.localize('pe_reminder_d')}</p>
-              <label class="kid-field">${this.localize('pe_time')}
-                <input type="time" id="pe-reminder-time" value="${time(st.planning_reminder_time, '18:00')}"></label>
-            </div>
-            <div class="family-box">
-              <h4>${this.localize('pe_push')}</h4>
-              <p class="kids-note">${this.localize('pe_push_d')}</p>
-              ${adults || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
-            </div>
-          </div>
-        </div>`;
-  }
-
-  /** Keeps the "We parents" inputs in this.settings (saved with the normal save button). */
-  _bindParentsCentralInputs() {
-    const root = this.shadowRoot;
-    const box = root.getElementById('pe-content');
-    if (!box) return;
-    const sync = () => {
-      const val = (id) => root.getElementById(id);
-      const time = (id, def) => (/^\d{2}:\d{2}$/.test(val(id).value) ? val(id).value : def);
-      this.settings.role_model_band = !!val('pe-band').checked;
-      this.settings.role_model_label = val('pe-label').value.trim();
-      this.settings.weekly_summary = !!val('pe-summary').checked;
-      this.settings.weekly_summary_time = time('pe-summary-time', '19:00');
-      this.settings.planning_reminders = !!val('pe-reminder').checked;
-      this.settings.planning_reminder_time = time('pe-reminder-time', '18:00');
-      const notify = {};
-      root.querySelectorAll('.pe-push').forEach(el => { if (el.value) notify[el.dataset.uid] = el.value; });
-      this.settings.parent_notify = notify;
-      root.querySelectorAll('.tb-push').forEach(el => { el.value = notify[el.dataset.uid] || ''; });
-    };
-    box.addEventListener('input', sync);
-    box.addEventListener('change', sync);
-  }
-
-  /**
-   * Renders the "Tablet" section: night mode (bedtime, wake-up times) and the
-   * rocket countdown length. Saved with the normal save button.
-   * @returns {string} - The HTML.
-   */
-  _renderTabletSection() {
-    const st = this.settings || {};
-    const valid = (v, def) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(v || '') ? v : def);
-    // 15 minute steps; a stored value that is not on the grid stays selectable
-    const timeSelect = (id, value) => {
-      const opts = [];
-      for (let m = 0; m < 1440; m += 15) {
-        opts.push(`${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`);
-      }
-      if (!opts.includes(value)) { opts.push(value); opts.sort(); }
-      return `<select class="form-select" id="${id}" style="height: 36px; font-size: 14px;">${opts.map(o => `<option value="${o}" ${o === value ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
-    };
-    const countdown = Math.max(15, Math.min(180, parseInt(st.rocket_countdown) || 60));
-    const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const esc = (v) => this._esc(v);
     const hours = st.approval_reminder_hours === undefined ? 2 : Math.max(0, Math.min(24, parseInt(st.approval_reminder_hours) || 0));
     const notify = st.parent_notify || {};
     const rows = (this._adults || []).map(a => {
@@ -1709,41 +1908,183 @@ class FamilyMissionSettings extends HTMLElement {
         </div></div>`;
     }).join('');
     return `
-        <div class="section-card">
-          <div class="section-header" id="tb-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._tbOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('tb_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._tbOpen ? 'open' : ''}" id="tb-content">
-            <p class="kids-note">${this.localize('tb_desc')}</p>
             <div class="family-box">
-              <label class="parent-check"><input type="checkbox" id="tb-night" ${st.night_mode !== false ? 'checked' : ''}> ${this.localize('tb_night')}</label>
-              <p class="kids-note">${this.localize('tb_night_d')}</p>
-              <div class="kid-fields">
-                <label class="kid-field">${this.localize('tb_sleep')}${timeSelect('tb-sleep', valid(st.night_sleep, '20:30'))}</label>
-                <label class="kid-field">${this.localize('tb_wake_wd')}${timeSelect('tb-wake-wd', valid(st.night_wake_weekday, '06:00'))}</label>
-                <label class="kid-field">${this.localize('tb_wake_we')}${timeSelect('tb-wake-we', valid(st.night_wake_weekend, '08:00'))}</label>
-              </div>
-            </div>
-            <div class="family-box">
-              <label class="kid-field">${this.localize('tb_rocket')}
-                <input type="number" id="tb-rocket" min="15" max="180" step="5" value="${countdown}"></label>
-              <p class="kids-note">${this.localize('tb_rocket_d')}</p>
+              <h4>${this.localize('pe_push')}</h4>
+              <p class="kids-note">${this.localize('pe_push_d')}</p>
+              ${rows || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
+              <p class="kids-note">${this.localize('tb_test_hint')}</p>
             </div>
             <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="tb-reward-push" ${st.reward_push !== false ? 'checked' : ''}> ${this.localize('tb_reward_push')}</label>
               <label class="parent-check"><input type="checkbox" id="tb-approval-push" ${st.approval_push !== false ? 'checked' : ''}> ${this.localize('tb_approval_push')}</label>
-              <h4>${this.localize('tb_push_status')}</h4>
-              ${rows || `<p class="kids-note">${this.localize('pe_no_adults')}</p>`}
-              <p class="kids-note">${this.localize('tb_test_hint')}</p>
               <label class="kid-field">${this.localize('tb_reminder')}
                 <input type="number" id="tb-reminder-hours" min="0" max="24" step="1" value="${hours}"></label>
               <p class="kids-note">${this.localize('tb_reminder_d')}</p>
+            </div>`;
+  }
+
+  /** Summaries and reminders: weekly summary, morning overview, planning reminder, absence suggestion. */
+  _renderRemindersBody() {
+    const esc = (v) => this._esc(v);
+    const st = this.settings || {};
+    const time = (v, def) => (/^\d{2}:\d{2}$/.test(v || '') ? v : def);
+    return `
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-summary" ${st.weekly_summary !== false ? 'checked' : ''}> ${this.localize('pe_summary')}</label>
+              <p class="kids-note">${this.localize('pe_summary_d')}</p>
+              <label class="kid-field">${this.localize('pe_time')}
+                <input type="time" id="pe-summary-time" value="${time(st.weekly_summary_time, '19:00')}"></label>
             </div>
-          </div>
-        </div>`;
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-digest" ${st.parent_digest_enabled === true ? 'checked' : ''}> ${this.localize('pe_digest')}</label>
+              <p class="kids-note">${this.localize('pe_digest_d')}</p>
+              <label class="kid-field">${this.localize('pe_time')}
+                <input type="time" id="pe-digest-time" value="${time(st.parent_digest_time, '07:00')}"></label>
+            </div>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-reminder" ${st.planning_reminders !== false ? 'checked' : ''}> ${this.localize('pe_reminder')}</label>
+              <p class="kids-note">${this.localize('pe_reminder_d')}</p>
+              <label class="kid-field">${this.localize('pe_time')}
+                <input type="time" id="pe-reminder-time" value="${time(st.planning_reminder_time, '18:00')}"></label>
+            </div>
+            <div class="family-box">
+              <h4>${this.localize('pe_bins')}</h4>
+              <p class="kids-note">${this.localize('pe_bins_d')}</p>
+              <label class="kid-field">${this.localize('pe_time')}
+                <input type="time" id="pe-bins-time" value="${time(st.parent_bins_check_time, '19:30')}"></label>
+            </div>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-battery" ${st.battery_tasks_enabled === true ? 'checked' : ''}> ${this.localize('pe_battery')}</label>
+              <p class="kids-note">${this.localize('pe_battery_d')}</p>
+              <label class="kid-field">${this.localize('pe_battery_pct')}
+                <input type="number" id="pe-battery-pct" min="5" max="50" step="1" value="${esc(st.battery_threshold || 20)}"></label>
+            </div>
+            <div class="family-box">
+              <label class="parent-check"><input type="checkbox" id="pe-abs" ${st.absence_suggest_enabled === true ? 'checked' : ''}> ${this.localize('pe_abs')}</label>
+              <p class="kids-note">${this.localize('pe_abs_d')}</p>
+              <label class="kid-field">${this.localize('pe_abs_hours')}
+                <input type="number" id="pe-abs-hours" min="6" max="168" value="${esc(st.absence_suggest_hours || 24)}"></label>
+            </div>`;
+  }
+
+  /** School holiday calendar: any calendar entity; an all-day event there is a school holiday. */
+  _renderSchoolCalendarBody() {
+    const esc = (v) => this._esc(v);
+    const current = (this.settings && this.settings.school_holiday_calendar) || '';
+    const ids = Object.keys((this._hass && this._hass.states) || {}).filter(id => id.startsWith('calendar.')).sort();
+    if (current && !ids.includes(current)) ids.unshift(current);
+    const name = (id) => {
+      const st = this._hass && this._hass.states && this._hass.states[id];
+      return (st && st.attributes && st.attributes.friendly_name) || id;
+    };
+    return `
+            <div class="family-box">
+              <p class="kids-note">${this.localize('school_cal_d')}</p>
+              <label class="kid-field">${this.localize('school_cal_lbl')}
+                <select id="sh-cal">
+                  <option value="">${esc(this.localize('school_cal_off'))}</option>
+                  ${ids.map(id => `<option value="${esc(id)}" ${id === current ? 'selected' : ''}>${esc(name(id))}</option>`).join('')}
+                </select></label>
+            </div>`;
+  }
+
+  /** Keeps the tablet / notification inputs in this.settings (saved with the Save bar). */
+  _bindParentsCentralInputs() {
+    const root = this.shadowRoot;
+    const sync = () => {
+      const el = (id) => root.getElementById(id);
+      const time = (id, def) => (el(id) && /^\d{2}:\d{2}$/.test(el(id).value) ? el(id).value : def);
+      if (el('pe-band')) {
+        this.settings.role_model_band = !!el('pe-band').checked;
+        this.settings.role_model_label = el('pe-label').value.trim();
+      }
+      if (el('pe-summary')) {
+        this.settings.weekly_summary = !!el('pe-summary').checked;
+        this.settings.weekly_summary_time = time('pe-summary-time', '19:00');
+        this.settings.parent_digest_enabled = !!el('pe-digest').checked;
+        this.settings.parent_digest_time = time('pe-digest-time', '07:00');
+        this.settings.planning_reminders = !!el('pe-reminder').checked;
+        this.settings.planning_reminder_time = time('pe-reminder-time', '18:00');
+        this.settings.parent_bins_check_time = time('pe-bins-time', '19:30');
+        this.settings.battery_tasks_enabled = !!el('pe-battery').checked;
+        const pct = parseInt(el('pe-battery-pct').value);
+        this.settings.battery_threshold = pct >= 5 && pct <= 50 ? pct : 20;
+        this.settings.absence_suggest_enabled = !!el('pe-abs').checked;
+        const hours = parseInt(el('pe-abs-hours').value);
+        this.settings.absence_suggest_hours = hours >= 6 && hours <= 168 ? hours : 24;
+      }
+      if (el('sh-cal')) this.settings.school_holiday_calendar = el('sh-cal').value;
+      if (el('tb-night')) {
+        this.settings.night_mode = !!el('tb-night').checked;
+        this.settings.night_sleep = el('tb-sleep').value;
+        this.settings.night_wake_weekday = el('tb-wake-wd').value;
+        this.settings.night_wake_weekend = el('tb-wake-we').value;
+        const n = parseInt(el('tb-rocket').value);
+        this.settings.rocket_countdown = Math.max(15, Math.min(180, isNaN(n) ? 60 : n));
+      }
+      if (el('tb-reward-push')) {
+        this.settings.reward_push = !!el('tb-reward-push').checked;
+        this.settings.approval_push = !!el('tb-approval-push').checked;
+        const h = parseInt(el('tb-reminder-hours').value);
+        this.settings.approval_reminder_hours = Math.max(0, Math.min(24, isNaN(h) ? 2 : h));
+        const notify = {};
+        root.querySelectorAll('.tb-push').forEach(s => { if (s.value) notify[s.dataset.uid] = s.value; });
+        this.settings.parent_notify = notify;
+      }
+    };
+    ['family', 'notify', 'device'].forEach(tab => {
+      const box = root.querySelector(`.tab-panel[data-panel="${tab}"]`);
+      if (!box) return;
+      box.addEventListener('input', sync);
+      box.addEventListener('change', sync);
+    });
+    root.querySelectorAll('.tb-test-push').forEach(btn => btn.addEventListener('click', async () => {
+      const out = btn.parentElement.querySelector('.tb-test-result');
+      let msg;
+      try {
+        const res = await this._hass.callWS({ type: 'family_mission/test_push', user_id: btn.dataset.uid });
+        if (res && res.success) msg = this.localize('tb_test_ok').replace('{t}', (res.targets || []).join(', '));
+        else if (res && res.error === 'no_target') msg = this.localize('tb_test_none');
+        else msg = this.localize('tb_test_fail').replace('{e}', ((res && res.errors) || []).join('; '));
+      } catch (err) {
+        msg = this.localize('tb_test_fail').replace('{e}', (err && err.message) || String(err));
+      }
+      if (out) out.textContent = msg;
+      this._showToast(msg);
+    }));
+  }
+
+  /** Night mode (bedtime, wake-up times). */
+  _renderNightBody() {
+    const st = this.settings || {};
+    const valid = (v, def) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(v || '') ? v : def);
+    return `
+              <label class="parent-check"><input type="checkbox" id="tb-night" ${st.night_mode !== false ? 'checked' : ''}> ${this.localize('tb_night')}</label>
+              <p class="kids-note">${this.localize('tb_night_d')}</p>
+              <div class="kid-fields">
+                <label class="kid-field">${this.localize('tb_sleep')}${this._timeSel('tb-sleep', valid(st.night_sleep, '20:30'))}</label>
+                <label class="kid-field">${this.localize('tb_wake_wd')}${this._timeSel('tb-wake-wd', valid(st.night_wake_weekday, '06:00'))}</label>
+                <label class="kid-field">${this.localize('tb_wake_we')}${this._timeSel('tb-wake-we', valid(st.night_wake_weekend, '08:00'))}</label>
+              </div>`;
+  }
+
+  /** Rocket countdown length. */
+  _renderRocketBody() {
+    const countdown = Math.max(15, Math.min(180, parseInt((this.settings || {}).rocket_countdown) || 60));
+    return `
+              <label class="kid-field">${this.localize('tb_rocket')}
+                <input type="number" id="tb-rocket" min="15" max="180" step="5" value="${countdown}"></label>
+              <p class="kids-note">${this.localize('tb_rocket_d')}</p>`;
+  }
+
+  /** Role-model band on the tablet. */
+  _renderBandBody() {
+    const st = this.settings || {};
+    return `
+              <label class="parent-check"><input type="checkbox" id="pe-band" ${st.role_model_band !== false ? 'checked' : ''}> ${this.localize('pe_band')}</label>
+              <p class="kids-note">${this.localize('pe_band_d')}</p>
+              <label class="kid-field">${this.localize('pe_label')}
+                <input type="text" id="pe-label" maxlength="40" placeholder="${this._esc(this.localize('pe_label_ph'))}" value="${this._esc(st.role_model_label || '')}"></label>`;
   }
 
   /** 15 minute time select; a stored value that is not on the grid stays selectable. */
@@ -1803,7 +2144,7 @@ class FamilyMissionSettings extends HTMLElement {
               ${typeRows}
               <p class="kids-note">${this.localize('ws_types_d')}</p>
               ${next ? `<h4>${this.localize('ws_next')}</h4><ul class="kids-note" style="margin:0; padding-left:18px">${next}</ul>` : ''}
-              <button type="button" id="ws-reload">${this.localize('ws_reload')}</button>
+              <button type="button" id="btn-ws-reload">${this.localize('ws_reload')}</button>
             </div>
             <div class="family-box">
               <div class="kid-fields">
@@ -1821,19 +2162,10 @@ class FamilyMissionSettings extends HTMLElement {
               </div>
             </div>`;
     }
-    return `
-        <div class="section-card">
-          <div class="section-header" id="ws-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._wsOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('ws_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._wsOpen ? 'open' : ''}" id="ws-content">
+    return this._section('waste', this.localize('ws_title'), `<div id="ws-content" class="sec-flow">
             <p class="kids-note">${this.localize('ws_desc')}</p>
             ${body}
-          </div>
-        </div>`;
+          </div>`, { collapsible: true });
   }
 
   /** Keeps the "Waste collection" inputs in this.settings (saved with the normal save button). */
@@ -1882,15 +2214,7 @@ class FamilyMissionSettings extends HTMLElement {
     const nameRows = (this._adults || []).map(a => `
               <label class="kid-field">${esc(a.name)}
                 <input type="text" class="an-name" data-uid="${esc(a.id)}" maxlength="30" placeholder="${esc(a.name)}" value="${esc(names[a.id] || '')}"></label>`).join('');
-    return `
-        <div class="section-card">
-          <div class="section-header" id="an-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._anOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('an_title')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._anOpen ? 'open' : ''}" id="an-content">
+    return this._section('announce', this.localize('an_title'), `<div id="an-content" class="sec-flow">
             <p class="kids-note">${this.localize('an_desc')}</p>
             <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="an-enabled" ${st.announce_enabled === true ? 'checked' : ''}> ${this.localize('an_enabled')}</label>
@@ -1915,8 +2239,7 @@ class FamilyMissionSettings extends HTMLElement {
               <label class="parent-check"><input type="checkbox" id="an-night" ${st.announce_night === true ? 'checked' : ''}> ${this.localize('an_night')}</label>
             </div>
             ${nameRows ? `<div class="family-box"><h4>${this.localize('an_names')}</h4><div class="kid-fields">${nameRows}</div></div>` : ''}
-          </div>
-        </div>`;
+</div>`, { collapsible: true });
   }
 
   /** Keeps the "Voice announcement" inputs in this.settings; the test uses the unsaved choice. */
@@ -1953,47 +2276,6 @@ class FamilyMissionSettings extends HTMLElement {
       if (out) out.textContent = msg;
       this._showToast(msg);
     });
-  }
-
-  /** Keeps the "Tablet" inputs in this.settings (saved with the normal save button). */
-  _bindTabletInputs() {
-    const root = this.shadowRoot;
-    const box = root.getElementById('tb-content');
-    if (!box) return;
-    const sync = () => {
-      const val = (id) => root.getElementById(id);
-      this.settings.night_mode = !!val('tb-night').checked;
-      this.settings.reward_push = !!val('tb-reward-push').checked;
-      this.settings.approval_push = !!val('tb-approval-push').checked;
-      this.settings.night_sleep = val('tb-sleep').value;
-      this.settings.night_wake_weekday = val('tb-wake-wd').value;
-      this.settings.night_wake_weekend = val('tb-wake-we').value;
-      const n = parseInt(val('tb-rocket').value);
-      this.settings.rocket_countdown = Math.max(15, Math.min(180, isNaN(n) ? 60 : n));
-      const h = parseInt(val('tb-reminder-hours').value);
-      this.settings.approval_reminder_hours = Math.max(0, Math.min(24, isNaN(h) ? 2 : h));
-      const notify = {};
-      root.querySelectorAll('.tb-push').forEach(el => { if (el.value) notify[el.dataset.uid] = el.value; });
-      this.settings.parent_notify = notify;
-      // keep the select of the "We parents" section in step
-      root.querySelectorAll('.pe-push').forEach(el => { el.value = notify[el.dataset.uid] || ''; });
-    };
-    box.addEventListener('input', sync);
-    box.addEventListener('change', sync);
-    box.querySelectorAll('.tb-test-push').forEach(btn => btn.addEventListener('click', async () => {
-      const out = btn.parentElement.querySelector('.tb-test-result');
-      let msg;
-      try {
-        const res = await this._hass.callWS({ type: 'family_mission/test_push', user_id: btn.dataset.uid });
-        if (res && res.success) msg = this.localize('tb_test_ok').replace('{t}', (res.targets || []).join(', '));
-        else if (res && res.error === 'no_target') msg = this.localize('tb_test_none');
-        else msg = this.localize('tb_test_fail').replace('{e}', ((res && res.errors) || []).join('; '));
-      } catch (err) {
-        msg = this.localize('tb_test_fail').replace('{e}', (err && err.message) || String(err));
-      }
-      if (out) out.textContent = msg;
-      this._showToast(msg);
-    }));
   }
 
   /**
@@ -2066,6 +2348,53 @@ class FamilyMissionSettings extends HTMLElement {
     }
   }
 
+  /** Wires the medication editor of the kid rows to the drafts. */
+  _bindCareInputs(root) {
+    const entry = (el) => (this._kidDraft(el.dataset.uid).care || [])[parseInt(el.dataset.ci)];
+    const on = (selector, type, fn, rerender = false) => root.querySelectorAll(selector).forEach(el => el.addEventListener(type, (ev) => {
+      const c = entry(el);
+      if (!c) return;
+      fn(c, ev, el);
+      if (rerender) { this._markDirty(); this._render(); }
+    }));
+    on('.care-emoji', 'input', (c, ev) => { c.emoji = ev.target.value; });
+    on('.care-label', 'input', (c, ev) => { c.label = ev.target.value; });
+    on('.care-anchor', 'change', (c, ev) => {
+      c.anchor = ev.target.value;
+      delete c.after;
+      if (c.anchor !== 'time') c.deadline = c.anchor === 'evening' ? '21:00' : '10:00';
+    }, true);
+    on('.care-after', 'change', (c, ev) => { c.after = ev.target.value; });
+    on('.care-time', 'input', (c, ev) => { if (ev.target.value) c.time = ev.target.value; });
+    on('.care-deadline', 'input', (c, ev) => { if (ev.target.value) c.deadline = ev.target.value; });
+    on('.care-day', 'click', (c, ev, el) => {
+      const wd = parseInt(el.dataset.wd);
+      const set = new Set(c.weekdays || []);
+      if (set.has(wd)) set.delete(wd); else set.add(wd);
+      c.weekdays = [...set].sort();
+    }, true);
+    on('.care-stock', 'change', (c, ev) => {
+      const n = parseInt(ev.target.value);
+      if (ev.target.value === '' || isNaN(n)) { delete c.stock; delete c.per_dose; delete c.stock_set_at; } else { c.stock = Math.max(0, Math.min(9999, n)); c.per_dose = c.per_dose || 1; c.stock_set_at = new Date().toISOString(); /* a new token: the live counter restarts */ }
+    }, true);
+    on('.care-perdose', 'input', (c, ev) => { c.per_dose = Math.max(1, Math.min(20, parseInt(ev.target.value) || 1)); });
+    on('.care-notify', 'change', (c, ev) => { c.notify_parents = !!ev.target.checked; });
+    on('.care-alert', 'change', (c, ev) => {
+      c.decline_alert = { count: 3, days: 7, ...(c.decline_alert || {}), enabled: !!ev.target.checked };
+    }, true);
+    on('.care-alert-count', 'input', (c, ev) => { c.decline_alert = { ...(c.decline_alert || {}), count: parseInt(ev.target.value) || 3 }; });
+    on('.care-alert-days', 'input', (c, ev) => { c.decline_alert = { ...(c.decline_alert || {}), days: parseInt(ev.target.value) || 7 }; });
+    on('.care-remove', 'click', (c, ev, el) => { this._kidDraft(el.dataset.uid).care.splice(parseInt(el.dataset.ci), 1); }, true);
+    root.querySelectorAll('.care-add').forEach(el => el.addEventListener('click', () => {
+      const d = this._kidDraft(el.dataset.uid);
+      d.care = d.care || [];
+      d.care.push({ id: '', label: '', emoji: '💊', anchor: 'morning', time: '08:00', weekdays: [0, 1, 2, 3, 4, 5, 6],
+        deadline: '10:00', notify_parents: true, decline_alert: { enabled: false, count: 3, days: 7 } });
+      this._markDirty();
+      this._render();
+    }));
+  }
+
   /**
    * Wires the inputs of the kids section to the drafts (no re-render while typing).
    */
@@ -2119,6 +2448,7 @@ class FamilyMissionSettings extends HTMLElement {
     root.querySelectorAll('.kid-clear-pin').forEach(el => el.addEventListener('change', (ev) => {
       this._kidDraft(el.dataset.uid).clear_pin = !!ev.target.checked;
     }));
+    this._bindCareInputs(root);
     root.querySelectorAll('.user-goal-input').forEach(el => el.addEventListener('input', (ev) => {
       this._goalDrafts[el.dataset.uid] = ev.target.value;
     }));
@@ -2127,12 +2457,21 @@ class FamilyMissionSettings extends HTMLElement {
       if (el) el.addEventListener('input', (ev) => { this._familyDraft[key] = ev.target.value; });
     };
     fam('fg-points', 'points');
+    fam('fg-percent', 'fg_percent');
+    const fgModeEl = root.getElementById('fg-mode');
+    if (fgModeEl) fgModeEl.addEventListener('change', (ev) => {
+      this._familyDraft.fg_mode = ev.target.value;
+      const pct = ev.target.value === 'percent';
+      root.querySelectorAll('.fg-percent-box').forEach(el => { el.hidden = !pct; });
+      root.querySelectorAll('.fg-points-box').forEach(el => { el.hidden = pct; });
+    });
     const bindTake = () => {
       const take = root.getElementById('fg-take');
       if (take) take.addEventListener('click', () => {
         const input = root.getElementById('fg-points');
         if (input) input.value = take.dataset.val;
         this._familyDraft.points = take.dataset.val;
+        this._markDirty();
       });
     };
     bindTake();
@@ -2161,99 +2500,15 @@ class FamilyMissionSettings extends HTMLElement {
       return;
     }
     
-    if (this._themeView === undefined) this._themeView = 'light';
     const displayTitle = this._config.title || this.localize('title');
-    const showAdvanced = this._config.show_advanced === true;
     const template = this._editingTemplateId ? this.templates[this._editingTemplateId] : null;
+    const canManage = this._canManage();
+    const tabs = [
+      ['family', 'tab_family'], ['tasks', 'tab_tasks'], ['notify', 'tab_notify'], ['device', 'tab_device']
+    ];
 
-    let html = this._getStyles();
-    
-    // Add Main Layout
-    html += `
-      <ha-card>
-        <div class="header">${displayTitle}</div>
-        
-        <div class="section-card">
-          <div class="section-header" id="color-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._colorOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('color_adjustments')}</span>
-            </div>
-            <div style="display: ${this._colorOpen ? 'flex' : 'none'}; align-items: center; gap: 8px;" @click="ev => ev.stopPropagation()">
-              <ha-icon icon="mdi:weather-sunny" style="color: ${this._themeView === 'light' ? 'var(--primary-color)' : 'var(--disabled-text-color)'};"></ha-icon>
-              <ha-switch id="theme-toggle" ${this._themeView === 'dark' ? 'checked' : ''}></ha-switch>
-              <ha-icon icon="mdi:weather-night" style="color: ${this._themeView === 'dark' ? 'var(--primary-color)' : 'var(--disabled-text-color)'};"></ha-icon>
-            </div>
-          </div>
-          
-          <div class="section-content ${this._colorOpen ? 'open' : ''}">
-            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-              ${['done', 'due', 'overdue'].map(status => {
-                const colorKey = `color_${status}_${this._themeView}`;
-                const transpKey = `transparency_${status}_${this._themeView}`;
-                
-                const colorVal = this.settings[colorKey] || this.settings[`color_${status}`] || (status==='done'?'#4CAF50':status==='due'?'#FFC107':'#F44336');
-                const transpVal = this.settings[transpKey] !== undefined ? this.settings[transpKey] : 8;
-                
-                return `
-                <div style="display: grid; grid-template-columns: 35px 80px 1fr 35px; align-items: center; gap: 8px;">
-                  <input type="color" id="c-${status}" value="${colorVal}" title="${this.localize(`color_${status}_lbl`)}" style="justify-self: center;">
-                  <span style="font-size: 14px;">${this.localize(`c_${status}`)}</span>
-                  <input type="range" min="0" max="100" value="${transpVal}" class="transparency-slider" id="t-${status}" style="width: 100%; cursor: pointer;">
-                  <span style="font-size: 13px; color: var(--secondary-text-color); text-align: right;" id="tl-${status}">${transpVal}%</span>
-                </div>
-                `;
-              }).join('')}
-            </div>
-            
-            <div style="display: flex; justify-content: flex-end; margin-top: -8px;">
-              <ha-button appearance="plain" id="btn-default-colors">${this.localize('set_default')}</ha-button>
-            </div>
-          </div>
-        </div>
-        
-        <div class="section-card" style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="font-weight: 500; font-size: 14px; color: var(--primary-text-color);">${this.localize('days_overdue')}</span>
-          <input type="number" id="num-overdue" min="1" value="${this.settings.overdue_days}">
-        </div>
-        
-        <div class="section-card">
-          <div class="section-header" id="ie-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._ieOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('import_export')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._ieOpen ? 'open' : ''}">
-            <div style="display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
-              <ha-formfield label="${this.localize('export_tasks_cb')}">
-                <ha-checkbox id="cb-export-tasks" checked></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_templates_cb')}">
-                <ha-checkbox id="cb-export-templates" checked></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_history_cb')}">
-                <ha-checkbox id="cb-export-history"></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_settings_cb')}">
-                <ha-checkbox id="cb-export-settings" checked></ha-checkbox>
-              </ha-formfield>
-            </div>
-            <div style="display: flex; gap: 10px; width: 100%;">
-              <button class="btn btn-export" id="btn-export" title="${this.localize('export_hover')}">${this.localize('export_btn')}</button>
-              <button class="btn btn-import" id="btn-import-trigger" title="${this.localize('import_hover')}">${this.localize('import_btn')}</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-card">
-          <div class="section-header" id="templates-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._templatesOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('templates')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._templatesOpen ? 'open' : ''}" id="templates-content">
+    // Template list (collapsible: long)
+    const templatesHtml = `
             <div class="templates-header">
               <p class="templates-desc">${this.localize('templates_desc')}</p>
               <button class="icon-button add-button" id="btn-add-template" title="${this.localize('add_template')}">
@@ -2292,57 +2547,90 @@ class FamilyMissionSettings extends HTMLElement {
                 </div>
               `}).join('') : `<div class="no-templates-msg">${this.localize('no_templates')}</div>`}
             </div>
-          </div>
+`;
+
+    // Import / export and the destructive actions: small "Advanced" fold at the bottom (managers only)
+    const advancedHtml = canManage ? this._section('adv', this.localize('advanced'), `
+            <p class="kids-note">${this.localize('adv_note')}</p>
+            <h4>${this.localize('import_export')}</h4>
+            <div style="display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
+              <ha-formfield label="${this.localize('export_tasks_cb')}">
+                <ha-checkbox id="cb-export-tasks" checked></ha-checkbox>
+              </ha-formfield>
+              <ha-formfield label="${this.localize('export_templates_cb')}">
+                <ha-checkbox id="cb-export-templates" checked></ha-checkbox>
+              </ha-formfield>
+              <ha-formfield label="${this.localize('export_history_cb')}">
+                <ha-checkbox id="cb-export-history"></ha-checkbox>
+              </ha-formfield>
+              <ha-formfield label="${this.localize('export_settings_cb')}">
+                <ha-checkbox id="cb-export-settings" checked></ha-checkbox>
+              </ha-formfield>
+            </div>
+            <div style="display: flex; gap: 10px; width: 100%;">
+              <button class="btn btn-export" id="btn-export" title="${this.localize('export_hover')}">${this.localize('export_btn')}</button>
+              <button class="btn btn-import" id="btn-import-trigger" title="${this.localize('import_hover')}">${this.localize('import_btn')}</button>
+            </div>
+            <button class="btn btn-reset" id="btn-reset" title="${this.localize('confirm_reset')}">${this.localize('archive_btn')}</button>
+            <button class="btn btn-factory" id="btn-factory" title="${this.localize('confirm_factory')}">${this.localize('factory_btn')}</button>
+          `, { collapsible: true, badge: this.localize('immediate_note') }) : '';
+
+    const panels = {
+      family: [
+        this._section('kids', this.localize('kids_title'), this._renderKidsBody()),
+        this._section('parents', this.localize('parents_title'), this._renderParentsSection()),
+        this._section('fgoal', this.localize('family_goal'), this._renderFamilyGoalBody()),
+        canManage ? this._section('schoolcal', '📚 ' + this.localize('school_cal_lbl'), this._renderSchoolCalendarBody()) : ''
+      ],
+      tasks: [
+        this._section('templates', this.localize('templates'), templatesHtml, { collapsible: true, badge: this.localize('immediate_note') }),
+        this._section('approval', this.localize('approval_title'), this._renderApprovalBody()),
+        this._section('birthday', '🎂 ' + this.localize('birthday_title'), this._renderBirthdayBody()),
+        this._section('team', '👫 ' + this.localize('team_title'), this._renderTeamBody()),
+        this._section('claim', this.localize('claim_title'), this._renderClaimBody()),
+        this._section('expire', this.localize('expire_title'), this._renderExpireBody()),
+        this._renderTriggersSection(),
+        canManage ? this._renderWasteSection() : ''
+      ],
+      notify: [
+        this._section('push', this.localize('h_push'), this._renderPushBody()),
+        this._section('remind', this.localize('h_remind'), this._renderRemindersBody()),
+        canManage ? this._renderAnnounceSection() : ''
+      ],
+      device: [
+        this._section('night', '🌙 ' + this.localize('night_title'), this._renderNightBody()),
+        this._section('rocket', '🚀 ' + this.localize('rocket_title'), this._renderRocketBody()),
+        this._section('band', this.localize('band_title'), this._renderBandBody())
+      ]
+    };
+
+    let html = this._getStyles();
+    
+    // Add Main Layout
+    html += `
+      <ha-card>
+        <div class="header">${displayTitle}</div>
+
+        <div class="tabs" role="tablist">
+          ${tabs.map(([id, key]) => `<button type="button" class="tab-btn ${this._tab === id ? 'active' : ''}" role="tab" id="tab-${id}" data-tab="${id}"
+            aria-selected="${this._tab === id}" aria-controls="panel-${id}" tabindex="${this._tab === id ? 0 : -1}">${this.localize(key)}</button>`).join('')}
         </div>
 
-        <div class="section-card">
-          <div class="section-header" id="goals-toggle">
-            <div class="section-title">
-              <ha-icon icon="${this._goalsOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-              <span>${this.localize('point_goals')}</span>
-            </div>
-          </div>
-          <div class="section-content ${this._goalsOpen ? 'open' : ''}" id="goals-content">
-            ${Object.entries(this.users).filter(([uid]) => !this._kidDraft(uid).enabled).map(([uid, name]) => `
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 500; font-size: 14px; color: var(--primary-text-color);">${name}</span>
-                <input type="number" class="user-goal-input" data-uid="${uid}" 
-                       value="${this._goalValue(uid)}" placeholder="0">
-              </div>
-            `).join('')}
-          </div>
+        <div class="tab-panels">
+          ${tabs.map(([id]) => `<div class="tab-panel" role="tabpanel" id="panel-${id}" data-panel="${id}" aria-labelledby="tab-${id}" ${this._tab === id ? '' : 'hidden'}>
+            ${panels[id].join('')}
+          </div>`).join('')}
         </div>
 
-        ${this._renderKidsSection()}
-
-        ${this._renderTriggersSection()}
-
-        ${this._renderParentsCentralSection()}
-
-        ${this._renderTabletSection()}
-
-        ${this._canManage() ? this._renderWasteSection() : ''}
-
-        ${this._canManage() ? this._renderAnnounceSection() : ''}
-
-        ${showAdvanced ? `
-          <div class="section-card">
-            <div class="section-header" id="adv-toggle">
-              <div class="section-title">
-                <ha-icon icon="${this._advancedOpen ? 'mdi:chevron-up' : 'mdi:chevron-right'}"></ha-icon>
-                <span>${this.localize('advanced')}</span>
-              </div>
-            </div>
-            <div class="section-content ${this._advancedOpen ? 'open' : ''}">
-              <button class="btn btn-reset" id="btn-reset" title="${this.localize('confirm_reset')}">${this.localize('archive_btn')}</button>
-              <button class="btn btn-factory" id="btn-factory" title="${this.localize('confirm_factory')}">${this.localize('factory_btn')}</button>
-            </div>
-          </div>
-        ` : ''}
-        
-        <button class="btn btn-save" id="btn-save" title="${this.localize('save_hover')}" style="margin-top: 12px;">${this.localize('save')}</button>
+        ${advancedHtml}
 
         ${this._renderFooter()}
+
+        <div class="save-bar" id="save-bar" ${this._dirty ? '' : 'hidden'}>
+          <span class="save-msg">${this.localize('dirty_msg')}</span>
+          <button type="button" class="btn btn-discard" id="btn-discard">${this.localize('discard')}</button>
+          <button type="button" class="btn btn-save" id="btn-save">${this.localize('save')}</button>
+        </div>
       </ha-card>
 
       <div id="template-modal" class="modal ${this._templateModalOpen ? 'open' : ''}">
@@ -2355,6 +2643,16 @@ class FamilyMissionSettings extends HTMLElement {
               <div class="form-row">
                   <ha-input id="tmpl-interval" type="number" label="${this.localize('interval_lbl')}" class="form-col" value="${template?.interval ?? 7}"></ha-input>
                   <ha-input id="tmpl-complexity" type="number" label="${this.localize('points_lbl')}" min="1" max="10" value="${template?.complexity || 5}" class="form-col"></ha-input>
+              </div>
+
+              <div>
+                  <label class="form-label">${this.localize('weekdays_lbl')}</label>
+                  <div class="wd-chips" role="group" aria-label="${this.localize('weekdays_lbl')}">
+                      ${this.localize('weekday_short').split(',').map((d, i) => {
+                          const on = (template?.weekdays || []).includes(i);
+                          return `<button type="button" class="wd-chip ${on ? 'active' : ''}" data-wd="${i}" aria-pressed="${on}">${d}</button>`;
+                      }).join('')}
+                  </div>
               </div>
 
               <div class="form-row">
@@ -2379,6 +2677,12 @@ class FamilyMissionSettings extends HTMLElement {
               </div>
               <div class="form-row">
                   <div class="form-col">
+                      <label class="form-label" for="tmpl-scope">${this.localize('scope_lbl')}</label>
+                      <select id="tmpl-scope" class="form-select">
+                          ${['home', 'personal'].map(c => `<option value="${c}" ${(template?.scope || 'home') === c ? 'selected' : ''}>${this.localize('scope_' + c)}</option>`).join('')}
+                      </select>
+                  </div>
+                  <div class="form-col">
                       <label class="form-label" for="tmpl-available-from">${this.localize('available_from_lbl')}</label>
                       <select id="tmpl-available-from" class="form-select">${toSetTTimeOptions(template?.available_from || '', '—')}</select>
                   </div>
@@ -2387,6 +2691,20 @@ class FamilyMissionSettings extends HTMLElement {
                       <select id="tmpl-available-until" class="form-select">${toSetTTimeOptions(template?.available_until || '', '—')}</select>
                   </div>
               </div>
+              <div class="form-row">
+                  <div class="form-col">
+                      <label class="form-label" for="tmpl-available-from-we">${this.localize('available_from_we_lbl')}</label>
+                      <select id="tmpl-available-from-we" class="form-select">${toSetTTimeOptions(template?.available_from_we || '', '—')}</select>
+                  </div>
+                  <div class="form-col">
+                      <label class="form-label" for="tmpl-available-until-we">${this.localize('available_until_we_lbl')}</label>
+                      <select id="tmpl-available-until-we" class="form-select">${toSetTTimeOptions(template?.available_until_we || '', '—')}</select>
+                  </div>
+              </div>
+              <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('weekend_window_hint')}</div>
+              ${Object.values(this.tasks || {}).some(x => x && !x.parent_task && (x.catalog_key === 'homework' || String(x.wizard_key || '').split(':')[0] === 'homework')) || template?.after_key === 'homework' ? `<ha-formfield label="${this.localize('after_homework_lbl')}">
+                  <ha-switch id="tmpl-after" ${template?.after_key === 'homework' ? 'checked' : ''}></ha-switch>
+              </ha-formfield>` : ''}
               <ha-formfield label="${this.localize('approval_lbl')}">
                   <ha-switch id="tmpl-approval" ${template?.requires_approval ? 'checked' : ''}></ha-switch>
               </ha-formfield>
@@ -2421,6 +2739,12 @@ class FamilyMissionSettings extends HTMLElement {
                               </ha-formfield>
                           `;
                       }).join('')}
+                  </div>
+                  <div id="tmpl-rotation-row" hidden style="padding-top:8px;">
+                      <ha-formfield label="${this.localize('rotation_lbl')}">
+                          <ha-switch id="tmpl-rotation" ${template?.rotation ? 'checked' : ''}></ha-switch>
+                      </ha-formfield>
+                      <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('rotation_hint')}</div>
                   </div>
               </div>
 
@@ -2485,6 +2809,7 @@ class FamilyMissionSettings extends HTMLElement {
     this.shadowRoot.querySelector('ha-card').addEventListener('click', (ev) => this._handleClick(ev));
     this.shadowRoot.querySelector('#template-modal').addEventListener('click', (ev) => this._handleClick(ev));
     this.shadowRoot.querySelector('#template-modal').addEventListener('change', (ev) => {
+      if (ev.target && ev.target.classList && ev.target.classList.contains('tmpl-assignee-cb')) this._syncTemplateSchedule();
       if (ev.target && ev.target.id === 'tmpl-reminder') {
         const row = this.shadowRoot.getElementById('tmpl-reminder-row');
         if (row) row.hidden = !ev.target.checked;
@@ -2502,29 +2827,28 @@ class FamilyMissionSettings extends HTMLElement {
       importFileInput.addEventListener('change', (ev) => this._handleImportFileChange(ev));
     }
 
-    // Bind slider events
-    this.shadowRoot.querySelectorAll('.transparency-slider').forEach(el => {
-      el.addEventListener('input', (ev) => {
-        const status = ev.target.id.substring(2);
-        this.shadowRoot.getElementById(`tl-${status}`).innerText = `${ev.target.value}%`;
-        this.settings[`transparency_${status}_${this._themeView}`] = parseInt(ev.target.value);
-      });
-    });
-    this.shadowRoot.querySelectorAll('input[type="color"]').forEach(el => {
-      el.addEventListener('input', (ev) => {
-        const status = ev.target.id.substring(2);
-        this.settings[`color_${status}_${this._themeView}`] = ev.target.value;
-      });
-    });
-
     this._bindKidInputs();
     this._bindTriggerInputs();
     this._bindParentsCentralInputs();
-    this._bindTabletInputs();
     this._bindWasteInputs();
     this._bindAnnounceInputs();
 
+    this.shadowRoot.querySelectorAll('.sec-head').forEach(h => h.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); this._toggleSec(h.dataset.sec); }
+    }));
+
+    // Dirty tracking: any edit inside the panels shows the sticky save bar (immediate-save blocks opt out)
+    const markDirty = (ev) => {
+      const path = ev.composedPath ? ev.composedPath() : [];
+      if (path.some(el => el.dataset && el.dataset.nodirty)) return;
+      this._markDirty();
+    };
+    const panelBox = this.shadowRoot.querySelector('.tab-panels');
+    panelBox.addEventListener('input', markDirty);
+    panelBox.addEventListener('change', markDirty);
+
     if (this._templateModalOpen) {
+      this._syncTemplateSchedule();
       const iconPicker = this.shadowRoot.getElementById('tmpl-icon');
       if(iconPicker) iconPicker.hass = this._hass;
 
@@ -2570,9 +2894,6 @@ class FamilyMissionSettingsEditor extends HTMLElement {
           <ha-input label="${this.localize('height_lbl')}" placeholder="400px" value="${this._config.card_height || ''}" configValue="card_height" style="flex:1"></ha-input>
           <ha-input label="${this.localize('width_lbl')}" placeholder="100%" value="${this._config.card_width || ''}" configValue="card_width" style="flex:1"></ha-input>
         </div>
-        <ha-formfield label="${this.localize('show_advanced_lbl')}">
-          <ha-checkbox ${this._config.show_advanced === true ? 'checked' : ''} configValue="show_advanced"></ha-checkbox>
-        </ha-formfield>
       </div>
       <style>
         .card-config ha-input { display: block; margin-bottom: 8px; }
@@ -2581,8 +2902,7 @@ class FamilyMissionSettingsEditor extends HTMLElement {
 
     this._rendered = true;
     this.querySelectorAll('ha-input').forEach(el => el.addEventListener('input', ev => this._valueChanged(ev)));
-    this.querySelectorAll('ha-checkbox').forEach(el => el.addEventListener('change', ev => this._valueChanged(ev)));
-    this._updateUI();
+        this._updateUI();
   }
 
   _updateUI() {
@@ -2590,9 +2910,7 @@ class FamilyMissionSettingsEditor extends HTMLElement {
     this.querySelectorAll('[configValue]').forEach(el => {
         const key = el.getAttribute('configValue');
         const value = this._config[key];
-        if (el.tagName === 'HA-CHECKBOX') {
-            el.checked = value === true;
-        } else if (value !== undefined) {
+        if (value !== undefined) {
             el.value = value;
         }
     });
@@ -2604,10 +2922,6 @@ class FamilyMissionSettingsEditor extends HTMLElement {
     const target = ev.target;
     const configValue = target.configValue || target.getAttribute('configValue');
     let newValue = target.value;
-
-    if (target.tagName === 'HA-CHECKBOX') {
-      newValue = target.checked;
-    }
 
     if (this._config[configValue] === newValue) return;
 

@@ -88,8 +88,8 @@ async def test_catalog_and_preview(hass, hass_ws_client, setup):
     res = await _call(ws, "family_mission/wizard_preview", **BASE)
     proposal = res["result"]
     assert [k["name"] for k in proposal["kids"]] == ["Anna", "Ben", "Clara", "David"]
-    assert proposal["goals"][ANNA] == 215 and proposal["family_goal"] == 650
-    assert proposal["counts"] == {"tasks": 44, "bonus": 7, "templates": 4}
+    assert proposal["goals"][ANNA] == 255 and proposal["family_goal"] == 780
+    assert proposal["counts"] == {"tasks": 48, "bonus": 7, "templates": 4}
     assert {w["kid_id"] for w in proposal["warnings"]} == {CLARA, DAVID}
     assert not _tasks(hass)                      # preview never saves
     # gentle default selection: bigger chores are suggested off
@@ -98,7 +98,7 @@ async def test_catalog_and_preview(hass, hass_ws_client, setup):
 
     res = await _call(ws, "family_mission/wizard_preview", **{**BASE, "excluded": ["table_set:person.david"],
                                                                 "language": "en"})
-    assert res["result"]["counts"]["tasks"] == 43
+    assert res["result"]["counts"]["tasks"] == 47
     res = await _call(ws, "family_mission/wizard_preview", **{**BASE, "kids": [{"id": "person.ghost", "birth_year": 2015}]})
     assert res["error"]["code"] == "unknown_person"
     res = await _call(ws, "family_mission/wizard_preview", **{**BASE, "kids": [{"id": ANNA, "birth_year": 2015, "color": "red;x"}]})
@@ -111,20 +111,22 @@ async def test_apply_creates_everything(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     res = await _apply(ws, goals={ANNA: 200}, family_goal={"points": 640, "reward": "Pizza-Abend"})
     assert res["success"], res
-    assert res["result"] == {"success": True, "created": 44, "bonus": 7, "templates": 4,
-                             "deleted": 0, "updated": 0, "skipped": 0, "triggers": 0}
+    assert res["result"] == {"success": True, "created": 48, "bonus": 7, "templates": 4,
+                             "deleted": 0, "updated": 0, "kept_customized": 0, "detached": 0, "skipped": 0, "triggers": 0}
     await hass.async_block_till_done()
-    assert len(created_events) == 51
+    assert len(created_events) == 55
 
     tasks = _by_key(hass)
     morning = tasks["morning:person.anna"]
     assert morning["name"] == "Morgen-Mission Anna" and morning["assignees"] == [ANNA]
     assert morning["complexity"] == 2 and morning["interval"] == 1 and morning["category"] == "basis"
     assert morning["min_age"] == 6 and morning["generated_by"] == "wizard"
-    assert [s["title"] for s in morning["subtasks"]] == ["Anziehen", "Bett machen", "Schlafanzug weg"]
+    assert [s["title"] for s in morning["subtasks"]] == [
+        "Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg", "Brotdose & Trinkflasche einpacken"]
     assert "room_blitz:person.david" not in tasks and "room_blitz_small:person.david" in tasks
     deep = tasks["room_deep:person.david"]
-    assert [s["title"] for s in deep["subtasks"]] == ["Boden frei", "Regal ordnen", "Müll raus"]
+    assert [s["title"] for s in deep["subtasks"]] == [
+        "Boden frei", "Regal ordnen", "Kleidung in den Schrank", "Müll raus"]
 
     # rotation: staggered due dates, interval x n
     assert tasks["table_set:person.anna"]["interval"] == 4
@@ -146,7 +148,7 @@ async def test_apply_creates_everything(hass, hass_ws_client, setup):
 
     # settings
     opts = setup.options
-    assert opts["point_goals"][ANNA] == 200 and opts["point_goals"][DAVID] == 170
+    assert opts["point_goals"][ANNA] == 200 and opts["point_goals"][DAVID] == 205
     assert opts["family_goal"] == {"points": 640, "reward": "Pizza-Abend"}
     assert opts["kids"][ANNA]["birth_year"] == 2014 and opts["kids"][ANNA]["avatar"] == "🦊"
     assert opts["wizard"]["features"] == FEATURES and opts["wizard"]["phase"] == "start"
@@ -209,7 +211,7 @@ async def test_replace_existing_only_touches_wizard_tasks(hass, hass_ws_client, 
     manual_id = manual["result"]["task_id"]
     assert (await _apply(ws))["success"]
     first_ids = {t["id"] for t in _tasks(hass).values() if t.get("wizard_key")}
-    assert len(first_ids) == 51
+    assert len(first_ids) == 55
 
     # earn points and history: must survive
     task = _by_key(hass)["morning:person.anna"]
@@ -221,8 +223,8 @@ async def test_replace_existing_only_touches_wizard_tasks(hass, hass_ws_client, 
 
     # without replace: duplicates are skipped
     res = await _apply(ws)
-    assert res["result"]["created"] == 0 and res["result"]["bonus"] == 0 and res["result"]["skipped"] == 51
-    assert len(_tasks(hass)) == 52
+    assert res["result"]["created"] == 0 and res["result"]["bonus"] == 0 and res["result"]["skipped"] == 55
+    assert len(_tasks(hass)) == 56
 
     # replace with only two kids: existing tasks are updated IN PLACE (same ids), only
     # rotation tasks that are no longer part of the plan are deleted, the rotations are re-staggered
