@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.8.2] - 2026-11-02
+
+- **Fix, kids card `mode: mine`:** "Heute erledigt" / "Done today" in "Meine Aufgaben" now also lists the adult's own completed parent tasks (before, only point tasks appeared, so the count differed from the parents card). Parent entries show no stars; undo asks "… rückgängig machen? Die Aufgabe ist dann wieder offen." instead of mentioning points.
+
 ## [2.8.1] - 2026-11-02
 
 - **Parents' hub, More → Parent tasks:** one-time to-dos (quick add, someday, dated; they are deleted when ticked off) are no longer listed between the recurring parent tasks. They sit in a collapsed fold "Einmalige To-dos (N)" / "One-time to-dos (N)" below the list, so the "who does what" list stays short.

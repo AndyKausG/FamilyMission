@@ -77,7 +77,7 @@ const I18N_KIDS = {
     pa_cancel: "Cancel", pa_ok: "OK", pa_done_today: "Done today",
     pa_confirm_skip: "Skip \"{task}\" today? No points are given.",
     pa_confirm_complete: "Complete \"{task}\" for {name}? {n} points will be awarded.",
-    pa_confirm_undo: "Undo \"{task}\"? The points are taken back.",
+    pa_confirm_undo: "Undo \"{task}\"? The points are taken back.", pa_confirm_undo_parent: "Undo \"{task}\"? The task is open again.",
     pa_postpone_title: "Postpone \"{task}\"", pa_back_on: "Back on",
     pa_tomorrow: "Tomorrow", pa_day_after: "Day after tomorrow", pa_date: "Pick a date",
     pa_day: "Day", pa_month: "Month", pa_postpone_ok: "Postpone",
@@ -170,7 +170,7 @@ const I18N_KIDS = {
     pa_cancel: "Abbrechen", pa_ok: "OK", pa_done_today: "Heute erledigt",
     pa_confirm_skip: "\"{task}\" heute aussetzen? Es gibt keine Punkte.",
     pa_confirm_complete: "\"{task}\" für {name} erledigen? {n} Punkte werden gutgeschrieben.",
-    pa_confirm_undo: "\"{task}\" rückgängig machen? Die Punkte werden zurückgenommen.",
+    pa_confirm_undo: "\"{task}\" rückgängig machen? Die Punkte werden zurückgenommen.", pa_confirm_undo_parent: "\"{task}\" rückgängig machen? Die Aufgabe ist dann wieder offen.",
     pa_postpone_title: "\"{task}\" zurückstellen", pa_back_on: "Wieder da ab",
     pa_tomorrow: "Morgen", pa_day_after: "Übermorgen", pa_date: "Datum wählen",
     pa_day: "Tag", pa_month: "Monat", pa_postpone_ok: "Zurückstellen",
@@ -1745,11 +1745,12 @@ class FamilyMissionKids extends HTMLElement {
     this._render();
   }
 
-  /** Completions of this kid today (one per completion), for the parents' undo button. */
+  /** Completions of this kid today (one per completion), for the parents' undo button.
+   *  Includes the own parent tasks (type "parent") of an adult in mine mode. */
   _doneToday(kid) {
     const today = this._localToday();
     const seen = new Set();
-    return this.history.filter(h => (h.type || 'task') === 'task' && h.user_id === kid.id &&
+    return this.history.filter(h => ['task', 'parent'].includes(h.type || 'task') && h.user_id === kid.id &&
       this._dateKey(h.timestamp) === today).filter(h => {
       const key = h.completion_id || h.id;
       if (seen.has(key)) return false;
@@ -1765,7 +1766,8 @@ class FamilyMissionKids extends HTMLElement {
     this._sheet = {
       type: 'confirm', kind, taskId, historyId,
       name: entry ? entry.task_name : task.name,
-      points: entry ? entry.points : task.complexity
+      points: entry ? entry.points : task.complexity,
+      parent: !!(entry && entry.type === 'parent')
     };
     this._render();
   }
@@ -1861,7 +1863,7 @@ class FamilyMissionKids extends HTMLElement {
       ${list.map(h => `
         <div class="wait-item">
           <div class="wait-name">${escKids(h.task_name)}</div>
-          <div class="wait-pts">⭐ ${fmtKids(h.points)}</div>
+          <div class="wait-pts">${h.type === 'parent' ? '' : `⭐ ${fmtKids(h.points)}`}</div>
           <button class="pbtn" data-action="pa-undo" data-id="${escKids(h.id)}" title="${escKids(this.localize('pa_undo'))}" aria-label="${escKids(this.localize('pa_undo'))}" ${this._busy ? 'disabled' : ''}>↩️</button>
         </div>`).join('')}
     </div>`;
@@ -1896,7 +1898,7 @@ class FamilyMissionKids extends HTMLElement {
         <div class="sheet-hint">${until ? `${escKids(this.localize('pa_back_on'))}: ${escKids(when)}` : ''}</div>
         <div class="sheet-btns">${cancel}<button class="sbtn ok" data-action="sheet-ok" ${until ? '' : 'disabled'}>${escKids(this.localize('pa_postpone_ok'))}</button></div>`;
     } else {
-      const key = { skip: 'pa_confirm_skip', complete: 'pa_confirm_complete', undo: 'pa_confirm_undo' }[sheet.kind];
+      const key = { skip: 'pa_confirm_skip', complete: 'pa_confirm_complete', undo: sheet.parent ? 'pa_confirm_undo_parent' : 'pa_confirm_undo' }[sheet.kind];
       const icon = { skip: '⏭️', complete: '✅', undo: '↩️' }[sheet.kind];
       body = `
         <div class="sheet-title">${icon} ${escKids(this.localize(key, { task: sheet.name, name: kid ? kid.name : '', n: fmtKids(sheet.points) }))}</div>
