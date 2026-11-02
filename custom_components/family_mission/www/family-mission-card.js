@@ -113,33 +113,6 @@ window.customCards.push({
   preview: true,
 });
 
-/**
- * Options for a time select ("HH:MM", 15-minute steps). Used instead of
- * <input type="time">, whose native picker crashes some browsers (Safari)
- * inside the dialogs. A value outside the steps is kept as its own option.
- */
-function toCardTimeOptions(value, emptyLabel) {
-  const v = /^\d{2}:\d{2}$/.test(value || '') ? value : '';
-  const times = [];
-  for (let h = 0; h < 24; h++) for (let m = 0; m < 60; m += 15) times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-  if (v && !times.includes(v)) { times.push(v); times.sort(); }
-  return `<option value="" ${v ? '' : 'selected'}>${emptyLabel}</option>` +
-    times.map(t => `<option value="${t}" ${t === v ? 'selected' : ''}>${t}</option>`).join('');
-}
-
-
-/**
- * Options of the reminder target select: "event only" plus every `notify.*` service Home Assistant offers
- * (value `notify.<name>`). A saved target that is no longer offered is kept as its own option.
- */
-function toCardNotifyOptions(hass, selected, eventOnlyLabel) {
-  const names = Object.keys((hass && hass.services && hass.services.notify) || {}).filter(n => n !== 'send_message').sort();
-  const values = names.map(n => `notify.${n}`);
-  if (selected && !values.includes(selected)) values.push(selected);
-  return `<option value="" ${selected ? '' : 'selected'}>${eventOnlyLabel}</option>` +
-    values.map(v => `<option value="${v}" ${v === selected ? 'selected' : ''}>${v}</option>`).join('');
-}
-
 class FamilyMissionCard extends HTMLElement {
   /**
    * Initializes the FamilyMissionCard element and its internal state.
@@ -165,7 +138,6 @@ class FamilyMissionCard extends HTMLElement {
     this.currentPage = 1;
     this._searchTerm = "";
     this._searchVisible = false;
-    this._subtasks = [];
     this._currentTaskId = null;
     this._completionSubtasks = [];
     this._distribution = {};
@@ -296,13 +268,7 @@ class FamilyMissionCard extends HTMLElement {
     this._hass = hass;
     if (!hass) return;
     
-    if (this.shadowRoot) {
-        const iconPicker = this.shadowRoot.getElementById('f-icon-picker');
-        if (iconPicker) iconPicker.hass = hass;
-        
-        const areaPicker = this.shadowRoot.getElementById('f-area');
-        if (areaPicker) areaPicker.hass = hass;
-    }
+    if (this._taskEditor) this._taskEditor.hass = hass;
 
     if (!this._dataLoaded) { 
         this._mapUsers(); 
@@ -399,15 +365,12 @@ class FamilyMissionCard extends HTMLElement {
     else if (target.classList?.contains('btn-complete')) this._checkCompleteAction(taskId);
     else if (target.classList?.contains('btn-edit')) this._openModal(taskId);
     else if (target.classList?.contains('btn-delete')) this._deleteTask(taskId);
-    else if (target.id === 'btn-modal-cancel') this._closeModal();
-    else if (target.id === 'btn-modal-save') this._saveTask();
     else if (target.id === 'btn-choice-cancel') this._closeChoiceModal();
     else if (target.id === 'btn-choice-confirm') this._confirmCompletion();
     else if (target.id === 'btn-submodal-cancel') this._closeSubtaskCompletionModal();
     else if (target.id === 'btn-submodal-save') this._saveSubtaskProgress();
     else if (target.id === 'btn-submodal-all') this._completeEverything();
     else if (target.classList.contains('sub-complete-check')) this._toggleCompletionSubtask(target.dataset.index);
-    else if (target.classList?.contains('suggestion-item')) this._applyTemplate(target.dataset.id);
     else if (target.id === 'btn-prev-page') {
         this.currentPage = Math.max(1, this.currentPage - 1);
         this._renderTaskList();
@@ -416,59 +379,8 @@ class FamilyMissionCard extends HTMLElement {
         this.currentPage++;
         this._renderTaskList();
     }
-    else if (target.classList?.contains('wd-chip')) this._toggleWeekday(target);
-    else if (target.id === 'btn-type-recurring') this._updateTaskTypeUI(false);
-    else if (target.id === 'btn-type-onetime') this._updateTaskTypeUI(true);
     // Subtask Handlers
     else if (target.classList.contains('dist-btn')) this._handlePresetDistribution(target.dataset.preset, target.dataset.uid);
-    else if (target.id === 'toggle-time-settings') this._toggleSection('time-settings-content');
-    else if (target.id === 'toggle-subtasks') this._toggleSection('subtasks-content');
-    else if (target.id === 'btn-add-subtask') this._addSubtask();
-    else if (target.classList.contains('btn-del-subtask')) this._removeSubtask(target.dataset.index);
-    else if (target.classList.contains('subtask-check')) this._toggleSubtaskStatus(target.dataset.index);
-  }
-
-  /**
-   * Toggles the visibility of a UI section.
-   * @param {string} id - The ID of the section to toggle.
-   */
-  _toggleSection(id) {
-    const content = this.shadowRoot.getElementById(id);
-    if (!content) return;
-
-    const headerId = "toggle-" + id.replace("-content", "");
-    const icon = this.shadowRoot.querySelector(`#${headerId} ha-icon`);
-    
-    // Prüfe den aktuellen Zustand (inline oder via CSS)
-    const isHidden = content.style.display === 'none' || getComputedStyle(content).display === 'none';
-    
-    if (isHidden) {
-        content.style.display = 'flex';
-        if (icon) icon.setAttribute('icon', 'mdi:chevron-up');
-    } else {
-        content.style.display = 'none';
-        if (icon) icon.setAttribute('icon', 'mdi:chevron-down');
-    }
-  }
-
-  /**
-   * Explicitly sets the visibility state of a UI section.
-   * @param {string} id - The ID of the section.
-   * @param {boolean} open - Whether the section should be open.
-   */
-  _setSectionState(id, open) {
-    const content = this.shadowRoot.getElementById(id);
-    if (!content) return;
-
-    const headerId = "toggle-" + id.replace("-content", "");
-    const icon = this.shadowRoot.querySelector(`#${headerId} ha-icon`);
-    if (open) {
-        content.style.display = 'flex';
-        if (icon) icon.setAttribute('icon', 'mdi:chevron-up');
-    } else {
-        content.style.display = 'none';
-        if (icon) icon.setAttribute('icon', 'mdi:chevron-down');
-    }
   }
 
   /**
@@ -873,373 +785,161 @@ class FamilyMissionCard extends HTMLElement {
    * Deletes a task after user confirmation.
    * @param {string} taskId - The ID of the task to delete.
    */
-  _deleteTask(taskId) { 
+  _deleteTask(taskId, fromEditor = false) { 
       if (confirm(this.localize('confirm_delete'))) { 
           this._hass.callWS({ type: 'family_mission/delete_task', task_id: taskId }).then(() => { 
               this._showToast(this.localize('deleted')); 
+              if (fromEditor) this._closeModal();
               this._fetchData(); 
           }); 
       } 
   }
 
+  /** Creates the shared task editor once (loaded on demand) and wires its events. */
+  async _ensureTaskEditor() {
+    if (this._taskEditor) return this._taskEditor;
+    if (!customElements.get('family-mission-task-editor')) await import('/family_mission_frontend/family-mission-task-editor.js');
+    const ed = document.createElement('family-mission-task-editor');
+    ed.addEventListener('fm-editor-save', (ev) => this._saveTask(ev.detail.value));
+    ed.addEventListener('fm-editor-cancel', () => this._closeModal());
+    ed.addEventListener('fm-editor-delete', () => { if (this._editingTaskId) this._deleteTask(this._editingTaskId, true); });
+    ed.addEventListener('fm-editor-template', (ev) => this._applyTemplate(ev.detail.id));
+    this._taskEditor = ed;
+    return ed;
+  }
+
+  /** Local calendar day (YYYY-MM-DD) of an ISO timestamp, or ''. */
+  _localDay(iso) {
+    const d = iso ? new Date(iso) : null;
+    if (!d || isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  /** True when a homework task exists (the "only after homework" rule needs one). */
+  _hasHomeworkTask() {
+    return Object.values(this.tasks || {}).some(x => x && !x.parent_task &&
+      (x.catalog_key === 'homework' || String(x.wizard_key || '').split(':')[0] === 'homework'));
+  }
+
   /**
-   * Opens the modal to add or edit a task.
+   * Opens the shared task editor to add or edit a task.
    * @param {string|null} taskId - The ID of the task to edit, or null for a new task.
    */
-  _openModal(taskId = null) {
-    console.log("Opening modal for task:", taskId);
-    this._editingTaskId = taskId;
-    const modal = this.shadowRoot.getElementById('task-modal');
-    this._subtasks = [];
-    
-    if (taskId && this.tasks[taskId]) {
-        const t = this.tasks[taskId];
-        if (this.shadowRoot.getElementById('f-name')) this.shadowRoot.getElementById('f-name').value = t.name;
-        if (this.shadowRoot.getElementById('f-description')) this.shadowRoot.getElementById('f-description').value = t.description || "";
-        if (this.shadowRoot.getElementById('f-area')) this.shadowRoot.getElementById('f-area').value = t.area || "";
-        if (this.shadowRoot.getElementById('f-interval')) {
-            this.shadowRoot.getElementById('f-interval').value = (t.interval !== undefined) ? t.interval : 7;
-        }
-        if (this.shadowRoot.getElementById('f-complexity')) this.shadowRoot.getElementById('f-complexity').value = t.complexity;
-        this._setCategoryFields(t.category, t.min_age, t.requires_approval, t.available_from, t.available_until, t.requires_routine, t.reminder_at, t.reminder_target, t.allow_together);
-        this._setWeekendFields(t);
-        this._setScope(t.scope);
-        this._subtasks = t.subtasks ? [...t.subtasks] : [];
-        this._currentIcon = t.icon || "mdi:broom";
-        
-        this.shadowRoot.querySelectorAll('.assignee-cb').forEach(cb => {
-            cb.checked = t.assignees && t.assignees.includes(cb.value);
-        });
-        
-        const isOnetime = t.interval === 0 && !(t.weekdays && t.weekdays.length);
-        this._updateTaskTypeUI(isOnetime);
-        this._setWeekdays(t.weekdays);
-        this._syncScheduleUI();
-        const rot = this.shadowRoot.getElementById('f-rotation');
-        if (rot) rot.checked = !!(t.rotation && Array.isArray(t.rotation.members)) && !this.shadowRoot.getElementById('f-rotation-row').hidden;
-        this.shadowRoot.getElementById('template-suggestions').style.display = 'none';
-        this._fillTemplateSelect(false);
-        
-        const now = new Date();
-        now.setHours(0, 0, 0, 0); 
-
-        if (t.paused_until && new Date(t.paused_until) >= now) {
-            this.shadowRoot.getElementById('f-pause-cb').checked = true;
-            this.shadowRoot.getElementById('f-pause-date').value = t.paused_until;
-            this.shadowRoot.getElementById('f-pause-date').disabled = false;
-        } else {
-            this.shadowRoot.getElementById('f-pause-cb').checked = false;
-            this.shadowRoot.getElementById('f-pause-date').value = "";
-            this.shadowRoot.getElementById('f-pause-date').disabled = true;
-        }
-    } else {
-        this.shadowRoot.getElementById('f-name').value = ""; 
-        this.shadowRoot.getElementById('f-description').value = "";
-        this.shadowRoot.getElementById('f-area').value = "";
-        this.shadowRoot.getElementById('f-interval').value = 7;
-        this.shadowRoot.getElementById('f-complexity').value = 5; 
-        this._setCategoryFields('basis', 0, false);
-        this._setWeekendFields({});
-        this._setScope('home');
-        this._currentIcon = "mdi:broom";
-        this._subtasks = [];
-        
-        this._updateTaskTypeUI(false); // Default to recurring
-        this._setWeekdays([]);
-        if (this.shadowRoot.getElementById('f-rotation')) this.shadowRoot.getElementById('f-rotation').checked = false;
-        this.shadowRoot.getElementById('template-suggestions').style.display = 'block';
-        this.shadowRoot.getElementById('template-suggestions').innerHTML = '';
-        this._fillTemplateSelect(true);
-        this.shadowRoot.querySelectorAll('.assignee-cb').forEach(cb => cb.checked = false);        
-        this._syncScheduleUI();
-
-        this.shadowRoot.getElementById('f-pause-cb').checked = false;
-        this.shadowRoot.getElementById('f-pause-date').value = "";
-        this.shadowRoot.getElementById('f-pause-date').disabled = true;
-
-        this.shadowRoot.getElementById('f-override-overdue-cb').checked = false;
-        this.shadowRoot.getElementById('f-override-overdue-days').value = "";
-        this.shadowRoot.getElementById('f-override-overdue-days').disabled = true;
-
-    }
-    
-    const setDueDateCb = this.shadowRoot.getElementById('f-set-due-date-cb');
-    const customDueDateInput = this.shadowRoot.getElementById('f-custom-due-date');
-    if (setDueDateCb && customDueDateInput) {
-        setDueDateCb.checked = false;
-        customDueDateInput.value = "";
-        customDueDateInput.disabled = true;
-    }
-
-    const overrideOverdueCb = this.shadowRoot.getElementById('f-override-overdue-cb');
-    const overrideOverdueDays = this.shadowRoot.getElementById('f-override-overdue-days');
-    if (taskId && this.tasks[taskId]) {
-        const t = this.tasks[taskId];
-        if (t.override_overdue_days !== null && t.override_overdue_days !== undefined) {
-            overrideOverdueCb.checked = true;
-            overrideOverdueDays.value = t.override_overdue_days;
-            overrideOverdueDays.disabled = false;
-        } else {
-            overrideOverdueCb.checked = false;
-            overrideOverdueDays.disabled = true;
-        }
-    }
-
-    // Manage Section Visibility
-    let timeSettingsOpen = false;
-    if (taskId && this.tasks[taskId]) {
-        const t = this.tasks[taskId];
-        const now = new Date();
-        now.setHours(0, 0, 0, 0);
-        const isPaused = t.paused_until && new Date(t.paused_until) >= now;
-        const hasOverride = t.override_overdue_days !== null && t.override_overdue_days !== undefined;
-        
-        if (isPaused || hasOverride) timeSettingsOpen = true;
-    }
-    this._setSectionState('time-settings-content', timeSettingsOpen);
-    this._setSectionState('subtasks-content', this._subtasks.length > 0);
-    this._renderModalSubtasks();
-
-    const picker = this.shadowRoot.getElementById('f-icon-picker');
-    if (picker) picker.value = this._currentIcon; 
-    
-    modal.classList.add('open');
-  }
-
-  /**
-   * Fills the "From template" dropdown of the task editor. It is only shown
-   * when a new task is created and at least one template exists.
-   * @param {boolean} isNew - True when creating a new task.
-   */
-  _fillTemplateSelect(isNew) {
-    const wrap = this.shadowRoot.getElementById('template-select-wrap');
-    const sel = this.shadowRoot.getElementById('f-template');
-    if (!wrap || !sel) return;
+  async _openModal(taskId = null) {
+    const ed = await this._ensureTaskEditor();
+    const t = taskId && this.tasks[taskId] ? this.tasks[taskId] : null;
+    this._editingTaskId = t ? taskId : null;
+    const kids = (this.settings && this.settings.kids) || {};
     const templates = Object.values(this.templates || {}).sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    wrap.style.display = isNew && templates.length > 0 ? 'block' : 'none';
-    sel.innerHTML = '';
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = this.localize('from_template_ph');
-    sel.appendChild(placeholder);
-    templates.forEach(t => {
-        const opt = document.createElement('option');
-        opt.value = t.id;
-        opt.textContent = t.name;
-        sel.appendChild(opt);
-    });
-    sel.value = '';
-  }
-
-  /** Fills the reminder switch, time select and notify target select of the task editor. */
-  _setReminderFields(at, target) {
-    const sw = this.shadowRoot.getElementById('f-reminder');
-    const time = this.shadowRoot.getElementById('f-reminder-at');
-    const tgt = this.shadowRoot.getElementById('f-reminder-target');
-    if (sw) sw.checked = !!at;
-    if (time) time.innerHTML = toCardTimeOptions(at || '18:00', '—');
-    if (tgt) tgt.innerHTML = toCardNotifyOptions(this._hass, target || '', this.localize('reminder_event_only'));
-    const row = this.shadowRoot.getElementById('f-reminder-row');
-    if (row) row.hidden = !at;
-  }
-
-  /**
-   * Fills the kids-mode fields (category, minimum age, approval) of the task editor.
-   * Legacy/unknown categories (e.g. "Allgemein") are shown as "basis".
-   * @param {string} category - basis | bonus | auftrag.
-   * @param {number} minAge - Minimum age in years (0 = any).
-   * @param {boolean} requiresApproval - A parent has to approve completions by kids.
-   */
-  /** Scope select of the task editor ("home" | "personal"; anything else = home). */
-  _setScope(scope) {
-    const sel = this.shadowRoot.getElementById('f-scope');
-    if (sel) sel.value = scope === 'personal' ? 'personal' : 'home';
-  }
-
-  /** Weekend window and the "only after homework" switch (shown when a homework task exists). */
-  _setWeekendFields(t) {
-    const set = (id, value) => { const el = this.shadowRoot.getElementById(id); if (el) el.innerHTML = toCardTimeOptions(value || '', '—'); };
-    set('f-available-from-we', t.available_from_we);
-    set('f-available-until-we', t.available_until_we);
-    this._afterKey = typeof t.after_key === 'string' ? t.after_key : '';
-    const hasHomework = Object.values(this.tasks || {}).some(x => x && !x.parent_task &&
-      (x.catalog_key === 'homework' || String(x.wizard_key || '').split(':')[0] === 'homework'));
-    const wrap = this.shadowRoot.getElementById('f-after-wrap');
-    if (wrap) wrap.style.display = hasHomework || this._afterKey === 'homework' ? '' : 'none';
-    const sw = this.shadowRoot.getElementById('f-after');
-    if (sw) sw.checked = this._afterKey === 'homework';
-  }
-
-  /** `after_key` for the payload: the switch decides about "homework", any other stored key stays. */
-  _afterKeyValue() {
-    const wrap = this.shadowRoot.getElementById('f-after-wrap');
-    const sw = this.shadowRoot.getElementById('f-after');
-    if (wrap && wrap.style.display !== 'none' && sw) return sw.checked ? 'homework' : (this._afterKey && this._afterKey !== 'homework' ? this._afterKey : null);
-    return this._afterKey || null;
-  }
-
-  _setCategoryFields(category, minAge, requiresApproval = false, availableFrom = null, availableUntil = null, requiresRoutine = false, reminderAt = null, reminderTarget = '', allowTogether = undefined) {
-    this._setReminderFields(reminderAt, reminderTarget);
-    const routine = this.shadowRoot.getElementById('f-routine');
-    if (routine) routine.checked = !!requiresRoutine;
-    const together = this.shadowRoot.getElementById('f-together');
-    if (together) together.checked = allowTogether === undefined || allowTogether === null ? ['bonus', 'auftrag'].includes(category) : !!allowTogether;
-    const from = this.shadowRoot.getElementById('f-available-from');
-    const until = this.shadowRoot.getElementById('f-available-until');
-    if (from) from.innerHTML = toCardTimeOptions(availableFrom || '', '—');
-    if (until) until.innerHTML = toCardTimeOptions(availableUntil || '', '—');
-    const sel = this.shadowRoot.getElementById('f-category');
-    const age = this.shadowRoot.getElementById('f-min-age');
-    const approval = this.shadowRoot.getElementById('f-approval');
-    if (approval) approval.checked = !!requiresApproval;
-    if (sel) sel.value = ['basis', 'bonus', 'auftrag'].includes(category) ? category : 'basis';
-    if (age) age.value = Number.isFinite(parseInt(minAge)) ? parseInt(minAge) : 0;
-  }
-
-  /**
-   * Adds a new subtask to the local temporary state of the task editor.
-   */
-  _addSubtask() {
-    const input = this.shadowRoot.getElementById('new-subtask-title');
-    const title = input.value.trim();
-    if (!title) return;
-    
-    this._subtasks.push({ title: title, done: false });
-    input.value = '';
-    this._renderModalSubtasks();
-  }
-
-  /**
-   * Removes a subtask from the local temporary state.
-   * @param {number} index - The index of the subtask to remove.
-   */
-  _removeSubtask(index) {
-    this._subtasks.splice(index, 1);
-    this._renderModalSubtasks();
-  }
-
-  /**
-   * Toggles the 'done' status of a subtask in the editor.
-   * @param {number} index - The index of the subtask.
-   */
-  _toggleSubtaskStatus(index) {
-    this._subtasks[index].done = !this._subtasks[index].done;
-    this._renderModalSubtasks();
-  }
-
-  /**
-   * Renders the list of subtasks in the task editor modal.
-   */
-  _renderModalSubtasks() {
-    const container = this.shadowRoot.getElementById('subtask-list');
-    if (!container) return;
-    
-    if (this._subtasks.length === 0) {
-        container.innerHTML = '';
-        return;
+    ed.hass = this._hass;
+    ed.config = {
+      variant: 'modal', isNew: !t, canDelete: !!t && this._config.show_delete !== false,
+      title: this.localize('task'), showDate: true, advanced: true,
+      homework: this._hasHomeworkTask(),
+      who: { people: Object.entries(this.users || {}).map(([uid, name]) => ({ id: uid, name })), kids: Object.keys(kids) },
+      templates: t ? [] : templates.map(x => ({ id: x.id, name: x.name }))
+    };
+    if (t) {
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      const v = JSON.parse(JSON.stringify(t));
+      v.custom_due_date = t.interval === 0 && !(t.weekdays && t.weekdays.length) ? this._localDay(t.due_date) : '';
+      if (!(t.paused_until && new Date(t.paused_until) >= now)) v.paused_until = null;
+      ed.value = v;
+    } else {
+      ed.value = { name: '', icon: 'mdi:broom', category: 'basis', interval: 7, complexity: 5, assignees: [] };
     }
-
-    container.innerHTML = this._subtasks.map((st, index) => `
-        <div style="display: flex; align-items: center; gap: 8px; background: var(--secondary-background-color); padding: 4px 8px; border-radius: 4px;">
-            <ha-checkbox class="subtask-check" data-index="${index}" ${st.done ? 'checked' : ''}></ha-checkbox>
-            <span style="flex: 1; font-size: 14px; ${st.done ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${st.title}</span>
-            <button class="action-btn btn-del-subtask" data-index="${index}" style="width: 30px; height: 30px;">
-                <ha-icon icon="mdi:close" style="--mdc-icon-size: 18px;"></ha-icon>
-            </button>
-        </div>
-    `).join('');
+    ed.removeAttribute('open');
+    if (!ed.isConnected) this.shadowRoot.appendChild(ed);
+    ed.setAttribute('open', '');
   }
 
   /**
-   * Closes the task editor modal.
+   * Populates the task editor with the data of a template (keeps a chosen "once" rhythm and the advanced settings).
+   * @param {string} templateId - The ID of the template to apply.
    */
-  _closeModal() { 
-      this.shadowRoot.getElementById('task-modal').classList.remove('open'); 
+  _applyTemplate(templateId) {
+    const t = templateId && this.templates[templateId];
+    const ed = this._taskEditor;
+    if (!t || !ed) return;
+    const cur = ed.value;
+    const once = ed.mode === 'once';
+    const v = JSON.parse(JSON.stringify(t));
+    v.interval = once ? 0 : (t.interval > 0 ? t.interval : 7);
+    v.weekdays = once ? [] : (t.weekdays || []);
+    v.custom_due_date = cur.custom_due_date || '';
+    v.assignees = t.assignees || [];
+    v.paused_until = cur.paused_until;
+    v.override_overdue_days = cur.override_overdue_days;
+    ed.value = v;
   }
 
   /**
-   * Gathers data from the modal and saves the task to the backend.
+   * Closes the task editor.
+   */
+  _closeModal() {
+    if (this._taskEditor) this._taskEditor.removeAttribute('open');
+    this._editingTaskId = null;
+  }
+
+  /**
+   * Saves the task (the value object of the shared editor) to the backend.
+   * @param {object} v - Value of the editor.
    * @param {boolean} completeAfterSave - Whether to trigger the completion workflow immediately after saving.
    */
-  _saveTask(completeAfterSave = false) {
-    console.log("Saving task...");
-    const name = this.shadowRoot.getElementById('f-name')?.value?.trim();
-    if (!name) {
-        this._showToast("Name ist erforderlich!");
-        return;
-    }
-
+  _saveTask(v, completeAfterSave = false) {
+    const subtasks = v.subtasks || [];
     let shouldComplete = completeAfterSave;
-    if (!shouldComplete && this._subtasks.length > 0 && this._subtasks.every(st => st.done)) {
+    if (!shouldComplete && subtasks.length > 0 && subtasks.every(st => st.done)) {
         if (confirm(this.localize('confirm_task_complete'))) {
             shouldComplete = true;
         }
     }
 
-    const assignees = [];
-    const isOnetime = this.shadowRoot.getElementById('btn-type-onetime')?.classList.contains('active') || false;
-    this.shadowRoot.querySelectorAll('.assignee-cb').forEach(cb => {
-        if (cb.checked) assignees.push(cb.value);
-    });
-    
-    const setCustomDueDateCb = this.shadowRoot.getElementById('f-set-due-date-cb')?.checked || false;
-    const customDueDateVal = this.shadowRoot.getElementById('f-custom-due-date')?.value;
-    let customDueDate = null;
-    if (setCustomDueDateCb) {
-        if (customDueDateVal) customDueDate = customDueDateVal;
-        else customDueDate = new Date().toISOString().split('T')[0];
-    }
-
-    const isPausedCb = this.shadowRoot.getElementById('f-pause-cb')?.checked || false;
-    const pauseDateVal = this.shadowRoot.getElementById('f-pause-date')?.value;
-    const pausedUntil = (isPausedCb && pauseDateVal) ? pauseDateVal : null;
-
-    const isOverrideOverdueCb = this.shadowRoot.getElementById('f-override-overdue-cb')?.checked || false;
-    const overrideOverdueDaysVal = this.shadowRoot.getElementById('f-override-overdue-days')?.value;
-    const overrideOverdueDays = (isOverrideOverdueCb && overrideOverdueDaysVal) ? (parseInt(overrideOverdueDaysVal) || null) : null;
-
     const payload = {
-      name: name, 
-      description: this.shadowRoot.getElementById('f-description')?.value || "",
-      area: this.shadowRoot.getElementById('f-area')?.value || "",
-      interval: isOnetime ? 0 : parseInt(this.shadowRoot.getElementById('f-interval')?.value) || 7,
-      complexity: parseInt(this.shadowRoot.getElementById('f-complexity')?.value) || 5, 
-      icon: this.shadowRoot.getElementById('f-icon-picker')?.value || "mdi:broom",
-      category: this.shadowRoot.getElementById('f-category')?.value || "basis",
-      min_age: Math.max(0, Math.min(18, parseInt(this.shadowRoot.getElementById('f-min-age')?.value) || 0)),
-      requires_approval: !!this.shadowRoot.getElementById('f-approval')?.checked,
-      requires_routine: !!this.shadowRoot.getElementById('f-routine')?.checked,
-      allow_together: !!this.shadowRoot.getElementById('f-together')?.checked,
+      name: v.name,
+      description: v.description || "",
+      area: v.area || "",
+      interval: v.interval,
+      complexity: v.complexity,
+      icon: v.icon || "mdi:broom",
+      category: v.category || "basis",
+      min_age: v.min_age,
+      requires_approval: v.requires_approval,
+      requires_routine: v.requires_routine,
+      allow_together: v.allow_together,
       // time window for kids ("" = no limit); the backend stores an empty value as "no limit"
-      available_from: this.shadowRoot.getElementById('f-available-from')?.value || "",
-      available_until: this.shadowRoot.getElementById('f-available-until')?.value || "",
-      available_from_we: this.shadowRoot.getElementById('f-available-from-we')?.value || "",
-      available_until_we: this.shadowRoot.getElementById('f-available-until-we')?.value || "",
-      after_key: this._afterKeyValue(),
+      available_from: v.available_from,
+      available_until: v.available_until,
+      available_from_we: v.available_from_we,
+      available_until_we: v.available_until_we,
+      after_key: v.after_key,
       // reminder: switch off = no reminder; "" target = only the event
-      reminder_at: this.shadowRoot.getElementById('f-reminder')?.checked ? (this.shadowRoot.getElementById('f-reminder-at')?.value || "18:00") : "",
-      reminder_target: this.shadowRoot.getElementById('f-reminder')?.checked ? (this.shadowRoot.getElementById('f-reminder-target')?.value || "") : "",
-      assignees: assignees,
-      scope: this.shadowRoot.getElementById('f-scope')?.value === 'personal' ? 'personal' : 'home',
+      reminder_at: v.reminder_at,
+      reminder_target: v.reminder_target,
+      assignees: v.assignees || [],
+      scope: v.scope === 'personal' ? 'personal' : 'home',
       // weekday schedule replaces the interval ([] = none); rotation null = kids do not take turns
-      weekdays: isOnetime ? [] : this._getWeekdays(),
-      rotation: this._getRotation(),
-      custom_due_date: customDueDate,
-      paused_until: pausedUntil,
-      override_overdue_days: overrideOverdueDays,
-      subtasks: this._subtasks
+      weekdays: v.weekdays,
+      rotation: v.rotation || null,
+      custom_due_date: v.custom_due_date || null,
+      paused_until: v.paused_until || null,
+      override_overdue_days: v.override_overdue_days === undefined ? null : v.override_overdue_days,
+      subtasks: subtasks
     };
-    
+    if (v.catalog_key) payload.catalog_key = v.catalog_key;
+
     const type = this._editingTaskId ? 'family_mission/edit_task' : 'family_mission/add_task';
     if (this._editingTaskId) payload.task_id = this._editingTaskId;
-    
+    const editedId = this._editingTaskId;
+
     this._hass.callWS({ type, ...payload })
       .then(() => { 
         this._showToast(this.localize('saved')); 
         this._closeModal(); 
         this._fetchData(); 
         if (shouldComplete) {
-            const finalTaskId = this._editingTaskId || 
+            const finalTaskId = editedId || 
                                Object.values(this.tasks).find(t => t.name === payload.name)?.id;
             
             if (finalTaskId) {
@@ -1308,25 +1008,6 @@ class FamilyMissionCard extends HTMLElement {
           .modal.open { display: flex; } 
           .modal-content { background: var(--card-background-color); color: var(--primary-text-color); padding: 24px; border-radius: 12px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; box-shadow: 0px 4px 16px rgba(0,0,0,0.5); } 
           
-          .form-label { font-size: 14px; font-weight: 500; color: var(--primary-text-color); margin-bottom: 4px; display: block; } 
-          .task-type-selector { display: flex; border: 1px solid var(--divider-color); border-radius: 8px; overflow: hidden; margin-bottom: 20px; }
-          .type-btn { flex: 1; padding: 12px; background: transparent; border: none; cursor: pointer; color: var(--secondary-text-color); font-size: 14px; font-weight: 500; transition: background-color 0.2s, color 0.2s; }
-          .type-btn.active { background: var(--primary-color); color: var(--text-primary-color, white); }
-          .form-row { display: flex; gap: 16px; }
-          .form-row[hidden] { display: none; }
-          .form-col { flex: 1; }
-          .wd-chips { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 6px; }
-          .wd-chip { min-width: 40px; min-height: 36px; padding: 0 8px; border-radius: 18px; border: 1px solid var(--divider-color); background: transparent; color: var(--primary-text-color); font: inherit; cursor: pointer; }
-          .wd-chip.active { background: var(--primary-color); color: var(--text-primary-color, #fff); border-color: var(--primary-color); }
-          .form-select { width: 100%; box-sizing: border-box; height: 56px; padding: 0 12px; border: 1px solid var(--divider-color); border-radius: 4px; background: var(--card-background-color); color: var(--primary-text-color); font-family: inherit; font-size: 16px; }
-          .template-suggestions { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
-          .suggestion-item { background: transparent; border: none; color: var(--primary-color); cursor: pointer; text-align: left; padding: 4px 0; font-size: 14px; }
-          .suggestion-item:hover { text-decoration: underline; }
-
-          .collapsible-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; cursor: pointer; border-top: 1px solid var(--divider-color); margin-top: 8px; color: var(--primary-text-color); font-weight: 500; }
-          .collapsible-content { display: none; flex-direction: column; gap: 16px; padding: 8px 0 16px 0; }
-          .subtask-input-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-          .subtask-list { display: flex; flex-direction: column; gap: 6px; }
         </style>
       `;
   }
@@ -1388,178 +1069,6 @@ class FamilyMissionCard extends HTMLElement {
             </div>
         </div>
         
-        <div id="task-modal" class="modal">
-            <div class="modal-content">
-                <h2 style="margin: 0 0 20px 0;">${this.localize('task')}</h2>
-                
-                <div class="task-type-selector">
-                    <button class="type-btn" id="btn-type-recurring">${this.localize('recurring')}</button>
-                    <button class="type-btn" id="btn-type-onetime">${this.localize('onetime')}</button>
-                </div>
-
-                <div style="display:flex; flex-direction:column; gap:16px;">
-                    <div id="template-select-wrap" style="display: none;">
-                        <label class="form-label" for="f-template">${this.localize('from_template_lbl')}</label>
-                        <select id="f-template" class="form-select"></select>
-                    </div>
-                    <div>
-                        <ha-input id="f-name" label="${this.localize('name_lbl')}" style="width: 100%;"></ha-input>
-                        <div id="template-suggestions"></div>
-                    </div>
-                    <ha-input id="f-description" label="${this.localize('desc_lbl')}"></ha-input>
-                    
-                    <div class="form-row">
-                        <ha-input id="f-interval" type="number" label="${this.localize('interval_lbl')}" class="form-col"></ha-input>
-                        <ha-input id="f-complexity" type="number" label="${this.localize('points_lbl')}" min="1" max="10" class="form-col"></ha-input>
-                    </div>
-                    <div>
-                        <label class="form-label">${this.localize('weekdays_lbl')}</label>
-                        <div class="wd-chips" role="group" aria-label="${this.localize('weekdays_lbl')}">
-                            ${this.localize('weekday_short').split(',').map((d, i) => `<button type="button" class="wd-chip" data-wd="${i}" aria-pressed="false">${d}</button>`).join('')}
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label class="form-label">${this.localize('icon_lbl')}</label>
-                            <ha-icon-picker id="f-icon-picker"></ha-icon-picker>
-                        </div>
-                        <div class="form-col">
-                            <label class="form-label">${this.localize('area_lbl')}</label>
-                            <ha-area-picker id="f-area"></ha-area-picker>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label class="form-label" for="f-category">${this.localize('category_lbl')}</label>
-                            <select id="f-category" class="form-select">
-                                <option value="basis">${this.localize('cat_basis')}</option>
-                                <option value="bonus">${this.localize('cat_bonus')}</option>
-                                <option value="auftrag">${this.localize('cat_auftrag')}</option>
-                            </select>
-                        </div>
-                        <ha-input id="f-min-age" type="number" min="0" max="18" label="${this.localize('min_age_lbl')}" class="form-col"></ha-input>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label class="form-label" for="f-scope">${this.localize('scope_lbl')}</label>
-                            <select id="f-scope" class="form-select">
-                                <option value="home">${this.localize('scope_home')}</option>
-                                <option value="personal">${this.localize('scope_personal')}</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label class="form-label" for="f-available-from">${this.localize('available_from_lbl')}</label>
-                            <select id="f-available-from" class="form-select">${toCardTimeOptions('', '—')}</select>
-                        </div>
-                        <div class="form-col">
-                            <label class="form-label" for="f-available-until">${this.localize('available_until_lbl')}</label>
-                            <select id="f-available-until" class="form-select">${toCardTimeOptions('', '—')}</select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-col">
-                            <label class="form-label" for="f-available-from-we">${this.localize('available_from_we_lbl')}</label>
-                            <select id="f-available-from-we" class="form-select">${toCardTimeOptions('', '—')}</select>
-                        </div>
-                        <div class="form-col">
-                            <label class="form-label" for="f-available-until-we">${this.localize('available_until_we_lbl')}</label>
-                            <select id="f-available-until-we" class="form-select">${toCardTimeOptions('', '—')}</select>
-                        </div>
-                    </div>
-                    <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('weekend_window_hint')}</div>
-                    <ha-formfield id="f-after-wrap" label="${this.localize('after_homework_lbl')}" style="display:none">
-                        <ha-switch id="f-after"></ha-switch>
-                    </ha-formfield>
-                    <ha-formfield label="${this.localize('approval_lbl')}">
-                        <ha-switch id="f-approval"></ha-switch>
-                    </ha-formfield>
-                    <ha-formfield label="${this.localize('routine_lbl')}">
-                        <ha-switch id="f-routine"></ha-switch>
-                    </ha-formfield>
-                    <ha-formfield label="${this.localize('together_lbl')}">
-                        <ha-switch id="f-together"></ha-switch>
-                    </ha-formfield>
-                    <ha-formfield label="${this.localize('reminder_lbl')}">
-                        <ha-switch id="f-reminder"></ha-switch>
-                    </ha-formfield>
-                    <div class="form-row" id="f-reminder-row" hidden>
-                        <div class="form-col">
-                            <label class="form-label" for="f-reminder-at">${this.localize('reminder_time_lbl')}</label>
-                            <select id="f-reminder-at" class="form-select">${toCardTimeOptions('18:00', '—')}</select>
-                        </div>
-                        <div class="form-col">
-                            <label class="form-label" for="f-reminder-target">${this.localize('reminder_target_lbl')}</label>
-                            <select id="f-reminder-target" class="form-select">${toCardNotifyOptions(this._hass, '', this.localize('reminder_event_only'))}</select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="form-label">${this.localize('assignees_lbl')}</label>
-                        <div style="display:flex; flex-direction:column; gap:8px; padding-top:8px;">
-                            ${Object.entries(this.users).map(([uid, name]) => `
-                                <ha-formfield label="${name}">
-                                    <ha-checkbox class="assignee-cb" id="cb-${uid}" value="${uid}"></ha-checkbox>
-                                </ha-formfield>
-                            `).join('')}
-                        </div>
-                        <div id="f-rotation-row" hidden style="padding-top:8px;">
-                            <ha-formfield label="${this.localize('rotation_lbl')}">
-                                <ha-switch id="f-rotation"></ha-switch>
-                            </ha-formfield>
-                            <div class="form-label" style="font-size:12px;opacity:.7;">${this.localize('rotation_hint')}</div>
-                        </div>
-                    </div>
-                    
-                    <div id="toggle-time-settings" class="collapsible-header">
-                        <span>${this.localize('time_settings')}</span>
-                        <ha-icon icon="mdi:chevron-down"></ha-icon>
-                    </div>
-                    <div id="time-settings-content" class="collapsible-content">
-                        <div style="display:flex; flex-direction:column; gap:16px;">
-                            <div style="display:flex; align-items:center; gap:16px;">
-                                <ha-formfield label="${this.localize('set_due_today')}">
-                                    <ha-switch id="f-set-due-date-cb"></ha-switch>
-                                </ha-formfield>
-                                <input type="date" id="f-custom-due-date" style="flex:1; height: 56px; box-sizing: border-box; padding: 0 16px; border: 1px solid var(--divider-color); border-radius: 4px; background: transparent; color: var(--primary-text-color); font-size: 16px; font-family: inherit;" disabled>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:16px;">
-                                <ha-formfield label="${this.localize('override_overdue_lbl')}">
-                                    <ha-switch id="f-override-overdue-cb"></ha-switch>
-                                </ha-formfield>
-                                <ha-input id="f-override-overdue-days" type="number" min="0" max="9999" style="flex:1;" placeholder="${this.localize('override_overdue_days_placeholder')}" disabled></ha-input>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:16px;">
-                                <ha-formfield label="${this.localize('pause_until')}">
-                                    <ha-switch id="f-pause-cb"></ha-switch>
-                                </ha-formfield>
-                                <input type="date" id="f-pause-date" style="flex:1; height: 56px; box-sizing: border-box; padding: 0 16px; border: 1px solid var(--divider-color); border-radius: 4px; background: transparent; color: var(--primary-text-color); font-size: 16px; font-family: inherit;" disabled>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="toggle-subtasks" class="collapsible-header">
-                        <span>${this.localize('subtasks')}</span>
-                        <ha-icon icon="mdi:chevron-down"></ha-icon>
-                    </div>
-                    <div id="subtasks-content" class="collapsible-content">
-                        <div class="subtask-input-row">
-                            <ha-input id="new-subtask-title" placeholder="${this.localize('subtask_placeholder')}" style="flex: 1;"></ha-input>
-                            <ha-button id="btn-add-subtask">${this.localize('confirm')}</ha-button>
-                        </div>
-                        <div id="subtask-list" class="subtask-list"></div>
-                    </div>
-                </div>
-                
-                <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:24px;">
-                    <ha-button appearance="plain" variant="brand" id="btn-modal-cancel">${this.localize('cancel')}</ha-button>
-                    <ha-button raised id="btn-modal-save">${this.localize('save')}</ha-button>
-                </div>
-            </div>
-        </div>
       </ha-card>
     `;
     
@@ -1574,205 +1083,6 @@ class FamilyMissionCard extends HTMLElement {
         });
     }
 
-    const nameField = this.shadowRoot.getElementById('f-name');
-    if (nameField) {
-        nameField.addEventListener('input', (e) => this._handleTemplateSuggestions(e));
-    }
-
-    const templateSelect = this.shadowRoot.getElementById('f-template');
-    if (templateSelect) {
-        templateSelect.addEventListener('change', (e) => {
-            if (e.target.value) this._applyTemplate(e.target.value);
-        });
-    }
-    
-    const iconPicker = this.shadowRoot.getElementById('f-icon-picker');
-    if (iconPicker) iconPicker.hass = this._hass; 
-    
-    const areaPicker = this.shadowRoot.getElementById('f-area');
-    if (areaPicker) areaPicker.hass = this._hass;
-    
-    const pauseCb = this.shadowRoot.getElementById('f-pause-cb');
-    const pauseDate = this.shadowRoot.getElementById('f-pause-date');
-    if (pauseCb && pauseDate) {
-        pauseCb.addEventListener('change', (e) => {
-            pauseDate.disabled = !e.target.checked;
-            if (e.target.checked && !pauseDate.value) {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                pauseDate.value = tomorrow.toISOString().split('T')[0];
-            }
-        });
-    }
-
-    const setDueDateCb = this.shadowRoot.getElementById('f-set-due-date-cb');
-    const customDueDateInput = this.shadowRoot.getElementById('f-custom-due-date');
-    if (setDueDateCb && customDueDateInput) {
-        setDueDateCb.addEventListener('change', (e) => {
-            customDueDateInput.disabled = !e.target.checked;
-            if (e.target.checked && !customDueDateInput.value) {
-                const today = new Date();
-                customDueDateInput.value = today.toISOString().split('T')[0];
-            }
-        });
-    }
-
-    const categorySel = this.shadowRoot.getElementById('f-category');
-    if (categorySel) categorySel.addEventListener('change', (e) => {
-        const together = this.shadowRoot.getElementById('f-together');
-        if (together) together.checked = e.target.value !== 'basis';
-    });
-
-    this.shadowRoot.querySelectorAll('.assignee-cb').forEach(cb => cb.addEventListener('change', () => this._syncScheduleUI()));
-
-    const reminderSw = this.shadowRoot.getElementById('f-reminder');
-    if (reminderSw) reminderSw.addEventListener('change', (e) => {
-        const row = this.shadowRoot.getElementById('f-reminder-row');
-        if (row) row.hidden = !e.target.checked;
-    });
-
-    const overrideOverdueCb = this.shadowRoot.getElementById('f-override-overdue-cb');
-    const overrideOverdueDays = this.shadowRoot.getElementById('f-override-overdue-days');
-    if (overrideOverdueCb && overrideOverdueDays) {
-        overrideOverdueCb.addEventListener('change', (e) => {
-            overrideOverdueDays.disabled = !e.target.checked;
-            if (!e.target.checked) {
-                overrideOverdueDays.value = "";
-            }
-        });
-    }
-  }
-
-  /** Selected weekdays of the task editor (Mon=0 ... Sun=6), sorted. */
-  _getWeekdays() {
-    return Array.from(this.shadowRoot.querySelectorAll('.wd-chip.active'))
-      .map(b => parseInt(b.dataset.wd)).sort((a, b) => a - b);
-  }
-
-  /** Marks the weekday chips of `days` and updates the dependent fields. */
-  _setWeekdays(days) {
-    const set = new Set(Array.isArray(days) ? days : []);
-    this.shadowRoot.querySelectorAll('.wd-chip').forEach(b => {
-      b.classList.toggle('active', set.has(parseInt(b.dataset.wd)));
-      b.setAttribute('aria-pressed', String(b.classList.contains('active')));
-    });
-    this._syncScheduleUI();
-  }
-
-  _toggleWeekday(btn) {
-    btn.classList.toggle('active');
-    btn.setAttribute('aria-pressed', String(btn.classList.contains('active')));
-    if (this._getWeekdays().length) this._updateTaskTypeUI(false);   // weekdays only make sense for a recurring task
-    this._syncScheduleUI();
-  }
-
-  /** Weekdays replace the interval; the rotation switch needs two or more kids among the assignees. */
-  _syncScheduleUI() {
-    const interval = this.shadowRoot.getElementById('f-interval');
-    const onetime = this.shadowRoot.getElementById('btn-type-onetime')?.classList.contains('active');
-    if (interval) interval.disabled = !!onetime || this._getWeekdays().length > 0;
-    const kids = this.settings && this.settings.kids ? this.settings.kids : {};
-    const picked = Array.from(this.shadowRoot.querySelectorAll('.assignee-cb')).filter(cb => cb.checked && kids[cb.value]);
-    const row = this.shadowRoot.getElementById('f-rotation-row');
-    const sw = this.shadowRoot.getElementById('f-rotation');
-    if (row) row.hidden = picked.length < 2;
-    if (sw && picked.length < 2) sw.checked = false;
-  }
-
-  /** Rotation of the editor: the selected kids take turns, or null. */
-  _getRotation() {
-    const kids = this.settings && this.settings.kids ? this.settings.kids : {};
-    const sw = this.shadowRoot.getElementById('f-rotation');
-    const members = Array.from(this.shadowRoot.querySelectorAll('.assignee-cb')).filter(cb => cb.checked && kids[cb.value]).map(cb => cb.value);
-    return (sw && sw.checked && members.length >= 2) ? { members } : null;
-  }
-
-  /**
-   * Updates the UI state when switching between recurring and one-time tasks.
-   * @param {boolean} isOnetime - Whether the task is one-time.
-   */
-  _updateTaskTypeUI(isOnetime) {
-    const intervalField = this.shadowRoot.getElementById('f-interval');
-    const btnOnetime = this.shadowRoot.getElementById('btn-type-onetime');
-    const btnRecurring = this.shadowRoot.getElementById('btn-type-recurring');
-
-    if (isOnetime) {
-        intervalField.value = 0;
-        this._setWeekdays([]);
-        btnOnetime.classList.add('active');
-        btnRecurring.classList.remove('active');
-    } else {
-        if (intervalField.value == 0) intervalField.value = 7;
-        btnOnetime.classList.remove('active');
-        btnRecurring.classList.add('active');
-    }
-    this._syncScheduleUI();
-  }
-
-  /**
-   * Searches for templates matching the current input name and displays suggestions.
-   * @param {Event} e - The input event.
-   */
-  _handleTemplateSuggestions(e) {
-    const input = e.target.value.toLowerCase();
-    const suggestionsContainer = this.shadowRoot.getElementById('template-suggestions');
-    suggestionsContainer.innerHTML = '';
-
-    if (this._editingTaskId || input.length < 3) {
-        return;
-    }
-
-    const matchingTemplates = Object.values(this.templates).filter(t => 
-        t.name.toLowerCase().includes(input)
-    );
-
-    if (matchingTemplates.length > 0) {
-        matchingTemplates.slice(0, 5).forEach(template => {
-            const suggestionEl = document.createElement('button');
-            suggestionEl.className = 'suggestion-item';
-            suggestionEl.dataset.id = template.id;
-            suggestionEl.textContent = this.localize('recreate_task_prompt', { taskName: template.name });
-            suggestionsContainer.appendChild(suggestionEl);
-        });
-    }
-  }
-
-  /**
-   * Populates the task editor with data from a template.
-   * @param {string} templateId - The ID of the template to apply.
-   */
-  _applyTemplate(templateId) {
-    if (templateId && this.templates[templateId]) {
-        const t = this.templates[templateId];
-        this.shadowRoot.getElementById('f-name').value = t.name;
-        this.shadowRoot.getElementById('f-description').value = t.description || '';
-        this.shadowRoot.getElementById('f-area').value = t.area || '';
-        this.shadowRoot.getElementById('f-complexity').value = t.complexity || 5;
-        this.shadowRoot.getElementById('f-icon-picker').value = t.icon || 'mdi:broom';
-        this._setCategoryFields(t.category, t.min_age, t.requires_approval, t.available_from, t.available_until, t.requires_routine, t.reminder_at, t.reminder_target, t.allow_together);
-        this._setWeekendFields(t);
-        this._setScope(t.scope);
-        this.shadowRoot.getElementById('template-suggestions').innerHTML = '';
-        
-        this._subtasks = t.subtasks ? JSON.parse(JSON.stringify(t.subtasks)) : [];
-        this._renderModalSubtasks();
-        this._setSectionState('subtasks-content', this._subtasks.length > 0);
-
-        const isOnetimeSelected = this.shadowRoot.getElementById('btn-type-onetime').classList.contains('active');
-        if (isOnetimeSelected) {
-            this.shadowRoot.getElementById('f-interval').value = 0;
-        } else {
-            this.shadowRoot.getElementById('f-interval').value = t.interval > 0 ? t.interval : 7;
-        }
-
-        this.shadowRoot.querySelectorAll('.assignee-cb').forEach(cb => {
-            cb.checked = t.assignees && t.assignees.includes(cb.value);
-        });
-        this._setWeekdays(isOnetimeSelected ? [] : t.weekdays);
-        this._syncScheduleUI();
-        const rot = this.shadowRoot.getElementById('f-rotation');
-        if (rot) rot.checked = !!(t.rotation && Array.isArray(t.rotation.members)) && !this.shadowRoot.getElementById('f-rotation-row').hidden;
-    }
   }
 
   /**
