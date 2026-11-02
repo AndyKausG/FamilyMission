@@ -85,7 +85,7 @@ async def test_kids_catalog_is_localized_with_defaults(hass, env):
     assert morning["scope"] == "personal" and entries["trash"]["scope"] == "home"
     assert morning["available_from"] == "05:00" and morning["available_until"] == "10:00"
     assert morning["frequent"] is True and entries["windows"]["frequent"] is False
-    assert all(set(s) == {"title"} and s["title"] for s in morning["subtasks"])
+    assert all(set(s) == {"title", "min_age"} and s["title"] for s in morning["subtasks"])
     # the household features hide entries that need one
     assert entries["dishwasher_load"]["available"] is True        # no wizard run: nothing is hidden
 

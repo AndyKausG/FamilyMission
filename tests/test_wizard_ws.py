@@ -121,10 +121,12 @@ async def test_apply_creates_everything(hass, hass_ws_client, setup):
     assert morning["name"] == "Morgen-Mission Anna" and morning["assignees"] == [ANNA]
     assert morning["complexity"] == 2 and morning["interval"] == 1 and morning["category"] == "basis"
     assert morning["min_age"] == 6 and morning["generated_by"] == "wizard"
-    assert [s["title"] for s in morning["subtasks"]] == ["Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg"]
+    assert [s["title"] for s in morning["subtasks"]] == [
+        "Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg", "Brotdose & Trinkflasche einpacken"]
     assert "room_blitz:person.david" not in tasks and "room_blitz_small:person.david" in tasks
     deep = tasks["room_deep:person.david"]
-    assert [s["title"] for s in deep["subtasks"]] == ["Boden frei", "Regal ordnen", "Müll raus"]
+    assert [s["title"] for s in deep["subtasks"]] == [
+        "Boden frei", "Regal ordnen", "Kleidung in den Schrank", "Müll raus"]
 
     # rotation: staggered due dates, interval x n
     assert tasks["table_set:person.anna"]["interval"] == 4

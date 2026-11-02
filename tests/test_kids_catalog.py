@@ -63,11 +63,13 @@ def test_david_tasks():
     for missing in ("room_blitz", "dishwasher_load", "garden", "driveway", "bedding"):
         assert missing not in keys(david)
     deep = next(t for t in david["tasks"] if t["catalog_key"] == "room_deep")
-    assert [s["title"] for s in deep["subtasks"]] == ["Boden frei", "Regal ordnen", "Müll raus"]
+    assert [s["title"] for s in deep["subtasks"]] == [
+        "Boden frei", "Regal ordnen", "Kleidung in den Schrank", "Müll raus"]   # no dust / vacuum for a 6-year-old
     assert deep["name"] == "Zimmer gründlich David" and deep["kid_id"] == DAVID
     evening = next(t for t in david["tasks"] if t["catalog_key"] == "evening")
     assert [s["title"] for s in evening["subtasks"]] == [
-        "Schulranzen packen", "Schuhe & Jacke an ihren Platz", "Schmutzwäsche in den Korb"]
+        "Schulranzen packen", "Schuhe & Jacke an ihren Platz", "Schmutzwäsche in den Korb",
+        "Zähne putzen", "Schlafanzug an"]   # "Kleidung für morgen rauslegen" starts at 8
     anna_deep = next(t for t in kid(p, ANNA)["tasks"] if t["catalog_key"] == "room_deep")
     assert "Staubsaugen" in [s["title"] for s in anna_deep["subtasks"]]
 
@@ -415,7 +417,7 @@ def test_flow_catalog_localized_defaults():
     en = {e["key"]: e for e in kc.flow_catalog("en")}
     assert set(de) == {e["key"] for e in kc.CATALOG}
     assert de["morning"]["name"] == "Morgen-Mission" and en["morning"]["name"] == "Morning mission"
-    assert de["morning"]["subtasks"][0] == {"title": "Anziehen"}
+    assert de["morning"]["subtasks"][0] == {"title": "Anziehen", "min_age": 0}
     assert de["morning"]["frequent"] is True and de["car"]["frequent"] is False
     assert de["room_blitz"]["requires_approval"] is True and de["trash"]["category"] == "bonus"
 
@@ -430,12 +432,74 @@ def test_flow_catalog_features_hide_entries_and_subtasks():
     assert all(e["available"] for e in kc.flow_catalog("en"))
 
 
-def test_morning_mission_has_breakfast_and_teeth_steps():
+def test_flow_catalog_filters_steps_by_age():
+    older = {e["key"]: e for e in kc.flow_catalog("en", None, 10)}
+    younger = {e["key"]: e for e in kc.flow_catalog("en", None, 6)}
+    titles = lambda entries, key: [s["title"] for s in entries[key]["subtasks"]]   # noqa: E731
+    assert "Chop" in titles(older, "cooking") and "Chop" not in titles(younger, "cooking")
+    assert "Add tab & start" in titles(older, "dishwasher_load") and "Add tab & start" not in titles(younger, "dishwasher_load")
+    # without an age every step stays (the client filters by min_age)
+    everything = {e["key"]: e for e in kc.flow_catalog("en")}
+    assert {"title": "Chop", "min_age": 10} in everything["cooking"]["subtasks"]
+
+
+def test_morning_and_evening_missions_steps():
     morning = kc.CATALOG_BY_KEY["morning"]
     assert [s["title_de"] for s in morning["subtasks"]] == [
-        "Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg"]
+        "Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg",
+        "Brotdose & Trinkflasche einpacken"]
     assert [s["title_en"] for s in morning["subtasks"]] == [
-        "Get dressed", "Have breakfast", "Brush teeth", "Make the bed", "Put pajamas away"]
+        "Get dressed", "Have breakfast", "Brush teeth", "Make the bed", "Put pajamas away",
+        "Pack lunch box & water bottle"]
+    lunch = morning["subtasks"][-1]
+    assert lunch["min_age"] == 8 and lunch["requires"] == "school"
+    evening = kc.CATALOG_BY_KEY["evening"]
+    assert [s["title_en"] for s in evening["subtasks"]][-3:] == [
+        "Brush teeth", "Put on pajamas", "Lay out clothes for tomorrow"]
+
+
+def test_every_catalog_entry_but_the_unload_has_steps_and_they_are_filtered_by_age_and_feature():
+    for key, entry in kc.CATALOG_BY_KEY.items():
+        assert entry["subtasks"], key
+    p = proposal()
+    anna = kid(p, ANNA)         # 12 years, with school
+    david = kid(p, DAVID)       # 6 years
+    def steps(k, key):
+        return [s["title"] for s in next(t for t in k["tasks"] if t["catalog_key"] == key)["subtasks"]]
+    assert "Brotdose & Trinkflasche einpacken" in steps(anna, "morning")
+    assert "Brotdose & Trinkflasche einpacken" not in steps(david, "morning")
+    assert "Kleidung für morgen rauslegen" in steps(anna, "evening")
+    assert "Staub wischen" in steps(anna, "room_deep") and "Staub wischen" not in steps(david, "room_deep")
+    no_school = kc.build_proposal(KIDS, ["dishwasher"], FIRST, "start", current_year=2026)
+    assert "Brotdose & Trinkflasche einpacken" not in [
+        s["title"] for s in next(t for t in kid(no_school, ANNA)["tasks"] if t["catalog_key"] == "morning")["subtasks"]]
+
+
+def test_legacy_subtasks_cover_the_previous_step_lists():
+    # the pre-1504f00 morning list and the one before this change are frozen
+    assert [s["title_de"] for s in kc.LEGACY_SUBTASKS["morning"][0]] == ["Anziehen", "Bett machen", "Schlafanzug weg"]
+    assert len(kc.LEGACY_SUBTASKS["morning"][1]) == 5
+    assert set(kc.LEGACY_SUBTASKS) <= set(kc.CATALOG_BY_KEY)
+    assert "dishwasher_unload" not in kc.LEGACY_SUBTASKS
+
+
+def test_tasks_generated_with_old_step_lists_are_not_customized():
+    def task(key, titles):
+        return {**_generated(key), "subtasks": [{"title": t, "done": False} for t in titles]}
+
+    # every previous list, in both languages, stays "uncustomized"
+    for lang_key in ("title_de", "title_en"):
+        for key, lists in kc.LEGACY_SUBTASKS.items():
+            generated_key = f"{key}:open" if kc.CATALOG_BY_KEY[key]["mode"] == kc.MODE_OPEN else f"{key}:person.anna"
+            try:
+                base = _generated(generated_key)
+            except StopIteration:
+                continue        # not part of the standard test proposal
+            for steps in lists:
+                old = {**base, "subtasks": [{"title": s[lang_key], "done": False} for s in steps]}
+                assert kc.legacy_customized_fields(old) == [], (key, lang_key)
+    # an old list with an own step is customized, an old list without steps of today's list too
+    assert kc.legacy_customized_fields(task("morning:person.anna", ["Anziehen", "Mein Schritt"])) == ["subtasks"]
 
 
 def _generated(key="morning:person.anna", lang="de"):

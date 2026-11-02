@@ -60,6 +60,7 @@ const I18N_SETTINGS = {
     care_deadline: "Parents are told if unanswered at", care_weekdays: "Days", care_notify: "Tell parents when declined or unanswered",
     care_alert: "Extra alert when declined often", care_alert_count: "times", care_alert_days: "within days",
     care_days: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+    care_after: "Position: after step", care_after_end: "At the end",
     invalid_birthday: "The birthday must be a valid date in the past.",
     approval_title: "Approval & consequences",
     cheat_penalty_factor: "Deduction when cheating (x task points)", cheat_strict_days: "Strict mode after cheating (days, 0 = off)",
@@ -165,6 +166,7 @@ claim_minutes: "Bonus reservation (minutes)",
     care_deadline: "Eltern erfahren es, wenn bis dahin keine Antwort kommt", care_weekdays: "Tage", care_notify: "Eltern benachrichtigen bei \"Heute nicht\" oder keiner Antwort",
     care_alert: "Zusätzlicher Alarm bei häufigem Ablehnen", care_alert_count: "mal", care_alert_days: "innerhalb von Tagen",
     care_days: ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+    care_after: "Position: nach Schritt", care_after_end: "am Ende",
     invalid_birthday: "Der Geburtstag muss ein gültiges Datum in der Vergangenheit sein.",
     approval_title: "Freigabe & Konsequenzen",
     cheat_penalty_factor: "Abzug bei Schummeln (x Aufgabenpunkte)", cheat_strict_days: "Strenge Phase nach Schummeln (Tage, 0 = aus)",
@@ -1421,6 +1423,37 @@ class FamilyMissionSettings extends HTMLElement {
   }
 
   /**
+   * Step titles of the kid's morning / evening mission (wizard task or task with that catalog key).
+   * @returns {string[]} - The titles (empty without such a mission).
+   */
+  _careMissionSteps(uid, anchor) {
+    if (anchor !== 'morning' && anchor !== 'evening') return [];
+    const missions = Object.values(this.tasks || {}).filter(t => t && !t.parent_task &&
+      ((t.generated_by === 'wizard' && String(t.wizard_key || '').split(':')[0] === anchor) || t.catalog_key === anchor));
+    const mine = missions.find(t => (t.assignees || []).includes(uid)) || missions[0];
+    return mine ? (mine.subtasks || []).map(st => String((st && st.title) || st || '')).filter(Boolean) : [];
+  }
+
+  /** The position select of a care entry ("after step ..." / at the end); the unset default is shown as what it does. */
+  _careAfterSelect(c, steps, at, dis, esc) {
+    const lower = steps.map(t => t.toLowerCase());
+    let value = '';
+    if (typeof c.after === 'string') value = c.after;
+    else if (c.anchor === 'morning') {
+      const i = lower.findIndex(t => t === 'frühstücken' || t === 'have breakfast');
+      if (i >= 0) value = steps[i];
+    }
+    const known = !value || lower.includes(value.toLowerCase());
+    return `<label class="kid-field">${this.localize('care_after')}
+        <select class="care-after" ${at} ${dis}>
+          ${steps.map(t => `<option value="${esc(t)}" ${value.toLowerCase() === t.toLowerCase() ? 'selected' : ''}>${esc(t)}</option>`).join('')}
+          ${known ? '' : `<option value="${esc(value)}" selected>${esc(value)}</option>`}
+          <option value="" ${value ? '' : 'selected'}>${this.localize('care_after_end')}</option>
+        </select>
+      </label>`;
+  }
+
+  /**
    * Medication editor of a kid row: one block per entry (label, emoji, anchor, time, weekdays, deadline, notify, decline alert).
    * @returns {string} - The HTML.
    */
@@ -1443,6 +1476,7 @@ class FamilyMissionSettings extends HTMLElement {
                 ${['morning', 'evening', 'time'].map(a => `<option value="${a}" ${c.anchor === a ? 'selected' : ''}>${this.localize('care_anchor_' + a)}</option>`).join('')}
               </select>
             </label>
+            ${c.anchor !== 'time' && this._careMissionSteps(uid, c.anchor).length ? this._careAfterSelect(c, this._careMissionSteps(uid, c.anchor), at, dis, esc) : ''}
             ${c.anchor === 'time' ? `<label class="kid-field">${this.localize('care_time')}
               <input type="time" class="care-time" ${at} value="${esc(c.time || '08:00')}" ${dis}>
             </label>` : ''}
@@ -2256,8 +2290,10 @@ class FamilyMissionSettings extends HTMLElement {
     on('.care-label', 'input', (c, ev) => { c.label = ev.target.value; });
     on('.care-anchor', 'change', (c, ev) => {
       c.anchor = ev.target.value;
+      delete c.after;
       if (c.anchor !== 'time') c.deadline = c.anchor === 'evening' ? '21:00' : '10:00';
     }, true);
+    on('.care-after', 'change', (c, ev) => { c.after = ev.target.value; });
     on('.care-time', 'input', (c, ev) => { if (ev.target.value) c.time = ev.target.value; });
     on('.care-deadline', 'input', (c, ev) => { if (ev.target.value) c.deadline = ev.target.value; });
     on('.care-day', 'click', (c, ev, el) => {

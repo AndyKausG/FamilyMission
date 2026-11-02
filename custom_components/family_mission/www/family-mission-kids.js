@@ -1947,6 +1947,36 @@ class FamilyMissionKids extends HTMLElement {
     return ((this.careToday || {})[kid.id] || []).filter(c => c.mission_task_id === task.id);
   }
 
+  /**
+   * Position of a care step in a mission (same rule as kids.care_insert_index): directly after the step titled
+   * `after` (case-insensitive); '' = at the end; unset = after the breakfast step for a morning entry; otherwise at the end.
+   */
+  _careInsertIndex(titles, after, anchor) {
+    const names = titles.map(t => String(t || '').trim().toLowerCase());
+    let wanted = [];
+    if (after === undefined || after === null) wanted = anchor === 'morning' ? ['frühstücken', 'have breakfast'] : [];
+    else if (typeof after === 'string' && after.trim()) wanted = [after.trim().toLowerCase()];
+    const i = names.findIndex(n => wanted.includes(n));
+    return i >= 0 ? i + 1 : names.length;
+  }
+
+  /** The steps of a mission in display order: [{sub, index}] and [{care}] (care steps sit at their configured position). */
+  _missionSteps(subtasks, careSteps) {
+    const subs = Array.isArray(subtasks) ? subtasks : [];
+    const titles = subs.map(st => (st && st.title) || '');
+    const slots = {};
+    for (const c of careSteps || []) {
+      const at = this._careInsertIndex(titles, c.after, c.anchor);
+      (slots[at] = slots[at] || []).push(c);
+    }
+    const out = [];
+    for (let p = 0; p <= subs.length; p++) {
+      for (const c of slots[p] || []) out.push({ care: c });
+      if (p < subs.length) out.push({ sub: subs[p], index: p });
+    }
+    return out;
+  }
+
   /** Care items of a kid shown as a small card of their own (unanswered, or fixed-time items). */
   _careStandalone(kid) {
     if (kid.adult || !kid.id) return [];
@@ -3243,11 +3273,13 @@ class FamilyMissionKids extends HTMLElement {
     const careSteps = mode === 'window' ? [] : this._careSteps(kid, task);
     const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length;
     const subs = mode !== 'window' && (hasSubs || careSteps.length)
-      ? `<div class="subs">${(hasSubs ? task.subtasks : []).map((st, i) => `
-          <button class="sub ${st.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${i}"
-                  ${mode === 'locked' || mode === 'window' ? 'disabled' : ''} aria-pressed="${st.done ? 'true' : 'false'}">
-            <span class="box">${st.done ? '✓' : ''}</span><span class="sub-title">${escKids(st.title)}</span>
-          </button>`).join('')}${careSteps.map(c => this._renderCareStep(c, mode === 'locked')).join('')}</div>`
+      ? `<div class="subs">${this._missionSteps(hasSubs ? task.subtasks : [], careSteps).map(item => item.care
+          ? this._renderCareStep(item.care, mode === 'locked')
+          : `
+          <button class="sub ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
+                  ${mode === 'locked' || mode === 'window' ? 'disabled' : ''} aria-pressed="${item.sub.done ? 'true' : 'false'}">
+            <span class="box">${item.sub.done ? '✓' : ''}</span><span class="sub-title">${escKids(item.sub.title)}</span>
+          </button>`).join('')}</div>`
       : '';
 
     const cat = this._category(task);

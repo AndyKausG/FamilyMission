@@ -641,6 +641,45 @@ def test_care_profile_roundtrip_and_public():
     assert [c["label"] for c in merged["k"]["care"]] == ["A"]
 
 
+def test_normalize_care_after_is_optional_trimmed_and_limited():
+    [unset, text, end, junk, long] = kids.normalize_care([
+        {"id": "a"}, {"id": "b", "after": "  Zähne putzen "}, {"id": "c", "after": ""},
+        {"id": "d", "after": 5}, {"id": "e", "after": "x" * 100}])
+    assert "after" not in unset and "after" not in junk
+    assert text["after"] == "Zähne putzen" and end["after"] == "" and long["after"] == "x" * 60
+
+
+def test_care_insert_index_positions():
+    steps = ["Anziehen", "Frühstücken", "Zähne putzen", "Bett machen"]
+    index = kids.care_insert_index
+    assert index(steps, "zähne PUTZEN", "morning") == 3                 # case-insensitive, directly after it
+    assert index(steps, "Anziehen", "evening") == 1
+    assert index(steps, "", "morning") == 4                             # explicit: at the end
+    assert index(steps, None, "morning") == 2                           # default: after breakfast
+    assert index(["Get dressed", "Have breakfast", "Brush teeth"], None, "morning") == 2   # English title
+    assert index(steps, None, "evening") == 4 and index(steps, None, "time") == 4
+    assert index(["Anziehen", "Bett machen"], None, "morning") == 2     # no breakfast step: the end
+    assert index(steps, "Gibt es nicht", "morning") == 4                # unknown title: the end
+    assert index([], None, "morning") == 0
+    assert index([None, "Frühstücken"], None, "morning") == 2           # tolerant of odd entries
+
+
+def test_care_merge_steps_order():
+    subs = [{"title": "Anziehen", "done": False}, {"title": "Frühstücken", "done": True}, {"title": "Zähne putzen", "done": False}]
+    entries = kids.normalize_care([
+        {"id": "p", "anchor": "morning"}, {"id": "q", "anchor": "morning", "after": "Anziehen"},
+        {"id": "r", "anchor": "morning", "after": ""}, {"id": "s", "anchor": "morning", "after": "Frühstücken"}])
+    steps = kids.care_steps_for(entries, "morning", datetime(2026, 10, 29).date(), [], "k")
+    assert [s.get("after") for s in steps] == [None, "Anziehen", "", "Frühstücken"]
+    merged = kids.care_merge_steps(subs, steps, "morning")
+    labels = [(m["kind"], m["step"].get("care_id") or m["step"]["title"]) for m in merged]
+    assert labels == [
+        ("sub", "Anziehen"), ("care", "q"), ("sub", "Frühstücken"), ("care", "p"), ("care", "s"),
+        ("sub", "Zähne putzen"), ("care", "r")]
+    assert [m["index"] for m in merged if m["kind"] == "sub"] == [0, 1, 2]    # indexes stay the stored ones
+    assert [m["kind"] for m in kids.care_merge_steps([], steps, "morning")] == ["care"] * 4
+
+
 def test_care_log_helpers_and_steps():
     log = []
     monday = datetime(2026, 10, 26).date()

@@ -1641,6 +1641,9 @@ CARE_STATUSES = (CARE_TAKEN, CARE_DECLINED, CARE_UNANSWERED)
 CARE_ANSWERS = (CARE_TAKEN, CARE_DECLINED)
 MAX_CARE_ENTRIES = 6
 MAX_CARE_LABEL = 30
+MAX_CARE_AFTER = 60
+# Without an explicit position the step of a morning entry follows the breakfast step (if the mission has one)
+CARE_DEFAULT_AFTER = {"morning": ("Frühstücken", "Have breakfast")}
 DEFAULT_CARE_LABEL = "Tablette"
 DEFAULT_CARE_EMOJI = "💊"
 DEFAULT_CARE_TIME = "08:00"
@@ -1675,8 +1678,10 @@ def normalize_care(raw: Any) -> list[dict]:
     """Validate the care entries of a kid profile; invalid values fall back to the defaults.
 
     Entry: ``{id, label, emoji, anchor morning|evening|time, time, weekdays, deadline,
-    notify_parents, decline_alert {enabled, count, days}}``. Anything that is not a
+    notify_parents, decline_alert {enabled, count, days}, after}``. Anything that is not a
     list gives ``[]``, entries that are not dicts are dropped (at most 6 are kept).
+    ``after`` (optional, at most 60 characters) is the title of the mission step the care
+    step follows; ``""`` means "at the end", a missing key the default (see ``care_insert_index``).
     """
     if not isinstance(raw, (list, tuple)):
         return []
@@ -1700,7 +1705,8 @@ def normalize_care(raw: Any) -> list[dict]:
         alert = item.get("decline_alert") if isinstance(item.get("decline_alert"), dict) else {}
         count = _int_in(alert.get("count"), 1, 30)
         days = _int_in(alert.get("days"), 1, CARE_LOG_KEEP_DAYS)
-        result.append({
+        after = item.get("after")
+        entry = {
             "id": cid,
             "label": label or DEFAULT_CARE_LABEL,
             "emoji": emoji,
@@ -1714,8 +1720,51 @@ def normalize_care(raw: Any) -> list[dict]:
                 "count": count if count is not None else DEFAULT_ALERT_COUNT,
                 "days": days if days is not None else DEFAULT_ALERT_DAYS,
             },
-        })
+        }
+        if isinstance(after, str):
+            entry["after"] = after.strip()[:MAX_CARE_AFTER]
+        result.append(entry)
     return result
+
+
+def care_insert_index(titles: Iterable[Any], after: Any, anchor: str) -> int:
+    """Position of a care step inside a mission with the step ``titles``: the care step goes before this index.
+
+    ``after`` is the title of the step it follows (case-insensitive, German or English
+    title as stored in the mission); an empty string means "at the end". Without
+    ``after`` (``None``) the step of a ``morning`` entry follows the breakfast step; every
+    other case, and a title the mission does not have, puts the care step at the end.
+    """
+    names = [str(t or "").strip().casefold() for t in titles]
+    if after is None:
+        wanted = [w.casefold() for w in CARE_DEFAULT_AFTER.get(anchor, ())]
+    elif isinstance(after, str) and after.strip():
+        wanted = [after.strip().casefold()]
+    else:
+        wanted = []
+    for index, name in enumerate(names):
+        if name in wanted:
+            return index + 1
+    return len(names)
+
+
+def care_merge_steps(subtasks: Iterable[Any], care_steps: Iterable[dict], anchor: str) -> list[dict]:
+    """The steps of a mission in display order: ``{"kind": "sub", "index", "step"}`` / ``{"kind": "care", "step"}``.
+
+    ``care_steps`` are the virtual steps of ``care_steps_for``; each may carry ``after``.
+    Care steps with the same position keep their order.
+    """
+    subs = list(subtasks or ())
+    titles = [(st.get("title") if isinstance(st, dict) else st) for st in subs]
+    slots: dict[int, list[dict]] = {}
+    for step in care_steps or ():
+        slots.setdefault(care_insert_index(titles, step.get("after"), anchor), []).append(step)
+    merged: list[dict] = []
+    for position in range(len(subs) + 1):
+        merged.extend({"kind": "care", "step": c} for c in slots.get(position, ()))
+        if position < len(subs):
+            merged.append({"kind": "sub", "index": position, "step": subs[position]})
+    return merged
 
 
 def care_due_on(entry: dict, day: date) -> bool:
@@ -1780,6 +1829,7 @@ def care_steps_for(
             "kind": "care", "care_id": entry["id"], "title": entry.get("label") or DEFAULT_CARE_LABEL,
             "emoji": entry.get("emoji") or DEFAULT_CARE_EMOJI,
             "answer": care_answer_of(log, day.isoformat(), kid_id, entry["id"]),
+            **({"after": entry["after"]} if "after" in entry else {}),
         })
     return steps
 

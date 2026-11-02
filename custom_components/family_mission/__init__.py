@@ -2022,7 +2022,7 @@ def _care_attached(hass: HomeAssistant, kid_id: str, task_id: str) -> list[dict]
         if item["mission_task_id"] == task_id:
             result.append({"item": item, "step": {
                 "kind": "care", "care_id": item["id"], "title": item["label"], "emoji": item["emoji"],
-                "answer": item["answer"],
+                "answer": item["answer"], **({"after": item["after"]} if "after" in item else {}),
             }})
     return result
 
@@ -3726,7 +3726,12 @@ async def ws_kids_catalog(hass: HomeAssistant, connection: websocket_api.ActiveC
     wizard = _get_entry(hass).options.get("wizard") or {}
     features = wizard.get("features") if isinstance(wizard.get("features"), list) else None
     entries = [{**e, "scope": kidslib.scope_for_key(e["key"])} for e in kids_catalog.flow_catalog(lang, features)]
-    connection.send_result(msg["id"], {"language": lang, "entries": entries})
+    today = dt_util.now().date()
+    ages = {
+        kid_id: age for kid_id, profile in (_get_entry(hass).options.get("kids") or {}).items()
+        if isinstance(profile, dict) and (age := kidslib.kid_age(profile, today)) is not None
+    }
+    connection.send_result(msg["id"], {"language": lang, "entries": entries, "kid_ages": ages})
 
 
 @websocket_api.websocket_command({

@@ -141,6 +141,18 @@ async def test_profile_validation_falls_back_to_defaults(hass, env):
     assert res["success"] and "care" not in env["entry"].options["kids"][LENA]
 
 
+async def test_after_is_validated_and_reaches_the_card_data(hass, env):
+    stored = await _set_care(env, [_care(id="a"), _care(id="b", after="  Zähne putzen "), _care(id="c", after=""),
+                                   _care(id="d", after=7), _care(id="e", after="y" * 90)])
+    afters = {e["id"]: e.get("after") for e in stored}
+    assert afters == {"a": None, "b": "Zähne putzen", "c": "", "d": None, "e": "y" * 60}
+    assert "after" not in stored[0] and "after" not in stored[3]
+    task = _mission(hass)
+    _data(hass)["tasks"][task]["subtasks"] = [{"title": "Anziehen", "done": False}, {"title": "Zähne putzen", "done": False}]
+    items = (await _call(env["admin"], "family_mission/get_data"))["result"]["care_today"][LENA]
+    assert {i["id"]: i.get("after") for i in items} == afters
+
+
 async def test_set_kid_profile_with_care_needs_manager(hass, env):
     res = await _call(env["sam"], "family_mission/set_kid_profile", participant_id=LENA, avatar="🦊",
                       color="#ff8800", birth_year=2016, care=[_care()])

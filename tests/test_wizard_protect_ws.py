@@ -218,6 +218,43 @@ async def test_migration_accepts_filtered_steps_and_english_names(hass, hass_ws_
     assert all(t["customized"] == [] for t in _by_key(hass).values())
 
 
+OLD_MORNING = ["Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg"]
+OLD_EVENING = ["Schulranzen packen", "Schuhe & Jacke an ihren Platz", "Schmutzwäsche in den Korb"]
+
+
+def _titles(task):
+    return [s["title"] for s in task["subtasks"]]
+
+
+async def test_rerun_adds_new_steps_only_to_uncustomized_tasks(hass, hass_ws_client, setup):
+    ws = await hass_ws_client(hass)
+    tasks = await _fresh(hass, ws)
+    # tasks of an older version: the previous step lists, no customized list yet
+    for key, old in (("morning", OLD_MORNING), ("evening", OLD_EVENING)):
+        for kid in ("anna", "ben"):
+            task = tasks[f"{key}:person.{kid}"]
+            task["subtasks"] = [{"title": t, "done": t == old[0]} for t in old]
+            task.pop("customized")
+    tasks["table_clear:person.anna"]["subtasks"] = []            # a catalog entry that had no steps
+    tasks["table_clear:person.anna"].pop("customized")
+    _migrate_wizard_customized(_data(hass), setup.options)
+    # the old lists do not count as customized
+    assert tasks[MORNING]["customized"] == [] and tasks["evening:person.anna"]["customized"] == []
+    assert tasks["table_clear:person.anna"]["customized"] == []
+    # Ben's parents changed the morning steps
+    tasks["morning:person.ben"]["subtasks"] = [{"title": "Eigener Schritt", "done": False}]
+    tasks["morning:person.ben"]["customized"] = ["subtasks"]
+
+    res = await _apply(ws, replace_existing=True)
+    assert res["success"] and res["result"]["kept_customized"] >= 1
+    assert _titles(tasks[MORNING]) == OLD_MORNING + ["Brotdose & Trinkflasche einpacken"]
+    assert _titles(tasks["evening:person.anna"])[-3:] == ["Zähne putzen", "Schlafanzug an", "Kleidung für morgen rauslegen"]
+    assert _titles(tasks["table_clear:person.anna"]) == [
+        "Geschirr zur Spüle", "Reste abdecken & in den Kühlschrank", "Tisch abwischen"]
+    assert tasks[MORNING]["subtasks"][0]["done"] is True                                   # progress kept
+    assert _titles(tasks["morning:person.ben"]) == ["Eigener Schritt"]                      # protected
+
+
 async def test_migration_respects_wizard_point_overrides(hass, hass_ws_client, setup):
     ws = await hass_ws_client(hass)
     assert (await _apply(ws, points={MORNING: 5}))["success"]

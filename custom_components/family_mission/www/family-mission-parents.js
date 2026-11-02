@@ -105,7 +105,7 @@ const I18N_PARENTS = {
     nt_need_days: "Please pick at least one weekday.", nt_need_every: "Please enter 1 to 365 days.", nt_need_date: "Please pick a date.",
     nt_med_title: "Add medication", nt_med_hint: "Shown to the kid as a step of the morning / evening mission or at a fixed time. Never any points.",
     nt_c_existing: "Already set up:", nt_c_label: "Name", nt_c_label_ph: "Tablet", nt_c_emoji: "Emoji", nt_c_anchor: "Shown with",
-    nt_c_anchor_morning: "Morning mission", nt_c_anchor_evening: "Evening mission", nt_c_anchor_time: "Fixed time", nt_c_time: "At",
+    nt_c_anchor_morning: "Morning mission", nt_c_anchor_evening: "Evening mission", nt_c_anchor_time: "Fixed time", nt_c_time: "At", nt_c_after: "Position: after step", nt_c_after_end: "At the end",
     nt_c_deadline: "Parents are told if unanswered at", nt_c_default: "Default", nt_c_days: "Days", nt_c_notify: "Tell parents when declined or unanswered",
     nt_c_more: "More options (alerts, history): Settings > Kids.", nt_c_save: "Save medication", toast_nt_care: "Medication saved",
     nt_c_max: "At most 6 medications per kid.",
@@ -203,7 +203,7 @@ const I18N_PARENTS = {
     nt_need_days: "Bitte mindestens einen Wochentag wählen.", nt_need_every: "Bitte 1 bis 365 Tage eingeben.", nt_need_date: "Bitte ein Datum wählen.",
     nt_med_title: "Medikament eintragen", nt_med_hint: "Erscheint beim Kind als Schritt der Morgen- / Abend-Mission oder zu einer festen Uhrzeit. Nie Punkte.",
     nt_c_existing: "Schon eingetragen:", nt_c_label: "Name", nt_c_label_ph: "Tablette", nt_c_emoji: "Emoji", nt_c_anchor: "Erscheint bei",
-    nt_c_anchor_morning: "Morgen-Mission", nt_c_anchor_evening: "Abend-Mission", nt_c_anchor_time: "Feste Uhrzeit", nt_c_time: "Um",
+    nt_c_anchor_morning: "Morgen-Mission", nt_c_anchor_evening: "Abend-Mission", nt_c_anchor_time: "Feste Uhrzeit", nt_c_time: "Um", nt_c_after: "Position: nach Schritt", nt_c_after_end: "am Ende",
     nt_c_deadline: "Eltern erfahren es, wenn bis dahin keine Antwort kommt", nt_c_default: "Standard", nt_c_days: "Tage", nt_c_notify: "Eltern benachrichtigen bei „Heute nicht“ oder keiner Antwort",
     nt_c_more: "Weitere Optionen (Alarm, Verlauf): Einstellungen > Kinder.", nt_c_save: "Medikament speichern", toast_nt_care: "Medikament gespeichert",
     nt_c_max: "Höchstens 6 Medikamente pro Kind.",
@@ -1397,6 +1397,7 @@ class FamilyMissionParents extends HTMLElement {
     try {
       const res = await this._hass.callWS({ type: 'family_mission/kids_catalog' });
       this._flowCatalog = Array.isArray(res && res.entries) ? res.entries : [];
+      this._flowKidAges = (res && res.kid_ages) || {};
     } catch (err) {
       console.warn('FamilyMission Parents: catalog could not be loaded', err);
       this._flowCatalog = [];
@@ -1456,6 +1457,13 @@ class FamilyMissionParents extends HTMLElement {
   /** Time fields as the form state wants them: "HH:MM" or ''. */
   _ntTime(value) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(value || '') ? value : ''; }
 
+  /** Step titles of a catalog entry for the selected kids: steps with a higher min_age than the youngest kid are left out. */
+  _ntCatalogSteps(entry) {
+    const ages = this._nt.kids.map(id => (this._flowKidAges || {})[id]).filter(a => Number.isInteger(a));
+    const youngest = ages.length ? Math.min(...ages) : null;
+    return (entry.subtasks || []).filter(s => youngest === null || !(s.min_age > youngest)).map(s => s.title);
+  }
+
   /** Takes the defaults of a template (catalog entry, own template) or none and goes to step 2. */
   _ntPick(src, key) {
     const nt = this._nt;
@@ -1477,7 +1485,7 @@ class FamilyMissionParents extends HTMLElement {
         name: e.name, points: e.points, minAge: e.min_age, category: e.category, scope: e.scope,
         together: !!e.allow_together, approval: !!e.requires_approval, icon: e.icon,
         from: e.available_from, until: e.available_until, remind: '', catalogKey: e.key,
-        subtasks: (e.subtasks || []).map(s => s.title), weekdays: [],
+        subtasks: this._ntCatalogSteps(e), weekdays: [],
         interval: open && e.interval >= 365 ? 0 : e.interval
       };
       if (e.mode === 'rotation' && kids.length >= 2) mode = 'rotation';
@@ -1555,7 +1563,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'nt-icon') nt.icon = el.dataset.icon;
     else if (action === 'nt-sub-add') this._ntAddSub();
     else if (action === 'nt-sub-del') nt.subtasks.splice(parseInt(el.dataset.idx), 1);
-    else if (action === 'nt-c-anchor') { nt.care.anchor = el.dataset.anchor; }
+    else if (action === 'nt-c-anchor') { nt.care.anchor = el.dataset.anchor; delete nt.care.after; }
     else if (action === 'nt-c-wd') {
       const d = parseInt(el.dataset.wd);
       const i = nt.care.weekdays.indexOf(d);
@@ -1652,6 +1660,7 @@ class FamilyMissionParents extends HTMLElement {
           decline_alert: { enabled: false, count: 3, days: 7 }
         };
         if (c.deadline) entry.deadline = c.deadline;
+        if (typeof c.after === 'string' && c.anchor !== 'time') entry.after = c.after.slice(0, 60);
         const payload = {
           type: 'family_mission/set_kid_profile', participant_id: kid.id, avatar: p.avatar || kid.avatar, color: p.color || kid.color,
           birth_year: p.birth_year === undefined ? null : p.birth_year, care: (p.care || []).concat([entry])
@@ -1776,6 +1785,41 @@ class FamilyMissionParents extends HTMLElement {
       </div>`;
   }
 
+  /** Step titles of the morning / evening missions of the selected kids (merged, without duplicates). */
+  _ntMissionSteps(anchor) {
+    if (anchor !== 'morning' && anchor !== 'evening') return [];
+    const nt = this._nt;
+    const out = [];
+    for (const kidId of nt.kids) {
+      const missions = this._taskList().filter(t => !t.parent_task &&
+        ((t.generated_by === 'wizard' && String(t.wizard_key || '').split(':')[0] === anchor) || t.catalog_key === anchor));
+      const mine = missions.find(t => (t.assignees || []).includes(kidId));
+      for (const st of (mine ? (mine.subtasks || []) : [])) {
+        const title = String((st && st.title) || st || '');
+        if (title && !out.some(x => x.toLowerCase() === title.toLowerCase())) out.push(title);
+      }
+    }
+    return out;
+  }
+
+  /** The "Position: after step ..." select of the medication sheet (the unset default is shown as what it does). */
+  _ntAfterSelect(c) {
+    const steps = this._ntMissionSteps(c.anchor);
+    if (!steps.length) return '';
+    const lower = steps.map(t => t.toLowerCase());
+    let value = '';
+    if (typeof c.after === 'string') value = c.after;
+    else if (c.anchor === 'morning') {
+      const i = lower.findIndex(t => t === 'frühstücken' || t === 'have breakfast');
+      if (i >= 0) value = steps[i];
+    }
+    return `<div class="row"><label class="lbl inline" for="nt-c-after">${escParents(this.localize('nt_c_after'))}</label>
+      <select id="nt-c-after" class="txt">
+        ${steps.map(t => `<option value="${escParents(t)}" ${value.toLowerCase() === t.toLowerCase() ? 'selected' : ''}>${escParents(t)}</option>`).join('')}
+        <option value="" ${value ? '' : 'selected'}>${escParents(this.localize('nt_c_after_end'))}</option>
+      </select></div>`;
+  }
+
   /** Compact medication sheet: the entry is added to the care list of every selected kid. */
   _renderNtCare() {
     const nt = this._nt;
@@ -1801,6 +1845,7 @@ class FamilyMissionParents extends HTMLElement {
         <div class="lbl">${L('nt_c_anchor')}</div>
         <div class="chips">${['morning', 'evening', 'time'].map(a =>
           `<button class="chip ${c.anchor === a ? 'on' : ''}" aria-pressed="${c.anchor === a}" data-action="nt-c-anchor" data-anchor="${a}">${L('nt_c_anchor_' + a)}</button>`).join('')}</div>
+        ${c.anchor === 'time' ? '' : this._ntAfterSelect(c)}
         ${c.anchor === 'time' ? `<div class="row"><label class="lbl inline" for="nt-c-time">${L('nt_c_time')}</label><select id="nt-c-time" class="txt time">${parTimeOptions(c.time, '08:00')}</select></div>` : ''}
         <div class="row"><label class="lbl inline" for="nt-c-deadline">${L('nt_c_deadline')}</label><select id="nt-c-deadline" class="txt time">${parTimeOptions(c.deadline, L('nt_c_default'))}</select></div>
         <div class="lbl">${L('nt_c_days')}</div>
@@ -1837,6 +1882,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (id === 'nt-newsub') nt.newSub = el.value;
     else if (id === 'nt-c-label' && nt.care) nt.care.label = el.value;
     else if (id === 'nt-c-emoji' && nt.care) nt.care.emoji = el.value;
+    else if (id === 'nt-c-after' && nt.care) nt.care.after = el.value;
     else if (id === 'nt-c-time' && nt.care) nt.care.time = el.value || '08:00';
     else if (id === 'nt-c-deadline' && nt.care) nt.care.deadline = el.value;
     else if (id === 'nt-c-notify' && nt.care) nt.care.notify = el.checked;

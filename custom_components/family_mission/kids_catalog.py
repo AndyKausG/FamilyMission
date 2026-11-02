@@ -109,52 +109,83 @@ CATALOG: tuple[dict, ...] = (
     # --- daily basis, one task per kid ---------------------------------
     _entry("morning", "Morgen-Mission", "Morning mission", "mdi:weather-sunny", 2, 5, 6, 1,
            "basis", MODE_EACH,
+           available_from="05:00", available_until="10:00",
            subtasks=[_st("Anziehen", "Get dressed"), _st("Frühstücken", "Have breakfast"),
                      _st("Zähne putzen", "Brush teeth"), _st("Bett machen", "Make the bed"),
-                     _st("Schlafanzug weg", "Put pajamas away")],
-           available_from="05:00", available_until="10:00"),
+                     _st("Schlafanzug weg", "Put pajamas away"),
+                     _st("Brotdose & Trinkflasche einpacken", "Pack lunch box & water bottle", 8, "school")]),
     _entry("evening", "Abend-Mission", "Evening mission", "mdi:weather-night", 3, 7, 6, 1,
            "basis", MODE_EACH,
+           available_from="17:00", available_until="21:00",
            subtasks=[_st("Schulranzen packen", "Pack school bag", requires="school"),
                      _st("Schuhe & Jacke an ihren Platz", "Shoes & jacket in their place"),
-                     _st("Schmutzwäsche in den Korb", "Dirty laundry into the basket")],
-           available_from="17:00", available_until="21:00"),
+                     _st("Schmutzwäsche in den Korb", "Dirty laundry into the basket"),
+                     _st("Zähne putzen", "Brush teeth"), _st("Schlafanzug an", "Put on pajamas"),
+                     _st("Kleidung für morgen rauslegen", "Lay out clothes for tomorrow", 8)]),
     _entry("room_blitz", "Zimmer-Blitz (10 Minuten)", "Room blitz (10 minutes)", "mdi:timer-outline",
            3, 10, 8, 1, "basis", MODE_EACH,
+           available_from="14:00", available_until="19:30", replaced_by="room_deep", requires_approval=True,
            subtasks=[_st("Boden frei", "Clear the floor"),
                      _st("Spielzeug/Sachen in die Kisten", "Toys/things into the boxes"),
-                     _st("Schreibtisch frei", "Clear the desk")], available_from="14:00", available_until="19:30", replaced_by="room_deep", requires_approval=True),
+                     _st("Schreibtisch frei", "Clear the desk"),
+                     _st("Kleidung in Schrank oder Wäschekorb", "Clothes into wardrobe or laundry basket")]),
     _entry("room_blitz_small", "Zimmer-Blitz (5 Minuten)", "Room blitz (5 minutes)", "mdi:timer-sand",
            2, 5, 6, 1, "basis", MODE_EACH, max_age=7,
-           subtasks=[_st("Boden frei", "Clear the floor"),
-                     _st("Spielzeug in die Kisten", "Toys into the boxes")], available_from="14:00", available_until="19:30", replaced_by="room_deep", requires_approval=True),
+           available_from="14:00", available_until="19:30", replaced_by="room_deep", requires_approval=True,
+           subtasks=[_st("Boden frei", "Clear the floor"), _st("Spielzeug in die Kisten", "Toys into the boxes"),
+                     _st("Bücher ins Regal", "Books on the shelf")]),
     # --- rotation basis, shared duties ---------------------------------
     _entry("table_set", "Tisch decken", "Set the table", "mdi:silverware-fork-knife", 2, 5, 6, 1,
            "basis", MODE_ROTATION,
-           subtasks=[_st("Teller", "Plates"), _st("Besteck", "Cutlery"), _st("Gläser", "Glasses")], available_from="17:00", available_until="19:30", allow_together=True),
+           available_from="17:00", available_until="19:30", allow_together=True,
+           subtasks=[_st("Teller", "Plates"), _st("Besteck", "Cutlery"), _st("Gläser", "Glasses"),
+                     _st("Servietten", "Napkins"), _st("Getränke auf den Tisch", "Drinks on the table", 8)]),
     _entry("table_clear", "Tisch abräumen", "Clear the table", "mdi:table-chair", 2, 5, 6, 1,
-           "basis", MODE_ROTATION, available_from="18:00", available_until="20:30", allow_together=True),
+           "basis", MODE_ROTATION, available_from="18:00", available_until="20:30", allow_together=True,
+           subtasks=[_st("Geschirr zur Spüle", "Dishes to the sink"),
+                     _st("Reste abdecken & in den Kühlschrank", "Cover leftovers & into the fridge", 8),
+                     _st("Tisch abwischen", "Wipe the table")]),
     _entry("dishwasher_load", "Spülmaschine einräumen", "Load the dishwasher", "mdi:dishwasher-alert",
-           3, 10, 8, 1, "basis", MODE_ROTATION, requires="dishwasher", available_from="18:00", available_until="21:00", allow_together=True),
+           3, 10, 8, 1, "basis", MODE_ROTATION, requires="dishwasher", available_from="18:00", available_until="21:00", allow_together=True,
+           subtasks=[_st("Reste abkratzen", "Scrape off leftovers"),
+                     _st("Unten: Teller & Töpfe", "Bottom: plates & pots"),
+                     _st("Oben: Gläser & Tassen", "Top: glasses & cups"),
+                     _st("Tab rein & starten", "Add tab & start", 10)]),
     _entry("plants", "Pflanzen gießen", "Water the plants", "mdi:watering-can", 2, 5, 6, 7,
-           "basis", MODE_ROTATION, available_from="14:00", available_until="19:00", allow_together=True),
+           "basis", MODE_ROTATION, available_from="14:00", available_until="19:00", allow_together=True,
+           subtasks=[_st("Gießen", "Water"),
+                     _st("Untersetzer prüfen (nicht überlaufen)", "Check the saucers (no overflow)"),
+                     _st("Welke Blätter abzupfen", "Pick off wilted leaves", 8)]),
     _entry("garden", "Mini-Garten: gießen & Unkraut (15 Min)", "Mini garden: water & weed (15 min)",
-           "mdi:flower", 4, 15, 8, 7, "basis", MODE_ROTATION, requires="garden", available_from="10:00", available_until="18:00", allow_together=True),
+           "mdi:flower", 4, 15, 8, 7, "basis", MODE_ROTATION, requires="garden", available_from="10:00", available_until="18:00", allow_together=True,
+           subtasks=[_st("Gießen", "Water"), _st("Unkraut zupfen", "Pull weeds"), _st("Werkzeug zurück", "Tools back")]),
     _entry("driveway", "Hofeinfahrt kehren", "Sweep the driveway", "mdi:broom", 4, 15, 8, 7,
-           "basis", MODE_ROTATION, requires="driveway", available_from="10:00", available_until="18:00", allow_together=True),
+           "basis", MODE_ROTATION, requires="driveway", available_from="10:00", available_until="18:00", allow_together=True,
+           subtasks=[_st("Laub & Dreck zusammenkehren", "Sweep leaves & dirt together"),
+                     _st("In die Tonne", "Into the bin"), _st("Besen zurück", "Broom back")]),
     _entry("pet_feed", "Tiere füttern", "Feed the pets", "mdi:paw", 2, 5, 6, 1,
-           "basis", MODE_ROTATION, requires="pets", available_from="07:00", available_until="19:00", allow_together=True),
+           "basis", MODE_ROTATION, requires="pets", available_from="07:00", available_until="19:00", allow_together=True,
+           subtasks=[_st("Futter", "Food"), _st("Frisches Wasser", "Fresh water")]),
     _entry("pet_clean", "Käfig/Katzenklo sauber machen", "Clean cage/litter box", "mdi:paw-outline",
-           4, 15, 9, 7, "basis", MODE_ROTATION, requires="pets", available_from="10:00", available_until="18:00", allow_together=True),
+           4, 15, 9, 7, "basis", MODE_ROTATION, requires="pets", available_from="10:00", available_until="18:00", allow_together=True,
+           subtasks=[_st("Altes Streu raus", "Old litter out"), _st("Neues Streu rein", "New litter in"),
+                     _st("Hände waschen", "Wash hands")]),
     # --- weekly basis, one task per kid --------------------------------
     _entry("room_deep", "Zimmer gründlich", "Thorough room clean", "mdi:bed-king", 6, 30, 6, 7,
            "basis", MODE_EACH,
+           available_from="09:00", available_until="18:00", requires_approval=True,
            subtasks=[_st("Boden frei", "Clear the floor"), _st("Regal ordnen", "Tidy the shelf"),
-                     _st("Müll raus", "Take out the trash"), _st("Staubsaugen", "Vacuum", 8)], available_from="09:00", available_until="18:00", requires_approval=True),
+                     _st("Kleidung in den Schrank", "Clothes into the wardrobe"),
+                     _st("Müll raus", "Take out the trash"), _st("Staub wischen", "Dust", 8),
+                     _st("Staubsaugen", "Vacuum", 8)]),
     _entry("own_laundry", "Eigene Wäsche einräumen", "Put away own laundry", "mdi:wardrobe", 3, 10, 6, 7,
-           "basis", MODE_EACH, requires="washer", available_from="14:00", available_until="19:30", day_offset=-1),
+           "basis", MODE_EACH, requires="washer", available_from="14:00", available_until="19:30", day_offset=-1,
+           subtasks=[_st("Socken paaren", "Pair the socks"), _st("Falten", "Fold"),
+                     _st("In den Schrank", "Into the wardrobe")]),
     _entry("bedding", "Bettwäsche abziehen", "Strip the bedding", "mdi:bed-empty", 3, 10, 8, 14,
-           "basis", MODE_EACH, available_from="09:00", available_until="18:00", day_offset=1),
+           "basis", MODE_EACH, available_from="09:00", available_until="18:00", day_offset=1,
+           subtasks=[_st("Bezüge abziehen", "Strip the covers"), _st("In den Wäschekorb", "Into the laundry basket"),
+                     _st("Neu beziehen", "Put on fresh bedding", 10)]),
     # --- bonus, one open (unassigned) task -----------------------------
     _entry("dishwasher_unload", "Spülmaschine ausräumen", "Unload the dishwasher", "mdi:dishwasher",
            4, 10, 6, OPEN_INTERVAL, "bonus", MODE_OPEN, requires="dishwasher",
@@ -162,28 +193,100 @@ CATALOG: tuple[dict, ...] = (
            trigger_hint_de="Spülprogramm fertig", trigger_hint_en="dishwasher program finished"),
     _entry("dryer_empty", "Wäsche aus dem Trockner + falten", "Empty the dryer + fold", "mdi:tumble-dryer",
            4, 10, 8, OPEN_INTERVAL, "bonus", MODE_OPEN, requires="dryer",
-           trigger_hint_de="Trockner fertig", trigger_hint_en="dryer finished"),
+           trigger_hint_de="Trockner fertig", trigger_hint_en="dryer finished",
+           subtasks=[_st("Ausräumen", "Empty"), _st("Flusensieb leeren", "Empty the lint filter"),
+                     _st("Falten & verteilen", "Fold & hand out")]),
     _entry("washer_hang", "Wäsche aufhängen", "Hang up the laundry", "mdi:hanger",
            4, 10, 9, OPEN_INTERVAL, "bonus", MODE_OPEN, requires="washer",
-           trigger_hint_de="Waschmaschine fertig", trigger_hint_en="washing machine finished"),
+           trigger_hint_de="Waschmaschine fertig", trigger_hint_en="washing machine finished",
+           subtasks=[_st("Ausräumen", "Empty"), _st("Ausschütteln & aufhängen", "Shake out & hang up"),
+                     _st("Korb zurück", "Basket back")]),
     _entry("vacuum_prep", "Weg frei für den Saugroboter", "Clear the way for the robot vacuum",
            "mdi:robot-vacuum", 2, 5, 6, OPEN_INTERVAL, "bonus", MODE_OPEN, requires="robot_vacuum",
-           trigger_hint_de="Saugroboter startet", trigger_hint_en="robot vacuum starts"),
+           trigger_hint_de="Saugroboter startet", trigger_hint_en="robot vacuum starts",
+           subtasks=[_st("Boden frei", "Clear the floor"), _st("Kabel & Socken weg", "Cables & socks away"),
+                     _st("Stühle hoch", "Chairs up", 8)]),
     _entry("trash", "Müll rausbringen", "Take out the trash", "mdi:trash-can", 2, 5, 8, OPEN_INTERVAL,
-           "bonus", MODE_OPEN),
+           "bonus", MODE_OPEN,
+           subtasks=[_st("Beutel zubinden", "Tie the bag"), _st("Rausbringen", "Take it out"),
+                     _st("Neuen Beutel einlegen", "Put in a new bag")]),
     _entry("groceries", "Einkäufe auspacken", "Unpack the groceries", "mdi:cart", 2, 5, 6, OPEN_INTERVAL,
-           "bonus", MODE_OPEN),
+           "bonus", MODE_OPEN,
+           subtasks=[_st("Kühlsachen zuerst", "Cold items first"), _st("Rest einräumen", "Put the rest away"),
+                     _st("Taschen weg", "Bags away")]),
     _entry("bottles", "Leergut wegbringen", "Return the empty bottles", "mdi:bottle-soda-classic",
-           3, 10, 10, OPEN_INTERVAL, "bonus", MODE_OPEN),
+           3, 10, 10, OPEN_INTERVAL, "bonus", MODE_OPEN,
+           subtasks=[_st("Flaschen sammeln & sortieren", "Collect & sort the bottles"),
+                     _st("Zurückgeben", "Return them"), _st("Bon an Mama/Papa", "Receipt to mom/dad")]),
     # --- Auftrag: templates only ----------------------------------------
     _entry("cooking", "Beim Kochen helfen", "Help with cooking", "mdi:chef-hat", 5, 30, 8, 0,
-           "auftrag", MODE_OPEN),
-    _entry("car", "Auto aussaugen", "Vacuum the car", "mdi:car-side", 6, 30, 8, 0, "auftrag", MODE_OPEN),
+           "auftrag", MODE_OPEN,
+           subtasks=[_st("Hände waschen", "Wash hands"), _st("Gemüse waschen", "Wash the vegetables"),
+                     _st("Schneiden", "Chop", 10), _st("Mit aufräumen", "Help tidy up")]),
+    _entry("car", "Auto aussaugen", "Vacuum the car", "mdi:car-side", 6, 30, 8, 0, "auftrag", MODE_OPEN,
+           subtasks=[_st("Müll raus", "Trash out"), _st("Fußmatten ausschütteln", "Shake out the floor mats"),
+                     _st("Aussaugen", "Vacuum")]),
     _entry("windows", "Fenster putzen", "Clean the windows", "mdi:window-closed-variant", 6, 45, 10, 0,
-           "auftrag", MODE_OPEN),
+           "auftrag", MODE_OPEN,
+           subtasks=[_st("Fensterbank frei", "Clear the window sill"), _st("Einsprühen & wischen", "Spray & wipe"),
+                     _st("Trocken nachwischen", "Wipe dry")]),
     _entry("sink", "Waschbecken im Bad putzen", "Clean the bathroom sink", "mdi:faucet", 4, 15, 10, 0,
-           "auftrag", MODE_OPEN),
+           "auftrag", MODE_OPEN,
+           subtasks=[_st("Zahnputzbecher spülen", "Rinse the toothbrush cup"),
+                     _st("Becken & Armatur putzen", "Clean basin & tap"), _st("Spiegel wischen", "Wipe the mirror")]),
 )
+
+# Previous step lists of catalog entries (frozen). Tasks generated with one of them are still
+# uncustomized: the customization check accepts them next to the current lists.
+LEGACY_SUBTASKS: dict[str, tuple[tuple[dict, ...], ...]] = {
+    "morning": (
+        (_st("Anziehen", "Get dressed"), _st("Bett machen", "Make the bed"),
+         _st("Schlafanzug weg", "Put pajamas away")),
+        (_st("Anziehen", "Get dressed"), _st("Frühstücken", "Have breakfast"),
+         _st("Zähne putzen", "Brush teeth"), _st("Bett machen", "Make the bed"),
+         _st("Schlafanzug weg", "Put pajamas away")),
+    ),
+    "evening": (
+        (_st("Schulranzen packen", "Pack school bag", requires="school"),
+         _st("Schuhe & Jacke an ihren Platz", "Shoes & jacket in their place"),
+         _st("Schmutzwäsche in den Korb", "Dirty laundry into the basket")),
+    ),
+    "room_blitz": (
+        (_st("Boden frei", "Clear the floor"),
+         _st("Spielzeug/Sachen in die Kisten", "Toys/things into the boxes"),
+         _st("Schreibtisch frei", "Clear the desk")),
+    ),
+    "room_blitz_small": (
+        (_st("Boden frei", "Clear the floor"), _st("Spielzeug in die Kisten", "Toys into the boxes")),
+    ),
+    "room_deep": (
+        (_st("Boden frei", "Clear the floor"), _st("Regal ordnen", "Tidy the shelf"),
+         _st("Müll raus", "Take out the trash"), _st("Staubsaugen", "Vacuum", 8)),
+    ),
+    "table_set": (
+        (_st("Teller", "Plates"), _st("Besteck", "Cutlery"), _st("Gläser", "Glasses")),
+    ),
+    # entries that had no steps before
+    "table_clear": ((),),
+    "dishwasher_load": ((),),
+    "plants": ((),),
+    "garden": ((),),
+    "driveway": ((),),
+    "pet_feed": ((),),
+    "pet_clean": ((),),
+    "own_laundry": ((),),
+    "bedding": ((),),
+    "dryer_empty": ((),),
+    "washer_hang": ((),),
+    "vacuum_prep": ((),),
+    "trash": ((),),
+    "groceries": ((),),
+    "bottles": ((),),
+    "cooking": ((),),
+    "car": ((),),
+    "windows": ((),),
+    "sink": ((),),
+}
 
 CATALOG_BY_KEY = {e["key"]: e for e in CATALOG}
 ROTATION_KEYS = tuple(e["key"] for e in CATALOG if e["mode"] == MODE_ROTATION)
@@ -298,14 +401,17 @@ FLOW_FREQUENT_KEYS = (
 )
 
 
-def flow_catalog(lang: str = "de", features: Iterable[str] | None = None) -> list[dict]:
+def flow_catalog(
+    lang: str = "de", features: Iterable[str] | None = None, age: int | None = None,
+) -> list[dict]:
     """Localized catalog entries with their defaults for the "new task" flow of the parents card.
 
     Each entry: ``key, name, icon, points, minutes, min_age, interval, category, mode,
     allow_together, requires_approval, available_from, available_until, frequent, available,
-    subtasks [{title}]``. ``features`` (household features of the wizard) hides the entries that
+    subtasks [{title, min_age}]``. ``features`` (household features of the wizard) hides the entries that
     need a feature the household lacks (``available`` False); ``None`` keeps everything available.
-    A catalog subtask that needs a missing feature is left out.
+    A catalog subtask that needs a missing feature is left out, and so is one for older kids
+    than ``age`` (``None``: no age filter, the client filters by ``min_age``).
     """
     lang = "de" if lang == "de" else "en"
     feature_set = None if features is None else {f for f in features if isinstance(f, str)}
@@ -315,7 +421,9 @@ def flow_catalog(lang: str = "de", features: Iterable[str] | None = None) -> lis
         for st in e["subtasks"]:
             if st.get("requires") and feature_set is not None and st["requires"] not in feature_set:
                 continue
-            subtasks.append({"title": st["title_de"] if lang == "de" else st["title_en"]})
+            if age is not None and st["min_age"] > age:
+                continue
+            subtasks.append({"title": st["title_de"] if lang == "de" else st["title_en"], "min_age": st["min_age"]})
         result.append({
             "key": e["key"],
             "name": _name(e, lang),
@@ -790,17 +898,21 @@ def legacy_customized_fields(
     if bool(task.get("requires_approval", False)) != bool(entry["requires_approval"]):
         result.add("requires_approval")
 
-    # subtasks: the catalog list of one language, minus entries that depend on the
-    # age or a household feature (those may have been filtered out)
+    # subtasks: the current catalog list or one of its frozen predecessors (LEGACY_SUBTASKS) in one
+    # language, minus entries that depend on the age or a household feature (those may have been
+    # filtered out)
     titles = subtask_titles(task.get("subtasks"))
     ok = False
-    for lang_key in ("title_de", "title_en"):
-        full = [st[lang_key] for st in entry["subtasks"]]
-        if not _is_subsequence(titles, full):
-            continue
-        missing = [st for st in entry["subtasks"] if st[lang_key] not in titles]
-        if all(st["min_age"] > 0 or st.get("requires") for st in missing):
-            ok = True
+    for steps in (entry["subtasks"], *LEGACY_SUBTASKS.get(catalog_key, ())):
+        for lang_key in ("title_de", "title_en"):
+            full = [st[lang_key] for st in steps]
+            if not _is_subsequence(titles, full):
+                continue
+            missing = [st for st in steps if st[lang_key] not in titles]
+            if all(st["min_age"] > 0 or st.get("requires") for st in missing):
+                ok = True
+                break
+        if ok:
             break
     if not ok:
         result.add("subtasks")
