@@ -90,7 +90,7 @@ const I18N_PARENTS = {
     pt_ed_steps: "Steps (one per line)", pt_ed_todo: "Shopping list", pt_ed_todo_none: "— none —",
     nt_c_stock: "Stock (pills, optional)", nt_c_perdose: "Pills per dose", nt_c_stock_d: "A week before it runs out you get the task \"Prescription / refill\".",
     own_title: "New task", own_name: "Name", own_name_ph: "e.g. Call the dentist", own_interval: "Repeats", own_planning: "Planning task", own_who: "Who does it?", own_create: "Add",
-    pt_add: "Add task", pt_g_overdue: "Overdue", pt_g_today: "Today", pt_g_upcoming: "Coming up", pt_g_someday: "Someday",
+    pt_add: "Add task", pt_once: "One-time to-dos ({n})", pt_g_overdue: "Overdue", pt_g_today: "Today", pt_g_upcoming: "Coming up", pt_g_someday: "Someday",
     pt_tomorrow: "Tomorrow", pt_postpone: "→ Tomorrow", toast_pt_postponed: "Moved to tomorrow", pt_overdue_since: "overdue since {day}",
     qa_when: "When?", qa_today: "Today", qa_tomorrow: "Tomorrow", qa_weekend: "Weekend", qa_date: "Date", qa_someday: "Someday",
     qa_more: "More options", qa_time: "Time (optional)", qa_need_date: "Please pick a date.",
@@ -198,7 +198,7 @@ const I18N_PARENTS = {
     pt_ed_steps: "Schritte (einer pro Zeile)", pt_ed_todo: "Einkaufsliste", pt_ed_todo_none: "— keine —",
     nt_c_stock: "Vorrat (Tabletten, optional)", nt_c_perdose: "Tabletten pro Gabe", nt_c_stock_d: "Eine Woche bevor er reicht, bekommt ihr die Aufgabe \"Rezept/Nachkauf\".",
     own_title: "Neue Aufgabe", own_name: "Name", own_name_ph: "z. B. Zahnarzt anrufen", own_interval: "Wiederholung", own_planning: "Planungsaufgabe", own_who: "Wer macht es?", own_create: "Hinzufügen",
-    pt_add: "Aufgabe hinzufügen", pt_g_overdue: "Überfällig", pt_g_today: "Heute", pt_g_upcoming: "Demnächst", pt_g_someday: "Irgendwann",
+    pt_add: "Aufgabe hinzufügen", pt_once: "Einmalige To-dos ({n})", pt_g_overdue: "Überfällig", pt_g_today: "Heute", pt_g_upcoming: "Demnächst", pt_g_someday: "Irgendwann",
     pt_tomorrow: "Morgen", pt_postpone: "→ Morgen", toast_pt_postponed: "Auf morgen verschoben", pt_overdue_since: "überfällig seit {day}",
     qa_when: "Wann?", qa_today: "Heute", qa_tomorrow: "Morgen", qa_weekend: "Wochenende", qa_date: "Datum", qa_someday: "Irgendwann",
     qa_more: "Mehr Optionen", qa_time: "Uhrzeit (optional)", qa_need_date: "Bitte ein Datum wählen.",
@@ -2772,8 +2772,13 @@ class FamilyMissionParents extends HTMLElement {
   }
 
   _renderParentTaskEditor() {
-    const list = this._parentTasksAll();
-    const rows = list.map(t => {
+    // Recurring parent tasks are the "who does what" list; one-time to-dos (quick add, someday,
+    // dated) are deleted when done and stay in a collapsed fold so the list does not get long.
+    const all = this._parentTasksAll();
+    const once = (t) => !(parseInt(t.interval) > 0) && !(Array.isArray(t.weekdays) && t.weekdays.length);
+    const list = all.filter(t => !once(t));
+    const oneTime = all.filter(once);
+    const row = (t) => {
       const busy = this._busy.has('pt:' + t.id) ? 'disabled' : '';
       const who = (t.assignees || []).map(u => this._adultName(u)).join(', ');
       return `
@@ -2789,9 +2794,13 @@ class FamilyMissionParents extends HTMLElement {
           </div>
           ${this._renderPtMore(t, busy)}
         </article>`;
-    }).join('');
+    };
+    const rows = list.map(row).join('');
+    const onceFold = oneTime.length ? `
+      <details class="fold" data-det="pt-once" ${this._open.has('det:pt-once') ? 'open' : ''}>
+        <summary>${escParents(this.localize('pt_once', { n: oneTime.length }))}</summary>${oneTime.map(row).join('')}</details>` : '';
     return `
-      ${rows || `<div class="empty">${escParents(this.localize('pt_none'))}</div>`}
+      ${rows || `<div class="empty">${escParents(this.localize('pt_none'))}</div>`}${onceFold}
       <div class="chips">
         <button class="chip" data-action="pt-picker">➕ ${escParents(this.localize('pt_from_templates'))}</button>
         <button class="chip" data-action="pt-new">➕ ${escParents(this.localize('pt_own'))}</button>

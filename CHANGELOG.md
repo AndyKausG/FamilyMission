@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.8.1] - 2026-11-02
+
+- **Parents' hub, More → Parent tasks:** one-time to-dos (quick add, someday, dated; they are deleted when ticked off) are no longer listed between the recurring parent tasks. They sit in a collapsed fold "Einmalige To-dos (N)" / "One-time to-dos (N)" below the list, so the "who does what" list stays short.
+
 ## [2.8.0] - 2026-11-02
 
 - **Quick to-do on the own device.** In the kids card with `mode: mine`, an adult with a parents' role gets a round **＋** (44 px) in the "Meine Aufgaben" header. It opens a kids-style sheet: name (autofocus, Enter creates), chips Heute / Morgen / Wochenende / Datum / Irgendwann, optional time (15-minute select) and, when a partner exists, "Für" me / partner. The task is created with the existing `family_mission/parent_task_add`; errors show a toast and keep the sheet open. Never shown for kids or on the shared tablet.
