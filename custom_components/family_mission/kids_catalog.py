@@ -109,7 +109,8 @@ CATALOG: tuple[dict, ...] = (
     # --- daily basis, one task per kid ---------------------------------
     _entry("morning", "Morgen-Mission", "Morning mission", "mdi:weather-sunny", 2, 5, 6, 1,
            "basis", MODE_EACH,
-           subtasks=[_st("Anziehen", "Get dressed"), _st("Bett machen", "Make the bed"),
+           subtasks=[_st("Anziehen", "Get dressed"), _st("Frühstücken", "Have breakfast"),
+                     _st("Zähne putzen", "Brush teeth"), _st("Bett machen", "Make the bed"),
                      _st("Schlafanzug weg", "Put pajamas away")],
            available_from="05:00", available_until="10:00"),
     _entry("evening", "Abend-Mission", "Evening mission", "mdi:weather-night", 3, 7, 6, 1,
@@ -696,3 +697,120 @@ def all_candidate_keys(proposal: dict) -> set[str]:
     keys |= {t["wizard_key"] for t in proposal["open_tasks"]}
     keys |= {t["wizard_key"] for t in proposal["templates"]}
     return keys
+
+
+# ---------------------------------------------------------------------------
+# Customizations of generated tasks
+# ---------------------------------------------------------------------------
+
+# Definition fields of a task that the parents can change; a change of a wizard
+# task is recorded in its ``customized`` list and protects it from the wizard.
+CUSTOM_FIELDS = (
+    "name", "complexity", "icon", "category", "min_age", "allow_together", "interval", "weekdays",
+    "available_from", "available_until", "subtasks", "requires_approval", "description",
+    "reminder_at", "scope", "rotation",
+)
+
+
+def _norm_time(value: Any) -> str | None:
+    return str(value)[:5] if value else None
+
+
+def subtask_titles(subtasks: Any) -> list[str]:
+    """Titles of a subtask list (dicts or plain strings); progress is not part of the definition."""
+    result = []
+    for st in subtasks or []:
+        title = st.get("title") if isinstance(st, dict) else st
+        result.append(str(title or "").strip())
+    return result
+
+
+def _is_subsequence(needle: list[str], hay: list[str]) -> bool:
+    it = iter(hay)
+    return all(any(item == other for other in it) for item in needle)
+
+
+def legacy_customized_fields(
+    task: dict, point_overrides: dict | None = None, expected_scope: str | None = None,
+) -> list[str]:
+    """Fields of an existing wizard task that differ from what the wizard generates today.
+
+    Used once to migrate wizard tasks that were created before the ``customized``
+    list existed. Conservative: whatever cannot be shown to be the wizard's own
+    value counts as customized (a task of an unknown catalog key is customized
+    completely). The kid's name is not known here, so the name only has to
+    start with the catalog name (German or English).
+
+    :param point_overrides: ``{wizard_key: points}`` the wizard was run with
+    :param expected_scope: scope the wizard generates for the task's catalog key
+    """
+    catalog_key, _suffix = split_key(task.get("wizard_key") or "")
+    entry = CATALOG_BY_KEY.get(catalog_key)
+    if entry is None:
+        return sorted(CUSTOM_FIELDS)
+    result = set()
+
+    name = str(task.get("name") or "")
+    prefixes = (entry["name_de"], entry["name_en"])
+    if not any(name == p or name.startswith(p + " ") for p in prefixes):
+        result.add("name")
+
+    points = (point_overrides or {}).get(task.get("wizard_key"), entry["points"])
+    try:
+        points = max(1, min(10, int(points)))
+    except (TypeError, ValueError):
+        points = entry["points"]
+    if task.get("complexity") != points:
+        result.add("complexity")
+    if task.get("icon") != entry["icon"]:
+        result.add("icon")
+    if task.get("category") != entry["category"]:
+        result.add("category")
+    if (task.get("min_age") or 0) != entry["min_age"]:
+        result.add("min_age")
+    if bool(task.get("allow_together")) != bool(entry["allow_together"]):
+        result.add("allow_together")
+
+    interval = task.get("interval")
+    if entry["mode"] == MODE_OPEN:
+        expected_ok = interval == OPEN_INTERVAL
+    else:
+        step = entry["interval"]
+        expected_ok = isinstance(interval, int) and not isinstance(interval, bool) and interval > 0 and (
+            interval % step == 0 if entry["mode"] == MODE_ROTATION else interval == step
+        )
+    if not expected_ok:
+        result.add("interval")
+    if task.get("weekdays"):
+        result.add("weekdays")
+    if _norm_time(task.get("available_from")) != entry["available_from"]:
+        result.add("available_from")
+    if _norm_time(task.get("available_until")) != entry["available_until"]:
+        result.add("available_until")
+    if bool(task.get("requires_approval", False)) != bool(entry["requires_approval"]):
+        result.add("requires_approval")
+
+    # subtasks: the catalog list of one language, minus entries that depend on the
+    # age or a household feature (those may have been filtered out)
+    titles = subtask_titles(task.get("subtasks"))
+    ok = False
+    for lang_key in ("title_de", "title_en"):
+        full = [st[lang_key] for st in entry["subtasks"]]
+        if not _is_subsequence(titles, full):
+            continue
+        missing = [st for st in entry["subtasks"] if st[lang_key] not in titles]
+        if all(st["min_age"] > 0 or st.get("requires") for st in missing):
+            ok = True
+            break
+    if not ok:
+        result.add("subtasks")
+
+    if str(task.get("description") or "").strip():
+        result.add("description")
+    if task.get("reminder_at"):
+        result.add("reminder_at")
+    if expected_scope is not None and task.get("scope") not in (None, expected_scope):
+        result.add("scope")
+    if task.get("rotation"):
+        result.add("rotation")
+    return sorted(result)

@@ -428,3 +428,69 @@ def test_flow_catalog_features_hide_entries_and_subtasks():
     assert entries["dishwasher_load"]["available"] is True
     assert "Pack school bag" in [s["title"] for s in entries["evening"]["subtasks"]]
     assert all(e["available"] for e in kc.flow_catalog("en"))
+
+
+def test_morning_mission_has_breakfast_and_teeth_steps():
+    morning = kc.CATALOG_BY_KEY["morning"]
+    assert [s["title_de"] for s in morning["subtasks"]] == [
+        "Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg"]
+    assert [s["title_en"] for s in morning["subtasks"]] == [
+        "Get dressed", "Have breakfast", "Brush teeth", "Make the bed", "Put pajamas away"]
+
+
+def _generated(key="morning:person.anna", lang="de"):
+    """A task as the wizard generates it (first matching proposal item)."""
+    p = proposal(lang=lang)
+    items = [t for k in p["kids"] for t in k["tasks"]] + p["open_tasks"]
+    item = next(t for t in items if t["wizard_key"] == key)
+    return {
+        "wizard_key": key, "name": item["name"], "complexity": item["points"], "icon": item["icon"],
+        "category": item["category"], "min_age": item["min_age"], "allow_together": item["allow_together"],
+        "interval": item["interval"], "available_from": item["available_from"],
+        "available_until": item["available_until"], "requires_approval": item["requires_approval"],
+        "subtasks": item["subtasks"], "description": "",
+    }
+
+
+def test_legacy_customized_fields_of_generated_tasks_is_empty():
+    for key in ("morning:person.anna", "table_set:person.ben", "trash:open", "room_blitz:person.anna", "evening:person.david"):
+        for lang in ("de", "en"):
+            assert kc.legacy_customized_fields(_generated(key, lang)) == [], (key, lang)
+
+
+def test_legacy_customized_fields_detects_each_difference():
+    def fields(**change):
+        return kc.legacy_customized_fields({**_generated(), **change})
+
+    assert fields(name="Etwas anderes") == ["name"]
+    assert fields(complexity=9) == ["complexity"]
+    assert fields(icon="mdi:star") == ["icon"]
+    assert fields(category="bonus") == ["category"]
+    assert fields(min_age=3) == ["min_age"]
+    assert fields(allow_together=True) == ["allow_together"]
+    assert fields(interval=2) == ["interval"]
+    assert fields(weekdays=[0]) == ["weekdays"]
+    assert fields(available_until="11:00") == ["available_until"]
+    assert fields(available_from=None) == ["available_from"]
+    assert fields(requires_approval=True) == ["requires_approval"]
+    assert fields(description="x") == ["description"]
+    assert fields(reminder_at="07:00") == ["reminder_at"]
+    assert fields(rotation={"members": ["a", "b"]}) == ["rotation"]
+    assert fields(subtasks=[{"title": "Anziehen", "done": True}]) == ["subtasks"]          # steps removed
+    assert fields(subtasks=[{"title": "Neu", "done": False}]) == ["subtasks"]
+    assert kc.legacy_customized_fields({**_generated(), "scope": "personal"}, expected_scope="home") == ["scope"]
+
+
+def test_legacy_customized_fields_tolerances():
+    # progress is no customization; points overrides of the wizard and rotation lengths are fine
+    task = _generated()
+    task["subtasks"] = [{**s, "done": True} for s in task["subtasks"]]
+    assert kc.legacy_customized_fields(task) == []
+    assert kc.legacy_customized_fields({**task, "complexity": 6}, {"morning:person.anna": 6}) == []
+    rot = _generated("table_set:person.ben")
+    assert kc.legacy_customized_fields({**rot, "interval": rot["interval"] * 2}) == []
+    # steps that depend on the age / a feature may be missing
+    evening = _generated("evening:person.david")
+    assert kc.legacy_customized_fields({**evening, "subtasks": evening["subtasks"][1:]}) == []
+    # an unknown catalog key is customized completely
+    assert kc.legacy_customized_fields({"wizard_key": "gone:person.x"}) == sorted(kc.CUSTOM_FIELDS)

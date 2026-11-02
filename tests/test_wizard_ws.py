@@ -112,7 +112,7 @@ async def test_apply_creates_everything(hass, hass_ws_client, setup):
     res = await _apply(ws, goals={ANNA: 200}, family_goal={"points": 640, "reward": "Pizza-Abend"})
     assert res["success"], res
     assert res["result"] == {"success": True, "created": 44, "bonus": 7, "templates": 4,
-                             "deleted": 0, "updated": 0, "skipped": 0, "triggers": 0}
+                             "deleted": 0, "updated": 0, "kept_customized": 0, "detached": 0, "skipped": 0, "triggers": 0}
     await hass.async_block_till_done()
     assert len(created_events) == 51
 
@@ -121,7 +121,7 @@ async def test_apply_creates_everything(hass, hass_ws_client, setup):
     assert morning["name"] == "Morgen-Mission Anna" and morning["assignees"] == [ANNA]
     assert morning["complexity"] == 2 and morning["interval"] == 1 and morning["category"] == "basis"
     assert morning["min_age"] == 6 and morning["generated_by"] == "wizard"
-    assert [s["title"] for s in morning["subtasks"]] == ["Anziehen", "Bett machen", "Schlafanzug weg"]
+    assert [s["title"] for s in morning["subtasks"]] == ["Anziehen", "Frühstücken", "Zähne putzen", "Bett machen", "Schlafanzug weg"]
     assert "room_blitz:person.david" not in tasks and "room_blitz_small:person.david" in tasks
     deep = tasks["room_deep:person.david"]
     assert [s["title"] for s in deep["subtasks"]] == ["Boden frei", "Regal ordnen", "Müll raus"]

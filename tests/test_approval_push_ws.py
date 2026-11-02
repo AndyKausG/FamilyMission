@@ -220,8 +220,9 @@ async def test_wizard_sets_flag_on_creation_and_keeps_parent_choice(hass, client
     target = flagged[0]
     assert (await _call(admin, "family_mission/edit_task", task_id=target["id"], requires_approval=False))["success"]
     assert (await _call(admin, "family_mission/wizard_apply", **base, replace_existing=True))["success"]
-    assert target["requires_approval"] is False
-    # an old wizard task without the key gets the catalog value on re-apply
+    assert target["requires_approval"] is False and "requires_approval" in target["customized"]
+    # an old (uncustomized) wizard task without the key gets the catalog value on re-apply
     del target["requires_approval"]
+    target["customized"] = []
     assert (await _call(admin, "family_mission/wizard_apply", **base, replace_existing=True))["success"]
     assert target.get("requires_approval") is True

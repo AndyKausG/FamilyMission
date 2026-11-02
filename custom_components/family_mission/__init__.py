@@ -84,6 +84,7 @@ from .const import (
     WS_TYPE_WIZARD_CATALOG,
     WS_TYPE_WIZARD_PREVIEW,
     WS_TYPE_WIZARD_APPLY,
+    WS_TYPE_WIZARD_UNDO,
     WS_TYPE_SET_BONUS_TRIGGERS,
     WS_TYPE_APPROVE,
     WS_TYPE_REJECT,
@@ -1094,6 +1095,7 @@ async def ws_edit_task(hass: HomeAssistant, connection: websocket_api.ActiveConn
         return
         
     task_ref = data["tasks"][task_id]
+    before = _task_definition(task_ref)
     keys_to_update = ["name", "description", "area", "interval", "assignees", "complexity", "icon", "subtasks"]
     
     for key in keys_to_update:
@@ -1127,10 +1129,51 @@ async def ws_edit_task(hass: HomeAssistant, connection: websocket_api.ActiveConn
     _apply_schedule(hass, task_ref, msg)
     if "weekdays" in msg:
         _align_due_to_weekdays(task_ref, dt_util.now().date())
+    _record_customization(task_ref, before)
 
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     connection.send_result(msg["id"], {"success": True})
+
+
+def _task_definition(task: dict) -> dict:
+    """The parents' definition fields of a task (see ``kids_catalog.CUSTOM_FIELDS``) in a comparable form.
+
+    Subtasks count by their titles only (progress toggles are no change), a rotation by its members.
+    """
+    rotation = task.get("rotation")
+    return {
+        "name": task.get("name"),
+        "complexity": task.get("complexity"),
+        "icon": task.get("icon"),
+        "category": normalize_category(task.get("category")),
+        "min_age": normalize_min_age(task.get("min_age", 0)),
+        "allow_together": bool(task.get("allow_together")),
+        "interval": task.get("interval"),
+        "weekdays": kidslib.normalize_weekdays(task.get("weekdays")) or None,
+        "available_from": normalize_time(task.get("available_from")),
+        "available_until": normalize_time(task.get("available_until")),
+        "subtasks": kids_catalog.subtask_titles(task.get("subtasks")),
+        "requires_approval": bool(task.get("requires_approval", False)),
+        "description": str(task.get("description") or "").strip(),
+        "reminder_at": normalize_time(task.get("reminder_at")),
+        "scope": task.get("scope"),
+        "rotation": sorted(rotation.get("members") or []) if isinstance(rotation, dict) else None,
+    }
+
+
+def _record_customization(task: dict, before: dict) -> None:
+    """Remember in ``task["customized"]`` which definition fields an edit changed (wizard tasks only).
+
+    The wizard never overwrites these fields again. ``before`` is :func:`_task_definition`
+    taken before the edit; progress, due date, pause, claim and the rotation turn are no definition.
+    """
+    if task.get("generated_by") != kids_catalog.GENERATED_BY:
+        return
+    after = _task_definition(task)
+    changed = {key for key in kids_catalog.CUSTOM_FIELDS if before.get(key) != after.get(key)}
+    if changed:
+        task["customized"] = sorted(set(task.get("customized") or []) | changed)
 
 
 def _together_from(value, category) -> bool:
@@ -1451,6 +1494,7 @@ async def ws_import_tasks(hass: HomeAssistant, connection: websocket_api.ActiveC
             if isinstance(tdata, dict):
                 migrate_task_like(tdata)
             data["tasks"][tid] = tdata
+        _migrate_wizard_customized(data, _get_entry(hass).options)
             
     if "templates" in msg:
         imported_templates = msg["templates"]
@@ -3667,6 +3711,8 @@ async def ws_wizard_catalog(hass: HomeAssistant, connection: websocket_api.Activ
         t.get("generated_by") == kids_catalog.GENERATED_BY
         for t in hass.data[DOMAIN]["data"]["tasks"].values()
     )
+    backup = _wizard_backup(hass.data[DOMAIN]["data"])
+    result["backup"] = {"at": backup["at"]} if backup else None
     connection.send_result(msg["id"], result)
 
 
@@ -3701,36 +3747,120 @@ async def ws_wizard_preview(hass: HomeAssistant, connection: websocket_api.Activ
     proposal["suggested_excluded"] = kids_catalog.suggest_excluded(_wizard_proposal(ctx, set()), ctx["phase"])
     for kid in proposal["kids"]:
         kid.pop("pin", None)
+    # What a re-run with "replace" would do with the earlier wizard tasks (customized ones are protected)
+    tasks = hass.data[DOMAIN]["data"]["tasks"]
+    selected_keys = {
+        t["wizard_key"] for t in [x for k in proposal["kids"] for x in k["tasks"]] + proposal["open_tasks"] if t["selected"]
+    }
+    info = _wizard_existing_info(tasks, {k["id"] for k in ctx["kids"]}, proposal, selected_keys)
+    proposal["existing"] = info
+    proposal["existing_counts"] = _wizard_counts(info)
     connection.send_result(msg["id"], proposal)
 
 
 def _wizard_update_task(task: dict, item: dict) -> None:
     """Refresh the definition of an existing wizard task from the proposal.
 
+    Fields in ``task["customized"]`` (changed by the parents) are never touched.
     Due date, pause, claim and the assignees stay as they are; the progress of
     subtasks with an unchanged title is kept.
     """
-    progress = {st.get("title"): bool(st.get("done")) for st in task.get("subtasks") or [] if isinstance(st, dict)}
-    task["name"] = item["name"]
-    task["complexity"] = item["points"]
-    task["icon"] = item["icon"]
-    task["category"] = normalize_category(item["category"])
-    task["min_age"] = normalize_min_age(item["min_age"])
-    task["allow_together"] = bool(item.get("allow_together", default_allow_together(item["category"])))
-    task["interval"] = item["interval"]
-    # Only a task that never had the flag (created before 2.3) gets the catalog value: once the
-    # parents saved the task, the key exists and their choice is kept.
-    if "requires_approval" not in task and item.get("requires_approval"):
-        task["requires_approval"] = True
-    task["available_from"] = normalize_time(item.get("available_from"))
-    task["available_until"] = normalize_time(item.get("available_until"))
+    custom = set(task.get("customized") or [])
+    if "subtasks" not in custom:
+        progress = {st.get("title"): bool(st.get("done")) for st in task.get("subtasks") or [] if isinstance(st, dict)}
+        task["subtasks"] = [
+            {**st, "done": progress.get(st.get("title"), False)} for st in copy.deepcopy(item["subtasks"])
+        ]
+    if "name" not in custom:
+        task["name"] = item["name"]
+    if "complexity" not in custom:
+        task["complexity"] = item["points"]
+    if "icon" not in custom:
+        task["icon"] = item["icon"]
+    if "category" not in custom:
+        task["category"] = normalize_category(item["category"])
+    if "min_age" not in custom:
+        task["min_age"] = normalize_min_age(item["min_age"])
+    if "allow_together" not in custom:
+        task["allow_together"] = bool(item.get("allow_together", default_allow_together(item["category"])))
+    # a weekday schedule replaces the interval (which then stays as it is)
+    if "interval" not in custom and not task.get("weekdays"):
+        task["interval"] = item["interval"]
+    if "requires_approval" not in custom:
+        if "requires_approval" not in task:
+            if item.get("requires_approval"):
+                task["requires_approval"] = True    # created before 2.3: gets the catalog value once
+        else:
+            task["requires_approval"] = bool(item.get("requires_approval", False))
+    if "available_from" not in custom:
+        task["available_from"] = normalize_time(item.get("available_from"))
+    if "available_until" not in custom:
+        task["available_until"] = normalize_time(item.get("available_until"))
     if item.get("replaced_by_key"):
         task["replaced_by_key"] = item["replaced_by_key"]
     else:
         task.pop("replaced_by_key", None)
-    task["subtasks"] = [
-        {**st, "done": progress.get(st.get("title"), False)} for st in copy.deepcopy(item["subtasks"])
-    ]
+
+
+def _wizard_detach(task: dict) -> None:
+    """A wizard task the parents customized turns into an own task (kept completely)."""
+    for key in ("generated_by", "wizard_key", "customized"):
+        task.pop(key, None)
+
+
+def _migrate_wizard_customized(data: dict, options: dict | None = None) -> int:
+    """Give wizard tasks without a ``customized`` list one (runs once per task).
+
+    Fields that differ from what the wizard generates today (see
+    ``kids_catalog.legacy_customized_fields``) count as customized.
+    """
+    wizard_points = ((options or {}).get("wizard") or {}).get("points")
+    wizard_points = wizard_points if isinstance(wizard_points, dict) else {}
+    count = 0
+    for task in (data.get("tasks") or {}).values():
+        if (
+            not isinstance(task, dict) or task.get("generated_by") != kids_catalog.GENERATED_BY
+            or not task.get("wizard_key") or isinstance(task.get("customized"), list)
+        ):
+            continue
+        catalog_key, _suffix = kids_catalog.split_key(task["wizard_key"])
+        task["customized"] = kids_catalog.legacy_customized_fields(
+            task, wizard_points, kidslib.scope_for_key(catalog_key),
+        )
+        count += 1
+    return count
+
+
+def _wizard_existing_info(tasks: dict, kid_ids: set, proposal: dict, selected_keys: set) -> list[dict]:
+    """The earlier wizard tasks a re-run would handle: what happens to each of them.
+
+    ``action``: ``keep`` (selected, customized fields stay), ``update`` (selected,
+    uncustomized), ``detach`` (not selected but customized: becomes an own task),
+    ``remove`` (not selected, uncustomized).
+    """
+    result = []
+    for tid in _wizard_task_ids_to_replace(tasks, kid_ids, proposal):
+        task = tasks[tid]
+        custom = sorted(task.get("customized") or [])
+        selected = task["wizard_key"] in selected_keys
+        if selected:
+            action = "keep" if custom else "update"
+        else:
+            action = "detach" if custom else "remove"
+        result.append({
+            "task_id": tid, "wizard_key": task["wizard_key"], "name": task.get("name") or "",
+            "customized": custom, "selected": selected, "action": action,
+        })
+    return result
+
+
+def _wizard_counts(info: list[dict]) -> dict:
+    return {
+        "kept": sum(1 for i in info if i["action"] == "keep"),
+        "updated": sum(1 for i in info if i["action"] == "update"),
+        "removed": sum(1 for i in info if i["action"] == "remove"),
+        "detached": sum(1 for i in info if i["action"] == "detach"),
+    }
 
 
 def _wizard_restagger(wizard_tasks: list, existing: dict, household_day: int) -> dict:
@@ -3815,6 +3945,7 @@ def _wizard_task_ids_to_replace(tasks: dict, kid_ids: set, proposal: dict) -> li
     }),
     vol.Optional("replace_existing", default=False): bool,
     vol.Optional("reschedule", default=False): bool,
+    vol.Optional("reset_customized", default=[]): [str],
     vol.Optional("device_triggers", default=[]): [vol.Schema({
         vol.Required("wizard_key"): str,
         vol.Required("entity_id"): cv.entity_id,
@@ -3887,13 +4018,36 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
             if item["selected"] and item["wizard_key"] in wizard_task_by_key():
                 restagger[item["wizard_key"]] = _wizard_fresh_due(item, now_local, ctx["start"])
 
+    # Safety net for "undo last run": copies of everything this run changes or removes
+    backup_tasks: dict = {}
+    deleted_ids: list = []
+    detached = 0
+    detached_keys: dict = {}
+    reset_ids = set(msg["reset_customized"])
     deleted = 0
     if replace:
         for tid in _wizard_task_ids_to_replace(data["tasks"], kid_ids, proposal):
-            if data["tasks"][tid].get("wizard_key") not in selected_keys:
+            task = data["tasks"][tid]
+            if task.get("wizard_key") in selected_keys:
+                continue
+            backup_tasks[tid] = copy.deepcopy(task)
+            if task.get("customized"):
+                # customized by the parents: never deleted, it becomes an own task
+                detached_keys[task["wizard_key"]] = tid
+                _wizard_detach(task)
+                detached += 1
+            else:
                 del data["tasks"][tid]
+                deleted_ids.append(tid)
                 deleted += 1
     existing = wizard_task_by_key()
+    if replace:
+        for item in wizard_tasks:
+            old = existing.get(item["wizard_key"]) if item["selected"] else None
+            if old is not None and old.get("id"):
+                backup_tasks.setdefault(old["id"], copy.deepcopy(old))
+                if old["id"] in reset_ids:
+                    old["customized"] = []    # deliberately reset to the proposal
 
     def to_due(day: str) -> str:
         return dt_util.as_utc(dt_util.start_of_local_day(date.fromisoformat(day))).isoformat()
@@ -3901,6 +4055,7 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
     created_tasks = []
     skipped = 0
     updated = 0
+    kept_customized = 0
     for item in wizard_tasks:
         if not item["selected"]:
             continue
@@ -3909,6 +4064,8 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
             skipped += 1
             continue
         if old is not None:
+            if old.get("customized"):
+                kept_customized += 1
             _wizard_update_task(old, item)
             if item["wizard_key"] in restagger:
                 old["due_date"] = to_due(restagger[item["wizard_key"]].isoformat())
@@ -3940,6 +4097,7 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
             "subtasks": copy.deepcopy(item["subtasks"]),
             "wizard_key": item["wizard_key"],
             "generated_by": kids_catalog.GENERATED_BY,
+            "customized": [],
             "requires_approval": bool(item.get("requires_approval", False)),
             "scope": kidslib.scope_for_key(kids_catalog.split_key(item["wizard_key"])[0]),
         }
@@ -3952,6 +4110,7 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
     templates = data.setdefault("templates", {})
     template_names = {str(t.get("name", "")).strip().lower() for t in templates.values()}
     created_templates = 0
+    created_template_ids = []
     for item in proposal["templates"]:
         if not item["selected"] or item["name"].strip().lower() in template_names:
             continue
@@ -3972,6 +4131,15 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
         }
         template_names.add(item["name"].strip().lower())
         created_templates += 1
+        created_template_ids.append(template_id)
+
+    data["wizard_backup"] = {
+        "at": dt_util.utcnow().isoformat(),
+        "tasks": backup_tasks,
+        "deleted_ids": deleted_ids,
+        "created_ids": [t["id"] for t in created_tasks],
+        "created_template_ids": created_template_ids,
+    }
 
     # --- settings: goals, family goal, triggers, wizard memory ---------------------
     options = dict(entry.options)
@@ -4010,6 +4178,12 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
     triggers = [
         t for t in (options.get("bonus_triggers") or []) if t.get("wizard_key") not in open_keys
     ]
+    # the trigger of an open bonus task that turned into an own task now points to the task itself
+    triggers += [
+        {"task_id": detached_keys[t["wizard_key"]], "entity_id": t["entity_id"], "to_state": t["to_state"]}
+        for t in (options.get("bonus_triggers") or [])
+        if t.get("wizard_key") in detached_keys and t.get("wizard_key") in open_keys
+    ]
     triggers += [
         {"wizard_key": t["wizard_key"], "entity_id": t["entity_id"], "to_state": t["to_state"]}
         for t in msg["device_triggers"]
@@ -4038,9 +4212,57 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
         "templates": created_templates,
         "deleted": deleted,
         "updated": updated,
+        "kept_customized": kept_customized,
+        "detached": detached,
         "skipped": skipped,
         "triggers": len(msg["device_triggers"]),
     })
+
+
+WIZARD_BACKUP_DAYS = 7
+
+
+def _wizard_backup(data: dict) -> dict | None:
+    """The backup of the last wizard run while it can still be undone (7 days), else ``None``."""
+    backup = data.get("wizard_backup")
+    if not isinstance(backup, dict):
+        return None
+    at = parse_dt(backup.get("at")) if isinstance(backup.get("at"), str) else None
+    if at is None or dt_util.utcnow() - dt_util.as_utc(at) > timedelta(days=WIZARD_BACKUP_DAYS):
+        return None
+    return backup
+
+
+@websocket_api.websocket_command({vol.Required("type"): WS_TYPE_WIZARD_UNDO})
+@websocket_api.async_response
+async def ws_wizard_undo(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Undo the last wizard run (admin / manager): changed, deleted and detached tasks come back, new ones go.
+
+    Only the tasks are restored (not goals or triggers). Available until the next
+    wizard run, at most 7 days.
+    """
+    if not _check_role(hass, connection, msg, _MANAGE_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    backup = _wizard_backup(data)
+    if backup is None:
+        connection.send_result(msg["id"], {"success": False, "error": "no_backup"})
+        return
+    restored = 0
+    for tid, task in (backup.get("tasks") or {}).items():
+        if isinstance(task, dict):
+            data["tasks"][tid] = copy.deepcopy(task)
+            restored += 1
+    removed = 0
+    for tid in backup.get("created_ids") or []:
+        if data["tasks"].pop(tid, None) is not None:
+            removed += 1
+    for tid in backup.get("created_template_ids") or []:
+        data.setdefault("templates", {}).pop(tid, None)
+    data.pop("wizard_backup", None)
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    connection.send_result(msg["id"], {"success": True, "restored": restored, "removed": removed})
 
 
 # ---------------------------------------------------------------------------
@@ -6028,11 +6250,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     data, migrated = await async_auto_migrate(hass, entry, data)
 
     _ensure_data_defaults(data)
+    # wizard tasks from before the customization tracking: compare with the catalog once and store the result
+    wizard_migrated = _migrate_wizard_customized(data, entry.options)
 
     # IMPORTANT: Ensure settings from config entry options are always reflected in data
     data["settings"] = dict(entry.options)
-    if migrated:
+    if migrated or wizard_migrated:
         await store.async_save(data)
+    if migrated:
         notify_migrated(hass)
 
     hass.data[DOMAIN]["store"] = store
@@ -6384,7 +6609,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             return
             
         task_ref = data["tasks"][target_task_id]
-        
+        before = _task_definition(task_ref)
+
         if "new_name" in call.data:
             task_ref["name"] = call.data["new_name"]
         
@@ -6415,6 +6641,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if "override_overdue_days" in call.data:
             task_ref["override_overdue_days"] = call.data["override_overdue_days"]
+        _record_customization(task_ref, before)
 
         await store.async_save(data)
         hass.bus.async_fire(EVENT_TASK_UPDATED)
@@ -6605,6 +6832,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_kids_catalog)
     websocket_api.async_register_command(hass, ws_wizard_preview)
     websocket_api.async_register_command(hass, ws_wizard_apply)
+    websocket_api.async_register_command(hass, ws_wizard_undo)
     websocket_api.async_register_command(hass, ws_set_bonus_triggers)
     websocket_api.async_register_command(hass, ws_approve)
     websocket_api.async_register_command(hass, ws_reject)

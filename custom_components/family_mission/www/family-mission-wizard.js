@@ -42,9 +42,18 @@ const I18N_WIZARD = {
     family_reward: "Reward", family_reward_ph: "e.g. Pizza night", prorate_note: "The month is already running ({d} of {m} days left): goals were reduced proportionally.",
     rewards: ["Pizza night", "Cinema", "Swimming pool", "Day trip"],
     summary_intro: "Everything is ready. Please check:", n_tasks: "{n} tasks", n_bonus: "{n} bonus tasks", n_templates: "{n} order templates",
-    n_triggers: "{n} automatic triggers", replace: "Update earlier wizard tasks", replace_d: "Tasks created by this wizard are updated in place (name, points, icon, subtasks, time window): due dates, pauses and progress stay as they are. Tasks that are no longer selected are removed; rotations whose members changed start again tomorrow. Your own tasks, points and history stay untouched.", reschedule: "Redistribute due dates", reschedule_d: "Existing wizard tasks get fresh due dates like a new plan (household day for weekly tasks, staggered rotations, daily tasks today if their time window is still ahead, otherwise tomorrow). Points, history and progress stay. Only together with updating earlier tasks.",
+    n_triggers: "{n} automatic triggers", replace: "Reconcile earlier wizard tasks (your changes are kept)", replace_d: "Tasks created by this wizard are updated in place (name, points, icon, subtasks, time window): due dates, pauses and progress stay as they are. Everything you changed yourself on a task stays exactly as it is - the wizard never resets it. A changed task that is no longer selected is not deleted but becomes one of your own tasks; unchanged tasks that are no longer selected are removed. Rotations whose members changed start again tomorrow. Your own tasks, points and history stay untouched. You can undo the whole run afterwards.", reschedule: "Redistribute due dates", reschedule_d: "Existing wizard tasks get fresh due dates like a new plan (household day for weekly tasks, staggered rotations, daily tasks today if their time window is still ahead, otherwise tomorrow). Points, history and progress stay. Only together with updating earlier tasks.",
     kid_goal_line: "{name}: goal {g} pts", family_line: "Family goal: {g} pts", reward_line: "Reward: {r}",
     ok_title: "Done! Your kids mode is ready.", ok_counts: "Created {created} tasks, {bonus} bonus tasks and {templates} templates.",
+    sync_line: "{kept} customized tasks stay unchanged · {updated} will be updated · {removed} will be removed · {detached} will become your own tasks",
+    sync_details: "Show customized tasks", sync_reset: "Reset to proposal", sync_detach: "becomes your own task", sync_kept: "keeps your changes",
+    sync_fields: "Changed: {f}",
+    f_name: "name", f_complexity: "points", f_icon: "icon", f_category: "category", f_min_age: "minimum age", f_allow_together: "together",
+    f_interval: "interval", f_weekdays: "weekdays", f_available_from: "start time", f_available_until: "end time", f_subtasks: "steps",
+    f_requires_approval: "approval", f_description: "description", f_reminder_at: "reminder", f_scope: "scope", f_rotation: "rotation",
+    undo: "Undo the last wizard run", undo_d: "Restores the tasks the last run changed, removed or detached and removes the tasks it created (goals and triggers are not restored).",
+    undo_confirm: "Undo the last wizard run?", undo_done: "The last wizard run was undone ({n} tasks restored, {m} removed).", undo_fail: "Could not undo: ",
+    ok_detached: "{n} customized tasks are now your own tasks.", ok_kept: "{n} customized tasks kept your changes.",
     ok_deleted: "{n} earlier wizard tasks were removed.", ok_updated: "{n} existing tasks were updated (due dates kept).", ok_skipped: "{n} tasks already existed and were skipped.",
     next_steps: "Next steps", ns_pin: "Set a PIN for every kid: Settings card, section \"Kids\".",
     ns_tablet: "Put the kids card on the tablet dashboard (see the README, \"Kids mode\").",
@@ -87,9 +96,18 @@ const I18N_WIZARD = {
     family_reward: "Belohnung", family_reward_ph: "z.B. Pizza-Abend", prorate_note: "Der Monat läuft schon (noch {d} von {m} Tagen): Die Ziele wurden anteilig gekürzt.",
     rewards: ["Pizza-Abend", "Kino", "Schwimmbad", "Ausflug"],
     summary_intro: "Alles bereit. Bitte kurz prüfen:", n_tasks: "{n} Aufgaben", n_bonus: "{n} Bonus-Aufgaben", n_templates: "{n} Auftrags-Vorlagen",
-    n_triggers: "{n} automatische Auslöser", replace: "Bisherige Assistent-Aufgaben aktualisieren", replace_d: "Vom Assistenten angelegte Aufgaben werden an Ort und Stelle aktualisiert (Name, Punkte, Symbol, Teilaufgaben, Zeitfenster): Fälligkeit, Pause und Fortschritt bleiben erhalten. Nicht mehr gewählte Aufgaben werden entfernt; Rotationen mit geänderten Mitgliedern starten morgen neu. Eigene Aufgaben, Punkte und Verlauf bleiben unberührt.", reschedule: "Termine neu verteilen", reschedule_d: "Bisherige Assistent-Aufgaben bekommen neue Fälligkeiten wie bei einem neuen Plan (Haushaltstag für wöchentliche Aufgaben, versetzte Rotationen, tägliche Aufgaben heute, wenn ihr Zeitfenster noch bevorsteht, sonst morgen). Punkte, Verlauf und Fortschritt bleiben. Nur zusammen mit dem Aktualisieren bisheriger Aufgaben.",
+    n_triggers: "{n} automatische Auslöser", replace: "Bisherige Assistent-Aufgaben abgleichen (eure Anpassungen bleiben erhalten)", replace_d: "Vom Assistenten angelegte Aufgaben werden an Ort und Stelle aktualisiert (Name, Punkte, Symbol, Teilaufgaben, Zeitfenster): Fälligkeit, Pause und Fortschritt bleiben erhalten. Alles, was ihr selbst an einer Aufgabe geändert habt, bleibt genau so – der Assistent setzt es nie zurück. Eine angepasste Aufgabe, die nicht mehr gewählt ist, wird nicht gelöscht, sondern zu einer eigenen Aufgabe; nicht angepasste, nicht mehr gewählte Aufgaben werden entfernt. Rotationen mit geänderten Mitgliedern starten morgen neu. Eigene Aufgaben, Punkte und Verlauf bleiben unberührt. Den ganzen Lauf könnt ihr danach rückgängig machen.", reschedule: "Termine neu verteilen", reschedule_d: "Bisherige Assistent-Aufgaben bekommen neue Fälligkeiten wie bei einem neuen Plan (Haushaltstag für wöchentliche Aufgaben, versetzte Rotationen, tägliche Aufgaben heute, wenn ihr Zeitfenster noch bevorsteht, sonst morgen). Punkte, Verlauf und Fortschritt bleiben. Nur zusammen mit dem Aktualisieren bisheriger Aufgaben.",
     kid_goal_line: "{name}: Ziel {g} Pkt", family_line: "Familienziel: {g} Pkt", reward_line: "Belohnung: {r}",
     ok_title: "Geschafft! Der Kindermodus ist eingerichtet.", ok_counts: "{created} Aufgaben, {bonus} Bonus-Aufgaben und {templates} Vorlagen angelegt.",
+    sync_line: "{kept} angepasste Aufgaben bleiben unverändert · {updated} werden aktualisiert · {removed} werden entfernt · {detached} werden zu eigenen Aufgaben",
+    sync_details: "Angepasste Aufgaben anzeigen", sync_reset: "auf Vorschlag zurücksetzen", sync_detach: "wird zu eigener Aufgabe", sync_kept: "behält eure Änderungen",
+    sync_fields: "Geändert: {f}",
+    f_name: "Name", f_complexity: "Punkte", f_icon: "Symbol", f_category: "Kategorie", f_min_age: "Mindestalter", f_allow_together: "gemeinsam",
+    f_interval: "Intervall", f_weekdays: "Wochentage", f_available_from: "Beginn", f_available_until: "Ende", f_subtasks: "Teilaufgaben",
+    f_requires_approval: "Freigabe", f_description: "Beschreibung", f_reminder_at: "Erinnerung", f_scope: "Bereich", f_rotation: "Rotation",
+    undo: "Letzten Assistenten-Lauf rückgängig machen", undo_d: "Stellt die Aufgaben wieder her, die der letzte Lauf geändert, entfernt oder abgelöst hat, und entfernt die neu angelegten (Ziele und Auslöser werden nicht zurückgesetzt).",
+    undo_confirm: "Letzten Assistenten-Lauf rückgängig machen?", undo_done: "Der letzte Assistenten-Lauf wurde rückgängig gemacht ({n} Aufgaben wiederhergestellt, {m} entfernt).", undo_fail: "Rückgängig machen nicht möglich: ",
+    ok_detached: "{n} angepasste Aufgaben sind jetzt eigene Aufgaben.", ok_kept: "{n} angepasste Aufgaben haben eure Änderungen behalten.",
     ok_deleted: "{n} Assistent-Aufgaben wurden entfernt.", ok_updated: "{n} bestehende Aufgaben wurden aktualisiert (Fälligkeit bleibt).", ok_skipped: "{n} Aufgaben gab es schon und wurden übersprungen.",
     next_steps: "Nächste Schritte", ns_pin: "PIN für jedes Kind setzen: Einstellungen-Karte, Bereich \"Kinder\".",
     ns_tablet: "Die Kinder-Karte auf das Tablet-Dashboard legen (siehe README, \"Kids mode\").",
@@ -675,6 +693,8 @@ class FamilyMissionWizard extends HTMLElement {
       existingFamilyGoal: settings.family_goal || null,
       replace: wizardTasks,
       reschedule: false,
+      resetIds: new Set(),
+      backup: catalog.backup || null,
       hasWizardTasks: wizardTasks,
       preview: null,
       previewError: '',
@@ -841,6 +861,7 @@ class FamilyMissionWizard extends HTMLElement {
         family_goal: { points: Math.max(0, parseInt(s.familyPoints) || 0), reward: (s.familyReward || '').trim() },
         replace_existing: !!s.replace,
         reschedule: !!(s.replace && s.reschedule),
+        reset_customized: s.replace ? [...s.resetIds] : [],
         device_triggers
       });
       s.parentsResult = null;
@@ -1095,6 +1116,10 @@ class FamilyMissionWizard extends HTMLElement {
     const cat = s.catalog;
     if (!s.persons.length) return `<p class="muted">${wzEsc(this._t('no_persons'))}</p>`;
     const year = new Date().getFullYear();
+    const undo = s.undoMsg ? `<p class="muted">${wzEsc(s.undoMsg)}</p>` : '';
+    const undoCard = s.backup ? `<div class="card" style="border-left-color:var(--warning-color,#ffa000)">
+        <div class="row"><div class="grow"><b>${wzEsc(this._t('undo'))}</b><br><span class="muted">${wzEsc(this._t('undo_d'))}</span></div>
+        <button class="btn secondary" data-act="undo" ${s.undoBusy ? 'disabled' : ''}>${wzEsc(this._t('undo'))}</button></div></div>` : '';
     const cards = s.persons.map(p => {
       const k = s.kids[p.id];
       const age = this._ageOf(k);
@@ -1126,7 +1151,7 @@ class FamilyMissionWizard extends HTMLElement {
           ` : ''}
         </div>`;
     }).join('');
-    return `<p class="muted">${wzEsc(this._t('kids_intro'))}</p>
+    return `${undo}${undoCard}${s.error && this._step === 0 ? `<div class="err">${wzEsc(s.error)}</div>` : ''}<p class="muted">${wzEsc(this._t('kids_intro'))}</p>
       ${s.persons.some(p => p.isParent) ? `<p class="muted">${wzEsc(this._t('parents_hint'))}</p>` : ''}
       <div class="cols">${cards}</div>
       <div class="warn" id="need-year" ${this._kidsValid() ? 'hidden' : ''}>${wzEsc(this._t('need_year'))}</div>`;
@@ -1324,6 +1349,7 @@ class FamilyMissionWizard extends HTMLElement {
         ${p.kids.map(k => `<div class="row"><span class="avatar">${wzEsc(k.avatar || '🙂')}</span><div class="grow">${wzEsc(this._t('kid_goal_line', { name: k.name, g: this._effectiveGoal(k) }))}${p.prorated && this._effectiveGoal(k) > 0 ? ` <span class="muted">(${wzEsc(this._t('full_goal_from', { d: this._fmtDayMonth(p.full_goals_from), g: this._fullGoal(k) }))})</span>` : ''}</div></div>`).join('')}
         <div class="row"><span class="avatar">🏆</span><div class="grow"><b>${wzEsc(this._t('family_line', { g: s.familyPoints || 0 }))}</b>${s.familyReward ? `<br><span class="muted">${wzEsc(this._t('reward_line', { r: s.familyReward }))}</span>` : ''}</div></div>
       </div>
+      ${this._htmlSync()}
       <label class="card" style="border-left-color:var(--warning-color,#ffa000); cursor:pointer">
         <div class="row"><span class="sw-switch"><input type="checkbox" data-act="replace" ${s.replace ? 'checked' : ''}><span></span></span><b>${wzEsc(this._t('replace'))}</b></div>
         <span class="muted">${wzEsc(this._t('replace_d'))}</span></label>
@@ -1333,6 +1359,25 @@ class FamilyMissionWizard extends HTMLElement {
       ${s.error ? `<div class="err">${wzEsc(this._t('error'))}${wzEsc(s.error)}</div>` : ''}`;
   }
 
+  /** What a re-run does with earlier wizard tasks: customized ones stay, optionally reset by the parents. */
+  _htmlSync() {
+    const s = this._s;
+    const p = s.preview;
+    const existing = (p && p.existing) || [];
+    if (!s.replace || !existing.length) return '';
+    const c = p.existing_counts || {};
+    const custom = existing.filter(e => (e.customized || []).length);
+    const fields = e => e.customized.map(f => this._t('f_' + f)).join(', ');
+    const rows = custom.map(e => `<div class="row" style="align-items:flex-start">
+        <div class="grow"><b>${wzEsc(e.name)}</b><br><span class="muted">${wzEsc(this._t('sync_fields', { f: fields(e) }))} · ${wzEsc(this._t(e.action === 'detach' ? 'sync_detach' : 'sync_kept'))}</span></div>
+        ${e.action === 'keep' ? `<label style="white-space:nowrap"><input type="checkbox" data-act="reset-custom" data-id="${wzEsc(e.task_id)}" ${s.resetIds.has(e.task_id) ? 'checked' : ''}> ${wzEsc(this._t('sync_reset'))}</label>` : ''}
+      </div>`).join('');
+    return `<div class="card" style="border-left-color:var(--success-color,#4caf50)" id="sync-card">
+      <b>${wzEsc(this._t('sync_line', { kept: c.kept || 0, updated: c.updated || 0, removed: c.removed || 0, detached: c.detached || 0 }))}</b>
+      ${custom.length ? `<details><summary>${wzEsc(this._t('sync_details'))}</summary>${rows}</details>` : ''}
+    </div>`;
+  }
+
   _htmlSuccess() {
     const r = this._s.result.result || this._s.result;
     return `<div class="ok">${window.FamilyMissionBrand ? window.FamilyMissionBrand.iconSvg(96) : '🎉'}</div>
@@ -1340,6 +1385,8 @@ class FamilyMissionWizard extends HTMLElement {
       <p style="text-align:center">${wzEsc(this._t('ok_counts', { created: r.created, bonus: r.bonus, templates: r.templates }))}</p>
       ${r.deleted ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_deleted', { n: r.deleted }))}</p>` : ''}
       ${r.updated ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_updated', { n: r.updated }))}</p>` : ''}
+      ${r.kept_customized ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_kept', { n: r.kept_customized }))}</p>` : ''}
+      ${r.detached ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_detached', { n: r.detached }))}</p>` : ''}
       ${r.skipped ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_skipped', { n: r.skipped }))}</p>` : ''}
       ${this._s.parentsResult ? `<p class="muted" style="text-align:center">${wzEsc(this._t('ok_parents', { n: (this._s.parentsResult.created || 0) + (this._s.parentsResult.updated || 0) || this._parentsCount() }))}</p>` : ''}
       ${this._s.parentsError ? `<div class="err">${wzEsc(this._t('ok_parents_err'))}${wzEsc(this._s.parentsError)}</div>` : ''}
@@ -1372,7 +1419,28 @@ class FamilyMissionWizard extends HTMLElement {
     else if (act === 'kid-color') { s.kids[el.dataset.pid].color = el.dataset.v; this._renderBody(); }
     else if (act === 'pts-dec' || act === 'pts-inc') this._changePoints(el.dataset.k, act === 'pts-inc' ? 1 : -1);
     else if (act === 'suggest') { s.useSuggestion = true; this._scheduleRefresh(0); }
+    else if (act === 'undo') this._undo();
     else if (act === 'fg-chip') { s.familyReward = el.dataset.v; this._renderBody(); }
+  }
+
+  async _undo() {
+    const s = this._s;
+    if (!s || !s.backup || s.undoBusy || !window.confirm(this._t('undo_confirm'))) return;
+    s.undoBusy = true;
+    s.error = '';
+    try {
+      const res = await this._hass.callWS({ type: 'family_mission/wizard_undo' });
+      if (res && res.success) {
+        s.backup = null;
+        s.undoMsg = this._t('undo_done', { n: res.restored || 0, m: res.removed || 0 });
+      } else {
+        s.error = this._t('undo_fail') + ((res && res.error) || '');
+      }
+    } catch (err) {
+      s.error = this._t('undo_fail') + ((err && err.message) || String(err));
+    }
+    s.undoBusy = false;
+    this._renderBody();
   }
 
   _changePoints(key, delta) {
@@ -1423,6 +1491,8 @@ class FamilyMissionWizard extends HTMLElement {
       this._renderBody();
     } else if (act === 'reschedule') {
       s.reschedule = el.checked;
+    } else if (act === 'reset-custom') {
+      if (el.checked) s.resetIds.add(el.dataset.id); else s.resetIds.delete(el.dataset.id);
     }
   }
 
