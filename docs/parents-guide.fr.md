@@ -172,7 +172,7 @@ Le travail domestique des adultes est aussi un travail, souvent invisible. **Nou
 - **Tu peux ?** Si cela ne convient pas aujourd'hui, demandez à votre partenaire d'un geste. Il reçoit un message avec « Je m'en occupe » ou « Impossible ». S'il accepte, cela ne vaut que pour cette fois.
 - **Résumé du dimanche :** le dimanche soir arrive une note neutre : combien d'heures chaque personne a faites cette semaine et ce qui est resté en suspens. Elle ne juge rien, elle facilite seulement la discussion. Désactivable dans les réglages.
 - **Bandeau modèle :** la tablette des enfants affiche une ligne discrète comme « Maman et Papa ont aussi 3 missions aujourd'hui », avec des points de progression sans score. Les enfants voient que tout le monde participe. Le bandeau et son texte sont réglables.
-- **Appareil personnel :** avec `mode: mine`, vos propres tâches de parents (sans points, avec la durée) apparaissent sur votre téléphone et s'y cochent.
+- **Appareil personnel :** avec `mode: mine`, vos propres tâches de parents (sans points, avec la durée) apparaissent sur votre téléphone et s'y cochent. Le **＋** rond dans l'en-tête de « Mes tâches » ajoute une tâche rapidement (nom, Aujourd'hui / Demain / Week-end / Date / Un jour, heure en option et, avec un partenaire, « Pour » moi/partenaire) ; les tâches sans date et à venir sont dans les volets « Un jour » et « Bientôt », « → Demain » reporte.
 
 > 💡 Commencez petit : cinq à huit tâches suffisent. Laissez de côté ce qui ne convient pas. Il n'y a aucun champ obligatoire.
 

@@ -172,7 +172,7 @@ The adults' housework is work too, and often invisible. **We parents** makes it 
 - **Can you?:** if today does not work, ask your partner with one tap. They receive a message with “I'll do it” or “Can't”. If they take it, that applies to this one time only.
 - **Sunday summary:** on Sunday evening a neutral note arrives: how many hours each person did this week and what was left over. It judges nothing, it only makes talking easier. It can be switched off in the settings.
 - **Role-model band:** the kids tablet shows a quiet line such as “Mom and Dad also have 3 missions today”, with progress dots and no points. Kids see that everybody pitches in. The band and its wording are configurable.
-- **Own device:** with `mode: mine` your own parent tasks (no points, with duration) appear on your own phone and can be ticked off there.
+- **Own device:** with `mode: mine` your own parent tasks (no points, with duration) appear on your own phone and can be ticked off there. The round **＋** in the header of “My tasks” adds a quick to-do right there (name, Today / Tomorrow / Weekend / Date / Someday, optional time and, with a partner, “For” me/partner); undated and upcoming tasks sit in the folds “Someday” and “Coming up”, “→ Tomorrow” postpones.
 
 > 💡 Start small: five to eight tasks are enough. Leave out whatever does not fit. There are no required fields.
 

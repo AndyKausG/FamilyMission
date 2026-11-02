@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0] - 2026-11-02
+
+- **Quick to-do on the own device.** In the kids card with `mode: mine`, an adult with a parents' role gets a round **＋** (44 px) in the "Meine Aufgaben" header. It opens a kids-style sheet: name (autofocus, Enter creates), chips Heute / Morgen / Wochenende / Datum / Irgendwann, optional time (15-minute select) and, when a partner exists, "Für" me / partner. The task is created with the existing `family_mission/parent_task_add`; errors show a toast and keep the sheet open. Never shown for kids or on the shared tablet.
+- **Parent tasks in "Meine Aufgaben":** overdue dated tasks show a red "seit Mo" badge, every task has "→ Morgen" (`parent_task_postpone`), future dated tasks are listed in the fold "Demnächst (N)" and tasks without a date in "Irgendwann (N)" (same grouping as the parents card).
+- Night mode does not affect the own-device view (unchanged). de/en strings, README, help and parents' guides (de/en/fr) updated.
+- Tests: `tests/test_mine_quickadd_ws.py`.
+
 ## [2.7.0] - 2026-11-02
 
 - **One shared task editor.** New `www/family-mission-task-editor.js` (`<family-mission-task-editor>`, vanilla web component, registered as a Lovelace resource, loaded on demand by the cards) replaces three different forms: the template dialog of the settings card, the task dialog of the household card and step 2 / "Mehr Optionen" of the parents card's "Neue Aufgabe" flow (its step 1 and the "für wen" part stay).
