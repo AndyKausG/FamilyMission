@@ -8,6 +8,8 @@ FamilyMission turns household chores into **family missions**: small tasks with 
 
 Suggestions for improvement and bug reports are welcome: [issues](https://github.com/AndyKausG/FamilyMission/issues).
 
+If FamilyMission makes your family routine easier, you can [support the project on Ko-fi](https://ko-fi.com/derandyk) ☕.
+
 **Quick links:** [Installation](#installation) · [Recommended dashboard](#recommended-dashboard) · [Kids mode](#kids-mode) · [Parents card](#parents-card-family-mission-parents) · [Parents guide](#parents-guide-in-app-help) · [Migration from TaskOrganizer](#migration-from-taskorganizer)
 
 ## What is FamilyMission?
@@ -1128,3 +1130,5 @@ To publish a new version: raise `version` in `manifest.json`, add `## [X.Y.Z] - 
 
 ## Credits and license
 FamilyMission is based on [TaskOrganizer](https://github.com/patrickvonwiegen/TaskOrganizer) by Patrick von Wiegen (MIT). Maintained by [AndyKausG](https://github.com/AndyKausG). Released under the [MIT license](LICENSE) (copyright Patrick von Wiegen and AndyKausG).
+
+FamilyMission is free. If you like it, you can support its development on [Ko-fi](https://ko-fi.com/derandyk).
