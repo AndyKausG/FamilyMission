@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.8.3] - 2026-11-03
+
+- **Fix, medication check in the kids card:** the button "✓ Genommen" / "✓ Taken" carried the check mark in its label, so it looked preselected next to the empty "Heute nicht" button and a kid could just tick through. Both buttons are now neutral and equal; the check mark appears only after "Genommen" was actually chosen. Nothing is preselected, an unanswered medication still blocks "Fertig!".
+
 ## [2.8.2] - 2026-11-02
 
 - **Fix, kids card `mode: mine`:** "Heute erledigt" / "Done today" in "Meine Aufgaben" now also lists the adult's own completed parent tasks (before, only point tasks appeared, so the count differed from the parents card). Parent entries show no stars; undo asks "… rückgängig machen? Die Aufgabe ist dann wieder offen." instead of mentioning points.

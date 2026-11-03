@@ -71,7 +71,7 @@ const I18N_KIDS = {
     err_not_yet: "Not yet! This task starts a little later.",
     err_too_late: "Too late for today. New chance tomorrow!", err_steps_open: "Tick all steps first!", err_together_not_allowed: "This task is a solo job.",
     steps_left: "Still {n} step(s) to tick",
-    care_taken: "✓ Taken", care_declined: "Not today",
+    care_taken: "Taken", care_declined: "Not today",
     err_care_locked: "That is done for today.",
     pa_skip: "Skip today", pa_postpone: "Postpone", pa_complete: "Complete for {name}", pa_undo: "Undo",
     pa_cancel: "Cancel", pa_ok: "OK", pa_done_today: "Done today",
@@ -164,7 +164,7 @@ const I18N_KIDS = {
     err_not_yet: "Noch nicht dran! Die Aufgabe startet etwas später.",
     err_too_late: "Heute zu spät. Morgen gibt es eine neue Chance!", err_steps_open: "Hake zuerst alle Schritte ab!", err_together_not_allowed: "Diese Aufgabe machst du allein.",
     steps_left: "Noch {n} Schritt(e) abhaken",
-    care_taken: "✓ Genommen", care_declined: "Heute nicht",
+    care_taken: "Genommen", care_declined: "Heute nicht",
     err_care_locked: "Das ist für heute erledigt.",
     pa_skip: "Heute aussetzen", pa_postpone: "Zurückstellen", pa_complete: "Für {name} erledigen", pa_undo: "Rückgängig",
     pa_cancel: "Abbrechen", pa_ok: "OK", pa_done_today: "Heute erledigt",
@@ -2316,10 +2316,10 @@ class FamilyMissionKids extends HTMLElement {
     }
   }
 
-  /** The two answer buttons of a care item (neutral: "not today" is no failure). */
+  /** The two answer buttons of a care item (neutral: "not today" is no failure). Nothing is preselected: the check mark only appears on the chosen "taken" button. */
   _careButtons(c, disabled) {
     const btn = (status, label) => `<button class="care-btn ${status} ${c.answer === status ? 'on' : ''}" data-action="care-answer"
-        data-care="${escKids(c.id)}" data-status="${status}" aria-pressed="${c.answer === status ? 'true' : 'false'}" ${disabled || c.locked ? 'disabled' : ''}>${escKids(label)}</button>`;
+        data-care="${escKids(c.id)}" data-status="${status}" aria-pressed="${c.answer === status ? 'true' : 'false'}" ${disabled || c.locked ? 'disabled' : ''}>${c.answer === status && status === 'taken' ? '✓ ' : ''}${escKids(label)}</button>`;
     return btn('taken', this.localize('care_taken')) + btn('declined', this.localize('care_declined'));
   }
 
