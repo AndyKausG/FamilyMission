@@ -4694,8 +4694,12 @@ async def _async_clear_push(hass: HomeAssistant, tag: str) -> None:
     Several parents get the same push: once one of them handled it, it must
     disappear for all. Errors are only logged.
     """
+    done: set[str] = set()   # one device reached by several adults (shared phone / same target) is cleared once
     for adult in _adults(hass):
         for service in _push_services(hass, adult["id"]):
+            if service in done:
+                continue
+            done.add(service)
             try:
                 await hass.services.async_call(
                     "notify", service, {"message": "clear_notification", "data": {"tag": tag}}, blocking=True)
@@ -4713,8 +4717,9 @@ async def _async_push_all_adults(
     ``warn``: raises it.
     """
     delivered = False
+    sent_to: set[str] = set()   # a notify service shared by several adults gets the push once, not once per adult
     for adult in _adults(hass):
-        if await _async_push_adult(hass, adult["id"], title, message, actions, tag=tag):
+        if await _async_push_adult(hass, adult["id"], title, message, actions, tag=tag, skip=sent_to):
             delivered = True
     if delivered:
         persistent_notification.async_dismiss(hass, NO_PUSH_NOTIFICATION_ID)
@@ -4724,11 +4729,21 @@ async def _async_push_all_adults(
 
 
 async def _async_push_adult(
-    hass: HomeAssistant, uid: str, title: str, message: str, actions: list | None = None, tag: str | None = None
+    hass: HomeAssistant, uid: str, title: str, message: str, actions: list | None = None, tag: str | None = None,
+    skip: set[str] | None = None,
 ) -> bool:
-    """Send a push to an adult. Errors are only logged. True if at least one service took it."""
+    """Send a push to an adult. Errors are only logged. True if at least one service took it.
+
+    ``skip``: services that already got this push (in place: the ones used here are added), so a service
+    shared by several adults is not called twice. A skipped service counts as delivered.
+    """
     sent = False
     for service in _push_services(hass, uid):
+        if skip is not None:
+            if service in skip:
+                sent = True
+                continue
+            skip.add(service)
         payload: dict = {"title": title, "message": message}
         extra: dict = {}
         if actions:
