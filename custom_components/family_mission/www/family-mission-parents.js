@@ -91,7 +91,7 @@ const I18N_PARENTS = {
     nt_c_stock: "Stock (pills, optional)", nt_c_perdose: "Pills per dose", nt_c_stock_d: "A week before it runs out you get the task \"Prescription / refill\".",
     own_title: "New task", own_name: "Name", own_name_ph: "e.g. Call the dentist", own_interval: "Repeats", own_planning: "Planning task", own_who: "Who does it?", own_create: "Add",
     pt_add: "Add task", pt_once: "One-time to-dos ({n})", pt_g_overdue: "Overdue", pt_g_today: "Today", pt_g_upcoming: "Coming up", pt_g_someday: "Someday",
-    pt_tomorrow: "Tomorrow", pt_postpone: "→ Tomorrow", toast_pt_postponed: "Moved to tomorrow", pt_overdue_since: "overdue since {day}",
+    pt_tomorrow: "Tomorrow", pt_postpone: "→ Tomorrow", pt_battery_ignore: "Not a battery to replace", toast_battery_ignored: "Won't ask for this sensor again", toast_pt_postponed: "Moved to tomorrow", pt_overdue_since: "overdue since {day}",
     qa_when: "When?", qa_today: "Today", qa_tomorrow: "Tomorrow", qa_weekend: "Weekend", qa_date: "Date", qa_someday: "Someday",
     qa_more: "More options", qa_time: "Time (optional)", qa_need_date: "Please pick a date.",
     int_0: "once", int_1: "daily", int_2: "every 2 days", int_7: "weekly", int_14: "every 2 weeks", int_30: "monthly", int_91: "quarterly", int_182: "every 6 months", int_365: "yearly",
@@ -199,7 +199,7 @@ const I18N_PARENTS = {
     nt_c_stock: "Vorrat (Tabletten, optional)", nt_c_perdose: "Tabletten pro Gabe", nt_c_stock_d: "Eine Woche bevor er reicht, bekommt ihr die Aufgabe \"Rezept/Nachkauf\".",
     own_title: "Neue Aufgabe", own_name: "Name", own_name_ph: "z. B. Zahnarzt anrufen", own_interval: "Wiederholung", own_planning: "Planungsaufgabe", own_who: "Wer macht es?", own_create: "Hinzufügen",
     pt_add: "Aufgabe hinzufügen", pt_once: "Einmalige To-dos ({n})", pt_g_overdue: "Überfällig", pt_g_today: "Heute", pt_g_upcoming: "Demnächst", pt_g_someday: "Irgendwann",
-    pt_tomorrow: "Morgen", pt_postpone: "→ Morgen", toast_pt_postponed: "Auf morgen verschoben", pt_overdue_since: "überfällig seit {day}",
+    pt_tomorrow: "Morgen", pt_postpone: "→ Morgen", pt_battery_ignore: "Keine Batterie zum Wechseln", toast_battery_ignored: "Für diesen Sensor nie wieder", toast_pt_postponed: "Auf morgen verschoben", pt_overdue_since: "überfällig seit {day}",
     qa_when: "Wann?", qa_today: "Heute", qa_tomorrow: "Morgen", qa_weekend: "Wochenende", qa_date: "Datum", qa_someday: "Irgendwann",
     qa_more: "Mehr Optionen", qa_time: "Uhrzeit (optional)", qa_need_date: "Bitte ein Datum wählen.",
     int_0: "einmalig", int_1: "täglich", int_2: "alle 2 Tage", int_7: "wöchentlich", int_14: "alle 2 Wochen", int_30: "monatlich", int_91: "vierteljährlich", int_182: "halbjährlich", int_365: "jährlich",
@@ -753,6 +753,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'own-create') this._submitOwn();
     else if (action === 'own-when' && this._own) { this._own.when = el.dataset.when; if (el.dataset.when === 'custom' && !this._own.date) this._own.date = this._addDays(this._todayKey(), 2); this._renderLayer(); }
     else if (action === 'pt-postpone') this._ptPostpone(el.dataset.id);
+    else if (action === 'pt-battery-ignore') this._ptBatteryIgnore(el.dataset.id);
     else if (action === 'kt-done') this._ktDone(el.dataset.id, el.dataset.kid);
     else if (action === 'care-given') this._careGiven(el.dataset.kid, el.dataset.care);
     else if (action === 'kt-skip') this._ktSkip(el.dataset.id);
@@ -1282,6 +1283,8 @@ class FamilyMissionParents extends HTMLElement {
   _task(id) { return this._taskList().find(t => t.id === id) || null; }
 
   _ptDone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_done', task_id: id }, this.localize('toast_pt_done')); }
+
+  _ptBatteryIgnore(id) { return this._call('pt:' + id, { type: 'family_mission/battery_ignore', task_id: id }, this.localize('toast_battery_ignored')); }
 
   _ptPostpone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_postpone', task_id: id }, this.localize('toast_pt_postponed')); }
 
@@ -2548,6 +2551,7 @@ class FamilyMissionParents extends HTMLElement {
         <div class="pt-actions">
           <button class="btn ok pt-done" data-action="pt-done" data-id="${escParents(t.id)}" ${busy}>✓ ${escParents(this.localize('pt_done'))}</button>
           ${canPostpone ? `<button class="btn neutral pt-ask pt-later" data-action="pt-postpone" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_postpone'))}</button>` : ''}
+          ${String(t.auto_key || '').startsWith('battery:') ? `<button class="btn neutral pt-ask" data-action="pt-battery-ignore" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_battery_ignore'))}</button>` : ''}
           ${asked ? `<span class="pt-asked">${escParents(this.localize('pt_asked', { name: this._adultName(h.to) }))}</span>` : ''}
           ${canAsk ? `<button class="btn neutral pt-ask" data-action="pt-ask" data-id="${escParents(t.id)}" ${busy}>🙋 ${escParents(this.localize('pt_ask'))}</button>` : ''}
           ${t.parent_key === 'fridge' && t.todo_entity ? `<button class="btn neutral pt-ask" data-action="pt-todo" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_todo_btn'))}</button>` : ''}
