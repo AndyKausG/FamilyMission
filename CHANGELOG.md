@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.8.5] - 2026-11-04
+
+- **Fix, battery tasks:** the check took every `sensor.*` with `device_class: battery`, so a home battery, car batteries and inverter settings ("Generator SOC Limit", "Battery min SoC", "reserved SoC for backup", "Battery level (nominal)", "Ladezustand") became "🔋 Batterie ..." tasks. Now sensors with SoC / state of charge / limit / reserve / nominal / Ladezustand in the name and entities of the category `config` are skipped, and open tasks of such sensors are removed at the next check.
+- **Exclusion list `battery_ignore`:** settings card (Benachrichtigungen → Batterien, "Ausgeschlossene Sensoren", one entity per line, validated: only `sensor.*`, unique, at most 200) and a button "Keine Batterie zum Wechseln" on every battery task (new websocket `family_mission/battery_ignore`, parents' roles): the sensor goes on the list and the task is removed. README, parents' guides (de/en/fr) and help updated.
+- Tests: `tests/test_parents_v26_ws.py`, `tests/test_parents_catalog.py`.
+
 ## [2.8.4] - 2026-11-04
 
 - **Fix, duplicate pushes:** when several adults reach the same notify service (for example two parents with the same phone as push target, or a manual target that equals another adult's Companion app device), every push such as "✅ Kind ist fertig" arrived once per adult, and so did the silent `clear_notification` command after approving (it shows up as "clear_notification" in the Companion app's notification history). Each notify service now gets a push and a clear command once.
