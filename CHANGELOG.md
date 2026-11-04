@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.9.0] - 2026-11-04
+
+- **New setting `clear_pushes` (default on):** after an approval or a reward is handled, FamilyMission removes the push from the other adults' devices with a silent `clear_notification`. The Companion app lists that command in its notification history. Settings card, tab "Benachrichtigungen" / "Notifications": "Erledigte Pushes auf den anderen Geräten entfernen". Off: no `clear_notification` is sent, handled pushes stay on the other devices. Validated like the other push switches (invalid value = on). README, parents' guide (de/en/fr) and in-app help updated.
+- Tests: `tests/test_push_dedupe_ws.py`.
+
 ## [2.8.5] - 2026-11-04
 
 - **Fix, battery tasks:** the check took every `sensor.*` with `device_class: battery`, so a home battery, car batteries and inverter settings ("Generator SOC Limit", "Battery min SoC", "reserved SoC for backup", "Battery level (nominal)", "Ladezustand") became "🔋 Batterie ..." tasks. Now sensors with SoC / state of charge / limit / reserve / nominal / Ladezustand in the name and entities of the category `config` are skipped, and open tasks of such sensors are removed at the next check.

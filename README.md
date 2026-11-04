@@ -781,6 +781,7 @@ Both features only concern the wall tablet (`family-mission-kids` in family mode
 | `night_wake_weekend` | `"08:00"` | Wake-up time Sat+Sun. |
 | `rocket_countdown` | `60` | Length of the rocket countdown in seconds (15-180). |
 | `approval_push` | `true` | Push to the adults when a task waits for parent approval (see [Parent approval](#parent-approval)). |
+| `clear_pushes` | `true` | After an approval / reward is handled, remove the push from the other adults' devices (silent `clear_notification`; it appears in the Companion app's notification history). Off: handled pushes stay. |
 | `approval_reminder_hours` | `2` | Hours after which an open approval gets one quiet reminder push (integer 0-24, `0` = off; not at night). |
 | `reward_push` | `true` | Push to the adults when a kid requests a redemption (see [Reward shop](#reward-shop)). |
 
