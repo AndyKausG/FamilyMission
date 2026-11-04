@@ -47,3 +47,26 @@ async def test_shared_service_is_cleared_once(hass, env):
     await _async_clear_push(hass, "t1")
     assert len(env["phone"]) == 1
     assert env["phone"][0].data["message"] == "clear_notification"
+
+
+async def test_clear_pushes_can_be_switched_off(hass, env):
+    from custom_components.family_mission import _get_entry
+
+    entry = _get_entry(hass)
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "clear_pushes": False})
+    await _async_clear_push(hass, "t1")
+    assert env["phone"] == []
+    # sending is not affected
+    assert await _async_push_all_adults(hass, "Title", "Text", tag="t1")
+    assert len(env["phone"]) == 1
+
+
+def test_clear_pushes_setting_is_sanitized():
+    from custom_components.family_mission import _sanitize_tablet_settings
+
+    incoming = {"clear_pushes": "no"}
+    _sanitize_tablet_settings(incoming)
+    assert incoming["clear_pushes"] is True
+    incoming = {"clear_pushes": False}
+    _sanitize_tablet_settings(incoming)
+    assert incoming["clear_pushes"] is False

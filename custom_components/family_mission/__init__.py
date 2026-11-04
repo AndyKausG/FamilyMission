@@ -1403,7 +1403,7 @@ def _reminder_hours(value) -> int:
 
 def _sanitize_tablet_settings(incoming: dict) -> None:
     """Validate the 2.1 settings (night mode, rocket countdown, reward push); bad values fall back to the default."""
-    for key in ("night_mode", "reward_push", "approval_push"):
+    for key in ("night_mode", "reward_push", "approval_push", "clear_pushes"):
         if key in incoming and not isinstance(incoming[key], bool):
             incoming[key] = True
     for key, default in (
@@ -4695,6 +4695,8 @@ async def _async_clear_push(hass: HomeAssistant, tag: str) -> None:
     disappear for all. Errors are only logged.
     """
     done: set[str] = set()   # one device reached by several adults (shared phone / same target) is cleared once
+    if _get_entry(hass).options.get("clear_pushes", True) is False:
+        return    # switched off: handled pushes stay on the other devices (no clear_notification in the app history)
     for adult in _adults(hass):
         for service in _push_services(hass, adult["id"]):
             if service in done:

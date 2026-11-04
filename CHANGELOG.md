@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.9.0] - 2026-11-04
+
+- **New setting `clear_pushes` (default on):** after an approval or a reward is handled, FamilyMission removes the push from the other adults' devices with a silent `clear_notification`. The Companion app lists that command in its notification history. Settings card, tab "Benachrichtigungen" / "Notifications": "Erledigte Pushes auf den anderen Geräten entfernen". Off: no `clear_notification` is sent, handled pushes stay on the other devices. Validated like the other push switches (invalid value = on). README, parents' guide (de/en/fr) and in-app help updated.
+- Tests: `tests/test_push_dedupe_ws.py`.
+
 ## [2.8.4] - 2026-11-04
 
 - **Fix, duplicate pushes:** when several adults reach the same notify service (for example two parents with the same phone as push target, or a manual target that equals another adult's Companion app device), every push such as "✅ Kind ist fertig" arrived once per adult, and so did the silent `clear_notification` command after approving (it shows up as "clear_notification" in the Companion app's notification history). Each notify service now gets a push and a clear command once.
