@@ -14,10 +14,11 @@ import voluptuous as vol
 from homeassistant.components import frontend, persistent_notification, websocket_api
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED
+from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EntityCategory
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import (
     async_track_state_change_event,
     async_track_time_change,
@@ -129,6 +130,7 @@ from .const import (
     WS_TYPE_PARENT_TASK_ADD,
     WS_TYPE_PARENT_TASK_DONE,
     WS_TYPE_PARENT_TASK_POSTPONE,
+    WS_TYPE_BATTERY_IGNORE,
     WS_TYPE_PARENT_TOGGLE_STEP,
     WS_TYPE_PARENT_TODO_ADD,
     WS_TYPE_HANDOVER_ASK,
@@ -1371,6 +1373,8 @@ def _sanitize_parent_settings(incoming: dict) -> None:
             del incoming[key]
     if "battery_threshold" in incoming:
         incoming["battery_threshold"] = parents_catalog.battery_threshold(incoming["battery_threshold"])
+    if "battery_ignore" in incoming:
+        incoming["battery_ignore"] = parents_catalog.battery_ignore_list(incoming["battery_ignore"])
     if "absence_suggest_hours" in incoming:
         incoming["absence_suggest_hours"] = _suggest_hours(incoming["absence_suggest_hours"])
     for key, default in (
@@ -5426,6 +5430,33 @@ async def ws_parent_task_postpone(hass: HomeAssistant, connection: websocket_api
     connection.send_result(msg["id"], {"success": True, "due_date": tomorrow.isoformat()})
 
 
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_BATTERY_IGNORE,
+    vol.Required("task_id"): str,
+})
+@websocket_api.async_response
+async def ws_battery_ignore(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """"Never again for this device": put the sensor of an automatic battery task on the exclusion list and remove the task."""
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    task = data["tasks"].get(msg["task_id"])
+    auto_key = str((task or {}).get("auto_key") or "")
+    entity = auto_key.split(":", 1)[1] if auto_key.startswith("battery:") else ""
+    if not _is_parent_task(task) or not parents_catalog.battery_ignore_list([entity]):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+        return
+    entry = _get_entry(hass)
+    options = dict(entry.options)
+    options["battery_ignore"] = parents_catalog.battery_ignore_list([*(options.get("battery_ignore") or []), entity])
+    _drop_auto_task(data, task["id"], auto_key)
+    (data.get("battery_low") or {}).pop(entity, None)
+    await hass.data[DOMAIN]["store"].async_save(data)
+    hass.config_entries.async_update_entry(entry, options=options)
+    hass.bus.async_fire(EVENT_TASK_UPDATED)
+    connection.send_result(msg["id"], {"success": True, "entity_id": entity})
+
+
 def _parent_undo_info(task: dict) -> dict:
     """Undo information of a parents' task (``_undo_info`` plus assignment, handover, carry-over)."""
     info = _undo_info(task)
@@ -6432,8 +6463,19 @@ async def _async_check_batteries(hass: HomeAssistant, force: bool = False) -> in
     threshold = parents_catalog.battery_threshold(options.get("battery_threshold"))
     levels: dict[str, float] = {}
     names: dict[str, str] = {}
+    ignored = set(parents_catalog.battery_ignore_list(options.get("battery_ignore")))
+    registry = er.async_get(hass)
+    skipped: set[str] = set()    # no replaceable battery (home / car battery, SoC limits) or excluded by the user
     for state in hass.states.async_all("sensor"):
         if state.attributes.get("device_class") != "battery":
+            continue
+        reg_entry = registry.async_get(state.entity_id)
+        if (
+            state.entity_id in ignored
+            or (reg_entry is not None and reg_entry.entity_category == EntityCategory.CONFIG)
+            or not parents_catalog.battery_is_replaceable(state.attributes.get("friendly_name"), state.entity_id)
+        ):
+            skipped.add(state.entity_id)
             continue
         level = parents_catalog.battery_level(state.state)
         if level is None:
@@ -6443,6 +6485,9 @@ async def _async_check_batteries(hass: HomeAssistant, force: bool = False) -> in
     low = data.get("battery_low")
     if not isinstance(low, dict):
         low = data["battery_low"] = {}
+    for entity in [e for e in low if e in skipped]:    # became excluded: its open task goes away
+        _drop_auto_task(data, low.pop(entity, None), f"battery:{entity}")
+        changed = True
     newly, recovered = parents_catalog.battery_changes(levels, low, threshold)
     for entity in recovered:
         _drop_auto_task(data, low.pop(entity, None), f"battery:{entity}")
@@ -7724,6 +7769,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_parent_task_add)
     websocket_api.async_register_command(hass, ws_parent_task_done)
     websocket_api.async_register_command(hass, ws_parent_task_postpone)
+    websocket_api.async_register_command(hass, ws_battery_ignore)
     websocket_api.async_register_command(hass, ws_parent_toggle_step)
     websocket_api.async_register_command(hass, ws_parent_todo_add)
     websocket_api.async_register_command(hass, ws_handover_ask)

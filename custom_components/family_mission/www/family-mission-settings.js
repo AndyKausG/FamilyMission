@@ -92,7 +92,7 @@ claim_minutes: "Bonus reservation (minutes)",
     pe_digest: "Morning overview", pe_digest_d: "One push per adult in the morning: \"Today: 3 tasks, 1 overdue\". Only when something is due. Never at night.",
     pe_bins: "Bins: remind when the kids have not put them out", pe_bins_d: "Only with the waste collection. The parents' task \"Put the bins out\" is then due on the evening before a collection; if the kids' bonus is not done by this time, the parents get a push. Never at night.",
     pe_battery: "Create tasks for low batteries", pe_battery_d: "Sensors with the device class battery below the limit become a parents' task \"🔋 Battery ...\" (once per sensor, checked every 30 minutes).",
-    pe_battery_pct: "Limit in %",
+    pe_battery_pct: "Limit in %", pe_battery_ignore: "Excluded sensors (one entity per line)", pe_battery_ignore_d: "Home or car batteries and SoC limits are skipped automatically. Anything else that is no battery to replace goes here, e.g. sensor.sungrow_battery. The button \"Not a battery to replace\" on the task adds it for you.",
     pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. Other parent tasks only remind at their own time (if you set one).",
     pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.", 
     tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
@@ -208,7 +208,7 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     pe_digest: "Morgen-Übersicht", pe_digest_d: "Eine Push-Nachricht pro Erwachsenem am Morgen: \"Heute: 3 Aufgaben, 1 überfällig\". Nur wenn etwas ansteht. Nie nachts.",
     pe_bins: "Tonnen: erinnern, wenn die Kinder sie nicht rausgestellt haben", pe_bins_d: "Nur mit der Müllabfuhr. Die Eltern-Aufgabe \"Mülltonnen rausstellen\" ist dann am Abend vor einer Leerung fällig; ist der Bonus der Kinder bis zu dieser Uhrzeit nicht erledigt, bekommen die Eltern eine Push-Nachricht. Nie nachts.",
     pe_battery: "Aufgaben für schwache Batterien anlegen", pe_battery_d: "Sensoren mit der Geräteklasse Batterie unter der Grenze werden zur Eltern-Aufgabe \"🔋 Batterie ...\" (einmal pro Sensor, geprüft alle 30 Minuten).",
-    pe_battery_pct: "Grenze in %",
+    pe_battery_pct: "Grenze in %", pe_battery_ignore: "Ausgeschlossene Sensoren (eine Entität pro Zeile)", pe_battery_ignore_d: "Haus- oder Auto-Batterien und SoC-Grenzen werden automatisch übersprungen. Alles andere, was keine Batterie zum Wechseln ist, kommt hierhin, z. B. sensor.sungrow_battery. Der Knopf „Keine Batterie zum Wechseln“ an der Aufgabe trägt es für euch ein.",
     pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nur zu ihrer eigenen Uhrzeit (falls gesetzt).",
     pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.", 
     tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
@@ -1864,6 +1864,9 @@ class FamilyMissionSettings extends HTMLElement {
               <p class="kids-note">${this.localize('pe_battery_d')}</p>
               <label class="kid-field">${this.localize('pe_battery_pct')}
                 <input type="number" id="pe-battery-pct" min="5" max="50" step="1" value="${esc(st.battery_threshold || 20)}"></label>
+              <label class="kid-field">${this.localize('pe_battery_ignore')}
+                <textarea id="pe-battery-ignore" rows="3" spellcheck="false">${esc((st.battery_ignore || []).join('\n'))}</textarea></label>
+              <p class="kids-note">${this.localize('pe_battery_ignore_d')}</p>
             </div>
             <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="pe-abs" ${st.absence_suggest_enabled === true ? 'checked' : ''}> ${this.localize('pe_abs')}</label>
@@ -1915,6 +1918,7 @@ class FamilyMissionSettings extends HTMLElement {
         this.settings.battery_tasks_enabled = !!el('pe-battery').checked;
         const pct = parseInt(el('pe-battery-pct').value);
         this.settings.battery_threshold = pct >= 5 && pct <= 50 ? pct : 20;
+        this.settings.battery_ignore = el('pe-battery-ignore').value.split(/[\s,;]+/).filter(Boolean);
         this.settings.absence_suggest_enabled = !!el('pe-abs').checked;
         const hours = parseInt(el('pe-abs-hours').value);
         this.settings.absence_suggest_hours = hours >= 6 && hours <= 168 ? hours : 24;

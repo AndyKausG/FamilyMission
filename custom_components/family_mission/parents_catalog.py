@@ -14,6 +14,7 @@ goals, and nothing is rated or compared.
 
 from __future__ import annotations
 
+import re
 from datetime import date, datetime, timedelta, tzinfo
 from typing import Any, Iterable
 
@@ -601,6 +602,34 @@ def battery_threshold(value: Any) -> int:
     except (TypeError, ValueError, OverflowError):
         return DEFAULT_BATTERY_THRESHOLD
     return max(MIN_BATTERY_THRESHOLD, min(MAX_BATTERY_THRESHOLD, number))
+
+
+# Sensors with device_class battery that are no replaceable battery: charge state / limits / reserves of a home or
+# car battery or an inverter ("Generator SOC Limit", "Battery min SoC", "reserved SoC for backup", "Ladezustand").
+_BATTERY_NOT_REPLACEABLE = re.compile(r"\b(soc|state of charge|ladezustand|limit|reserv\w*|nominal)\b", re.IGNORECASE)
+MAX_BATTERY_IGNORE = 200
+
+
+def battery_is_replaceable(friendly_name: Any, entity_id: Any = "") -> bool:
+    """False for sensors that only look like a battery (SoC / limit / reserve / nominal in the name)."""
+    text = f"{friendly_name or ''} {str(entity_id or '').split('.', 1)[-1].replace('_', ' ')}"
+    return _BATTERY_NOT_REPLACEABLE.search(text) is None
+
+
+def battery_ignore_list(value: Any) -> list[str]:
+    """Well-formed ``sensor.*`` entity ids (lower case, unique, in order, at most 200) of the battery exclusion list."""
+    if isinstance(value, str):
+        value = re.split(r"[\s,;]+", value)
+    if not isinstance(value, (list, tuple)):
+        return []
+    result: list[str] = []
+    for item in value:
+        entity = item.strip().lower() if isinstance(item, str) else ""
+        if re.fullmatch(r"sensor\.[a-z0-9_]{1,100}", entity) and entity not in result:
+            result.append(entity)
+        if len(result) >= MAX_BATTERY_IGNORE:
+            break
+    return result
 
 
 def battery_level(state: Any) -> float | None:

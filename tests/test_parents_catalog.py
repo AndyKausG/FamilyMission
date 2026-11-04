@@ -286,3 +286,16 @@ def test_battery_helpers():
     assert pc.battery_task_name("Smoke", "en") == "🔋 Battery Smoke"
     assert pc.stock_task_name("Tablette", "Lena", "de") == "💊 Rezept/Nachkauf Tablette Lena"
     assert pc.stock_task_name("Pill", "Lena", "en") == "💊 Prescription / refill Pill Lena"
+
+
+def test_battery_replaceable_and_ignore_list():
+    for name in ("Rauchmelder Flur", "Sungrow SBH", "Tür Batterie"):
+        assert pc.battery_is_replaceable(name, "sensor.x"), name
+    for name in ("LB-AK-396E Generator SOC Limit", "Battery reserved SoC for backup", "Battery min SoC",
+                 "Battery level (nominal)", "Batterie Ladezustand", "Battery State of Charge"):
+        assert not pc.battery_is_replaceable(name, "sensor.x"), name
+    assert not pc.battery_is_replaceable("Akku", "sensor.wr_generator_soc_limit")
+    assert pc.battery_ignore_list(None) == [] and pc.battery_ignore_list(5) == []
+    assert pc.battery_ignore_list(" Sensor.A, sensor.b\nsensor.a;light.c") == ["sensor.a", "sensor.b"]
+    assert pc.battery_ignore_list(["sensor.a", 3, "x", "sensor.a", "sensor.B"]) == ["sensor.a", "sensor.b"]
+    assert len(pc.battery_ignore_list([f"sensor.s{i}" for i in range(300)])) == 200

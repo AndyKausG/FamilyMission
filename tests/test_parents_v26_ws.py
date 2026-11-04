@@ -767,6 +767,45 @@ async def test_battery_task_dedupe_hysteresis_and_removal(hass, env, freezer):
     assert await _async_check_batteries(hass) == 1 and len(_auto(hass, "battery")) == 1
 
 
+async def test_battery_skips_soc_limits_config_entities_and_the_exclusion_list(hass, env):
+    await _settings(env, battery_tasks_enabled=True)
+    _battery(hass, "sensor.rauchmelder", 5, "Rauchmelder Flur")
+    for name in ("LB-AK-396E Generator SOC Limit", "Battery reserved SoC for backup", "Battery min SoC",
+                 "Battery level (nominal)", "Batterie Ladezustand"):
+        _battery(hass, "sensor.x_" + str(abs(hash(name))), 5, name)
+    _battery(hass, "sensor.sungrow_sbh", 5, "Sungrow SBH")
+    ent = er.async_get(hass).async_get_or_create(
+        "sensor", "test", "einstellung", suggested_object_id="einstellung", entity_category=er.EntityCategory.CONFIG)
+    _battery(hass, ent.entity_id, 5, "Wallbox Akku")
+    await _settings(env, battery_ignore=["Sensor.Sungrow_SBH", "sensor.sungrow_sbh", "light.no", "junk", 5])
+    assert env["entry"].options["battery_ignore"] == ["sensor.sungrow_sbh"]
+    assert await _async_check_batteries(hass, force=True) == 1
+    assert [t["auto_key"] for t in _auto(hass, "battery")] == ["battery:sensor.rauchmelder"]
+
+
+async def test_battery_ignore_removes_the_open_task_and_the_button_adds_the_sensor(hass, env):
+    await _settings(env, battery_tasks_enabled=True)
+    _battery(hass, "sensor.sungrow_sbh", 5, "Sungrow SBH")
+    _battery(hass, "sensor.rauchmelder", 5, "Rauchmelder")
+    assert await _async_check_batteries(hass, force=True) == 2
+    # the settings list removes the open task at the next check
+    await _settings(env, battery_ignore="sensor.sungrow_sbh, sensor.nope")
+    assert env["entry"].options["battery_ignore"] == ["sensor.sungrow_sbh", "sensor.nope"]
+    await _async_check_batteries(hass, force=True)
+    assert [t["auto_key"] for t in _auto(hass, "battery")] == ["battery:sensor.rauchmelder"]
+    # "not a battery to replace" on the task: excluded for good, task gone
+    task = _auto(hass, "battery")[0]
+    res = await _call(env["anna"], "family_mission/battery_ignore", task_id=task["id"])
+    assert res["result"]["success"] and res["result"]["entity_id"] == "sensor.rauchmelder"
+    assert "sensor.rauchmelder" in env["entry"].options["battery_ignore"]
+    assert not _auto(hass, "battery")
+    await _async_check_batteries(hass, force=True)
+    assert not _auto(hass, "battery")
+    # only automatic battery tasks
+    other = await _call(env["anna"], "family_mission/battery_ignore", task_id="nope")
+    assert other["result"] == {"success": False, "error": "not_found"}
+
+
 async def test_battery_threshold_is_used(hass, env):
     await _settings(env, battery_tasks_enabled=True, battery_threshold=10)
     _battery(hass, "sensor.a", 15, "A")
