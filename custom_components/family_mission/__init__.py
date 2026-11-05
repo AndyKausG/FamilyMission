@@ -2191,9 +2191,14 @@ async def _async_care_answer(
         return {"success": False, "error": ERR_CARE_LOCKED}
     data = hass.data[DOMAIN]["data"]
     log = data.setdefault("care_log", [])
-    kidslib.care_record(
-        log, dt_util.now().date().isoformat(), kid_id, care_id, status, dt_util.utcnow().isoformat(), confirmed_by,
+    day = dt_util.now().date().isoformat()
+    earlier = kidslib.care_find(log, day, kid_id, care_id)
+    # the parents were told "not taken" / "no answer" and the answer is now "taken": that push is outdated
+    stale_push = bool(
+        earlier and earlier.get("pushed") and status == kidslib.CARE_TAKEN
+        and earlier.get("status") in (kidslib.CARE_DECLINED, kidslib.CARE_UNANSWERED)
     )
+    kidslib.care_record(log, day, kid_id, care_id, status, dt_util.utcnow().isoformat(), confirmed_by)
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     # the tracked pill stock follows "taken" (and a changed answer gives the pills back)
@@ -2202,6 +2207,14 @@ async def _async_care_answer(
         await _async_care_stock_taken(hass, kid_id, care_id, delta)
         await _async_check_care_stock(hass)
     await _async_check_care(hass)  # a decline reaches the parents right away
+    if stale_push and item.get("notify_parents"):
+        tag = f"{DOMAIN}_care_{kid_id}_{care_id}"
+        if _get_entry(hass).options.get("clear_pushes", True) is not False:
+            await _async_clear_push(hass, tag)    # the wrong "not taken" push disappears from the parents' devices
+        elif not _parent_night(hass):
+            title, text = kidslib.care_texts(
+                "taken", _participant_name(hass, kid_id), f"{item['emoji']} {item['label']}", _lang(hass))
+            await _async_push_all_adults(hass, title, text, tag=tag)    # same tag: replaces the old push
     return {"success": True, "status": status}
 
 

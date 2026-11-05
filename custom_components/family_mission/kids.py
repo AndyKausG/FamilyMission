@@ -2151,11 +2151,13 @@ def decline_alert_due(
 
 
 def care_texts(kind: str, kid_name: str, label: str, lang: str, count: int = 0, days: int = 0) -> tuple[str, str]:
-    """``(title, message)`` of a push to the parents; ``kind`` = declined | unanswered | alert."""
+    """``(title, message)`` of a push to the parents; ``kind`` = declined | unanswered | taken (correction) | alert."""
     de = lang == "de"
     title = "💊 Gesundheit" if de else "💊 Health"
     if kind == "declined":
         return title, (f"{kid_name}: {label} heute nicht genommen." if de else f"{kid_name}: {label} not taken today.")
+    if kind == "taken":    # correction after a "not taken" / "no answer" push
+        return title, (f"{kid_name}: {label} wurde doch genommen." if de else f"{kid_name}: {label} was taken after all.")
     if kind == "unanswered":
         return title, (f"{kid_name}: {label} ist noch offen (keine Antwort)." if de
                        else f"{kid_name}: {label} is still open (no answer).")
