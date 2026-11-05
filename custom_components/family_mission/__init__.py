@@ -2049,6 +2049,8 @@ async def _async_kid_complete(hass: HomeAssistant, task_id: str, ctx: dict, help
     if profile is not None and needs_approval(task, profile, dt_util.now().date()):
         await _async_request_approval(hass, task_id, kid_id, points, helper_ids, bonus)
         _care_lock(hass, kid_id, care_attached)
+        if care_attached:
+            await _async_check_care(hass)    # "Fertig" was pressed: the answers are final, a decline reaches the parents now
         return {"success": True, "pending": True, "points": points, "task_name": task_name}
 
     if helpers:
@@ -2059,6 +2061,8 @@ async def _async_kid_complete(hass: HomeAssistant, task_id: str, ctx: dict, help
     if not success:
         return {"success": False, "error": ERR_NOT_FOUND}
     _care_lock(hass, kid_id, care_attached)
+    if care_attached:
+        await _async_check_care(hass)    # "Fertig" was pressed: the answers are final, a decline reaches the parents now
 
     result = {"success": True, "points": points, "task_name": task_name}
     if helpers:
@@ -2267,6 +2271,19 @@ async def ws_care_confirm(hass: HomeAssistant, connection: websocket_api.ActiveC
     ))
 
 
+def _care_push_ready(hass: HomeAssistant, item: dict, entry: dict, options: dict, now: datetime) -> bool:
+    """False while a "declined" answer may still change: it sits in a mission step the kid has not finished.
+
+    The parents hear about a decline once "Fertig" was pressed (the answers are locked then), at the deadline
+    at the latest. Fixed-time items (no mission), unanswered entries and days before today push right away.
+    """
+    if item.get("status") != kidslib.CARE_DECLINED or str(item.get("date", "")) < now.date().isoformat():
+        return True
+    if item.get("locked") or kidslib.care_deadline_passed(entry, now):
+        return True
+    return _care_mission(hass, item["kid_id"], entry["anchor"], options, now) is None
+
+
 async def _async_check_care(hass: HomeAssistant) -> int:
     """Care timers (every minute): unanswered at the deadline, pushes to the parents, decline alerts.
 
@@ -2310,9 +2327,11 @@ async def _async_check_care(hass: HomeAssistant) -> int:
             if (item.get("pushed") or item.get("status") not in (kidslib.CARE_DECLINED, kidslib.CARE_UNANSWERED)
                     or str(item.get("date", "")) < yesterday):
                 continue
+            entry = care_of.get(item.get("kid_id"), {}).get(item.get("care_id"))
+            if entry is not None and not _care_push_ready(hass, item, entry, options, now):
+                continue    # "Heute nicht" inside a mission that is not finished yet: the kid may still change it
             item["pushed"] = True
             changed = True
-            entry = care_of.get(item.get("kid_id"), {}).get(item.get("care_id"))
             if entry is None or not entry["notify_parents"]:
                 continue
             title, text = kidslib.care_texts(

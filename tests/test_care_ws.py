@@ -304,6 +304,34 @@ async def test_unanswered_at_deadline_pushes_once_and_logs(hass, env, freezer):
     assert env["push"][1].data["data"]["tag"] == env["push"][0].data["data"]["tag"]
 
 
+async def test_decline_in_a_mission_reaches_the_parents_only_after_fertig(hass, env, freezer):
+    task = _mission(hass)
+    await _set_care(env, [_care(deadline="10:00")])
+    freezer.move_to(MORNING)
+    await _answer(env, "declined")
+    await _check(hass)
+    assert env["push"] == []                                   # the kid may still change it
+    await _answer(env, "taken")
+    await _check(hass)
+    assert env["push"] == []                                   # corrected before "Fertig": the parents never hear of it
+    await _answer(env, "declined")
+    assert (await _complete(env, task))["success"]             # "Fertig": the answer is final
+    await hass.async_block_till_done()
+    assert len(env["push"]) == 1 and "not taken" in env["push"][0].data["message"]
+
+
+async def test_decline_in_an_unfinished_mission_is_pushed_at_the_deadline(hass, env, freezer):
+    _mission(hass)
+    await _set_care(env, [_care(deadline="10:00")])
+    freezer.move_to(MORNING)
+    await _answer(env, "declined")
+    await _check(hass)
+    assert env["push"] == []
+    freezer.move_to(AFTER_DEADLINE)
+    await _check(hass)
+    assert len(env["push"]) == 1 and "not taken" in env["push"][0].data["message"]
+
+
 async def test_corrected_answer_clears_the_wrong_declined_push(hass, env, freezer):
     await _set_care(env, [_care(anchor="time", time="07:00")])
     await _answer(env, "declined")                           # Jonte taps "Heute nicht" by mistake
