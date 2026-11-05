@@ -298,7 +298,71 @@ async def test_unanswered_at_deadline_pushes_once_and_logs(hass, env, freezer):
     # a late answer replaces it; "taken" is silent
     assert (await _answer(env, "taken"))["success"]
     await _check(hass)
-    assert _data(hass)["care_log"][0]["status"] == "taken" and len(env["push"]) == 1
+    assert _data(hass)["care_log"][0]["status"] == "taken"
+    # the outdated "no answer" push is cleared on the parents' devices (same tag), no new message
+    assert len(env["push"]) == 2 and env["push"][1].data["message"] == "clear_notification"
+    assert env["push"][1].data["data"]["tag"] == env["push"][0].data["data"]["tag"]
+
+
+async def test_decline_in_a_mission_reaches_the_parents_only_after_fertig(hass, env, freezer):
+    task = _mission(hass)
+    await _set_care(env, [_care(deadline="10:00")])
+    freezer.move_to(MORNING)
+    await _answer(env, "declined")
+    await _check(hass)
+    assert env["push"] == []                                   # the kid may still change it
+    await _answer(env, "taken")
+    await _check(hass)
+    assert env["push"] == []                                   # corrected before "Fertig": the parents never hear of it
+    await _answer(env, "declined")
+    assert (await _complete(env, task))["success"]             # "Fertig": the answer is final
+    await hass.async_block_till_done()
+    assert len(env["push"]) == 1 and "not taken" in env["push"][0].data["message"]
+
+
+async def test_decline_in_an_unfinished_mission_is_pushed_at_the_deadline(hass, env, freezer):
+    _mission(hass)
+    await _set_care(env, [_care(deadline="10:00")])
+    freezer.move_to(MORNING)
+    await _answer(env, "declined")
+    await _check(hass)
+    assert env["push"] == []
+    freezer.move_to(AFTER_DEADLINE)
+    await _check(hass)
+    assert len(env["push"]) == 1 and "not taken" in env["push"][0].data["message"]
+
+
+async def test_corrected_answer_clears_the_wrong_declined_push(hass, env, freezer):
+    await _set_care(env, [_care(anchor="time", time="07:00")])
+    await _answer(env, "declined")                           # Jonte taps "Heute nicht" by mistake
+    await hass.async_block_till_done()
+    assert len(env["push"]) == 1 and "not taken" in env["push"][0].data["message"]
+    await _answer(env, "taken")                              # ... and corrects it
+    await hass.async_block_till_done()
+    assert len(env["push"]) == 2 and env["push"][1].data["message"] == "clear_notification"
+    assert env["push"][1].data["data"]["tag"] == env["push"][0].data["data"]["tag"]
+    await _answer(env, "taken")                              # again taken: nothing more
+    assert len(env["push"]) == 2
+
+
+async def test_corrected_answer_sends_a_replacement_when_clearing_is_off(hass, env, freezer):
+    from custom_components.family_mission import _get_entry
+    entry = _get_entry(hass)
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "clear_pushes": False})
+    await _set_care(env, [_care(anchor="time", time="07:00")])
+    await _answer(env, "declined")
+    await hass.async_block_till_done()
+    await _answer(env, "taken")
+    await hass.async_block_till_done()
+    assert len(env["push"]) == 2 and "taken after all" in env["push"][1].data["message"]
+    assert env["push"][1].data["data"]["tag"] == env["push"][0].data["data"]["tag"]
+
+
+async def test_taken_without_an_earlier_push_stays_silent(hass, env, freezer):
+    await _set_care(env, [_care(anchor="time", time="07:00")])
+    await _answer(env, "taken")
+    await hass.async_block_till_done()
+    assert env["push"] == []
 
 
 async def test_answered_before_deadline_no_unanswered_push(hass, env, freezer):

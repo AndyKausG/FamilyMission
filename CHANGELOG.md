@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.9.1] - 2026-11-05
+
+- **Fix, medication push stays wrong after a correction:** a kid who first answered "Heute nicht" (or did not answer until the deadline) and then corrected it to "Genommen" left the parents with the old push "... heute nicht genommen" / "... noch offen". The change to "taken" now clears that outdated push (same tag, silent `clear_notification`); with `clear_pushes` off a short replacement push "... wurde doch genommen" with the same tag is sent instead (not at night). "Taken" without an earlier push stays silent as before.
+- **Medication decline push only after "Fertig":** a "Heute nicht" inside the morning / evening mission is no longer pushed to the parents at once. The kid can still change the answer until "Fertig" is pressed (the answer is locked then); the parents hear about it when the mission is finished, at the deadline at the latest. Fixed-time items without a mission (no "Fertig") and "no answer" at the deadline are pushed as before. README, parents' guides (de/en/fr) and help updated.
+- Tests: `tests/test_care_ws.py`, `tests/test_kids_helpers.py`.
+
 ## [2.9.0] - 2026-11-04
 
 - **New setting `clear_pushes` (default on):** after an approval or a reward is handled, FamilyMission removes the push from the other adults' devices with a silent `clear_notification`. The Companion app lists that command in its notification history. Settings card, tab "Benachrichtigungen" / "Notifications": "Erledigte Pushes auf den anderen Geräten entfernen". Off: no `clear_notification` is sent, handled pushes stay on the other devices. Validated like the other push switches (invalid value = on). README, parents' guide (de/en/fr) and in-app help updated.

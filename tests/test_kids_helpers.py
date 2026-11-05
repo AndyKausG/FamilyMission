@@ -722,6 +722,7 @@ def test_care_deadline_and_decline_alert():
 def test_care_texts():
     assert "Lena" in kids.care_texts("declined", "Lena", "💊 Tablette", "de")[1]
     assert "3x" in kids.care_texts("alert", "Lena", "T", "en", 3, 7)[1]
+    assert "doch genommen" in kids.care_texts("taken", "Lena", "T", "de")[1]
     assert "open" in kids.care_texts("unanswered", "Lena", "T", "en")[1]
 
 
