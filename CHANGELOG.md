@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0] - 2026-11-07
+
+- **Parent tasks, "Später":** besides "→ Morgen" every parent task has "📅 Später" (parents' hub and own device `mode: mine`): tomorrow, day after tomorrow, weekend, next week, a date or someday (one-time tasks only). `family_mission/parent_task_postpone` takes the new optional `to` (`tomorrow` stays the default) and `date`; bad targets / dates give `invalid_target`.
+- **Plan the week:** the new 🗓️ button in the header of "Meine Aufgaben" (parents' hub) spreads overdue and today's one-time to-dos over the next 7 days, oldest first, at most 3 / 4 / 5 / 6 per person and day (default 4). First a preview, then "Übernehmen". Recurring tasks, tasks with a time and automatic tasks stay (and count as load), nobody changes owner. New websocket `family_mission/parent_plan_week` (`max_per_day`, `apply`).
+- **Role-model band:** "Auch Mama und Papa haben heute N Missionen" on the tablet counts only what is **due today** (plus done today), no longer the overdue backlog, later or someday tasks.
+- de/en strings, README, parents' guides (de/en/fr) and help updated. Tests: `tests/test_parents_catalog.py`, `tests/test_parent_todo_ws.py`.
+
 ## [2.9.1] - 2026-11-05
 
 - **Fix, medication push stays wrong after a correction:** a kid who first answered "Heute nicht" (or did not answer until the deadline) and then corrected it to "Genommen" left the parents with the old push "... heute nicht genommen" / "... noch offen". The change to "taken" now clears that outdated push (same tag, silent `clear_notification`); with `clear_pushes` off a short replacement push "... wurde doch genommen" with the same tag is sent instead (not at night). "Taken" without an earlier push stays silent as before.

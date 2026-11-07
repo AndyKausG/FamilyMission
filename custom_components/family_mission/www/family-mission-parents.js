@@ -91,7 +91,7 @@ const I18N_PARENTS = {
     nt_c_stock: "Stock (pills, optional)", nt_c_perdose: "Pills per dose", nt_c_stock_d: "A week before it runs out you get the task \"Prescription / refill\".",
     own_title: "New task", own_name: "Name", own_name_ph: "e.g. Call the dentist", own_interval: "Repeats", own_planning: "Planning task", own_who: "Who does it?", own_create: "Add",
     pt_add: "Add task", pt_once: "One-time to-dos ({n})", pt_g_overdue: "Overdue", pt_g_today: "Today", pt_g_upcoming: "Coming up", pt_g_someday: "Someday",
-    pt_tomorrow: "Tomorrow", pt_postpone: "→ Tomorrow", pt_battery_ignore: "Not a battery to replace", toast_battery_ignored: "Won't ask for this sensor again", toast_pt_postponed: "Moved to tomorrow", pt_overdue_since: "overdue since {day}",
+    pt_tomorrow: "Tomorrow", pt_postpone: "→ Tomorrow", pt_later: "📅 Later", later_title: "When should \"{task}\" come back?", later_day_after: "Day after tomorrow", later_next_week: "Next week", toast_moved: "Moved", plan_open: "Plan the week", plan_title: "Plan the week", plan_intro: "Overdue and today's one-time to-dos are spread over the next 7 days, oldest first. Who does what stays as it is; recurring tasks and tasks with a time stay where they are.", plan_cap: "At most per person and day", plan_none: "Everything already fits - nothing to move.", plan_apply: "Apply ({n})", plan_loading: "Planning ...", toast_planned: "Week planned", pt_battery_ignore: "Not a battery to replace", toast_battery_ignored: "Won't ask for this sensor again", toast_pt_postponed: "Moved to tomorrow", pt_overdue_since: "overdue since {day}",
     qa_when: "When?", qa_today: "Today", qa_tomorrow: "Tomorrow", qa_weekend: "Weekend", qa_date: "Date", qa_someday: "Someday",
     qa_more: "More options", qa_time: "Time (optional)", qa_need_date: "Please pick a date.",
     int_0: "once", int_1: "daily", int_2: "every 2 days", int_7: "weekly", int_14: "every 2 weeks", int_30: "monthly", int_91: "quarterly", int_182: "every 6 months", int_365: "yearly",
@@ -199,7 +199,7 @@ const I18N_PARENTS = {
     nt_c_stock: "Vorrat (Tabletten, optional)", nt_c_perdose: "Tabletten pro Gabe", nt_c_stock_d: "Eine Woche bevor er reicht, bekommt ihr die Aufgabe \"Rezept/Nachkauf\".",
     own_title: "Neue Aufgabe", own_name: "Name", own_name_ph: "z. B. Zahnarzt anrufen", own_interval: "Wiederholung", own_planning: "Planungsaufgabe", own_who: "Wer macht es?", own_create: "Hinzufügen",
     pt_add: "Aufgabe hinzufügen", pt_once: "Einmalige To-dos ({n})", pt_g_overdue: "Überfällig", pt_g_today: "Heute", pt_g_upcoming: "Demnächst", pt_g_someday: "Irgendwann",
-    pt_tomorrow: "Morgen", pt_postpone: "→ Morgen", pt_battery_ignore: "Keine Batterie zum Wechseln", toast_battery_ignored: "Für diesen Sensor nie wieder", toast_pt_postponed: "Auf morgen verschoben", pt_overdue_since: "überfällig seit {day}",
+    pt_tomorrow: "Morgen", pt_postpone: "→ Morgen", pt_later: "📅 Später", later_title: "Wann soll „{task}“ wieder dran sein?", later_day_after: "Übermorgen", later_next_week: "Nächste Woche", toast_moved: "Verschoben", plan_open: "Woche planen", plan_title: "Woche planen", plan_intro: "Überfällige und heutige Einmal-To-dos werden auf die nächsten 7 Tage verteilt, die ältesten zuerst. Wer was macht, bleibt unverändert; wiederkehrende Aufgaben und Aufgaben mit Uhrzeit bleiben, wo sie sind.", plan_cap: "Höchstens pro Person und Tag", plan_none: "Alles passt schon – nichts zu verschieben.", plan_apply: "Übernehmen ({n})", plan_loading: "Plane ...", toast_planned: "Woche geplant", pt_battery_ignore: "Keine Batterie zum Wechseln", toast_battery_ignored: "Für diesen Sensor nie wieder", toast_pt_postponed: "Auf morgen verschoben", pt_overdue_since: "überfällig seit {day}",
     qa_when: "Wann?", qa_today: "Heute", qa_tomorrow: "Morgen", qa_weekend: "Wochenende", qa_date: "Datum", qa_someday: "Irgendwann",
     qa_more: "Mehr Optionen", qa_time: "Uhrzeit (optional)", qa_need_date: "Bitte ein Datum wählen.",
     int_0: "einmalig", int_1: "täglich", int_2: "alle 2 Tage", int_7: "wöchentlich", int_14: "alle 2 Wochen", int_30: "monatlich", int_91: "vierteljährlich", int_182: "halbjährlich", int_365: "jährlich",
@@ -324,6 +324,8 @@ class FamilyMissionParents extends HTMLElement {
     this._pickKid = null;         // kid chooser purpose: 'praise' | 'skip'
     this._skip = null;            // skip sheet { kidId }
     this._own = null;             // own parent task sheet
+    this._later = null;           // "later" sheet of a parent task {id, date}
+    this._plan = null;            // week plan sheet {cap, moves}
     this._todo = null;            // "to the shopping list" sheet { id, item }
     this._nt = null;              // new task flow state
     this._flowCatalog = null;     // localized kids catalog (family_mission/kids_catalog)
@@ -656,6 +658,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (el.id === 'abs-to' && this._abs) this._abs.to = el.value;
     else if (el.id === 'abs-personal' && this._abs) this._abs.personal = el.checked;
     else if (el.id === 'abs-care' && this._abs) this._abs.care = el.checked;
+    else if (el.id === 'later-date' && this._later) { this._later.date = el.value; this._renderLayer(); }
     else if (el.id === 'own-int' && this._own) this._own.interval = parseInt(el.value);
     else if (el.id === 'own-date' && this._own) { this._own.date = el.value; this._own.when = 'custom'; this._renderLayer(); }
     else if (el.id === 'own-time' && this._own) this._own.time = el.value;
@@ -710,7 +713,7 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'not-done') this._reject(el.dataset.id, 'not_done');
     else if (action === 'cheated') { this._confirm = el.dataset.id; this._renderLayer(); }
     else if (action === 'cheated-confirm') { const id = this._confirm; this._confirm = null; this._renderLayer(); this._reject(id, 'cheated'); }
-    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._todo = null; this._nt = null; this._del = null; this._picker = null; this._abs = null; this._renderLayer(); }
+    else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._todo = null; this._nt = null; this._del = null; this._picker = null; this._abs = null; this._later = null; this._plan = null; this._renderLayer(); }
     else if (action === 'tab') this._setTab(el.dataset.tab);
     else if (action === 'goto-approvals') { const sec = this.shadowRoot.getElementById('appr-section'); if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
     else if (action === 'pw-setup') {
@@ -753,6 +756,11 @@ class FamilyMissionParents extends HTMLElement {
     else if (action === 'own-create') this._submitOwn();
     else if (action === 'own-when' && this._own) { this._own.when = el.dataset.when; if (el.dataset.when === 'custom' && !this._own.date) this._own.date = this._addDays(this._todayKey(), 2); this._renderLayer(); }
     else if (action === 'pt-postpone') this._ptPostpone(el.dataset.id);
+    else if (action === 'pt-later') { this._later = { id: el.dataset.id, date: '' }; this._renderLayer(); }
+    else if (action === 'later-pick') this._ptLaterPick(el.dataset.to);
+    else if (action === 'plan-open') this._planOpen();
+    else if (action === 'plan-cap') this._planCap(parseInt(el.dataset.cap));
+    else if (action === 'plan-apply') this._planApply();
     else if (action === 'pt-battery-ignore') this._ptBatteryIgnore(el.dataset.id);
     else if (action === 'kt-done') this._ktDone(el.dataset.id, el.dataset.kid);
     else if (action === 'care-given') this._careGiven(el.dataset.kid, el.dataset.care);
@@ -1285,6 +1293,107 @@ class FamilyMissionParents extends HTMLElement {
   _ptDone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_done', task_id: id }, this.localize('toast_pt_done')); }
 
   _ptBatteryIgnore(id) { return this._call('pt:' + id, { type: 'family_mission/battery_ignore', task_id: id }, this.localize('toast_battery_ignored')); }
+
+  /** "Later" sheet of a parent task: pick a target (or a date) and move it. */
+  _ptLaterPick(to) {
+    const l = this._later;
+    if (!l) return;
+    if (to === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(l.date || '')) return;
+    const payload = { type: 'family_mission/parent_task_postpone', task_id: l.id, to };
+    if (to === 'date') payload.date = l.date;
+    this._later = null;
+    this._renderLayer();
+    return this._call('pt:' + l.id, payload, this.localize('toast_moved'));
+  }
+
+  /** Week plan: ask the backend for a proposal (nothing is changed), show it, apply on request. */
+  async _planOpen() {
+    this._plan = { cap: 4, moves: null };
+    this._renderLayer();
+    await this._planLoad();
+  }
+
+  async _planLoad() {
+    const plan = this._plan;
+    if (!plan) return;
+    plan.moves = null;
+    this._renderLayer();
+    try {
+      const res = await this._hass.callWS({ type: 'family_mission/parent_plan_week', max_per_day: plan.cap });
+      if (this._plan === plan) plan.moves = res && res.success ? res.moves : [];
+    } catch (err) {
+      if (this._plan === plan) plan.moves = [];
+      this._toast(this.localize('err') + (err && err.message ? err.message : ''));
+    }
+    if (this._plan === plan) this._renderLayer();
+  }
+
+  _planCap(n) {
+    if (!this._plan || !(n >= 1)) return;
+    this._plan.cap = n;
+    this._planLoad();
+  }
+
+  async _planApply() {
+    const plan = this._plan;
+    if (!plan || !plan.moves || !plan.moves.length || this._busy.has('plan')) return;
+    this._busy.add('plan');
+    try {
+      await this._hass.callWS({ type: 'family_mission/parent_plan_week', max_per_day: plan.cap, apply: true });
+      this._toast(this.localize('toast_planned'));
+    } catch (err) {
+      this._toast(this.localize('err') + (err && err.message ? err.message : ''));
+    }
+    this._busy.delete('plan');
+    this._plan = null;
+    this._renderLayer();
+    this._fetchData();
+  }
+
+  _renderLaterSheet() {
+    const l = this._later;
+    const t = this._task(l.id);
+    const once = !!t && t.interval === 0;
+    const chip = (to, key) => `<button class="chip" data-action="later-pick" data-to="${to}">${escParents(this.localize(key))}</button>`;
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('pt_later'))}" style="--kc:#7E57C2">
+        <div class="grab"></div>
+        <h3>📅 ${escParents(this.localize('later_title', { task: t ? t.name : '' }))}</h3>
+        <div class="chips">${chip('tomorrow', 'qa_tomorrow')}${chip('day_after', 'later_day_after')}${chip('weekend', 'qa_weekend')}${chip('next_week', 'later_next_week')}${once ? chip('someday', 'qa_someday') : ''}</div>
+        <div class="lbl">${escParents(this.localize('qa_date'))}</div>
+        <input id="later-date" class="txt" type="date" min="${escParents(this._todayKey())}" value="${escParents(l.date)}" aria-label="${escParents(this.localize('qa_date'))}">
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
+          <button class="btn ok" data-action="later-pick" data-to="date" ${l.date ? '' : 'disabled'}>OK</button>
+        </div>
+      </div>`;
+  }
+
+  _renderPlanSheet() {
+    const plan = this._plan;
+    const caps = [3, 4, 5, 6].map(n => `<button class="chip ${plan.cap === n ? 'on' : ''}" data-action="plan-cap" data-cap="${n}" aria-pressed="${plan.cap === n}">${n}</button>`).join('');
+    let list;
+    if (plan.moves === null) list = `<p class="hint">${escParents(this.localize('plan_loading'))}</p>`;
+    else if (!plan.moves.length) list = `<div class="empty">🎉 ${escParents(this.localize('plan_none'))}</div>`;
+    else list = plan.moves.map(m => `<div class="entry"><span class="e-main"><span class="e-name">${escParents(m.name)}</span>
+        <span class="e-sub">${escParents(this._adultName(m.owner))} · ${escParents(this._dayLabel(m.from))} → ${escParents(this._dayLabel(m.to))}</span></span></div>`).join('');
+    const n = plan.moves ? plan.moves.length : 0;
+    return `
+      <div class="scrim" data-action="dialog-close"></div>
+      <div class="sheet adhoc" role="dialog" aria-modal="true" aria-label="${escParents(this.localize('plan_title'))}" style="--kc:#7E57C2">
+        <div class="grab"></div>
+        <h3>🗓️ ${escParents(this.localize('plan_title'))}</h3>
+        <p class="hint">${escParents(this.localize('plan_intro'))}</p>
+        <div class="lbl">${escParents(this.localize('plan_cap'))}</div>
+        <div class="chips">${caps}</div>
+        ${list}
+        <div class="dialog-actions">
+          <button class="btn neutral" data-action="dialog-close">${escParents(this.localize('cancel'))}</button>
+          <button class="btn ok" data-action="plan-apply" ${n ? '' : 'disabled'}>${escParents(this.localize('plan_apply', { n }))}</button>
+        </div>
+      </div>`;
+  }
 
   _ptPostpone(id) { return this._call('pt:' + id, { type: 'family_mission/parent_task_postpone', task_id: id }, this.localize('toast_pt_postponed')); }
 
@@ -2550,6 +2659,8 @@ class FamilyMissionParents extends HTMLElement {
         ${this._renderSteps(t)}
         <div class="pt-actions">
           <button class="btn ok pt-done" data-action="pt-done" data-id="${escParents(t.id)}" ${busy}>✓ ${escParents(this.localize('pt_done'))}</button>
+ 
+          <button class="btn neutral pt-ask pt-later" data-action="pt-later" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_later'))}</button>
           ${canPostpone ? `<button class="btn neutral pt-ask pt-later" data-action="pt-postpone" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_postpone'))}</button>` : ''}
           ${String(t.auto_key || '').startsWith('battery:') ? `<button class="btn neutral pt-ask" data-action="pt-battery-ignore" data-id="${escParents(t.id)}" ${busy}>${escParents(this.localize('pt_battery_ignore'))}</button>` : ''}
           ${asked ? `<span class="pt-asked">${escParents(this.localize('pt_asked', { name: this._adultName(h.to) }))}</span>` : ''}
@@ -2636,7 +2747,7 @@ class FamilyMissionParents extends HTMLElement {
             <button class="undo" data-action="undo" data-id="${escParents(h.id)}">↩️ ${escParents(this.localize('undo'))}</button></div>`).join('')}</details>`;
       }
     }
-    return `<section><h2><span class="h2-t">${escParents(this.localize('own_tasks'))}</span><button class="h2-add" data-action="pt-new" aria-label="${escParents(this.localize('pt_add'))}" title="${escParents(this.localize('pt_add'))}">＋</button></h2>${inner}</section>`;
+    return `<section><h2><span class="h2-t">${escParents(this.localize('own_tasks'))}</span>${hasAny ? `<button class="h2-add h2-plan" data-action="plan-open" aria-label="${escParents(this.localize('plan_open'))}" title="${escParents(this.localize('plan_open'))}">🗓️</button>` : ''}<button class="h2-add" data-action="pt-new" aria-label="${escParents(this.localize('pt_add'))}" title="${escParents(this.localize('pt_add'))}">＋</button></h2>${inner}</section>`;
   }
 
   _renderQuick() {
@@ -2857,6 +2968,8 @@ class FamilyMissionParents extends HTMLElement {
       return;
     }
     if (this._abs) { layer.innerHTML = this._renderAbsenceSheet(); return; }
+    if (this._later) { layer.innerHTML = this._renderLaterSheet(); return; }
+    if (this._plan) { layer.innerHTML = this._renderPlanSheet(); return; }
     if (this._own) { layer.innerHTML = this._renderOwnSheet(); return; }
     if (this._todo) { layer.innerHTML = this._renderTodoSheet(); return; }
     if (this._pickKid) { layer.innerHTML = this._renderPickKidSheet(); return; }
@@ -3124,6 +3237,7 @@ class FamilyMissionParents extends HTMLElement {
       .badge.late { background: color-mix(in srgb, var(--p-danger) 16%, transparent); color: var(--primary-text-color); }
       .badge.due { background: color-mix(in srgb, var(--primary-color, #03a9f4) 14%, transparent); color: var(--primary-text-color); }
       .h2-t { flex: 1; min-width: 0; }
+      .h2-plan { margin-right: 10px; font-size: 20px; }
       .h2-add { flex: none; width: 44px; height: 44px; margin: -8px -4px -8px 0; border-radius: 22px; border: 2px solid var(--p-line); background: var(--card-background-color, #fff); color: var(--primary-text-color); font-size: 24px; font-weight: 700; line-height: 1; touch-action: manipulation; }
       h3.pt-group { margin: 12px 0 8px; font-size: 14px; }
       h3.pt-group.overdue { color: var(--p-danger); }
