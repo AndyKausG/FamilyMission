@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.10.1] - 2026-11-07
+
+- **Fix, role-model band:** 2.10.0 counted "due today", but the nightly rollover moves every unfinished parent task to today (marked `carried_since`), so the backlog was still counted. The band "Auch Mama und Papa haben heute N Missionen" now leaves out tasks carried over from earlier days and counts what is really new today (plus done today). The carried-over tasks stay in the parents' lists; "🗓️ Woche planen" spreads them over the next days.
+
 ## [2.10.0] - 2026-11-07
 
 - **Parent tasks, "Später":** besides "→ Morgen" every parent task has "📅 Später" (parents' hub and own device `mode: mine`): tomorrow, day after tomorrow, weekend, next week, a date or someday (one-time tasks only). `family_mission/parent_task_postpone` takes the new optional `to` (`tomorrow` stays the default) and `date`; bad targets / dates give `invalid_target`.
