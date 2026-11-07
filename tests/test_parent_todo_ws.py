@@ -203,6 +203,56 @@ async def test_postpone_to_tomorrow(hass, clients):
     assert res["result"]["success"] is False
 
 
+async def test_postpone_targets(hass, clients):
+    anna = clients["anna"]
+    once = await _add(anna, name="Einmalig", interval=0, due_date="2026-10-20")
+    weekly = await _add(anna, name="Woechentlich", interval=7)
+    cases = (("day_after", "2026-10-31"), ("weekend", "2026-10-31"), ("next_week", "2026-11-02"),
+             ("date", "2026-12-24"), ("tomorrow", "2026-10-30"))
+    for target, expected in cases:
+        extra = {"date": "2026-12-24"} if target == "date" else {}
+        res = await _call(anna, "family_mission/parent_task_postpone", task_id=once, to=target, **extra)
+        assert res["result"] == {"success": True, "due_date": expected}, target
+        assert _data(hass)["tasks"][once]["due_date"] == _day_start(date.fromisoformat(expected))
+    res = await _call(anna, "family_mission/parent_task_postpone", task_id=once, to="someday")
+    assert res["result"] == {"success": True, "due_date": None}
+    assert _data(hass)["tasks"][once]["someday"] is True and _data(hass)["tasks"][once]["due_date"] is None
+    # recurring tasks cannot become "someday"; bad dates are refused
+    for kw in ({"to": "someday"}, {"to": "date"}, {"to": "date", "date": "2020-01-01"}, {"to": "date", "date": "x"}):
+        res = await _call(anna, "family_mission/parent_task_postpone", task_id=weekly, **kw)
+        assert res["result"] == {"success": False, "error": "invalid_target"}, kw
+    res = await _call(anna, "family_mission/parent_task_postpone", task_id=weekly, to="bogus")
+    assert res["success"] is False
+
+
+async def test_plan_week_spreads_the_backlog_and_keeps_fixed_tasks(hass, clients):
+    anna, sam = clients["anna"], clients["sam"]
+    ids = [await _add(anna, name=f"Alt {i}", interval=0, due_date=f"2026-10-{20 + i}") for i in range(6)]
+    timed = await _add(anna, name="Mit Uhrzeit", interval=0, due_date="2026-10-20", due_time="08:00")
+    someday = await _add(anna, name="Irgendwann", interval=0)
+    weekly = await _add(anna, name="Woechentlich", interval=7, due_date="2026-10-29")
+    res = await _call(anna, "family_mission/parent_plan_week", max_per_day=2)
+    plan = res["result"]
+    assert plan["success"] and plan["applied"] is False and plan["max_per_day"] == 2
+    # preview changes nothing
+    assert _data(hass)["tasks"][ids[0]]["due_date"] == _day_start(date(2026, 10, 20))
+    moved = {m["task_id"]: m["to"] for m in plan["moves"]}
+    # Thursday already has the recurring task + the timed one is fixed on its own (past) day: 6 backlog tasks, 1 slot today
+    assert timed not in moved and someday not in moved and weekly not in moved
+    assert moved[ids[0]] == "2026-10-29" and moved[ids[1]] == "2026-10-30" and moved[ids[2]] == "2026-10-30"
+    assert moved[ids[3]] == "2026-10-31" and moved[ids[4]] == "2026-10-31" and moved[ids[5]] == "2026-11-01"
+    assert max(sum(1 for d in moved.values() if d == day) for day in set(moved.values())) <= 2
+    res = await _call(anna, "family_mission/parent_plan_week", max_per_day=2, apply=True)
+    assert res["result"]["applied"] is True
+    for tid, to in moved.items():
+        assert _data(hass)["tasks"][tid]["due_date"] == _day_start(date.fromisoformat(to))
+    assert _data(hass)["tasks"][timed]["due_date"] == _day_start(date(2026, 10, 20))
+    res = await _call(anna, "family_mission/parent_plan_week")
+    assert res["result"]["moves"] == [] and res["result"]["max_per_day"] == 4
+    res = await _call(sam, "family_mission/parent_plan_week")
+    assert res["success"] is False and res["error"]["code"] == "unauthorized"
+
+
 # ---------------------------------------------------------------------------
 # settings
 # ---------------------------------------------------------------------------

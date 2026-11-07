@@ -299,3 +299,43 @@ def test_battery_replaceable_and_ignore_list():
     assert pc.battery_ignore_list(" Sensor.A, sensor.b\nsensor.a;light.c") == ["sensor.a", "sensor.b"]
     assert pc.battery_ignore_list(["sensor.a", 3, "x", "sensor.a", "sensor.B"]) == ["sensor.a", "sensor.b"]
     assert len(pc.battery_ignore_list([f"sensor.s{i}" for i in range(300)])) == 200
+
+
+def test_postpone_day_targets():
+    thu, sat, sun = date(2026, 10, 29), date(2026, 10, 31), date(2026, 11, 1)
+    assert pc.postpone_day("tomorrow", thu) == (True, date(2026, 10, 30))
+    assert pc.postpone_day("day_after", thu) == (True, date(2026, 10, 31))
+    assert pc.postpone_day("weekend", thu) == (True, sat)
+    assert pc.postpone_day("weekend", sat) == (True, sun)
+    assert pc.postpone_day("weekend", sun) == (True, date(2026, 11, 7))
+    assert pc.postpone_day("next_week", thu) == (True, date(2026, 11, 2))
+    assert pc.postpone_day("next_week", date(2026, 11, 2)) == (True, date(2026, 11, 9))
+    assert pc.postpone_day("someday", thu) == (True, None) and pc.postpone_day("someday", thu, once=False) == (False, None)
+    assert pc.postpone_day("date", thu, "2026-12-24") == (True, date(2026, 12, 24))
+    for bad in (None, "", "x", "2026-10-28", "2030-01-01"):
+        assert pc.postpone_day("date", thu, bad) == (False, None), bad
+    assert pc.postpone_day("bogus", thu) == (False, None)
+
+
+def test_plan_max_and_plan_week():
+    assert pc.plan_max(None) == 4 and pc.plan_max(True) == 4 and pc.plan_max("x") == 4
+    assert pc.plan_max(0) == 1 and pc.plan_max(99) == 15 and pc.plan_max("6") == 6
+    today = date(2026, 10, 29)
+    items = [
+        {"id": "a", "owner": "u1", "due": date(2026, 10, 20), "movable": True},
+        {"id": "b", "owner": "u1", "due": date(2026, 10, 25), "movable": True},
+        {"id": "c", "owner": "u1", "due": today, "movable": True},
+        {"id": "d", "owner": "u2", "due": today, "movable": True},
+        {"id": "fix", "owner": "u1", "due": date(2026, 10, 30), "movable": False},
+        {"id": "someday", "owner": "u1", "due": None, "movable": True},
+    ]
+    moves = {m["id"]: m for m in pc.plan_week(items, today, 1)}
+    assert moves["a"]["to"] == today and moves["a"]["from"] == date(2026, 10, 20)       # oldest first, overdue -> today
+    assert moves["b"]["to"] == date(2026, 10, 31)                                      # Fri holds the fixed task, so Sat
+    assert moves["c"]["to"] == date(2026, 11, 1)
+    assert "d" not in moves and "fix" not in moves and "someday" not in moves             # u2 has room today; fixed / undated stay
+    # nothing to do when everything fits
+    assert pc.plan_week(items[2:4], today, 4) == []
+    # no room anywhere in the week: the last day takes the rest
+    crowded = [{"id": str(i), "owner": "u1", "due": today, "movable": True} for i in range(10)]
+    assert {m["to"] for m in pc.plan_week(crowded, today, 1)} <= {today + timedelta(days=i) for i in range(1, 7)}

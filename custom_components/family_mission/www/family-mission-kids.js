@@ -37,7 +37,7 @@ const I18N_KIDS = {
     qa_time: "Time (optional)", qa_who: "For", qa_me: "Me", qa_cancel: "Cancel", qa_create: "Add", qa_need_date: "Please pick a date.",
     qa_saved: "Added: {name}", qa_err_no_adult: "No adult profile found for your user.", qa_err_unauthorized: "You are not allowed to add to-dos.",
     parent_soon: "Coming up ({n})", parent_someday: "Someday ({n})", parent_since: "since {day}", parent_overdue: "overdue",
-    parent_postpone: "→ Tomorrow", parent_postponed: "Moved to tomorrow.",
+    parent_postpone: "→ Tomorrow", parent_postponed: "Moved to tomorrow.", parent_later: "📅 Later", parent_moved: "Moved.", pl_title: "When should \"{task}\" come back?", pl_weekend: "Weekend", pl_next_week: "Next week", pl_someday: "Someday",
     tasks_open_one: "1 task open", tasks_open: "{n} tasks open", all_done_badge: "All done!",
     family_rocket: "Family rocket", reward: "Reward", points_unit: "pts", goal_reached: "Goal reached!",
     claim: "Take it", done_btn: "Done!", locked_basis: "Your tasks first!", claimed_other: "{name} is on it",
@@ -130,7 +130,7 @@ const I18N_KIDS = {
     qa_time: "Uhrzeit (optional)", qa_who: "Für", qa_me: "Mich", qa_cancel: "Abbrechen", qa_create: "Anlegen", qa_need_date: "Bitte ein Datum wählen.",
     qa_saved: "Angelegt: {name}", qa_err_no_adult: "Für deinen Benutzer wurde kein Erwachsenen-Profil gefunden.", qa_err_unauthorized: "Du darfst keine Aufgaben anlegen.",
     parent_soon: "Demnächst ({n})", parent_someday: "Irgendwann ({n})", parent_since: "seit {day}", parent_overdue: "überfällig",
-    parent_postpone: "→ Morgen", parent_postponed: "Auf morgen verschoben.",
+    parent_postpone: "→ Morgen", parent_postponed: "Auf morgen verschoben.", parent_later: "📅 Später", parent_moved: "Verschoben.", pl_title: "Wann soll „{task}“ wieder dran sein?", pl_weekend: "Wochenende", pl_next_week: "Nächste Woche", pl_someday: "Irgendwann",
     tasks_open_one: "1 Aufgabe offen", tasks_open: "{n} Aufgaben offen", all_done_badge: "Alles geschafft!",
     family_rocket: "Familien-Rakete", reward: "Belohnung", points_unit: "Pkt.", goal_reached: "Ziel erreicht!",
     claim: "Übernehmen", done_btn: "Fertig!", locked_basis: "Erst deine Aufgaben!", claimed_other: "{name} macht das",
@@ -1134,8 +1134,37 @@ class FamilyMissionKids extends HTMLElement {
 
   _ptPostponeBtn(t) {
     const tomorrow = this._ymdOf(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1));
-    if (this._dateKey(t.due_date) === tomorrow) return '';
-    return `<button class="pt-postpone" data-action="pt-postpone" data-task="${escKids(t.id)}" ${this._busy ? 'disabled' : ''}>${escKids(this.localize('parent_postpone'))}</button>`;
+    const quick = this._dateKey(t.due_date) === tomorrow ? '' :
+      `<button class="pt-postpone" data-action="pt-postpone" data-task="${escKids(t.id)}" ${this._busy ? 'disabled' : ''}>${escKids(this.localize('parent_postpone'))}</button>`;
+    return quick + `<button class="pt-postpone" data-action="pt-later" data-task="${escKids(t.id)}" ${this._busy ? 'disabled' : ''}>${escKids(this.localize('parent_later'))}</button>`;
+  }
+
+  /** "Later": a sheet with tomorrow / day after / weekend / next week / date / someday for a parent task. */
+  _ptLaterOpen(taskId) {
+    const t = this.tasks[taskId];
+    if (!t) return;
+    this._sheet = { type: 'ptlater', taskId, name: t.name, once: t.interval === 0, date: '' };
+    this._render();
+  }
+
+  async _ptLater(to) {
+    const sheet = this._sheet;
+    if (!sheet || sheet.type !== 'ptlater' || this._busy) return;
+    if (to === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(sheet.date || '')) return;
+    this._busy = true;
+    try {
+      const msg = { type: 'family_mission/parent_task_postpone', task_id: sheet.taskId, to };
+      if (to === 'date') msg.date = sheet.date;
+      const res = await this._hass.callWS(msg);
+      this._sheet = null;
+      this._showToast(res && res.success ? this.localize('parent_moved') : this._errorText(res));
+    } catch (err) {
+      console.error('FamilyMission Kids: postpone failed', err);
+      this._showToast(this.localize('err_generic'));
+    }
+    this._busy = false;
+    this._render();
+    this._fetchData();
   }
 
   /** Folds below the list: "Demnächst (N)" (future dated) and "Irgendwann (N)" (no date). */
@@ -1553,7 +1582,8 @@ class FamilyMissionKids extends HTMLElement {
    * Returns { open, done, total }. Parent tasks have no points and are never listed here.
    */
   _parentsToday() {
-    const open = Object.values(this.tasks).filter(t => t.parent_task && this._isOpen(t)).length;
+    // only what is due today (not the overdue backlog, not later, not someday): the band shows the day's workload
+    const open = Object.values(this.tasks).filter(t => t.parent_task && this._ptBucket(t) === 'today').length;
     const today = this._localToday();
     const seen = new Set();
     this.history.forEach(h => {
@@ -1704,6 +1734,8 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'qa-mode' && this._qa) { this._qa.mode = el.dataset.mode; this._qaRender(); }
     else if (action === 'qa-create') this._qaCreate();
     else if (action === 'pt-postpone') this._ptPostpone(el.dataset.task);
+    else if (action === 'pt-later') this._ptLaterOpen(el.dataset.task);
+    else if (action === 'pl-pick') this._ptLater(el.dataset.to);
     else if (action === 'claim') this._claim(el.dataset.task);
     else if (action === 'complete') this._complete(el.dataset.task);
     else if (action === 'sleep-tap') { this._peekUntil = Date.now() + 5000; this._syncNight(); this._wiggleAlarm(); }
@@ -1881,6 +1913,13 @@ class FamilyMissionKids extends HTMLElement {
       body = `
         <div class="sheet-title">🛍️ ${escKids(this.localize('shop_confirm', { emoji: r.emoji || '🎁', name: r.name, cost: fmtKids(r.cost) }))}</div>
         <div class="sheet-btns">${cancel}<button class="sbtn ok" data-action="sheet-ok">${escKids(this.localize('shop_redeem'))}</button></div>`;
+    } else if (sheet.type === 'ptlater') {
+      const opt = (to, key) => `<button class="schoice" data-action="pl-pick" data-to="${to}">${escKids(this.localize(key))}</button>`;
+      body = `
+        <div class="sheet-title">📅 ${escKids(this.localize('pl_title', { task: sheet.name }))}</div>
+        <div class="schoices">${opt('tomorrow', 'pa_tomorrow')}${opt('day_after', 'pa_day_after')}${opt('weekend', 'pl_weekend')}${opt('next_week', 'pl_next_week')}${sheet.once ? opt('someday', 'pl_someday') : ''}</div>
+        <div class="sdate"><label>${escKids(this.localize('pa_date'))}<input type="date" data-field="date" min="${escKids(this._localToday())}" value="${escKids(sheet.date)}"></label></div>
+        <div class="sheet-btns">${cancel}<button class="sbtn ok" data-action="pl-pick" data-to="date" ${sheet.date ? '' : 'disabled'}>${escKids(this.localize('pa_ok'))}</button></div>`;
     } else if (sheet.type === 'postpone') {
       const until = this._postponeUntil(sheet);
       const lang = (this._hass && this._hass.language) || undefined;
@@ -3856,6 +3895,7 @@ class FamilyMissionKids extends HTMLElement {
       .schoice.on { background: color-mix(in srgb, var(--kc) 28%, var(--k-card)); border-color: var(--kc); }
       .sdate { display: flex; gap: 14px; }
       .sdate label { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 20px; font-weight: 700; color: var(--k-sub); }
+      .sdate input { min-height: 64px; font-size: 26px; font-family: inherit; padding: 0 10px; border-radius: 18px; border: 3px solid var(--k-line); background: var(--k-card); color: var(--k-text); }
       .sdate select { min-height: 64px; font-size: 26px; font-family: inherit; padding: 0 10px; border-radius: 18px; border: 3px solid var(--k-line); background: var(--k-card); color: var(--k-text); }
       .t-action { flex-direction: column; gap: 8px; align-items: stretch; }
       .btn-together { min-height: 56px; font-size: 22px; background: var(--k-blue); }

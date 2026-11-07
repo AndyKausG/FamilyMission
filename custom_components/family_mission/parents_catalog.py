@@ -259,6 +259,93 @@ def partner_of(adult_ids: list[str], me: str | None) -> str | None:
 
 
 # ---------------------------------------------------------------------------
+# Postpone targets and the week plan
+# ---------------------------------------------------------------------------
+
+POSTPONE_TARGETS = ("tomorrow", "day_after", "weekend", "next_week", "someday", "date")
+PLAN_DAYS = 7
+DEFAULT_PLAN_MAX = 4
+MIN_PLAN_MAX = 1
+MAX_PLAN_MAX = 15
+
+
+def postpone_day(target: Any, today: date, date_text: Any = None, once: bool = True) -> tuple[bool, date | None]:
+    """``(ok, day)`` of a postpone target; ``day`` is ``None`` for "someday" (one-time tasks only).
+
+    ``weekend`` = the coming Saturday (Sunday when today is Saturday), ``next_week`` = the coming Monday,
+    ``date`` needs ``date_text`` (``YYYY-MM-DD``, today or later, at most 2 years ahead).
+    """
+    if target == "tomorrow":
+        return True, today + timedelta(days=1)
+    if target == "day_after":
+        return True, today + timedelta(days=2)
+    if target == "weekend":
+        if today.weekday() == 5:
+            return True, today + timedelta(days=1)
+        return True, today + timedelta(days=(5 - today.weekday()) % 7)
+    if target == "next_week":
+        return True, today + timedelta(days=7 - today.weekday())
+    if target == "someday":
+        return (True, None) if once else (False, None)
+    if target == "date":
+        try:
+            day = date.fromisoformat(str(date_text))
+        except (TypeError, ValueError):
+            return False, None
+        if day < today or day > today + timedelta(days=730):
+            return False, None
+        return True, day
+    return False, None
+
+
+def plan_max(value: Any) -> int:
+    """Maximum tasks per person and day of the week plan (1-15, default 4)."""
+    if isinstance(value, bool):
+        return DEFAULT_PLAN_MAX
+    try:
+        number = int(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return DEFAULT_PLAN_MAX
+    return max(MIN_PLAN_MAX, min(MAX_PLAN_MAX, number))
+
+
+def plan_week(items: Iterable[dict], today: date, max_per_day: int = DEFAULT_PLAN_MAX, days: int = PLAN_DAYS) -> list[dict]:
+    """Spread the open one-time to-dos over the next days so nobody has more than ``max_per_day`` a day.
+
+    ``items``: ``{id, owner, due (date | None), movable (bool)}``. Movable are one-time tasks that are overdue or due
+    today; everything else (recurring, with a time, automatic, undated, later dates) stays where it is but counts
+    towards the load of its day. The oldest task is placed first on the first day with room for its owner (later
+    days are not offered beyond ``days``; the last one takes the rest). Returns ``[{id, from, to}]`` for the tasks
+    that change their day; an overdue task that gets today moves, too (it is no longer overdue then).
+    """
+    cap = plan_max(max_per_day)
+    last = today + timedelta(days=days - 1)
+    load: dict[tuple[str, date], int] = {}
+    movable = []
+    for item in items:
+        due = item.get("due")
+        if item.get("movable") and due is not None and due <= today:
+            movable.append(item)
+        elif due is not None and today <= due <= last:
+            key = (str(item.get("owner") or ""), due)
+            load[key] = load.get(key, 0) + 1
+    movable.sort(key=lambda it: (it["due"], str(it.get("id"))))
+    moves = []
+    for item in movable:
+        owner = str(item.get("owner") or "")
+        day = last
+        for offset in range(days):
+            candidate = today + timedelta(days=offset)
+            if load.get((owner, candidate), 0) < cap:
+                day = candidate
+                break
+        load[(owner, day)] = load.get((owner, day), 0) + 1
+        if day != item["due"]:
+            moves.append({"id": item["id"], "from": item["due"], "to": day})
+    return moves
+
+
+# ---------------------------------------------------------------------------
 # Rollover (midnight, silent)
 # ---------------------------------------------------------------------------
 

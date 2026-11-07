@@ -130,6 +130,7 @@ from .const import (
     WS_TYPE_PARENT_TASK_ADD,
     WS_TYPE_PARENT_TASK_DONE,
     WS_TYPE_PARENT_TASK_POSTPONE,
+    WS_TYPE_PARENT_PLAN_WEEK,
     WS_TYPE_BATTERY_IGNORE,
     WS_TYPE_PARENT_TOGGLE_STEP,
     WS_TYPE_PARENT_TODO_ADD,
@@ -5444,10 +5445,13 @@ async def ws_parent_todo_add(hass: HomeAssistant, connection: websocket_api.Acti
 @websocket_api.websocket_command({
     vol.Required("type"): WS_TYPE_PARENT_TASK_POSTPONE,
     vol.Required("task_id"): str,
+    vol.Optional("to", default="tomorrow"): vol.In(parents_catalog.POSTPONE_TARGETS),
+    vol.Optional("date"): str,
 })
 @websocket_api.async_response
 async def ws_parent_task_postpone(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
-    """Postpone a parents' task to tomorrow (admin / manager / parent). Someday and overdue tasks get tomorrow as date."""
+    """Postpone a parents' task (admin / manager / parent): ``to`` = tomorrow (default) | day_after | weekend |
+    next_week | someday (one-time tasks) | date (``date`` = YYYY-MM-DD). Someday and overdue tasks get the new day."""
     if not _check_role(hass, connection, msg, _DAILY_ROLES):
         return
     data = hass.data[DOMAIN]["data"]
@@ -5455,11 +5459,67 @@ async def ws_parent_task_postpone(hass: HomeAssistant, connection: websocket_api
     if not _is_parent_task(task):
         connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
         return
-    tomorrow = dt_util.now().date() + timedelta(days=1)
-    _set_parent_due(task, tomorrow)
+    once = task.get("interval", parents_catalog.DEFAULT_INTERVAL) == 0
+    ok, day = parents_catalog.postpone_day(msg["to"], dt_util.now().date(), msg.get("date"), once)
+    if not ok:
+        connection.send_result(msg["id"], {"success": False, "error": "invalid_target"})
+        return
+    _set_parent_due(task, day)
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
-    connection.send_result(msg["id"], {"success": True, "due_date": tomorrow.isoformat()})
+    connection.send_result(msg["id"], {"success": True, "due_date": day.isoformat() if day else None})
+
+
+def _plan_items(data: dict, today: date) -> list[dict]:
+    """The parents' tasks of the week plan (see ``parents_catalog.plan_week``): open one-time to-dos can move."""
+    items = []
+    for task in data["tasks"].values():
+        if not _is_parent_task(task):
+            continue
+        paused = _local_day_of(task.get("paused_until"))
+        if task.get("absent_all") or (paused is not None and today <= paused):
+            continue
+        due = None if task.get("someday") else _local_day_of(task.get("due_date"))
+        asked = (task.get("handover") or {}).get("state") == "asked"
+        movable = (
+            task.get("interval", parents_catalog.DEFAULT_INTERVAL) == 0 and not task.get("due_time")
+            and not task.get("auto_key") and not asked
+        )
+        items.append({"id": task["id"], "owner": (_assignee_ids(task) or [""])[0], "due": due, "movable": movable})
+    return items
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_PARENT_PLAN_WEEK,
+    vol.Optional("apply", default=False): bool,
+    vol.Optional("max_per_day", default=parents_catalog.DEFAULT_PLAN_MAX): vol.Any(int, float, str),
+})
+@websocket_api.async_response
+async def ws_parent_plan_week(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Week plan (admin / manager / parent): spread overdue and today's one-time to-dos over the next 7 days.
+
+    Without ``apply`` only the proposal is returned (``moves``: task, owner, from, to). With ``apply`` the
+    days are set. Owners never change; recurring tasks, tasks with a time and automatic tasks stay where they are.
+    """
+    if not _check_role(hass, connection, msg, _DAILY_ROLES):
+        return
+    data = hass.data[DOMAIN]["data"]
+    today = dt_util.now().date()
+    cap = parents_catalog.plan_max(msg["max_per_day"])
+    moves = parents_catalog.plan_week(_plan_items(data, today), today, cap)
+    result = []
+    for move in moves:
+        task = data["tasks"][move["id"]]
+        result.append({
+            "task_id": move["id"], "name": task.get("name") or "", "owner": (_assignee_ids(task) or [""])[0],
+            "from": move["from"].isoformat(), "to": move["to"].isoformat(),
+        })
+        if msg["apply"]:
+            _set_parent_due(task, move["to"])
+    if msg["apply"] and result:
+        await hass.data[DOMAIN]["store"].async_save(data)
+        hass.bus.async_fire(EVENT_TASK_UPDATED)
+    connection.send_result(msg["id"], {"success": True, "applied": bool(msg["apply"]), "max_per_day": cap, "moves": result})
 
 
 @websocket_api.websocket_command({
@@ -7801,6 +7861,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_parent_task_add)
     websocket_api.async_register_command(hass, ws_parent_task_done)
     websocket_api.async_register_command(hass, ws_parent_task_postpone)
+    websocket_api.async_register_command(hass, ws_parent_plan_week)
     websocket_api.async_register_command(hass, ws_battery_ignore)
     websocket_api.async_register_command(hass, ws_parent_toggle_step)
     websocket_api.async_register_command(hass, ws_parent_todo_add)
