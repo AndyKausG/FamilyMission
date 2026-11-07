@@ -1582,8 +1582,9 @@ class FamilyMissionKids extends HTMLElement {
    * Returns { open, done, total }. Parent tasks have no points and are never listed here.
    */
   _parentsToday() {
-    // only what is due today (not the overdue backlog, not later, not someday): the band shows the day's workload
-    const open = Object.values(this.tasks).filter(t => t.parent_task && this._ptBucket(t) === 'today').length;
+    // only what is due today: not tasks carried over from earlier days (the nightly rollover moves them to "today"
+    // and marks them with carried_since), not later, not someday - the band shows the day's own workload
+    const open = Object.values(this.tasks).filter(t => t.parent_task && this._ptBucket(t) === 'today' && !t.carried_since).length;
     const today = this._localToday();
     const seen = new Set();
     this.history.forEach(h => {
