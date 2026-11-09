@@ -96,7 +96,7 @@ claim_minutes: "Bonus reservation (minutes)",
     pe_reminder: "Planning reminder", pe_reminder_d: "Evening before a 🧠 planning task (e.g. meal plan) is due. Other parent tasks only remind at their own time (if you set one).",
     pe_push: "Push target per adult", pe_push_d: "Automatic uses the person's Companion app.", pe_auto: "Automatic", pe_no_adults: "No adults found.", 
     tb_reward_push: "Push to the parents when a kid wants to redeem a reward",
-    tb_approval_push: "Push to the parents when a task waits for approval", tb_clear_pushes: "Remove handled pushes from the other devices (sends a silent \"clear_notification\")",
+    tb_approval_push: "Push to the parents when a task waits for approval", tb_completion_push: "Push to the parents when a kid finished a task without approval (info only, not at night)", tb_clear_pushes: "Remove handled pushes from the other devices (sends a silent \"clear_notification\")",
     tb_push_status: "Who gets the push?", tb_push_auto: "✓ Push to {t} (automatic)", tb_push_manual: "✓ Push to {t}",
     tb_push_none: "⚠ No push target - sign in to the Companion app with this user or choose a target here",
     tb_test: "Test push", tb_test_ok: "Test push sent to {t}", tb_test_none: "No push target for this person.", tb_test_fail: "Test push failed: {e}",
@@ -212,7 +212,7 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     pe_reminder: "Planungs-Erinnerung", pe_reminder_d: "Am Vorabend einer 🧠 Planungs-Aufgabe (z. B. Essensplan). Andere Eltern-Aufgaben erinnern nur zu ihrer eigenen Uhrzeit (falls gesetzt).",
     pe_push: "Push-Ziel je Erwachsenem", pe_push_d: "Automatisch nutzt die Companion-App der Person.", pe_auto: "Automatisch", pe_no_adults: "Keine Erwachsenen gefunden.", 
     tb_reward_push: "Push an die Eltern, wenn ein Kind eine Belohnung einlösen möchte",
-    tb_approval_push: "Push an die Eltern, wenn eine Aufgabe auf Freigabe wartet", tb_clear_pushes: "Erledigte Pushes auf den anderen Geräten entfernen (stiller „clear_notification“-Befehl)",
+    tb_approval_push: "Push an die Eltern, wenn eine Aufgabe auf Freigabe wartet", tb_completion_push: "Push an die Eltern, wenn ein Kind eine Aufgabe ohne Freigabe erledigt hat (nur Info, nicht nachts)", tb_clear_pushes: "Erledigte Pushes auf den anderen Geräten entfernen (stiller „clear_notification“-Befehl)",
     tb_push_status: "Wer bekommt den Push?", tb_push_auto: "✓ Push an {t} (automatisch)", tb_push_manual: "✓ Push an {t}",
     tb_push_none: "⚠ Kein Push-Ziel – Companion-App mit diesem Benutzer anmelden oder unten ein Ziel wählen",
     tb_test: "Test-Push", tb_test_ok: "Test-Push gesendet an {t}", tb_test_none: "Für diese Person gibt es kein Push-Ziel.", tb_test_fail: "Test-Push fehlgeschlagen: {e}",
@@ -1822,6 +1822,7 @@ class FamilyMissionSettings extends HTMLElement {
             <div class="family-box">
               <label class="parent-check"><input type="checkbox" id="tb-reward-push" ${st.reward_push !== false ? 'checked' : ''}> ${this.localize('tb_reward_push')}</label>
               <label class="parent-check"><input type="checkbox" id="tb-approval-push" ${st.approval_push !== false ? 'checked' : ''}> ${this.localize('tb_approval_push')}</label>
+              <label class="parent-check"><input type="checkbox" id="tb-completion-push" ${st.completion_push === true ? 'checked' : ''}> ${this.localize('tb_completion_push')}</label>
               <label class="parent-check"><input type="checkbox" id="tb-clear-pushes" ${st.clear_pushes !== false ? 'checked' : ''}> ${this.localize('tb_clear_pushes')}</label>
               <label class="kid-field">${this.localize('tb_reminder')}
                 <input type="number" id="tb-reminder-hours" min="0" max="24" step="1" value="${hours}"></label>
@@ -1936,6 +1937,7 @@ class FamilyMissionSettings extends HTMLElement {
         this.settings.reward_push = !!el('tb-reward-push').checked;
         this.settings.approval_push = !!el('tb-approval-push').checked;
         this.settings.clear_pushes = !!el('tb-clear-pushes').checked;
+        if (el('tb-completion-push')) this.settings.completion_push = !!el('tb-completion-push').checked;
         const h = parseInt(el('tb-reminder-hours').value);
         this.settings.approval_reminder_hours = Math.max(0, Math.min(24, isNaN(h) ? 2 : h));
         const notify = {};
