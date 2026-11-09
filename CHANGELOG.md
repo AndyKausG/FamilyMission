@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.11.0] - 2026-11-09
+
+- **New setting `completion_push` (default off): done push without an automation.** When a kid finishes a task that needs no approval, all adults with a push target get an info push "✔️ Clara hat erledigt" / "✔️ Clara finished" (together: "Clara & David haben erledigt"), text "<task> (+<points> ⭐)", no buttons. Not inside the night mode window (not caught up later), not for completions by parents, and tasks with approval keep getting only the approval push. Settings card, tab "Benachrichtigungen" / "Notifications". Invalid values fall back to off. An own automation on `family_mission_task_completed` for this is no longer needed.
+- README, parents' guides (de/en/fr) and in-app help updated. Tests: `tests/test_completion_push_ws.py`.
+
 ## [2.10.1] - 2026-11-07
 
 - **Fix, role-model band:** 2.10.0 counted "due today", but the nightly rollover moves every unfinished parent task to today (marked `carried_since`), so the backlog was still counted. The band "Auch Mama und Papa haben heute N Missionen" now leaves out tasks carried over from earlier days and counts what is really new today (plus done today). The carried-over tasks stay in the parents' lists; "🗓️ Woche planen" spreads them over the next days.

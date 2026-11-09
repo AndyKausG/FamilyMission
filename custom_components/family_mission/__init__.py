@@ -1411,6 +1411,8 @@ def _sanitize_tablet_settings(incoming: dict) -> None:
     for key in ("night_mode", "reward_push", "approval_push", "clear_pushes"):
         if key in incoming and not isinstance(incoming[key], bool):
             incoming[key] = True
+    if "completion_push" in incoming and not isinstance(incoming["completion_push"], bool):
+        incoming["completion_push"] = False   # new in 2.11, off by default
     for key, default in (
         ("night_sleep", DEFAULT_NIGHT_SLEEP),
         ("night_wake_weekday", DEFAULT_NIGHT_WAKE_WEEKDAY),
@@ -2064,6 +2066,8 @@ async def _async_kid_complete(hass: HomeAssistant, task_id: str, ctx: dict, help
     _care_lock(hass, kid_id, care_attached)
     if care_attached:
         await _async_check_care(hass)    # "Fertig" was pressed: the answers are final, a decline reaches the parents now
+    if profile is not None:
+        await _async_push_completion(hass, [kid_id] + helper_ids, task_name, points)
 
     result = {"success": True, "points": points, "task_name": task_name}
     if helpers:
@@ -2418,6 +2422,26 @@ async def _async_request_approval(
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     await _async_push_approval(hass, event)
     return pending_id
+
+
+async def _async_push_completion(hass: HomeAssistant, kid_ids: list, task_name: str | None, points: float) -> bool:
+    """Info push to every adult when a kid finished a task without approval (setting ``completion_push``).
+
+    Off by default, no buttons, silent inside the night mode window (not caught up later).
+    Tasks with approval already get the approval push and are not pushed again.
+    """
+    if _get_entry(hass).options.get("completion_push", False) is not True:
+        return False
+    if _parent_night(hass):
+        return False
+    de = _lang(hass) == "de"
+    who = " & ".join(_participant_name(hass, uid) for uid in kid_ids)
+    if len(kid_ids) > 1:
+        title = f"✔️ {who} haben erledigt" if de else f"✔️ {who} finished"
+    else:
+        title = f"✔️ {who} hat erledigt" if de else f"✔️ {who} finished"
+    name = task_name or ("Aufgabe" if de else "Task")
+    return await _async_push_all_adults(hass, title, f"{name} (+{points:g} ⭐)")
 
 
 async def _async_push_approval(hass: HomeAssistant, event: dict) -> bool:
