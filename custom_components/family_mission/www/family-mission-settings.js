@@ -83,7 +83,9 @@ claim_minutes: "Bonus reservation (minutes)",
     expire_missed: "Missed duties expire at midnight (daily duties right away, weekly ones after 2 days) - no points, no deduction",
     help_btn: "Help", wizard_btn: "🚀 Kids mode quick start", wizard_hint: "Proposes an age-appropriate set of tasks, points and goals for your kids and creates everything in one click.",
     wizard_missing: "The wizard could not be loaded. Reload the page (Ctrl+F5) and try again.",
-    triggers_title: "Bonus triggers", triggers_desc: "Open a bonus task automatically when an entity changes to a state, e.g. when the dishwasher is finished. Fires the event family_mission_bonus_opened.",
+    triggers_title: "Bonus triggers", triggers_desc: "Open a bonus task automatically when an entity changes to a state, e.g. when the dishwasher is finished. Fires the event family_mission_bonus_opened. Optionally a script, automation, scene or button is started when the task is completed (with approval: when it is approved).",
+    trig_done: "When completed, start (optional)", trig_done_none: "— nothing —", trig_done_then: "when completed: {name}",
+    trig_done_script: "Scripts", trig_done_automation: "Automations", trig_done_scene: "Scenes", trig_done_button: "Buttons",
     trig_task: "Bonus task", trig_pick_task: "— choose a bonus task —", trig_add: "Add trigger", trig_remove: "Remove trigger", trig_none: "No triggers yet.", trig_no_bonus: "No bonus task yet. Create a task without assignee and category \"Bonus\" (or let the quick start create them).",
     trig_when: "when {entity} becomes \"{state}\"", trig_error: "Could not save the triggers: ", 
     pe_band: "Show role-model band on the tablet", pe_band_d: "Quiet line on the kids tablet: \"Mom and Dad also have N missions today\" (no points, no names).",
@@ -199,7 +201,9 @@ claim_minutes: "Bonus-Reservierung (Minuten)",
     expire_missed: "Verpasste Pflichten verfallen um Mitternacht (tägliche sofort, wöchentliche nach 2 Tagen) – ohne Punkte, ohne Abzug",
     help_btn: "Hilfe", wizard_btn: "🚀 Kindermodus-Schnellstart", wizard_hint: "Schlägt altersgerechte Aufgaben, Punkte und Ziele für eure Kinder vor und legt alles mit einem Klick an.",
     wizard_missing: "Der Assistent konnte nicht geladen werden. Seite neu laden (Strg+F5) und erneut versuchen.",
-    triggers_title: "Bonus-Auslöser / Bonus triggers", triggers_desc: "Öffnet eine Bonus-Aufgabe automatisch, wenn eine Entität einen Zustand annimmt, z.B. wenn die Spülmaschine fertig ist. Löst das Ereignis family_mission_bonus_opened aus.",
+    triggers_title: "Bonus-Auslöser / Bonus triggers", triggers_desc: "Öffnet eine Bonus-Aufgabe automatisch, wenn eine Entität einen Zustand annimmt, z.B. wenn die Spülmaschine fertig ist. Löst das Ereignis family_mission_bonus_opened aus. Optional wird beim Erledigen der Aufgabe ein Skript, eine Automation, eine Szene oder ein Button gestartet (mit Freigabe: bei der Freigabe).",
+    trig_done: "Beim Erledigen starten (optional)", trig_done_none: "— nichts —", trig_done_then: "beim Erledigen: {name}",
+    trig_done_script: "Skripte", trig_done_automation: "Automationen", trig_done_scene: "Szenen", trig_done_button: "Buttons",
     trig_task: "Bonus-Aufgabe", trig_pick_task: "— Bonus-Aufgabe wählen —", trig_add: "Auslöser hinzufügen", trig_remove: "Auslöser entfernen", trig_none: "Noch keine Auslöser.", trig_no_bonus: "Noch keine Bonus-Aufgabe vorhanden. Lege eine Aufgabe ohne Bearbeiter mit Kategorie „Bonus“ an (oder lass sie vom Schnellstart anlegen).",
     trig_when: "wenn {entity} auf \"{state}\" wechselt", trig_error: "Auslöser konnten nicht gespeichert werden: ", 
     pe_band: "Vorbild-Band auf dem Tablet zeigen", pe_band_d: "Ruhige Zeile auf dem Kinder-Tablet: \"Auch Mama und Papa haben heute N Missionen\" (ohne Punkte, ohne Namen).",
@@ -340,7 +344,7 @@ class FamilyMissionSettings extends HTMLElement {
     this._parentsDraft = null;
     this._wasteSrc = null;
     this._adults = [];
-    this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '' };
+    this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '', on_done: '' };
     this._wizard = null;
     this._unsubEvents = null;
     this.addEventListener('click', (ev) => this._handleClick(ev));
@@ -1279,6 +1283,7 @@ class FamilyMissionSettings extends HTMLElement {
         .trig-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--divider-color); border-radius: 8px; padding: 8px 8px 8px 12px; background: var(--card-background-color); }
         .trig-text { flex: 1; min-width: 0; font-size: 13px; color: var(--secondary-text-color); overflow-wrap: anywhere; }
         .trig-text b { color: var(--primary-text-color); font-size: 14px; display: block; }
+        .trig-done { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; font-size: 12px; }
         .trig-add { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--divider-color); padding-top: 12px; }
         .btn-save { background: #2196F3; color: white; margin-top: 8px; } 
         .btn-reset { background: #FF9800; color: white; } 
@@ -1751,12 +1756,31 @@ class FamilyMissionSettings extends HTMLElement {
       const st = this._hass && this._hass.states && this._hass.states[id];
       return (st && st.attributes && st.attributes.friendly_name) || id;
     };
+    // Follow-up action when the task is completed: scripts, automations, scenes, buttons
+    const doneGroups = [['script', 'trig_done_script'], ['automation', 'trig_done_automation'], ['scene', 'trig_done_scene'], ['button', 'trig_done_button'], ['input_button', 'trig_done_button']];
+    const stateIds = Object.keys((this._hass && this._hass.states) || {});
+    const doneOptions = (current) => {
+      const known = current && stateIds.includes(current);
+      return `<option value="">${this.localize('trig_done_none')}</option>`
+        + (current && !known ? `<option value="${esc(current)}" selected>${esc(current)}</option>` : '')
+        + doneGroups.map(([domain, label]) => {
+          const ids = stateIds.filter(id => id.startsWith(domain + '.'))
+            .sort((a, b) => entityName(a).localeCompare(entityName(b)));
+          if (!ids.length) return '';
+          return `<optgroup label="${esc(this.localize(label))}">${ids.map(id =>
+            `<option value="${esc(id)}" ${current === id ? 'selected' : ''}>${esc(entityName(id))}</option>`).join('')}</optgroup>`;
+        }).join('');
+    };
     const rows = triggers.map((trig, i) => {
       const task = this._triggerTask(trig);
       return `
         <div class="trig-row">
           <div class="trig-text"><b>${esc(task ? task.name : (trig.wizard_key || trig.task_id))}</b>
-            ${esc(this.localize('trig_when').replace('{entity}', entityName(trig.entity_id)).replace('{state}', trig.to_state))}</div>
+            ${esc(this.localize('trig_when').replace('{entity}', entityName(trig.entity_id)).replace('{state}', trig.to_state))}
+            ${isAdmin
+              ? `<label class="trig-done">${this.localize('trig_done')}
+                  <select class="form-select trig-done-sel" data-index="${i}" style="height: 34px; font-size: 13px;">${doneOptions(trig.on_done || '')}</select></label>`
+              : (trig.on_done ? `<div>${esc(this.localize('trig_done_then').replace('{name}', entityName(trig.on_done)))}</div>` : '')}</div>
           <button class="action-btn btn-trig-del" data-index="${i}" title="${this.localize('trig_remove')}" ${isAdmin ? '' : 'disabled'}><ha-icon icon="mdi:delete"></ha-icon></button>
         </div>`;
     }).join('');
@@ -1774,6 +1798,9 @@ class FamilyMissionSettings extends HTMLElement {
                 </label>
                 ${this._bonusTasks().length ? '' : `<p class="kids-note">${this.localize('trig_no_bonus')}</p>`}
                 <family-mission-trigger-picker id="trig-picker"></family-mission-trigger-picker>
+                <label class="kid-field">${this.localize('trig_done')}
+                  <select class="form-select" id="trig-done" style="height: 38px; font-size: 14px;">${doneOptions(d.on_done || '')}</select>
+                </label>
                 <button class="btn btn-save" id="btn-trig-add" style="margin-top: 0;" ${d.task && d.entity_id && d.to_state ? '' : 'disabled'}>${this.localize('trig_add')}</button>
               </div>` : ''}`;
     // Triggers are stored by their own command at once: the inputs never mark the form as changed
@@ -2214,6 +2241,11 @@ class FamilyMissionSettings extends HTMLElement {
     });
     const sel = root.getElementById('trig-task');
     if (sel) sel.addEventListener('change', (ev) => { this._trigDraft.task = ev.target.value; update(); });
+    const done = root.getElementById('trig-done');
+    if (done) done.addEventListener('change', (ev) => { this._trigDraft.on_done = ev.target.value; });
+    root.querySelectorAll('.trig-done-sel').forEach(el => el.addEventListener('change', (ev) => {
+      this._setTriggerDone(parseInt(el.dataset.index), ev.target.value);
+    }));
   }
 
   /**
@@ -2239,14 +2271,31 @@ class FamilyMissionSettings extends HTMLElement {
     const task = this.tasks[d.task];
     if (!task || !d.entity_id || !d.to_state) return;
     const trig = { entity_id: d.entity_id, to_state: d.to_state };
+    if (d.on_done) trig.on_done = d.on_done;
     // Wizard tasks are referenced by their key: it survives re-creation by the wizard
     if (task.wizard_key) trig.wizard_key = task.wizard_key; else trig.task_id = task.id;
     const list = [...(this.settings.bonus_triggers || []), trig];
     if (await this._saveTriggers(list)) {
       this.settings.bonus_triggers = list;
-      this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '' };
+      this._trigDraft = { task: '', entity_id: '', to_state: '', filter: '', on_done: '' };
       this._render();
     }
+  }
+
+  /**
+   * Sets or clears the follow-up action of a trigger (started when its task is completed).
+   * @param {number} index - Index in the trigger list.
+   * @param {string} entityId - script / automation / scene / button entity, '' for none.
+   */
+  async _setTriggerDone(index, entityId) {
+    const list = (this.settings.bonus_triggers || []).map((t, i) => {
+      if (i !== index) return t;
+      const next = { ...t };
+      if (entityId) next.on_done = entityId; else delete next.on_done;
+      return next;
+    });
+    if (await this._saveTriggers(list)) this.settings.bonus_triggers = list;
+    this._render();
   }
 
   /**

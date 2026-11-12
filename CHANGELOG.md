@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.12.0] - 2026-11-12
+
+- **Bonus triggers: optional follow-up action `on_done`.** Each trigger can carry the entity id of a `script.*`, `automation.*`, `scene.*`, `button.*` or `input_button.*` entity. When the task of the trigger is completed, FamilyMission starts it (`script.turn_on`, `automation.trigger` without the automation's conditions, `scene.turn_on`, `button.press` / `input_button.press`). Same moment as `family_mission_task_completed` (with approval only when a parent approves), on every completion of that task, undoing does not reverse it. Several triggers of the same task with the same `on_done` start it once. Off by default; errors are logged and never break the completion; not affected by night mode. `family_mission/set_bonus_triggers` rejects other domains with `invalid_done_action`. Settings card, tab "Aufgaben & Punkte", section "Bonus-Auslöser": select "Beim Erledigen starten (optional)" in the add form and on every trigger row. The wizard does not offer it but keeps an existing `on_done`.
+- README, parents' guides (de/en/fr) and in-app help updated. Tests: `tests/test_trigger_done_ws.py`.
+
 ## [2.11.0] - 2026-11-09
 
 - **New setting `completion_push` (default off): done push without an automation.** When a kid finishes a task that needs no approval, all adults with a push target get an info push "✔️ Clara hat erledigt" / "✔️ Clara finished" (together: "Clara & David haben erledigt"), text "<task> (+<points> ⭐)", no buttons. Not inside the night mode window (not caught up later), not for completions by parents, and tasks with approval keep getting only the approval push. Settings card, tab "Benachrichtigungen" / "Notifications". Invalid values fall back to off. An own automation on `family_mission_task_completed` for this is no longer needed.
