@@ -15,7 +15,7 @@ from homeassistant.components import frontend, persistent_notification, websocke
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, EntityCategory
-from homeassistant.core import HomeAssistant, ServiceCall, callback
+from homeassistant.core import HomeAssistant, ServiceCall, callback, valid_entity_id
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
@@ -891,6 +891,7 @@ def _award_task_points(
         "points_per_user": points_per_user,
         "total_points": total_points
     })
+    _run_trigger_done_actions(hass, data, task_id)
     _rocket_check(hass, data)
     return completion_id
 
@@ -4427,13 +4428,26 @@ async def ws_wizard_apply(hass: HomeAssistant, connection: websocket_api.ActiveC
         t for t in (options.get("bonus_triggers") or []) if t.get("wizard_key") not in open_keys
     ]
     # the trigger of an open bonus task that turned into an own task now points to the task itself
+    # the wizard does not know the follow-up action (on_done) of a trigger: keep it
+    def _keep_done(new: dict, old: dict) -> dict:
+        if old.get("on_done"):
+            new["on_done"] = old["on_done"]
+        return new
+
+    previous_done = {
+        (t.get("wizard_key"), t.get("entity_id"), t.get("to_state")): t
+        for t in (options.get("bonus_triggers") or []) if isinstance(t, dict)
+    }
     triggers += [
-        {"task_id": detached_keys[t["wizard_key"]], "entity_id": t["entity_id"], "to_state": t["to_state"]}
+        _keep_done(
+            {"task_id": detached_keys[t["wizard_key"]], "entity_id": t["entity_id"], "to_state": t["to_state"]}, t)
         for t in (options.get("bonus_triggers") or [])
         if t.get("wizard_key") in detached_keys and t.get("wizard_key") in open_keys
     ]
     triggers += [
-        {"wizard_key": t["wizard_key"], "entity_id": t["entity_id"], "to_state": t["to_state"]}
+        _keep_done(
+            {"wizard_key": t["wizard_key"], "entity_id": t["entity_id"], "to_state": t["to_state"]},
+            previous_done.get((t["wizard_key"], t["entity_id"], t["to_state"]), {}))
         for t in msg["device_triggers"]
     ]
     options["bonus_triggers"] = triggers
@@ -4531,6 +4545,53 @@ def _valid_bonus_triggers(settings: dict) -> list[dict]:
     return result
 
 
+# Follow-up action of a trigger when its task is completed: entity domain -> service
+_DONE_ACTION_SERVICES = {
+    "script": "turn_on",
+    "automation": "trigger",
+    "scene": "turn_on",
+    "button": "press",
+    "input_button": "press",
+}
+
+
+def _valid_done_action(entity_id) -> bool:
+    return (
+        isinstance(entity_id, str)
+        and valid_entity_id(entity_id)
+        and entity_id.split(".", 1)[0] in _DONE_ACTION_SERVICES
+    )
+
+
+async def _async_call_done_action(hass: HomeAssistant, entity_id: str) -> None:
+    """Start one follow-up action; errors are logged and never reach the completion."""
+    domain = entity_id.split(".", 1)[0]
+    service = _DONE_ACTION_SERVICES[domain]
+    if not hass.services.has_service(domain, service):
+        _LOGGER.warning("Trigger follow-up %s: service %s.%s not available", entity_id, domain, service)
+        return
+    try:
+        await hass.services.async_call(domain, service, {"entity_id": entity_id}, blocking=False)
+    except Exception as err:  # noqa: BLE001 - an optional action must not break anything
+        _LOGGER.warning("Trigger follow-up %s failed: %s", entity_id, err)
+
+
+@callback
+def _run_trigger_done_actions(hass: HomeAssistant, data: dict, task_id: str) -> None:
+    """Start the ``on_done`` actions of the bonus triggers of a completed task (each once)."""
+    task = (data.get("tasks") or {}).get(task_id) or {}
+    wizard_key = task.get("wizard_key")
+    actions: list[str] = []
+    for trig in _valid_bonus_triggers(_get_entry(hass).options):
+        on_done = trig.get("on_done")
+        if not _valid_done_action(on_done) or on_done in actions:
+            continue
+        if trig.get("task_id") == task_id or (wizard_key and trig.get("wizard_key") == wizard_key):
+            actions.append(on_done)
+    for entity_id in actions:
+        hass.async_create_task(_async_call_done_action(hass, entity_id))
+
+
 def _find_trigger_task(tasks: dict, trig: dict) -> dict | None:
     if trig.get("task_id") and trig["task_id"] in tasks:
         return tasks[trig["task_id"]]
@@ -4606,6 +4667,7 @@ def async_setup_bonus_triggers(hass: HomeAssistant) -> None:
         vol.Optional("wizard_key"): str,
         vol.Required("entity_id"): cv.entity_id,
         vol.Required("to_state"): vol.All(str, vol.Length(min=1, max=255)),
+        vol.Optional("on_done"): vol.Any(None, str),
     })],
 })
 @websocket_api.async_response
@@ -4617,9 +4679,15 @@ async def ws_set_bonus_triggers(hass: HomeAssistant, connection: websocket_api.A
         if not (trig.get("task_id") or trig.get("wizard_key")):
             connection.send_error(msg["id"], "invalid_trigger", "task_id or wizard_key required")
             return
+        if trig.get("on_done") and not _valid_done_action(trig["on_done"]):
+            connection.send_error(
+                msg["id"], "invalid_done_action",
+                "on_done must be a script, automation, scene, button or input_button entity")
+            return
     entry = _get_entry(hass)
     options = dict(entry.options)
-    options["bonus_triggers"] = [dict(t) for t in msg["triggers"]]
+    # an empty on_done is not stored
+    options["bonus_triggers"] = [{k: v for k, v in t.items() if k != "on_done" or v} for t in msg["triggers"]]
     hass.config_entries.async_update_entry(entry, options=options)
     connection.send_result(msg["id"], {"success": True})
 
