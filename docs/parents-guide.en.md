@@ -81,7 +81,7 @@ Kids who need a lot of structure benefit most from fixed times, few steps per mi
 - **Done:** gives points, confetti and a sound right away, or waits for your approval.
 - **👫 Together:** where allowed, several kids do a task together. The points are shared, plus a team bonus.
 - **Bonus:** voluntary extra tasks. Whoever taps “Take it” reserves it for a few minutes.
-- **Shop:** exchange the balance for rewards and choose a savings goal.
+- **Shop:** exchange the balance for rewards and choose a savings goal. **📒 Statement** shows per month: carried over, tasks, bonus, birthday, deductions, every redemption on its own and the balance (also in the parents' board below the kid: “🛍️ Wallet statement”, 6 months).
 
 **What you do:**
 

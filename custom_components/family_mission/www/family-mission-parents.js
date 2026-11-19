@@ -27,7 +27,7 @@ const I18N_PARENTS = {
     reason_ph: "Reason (required)", reason_lbl: "Reason", confirm_bonus: "Give +{n}", confirm_penalty: "Deduct −{n}",
     chip_helped: "Helped without being asked", chip_great: "Especially well done",
     chip_cheated: "Cheated", chip_agreement: "Agreement not kept",
-    history: "Latest entries", no_history: "No entries yet.",
+    history: "Latest entries", no_history: "No entries yet.", stmt: "🛍️ Wallet statement", stmt_opening: "Carried over", stmt_closing: "Balance", stmt_task: "Tasks", stmt_bonus: "Bonus", stmt_birthday: "Birthday", stmt_penalty: "Deductions", stmt_refund: "Refund", stmt_empty: "No bookings yet.", stmt_loading: "Loading ...", stmt_error: "Could not load the statement.",
     type_task: "Task", type_bonus: "Bonus", type_penalty: "Deduction", type_birthday: "Birthday",
     toast_approved: "Approved: +{n} for {name}", toast_not_done: "Back on the list", toast_cheated: "Deducted −{n} from {name}",
     toast_gone: "Already handled", toast_clamped: "Only −{n} deducted ({name} had no more points)",
@@ -135,7 +135,7 @@ const I18N_PARENTS = {
     reason_ph: "Begründung (Pflicht)", reason_lbl: "Begründung", confirm_bonus: "+{n} geben", confirm_penalty: "−{n} abziehen",
     chip_helped: "Ungefragt geholfen", chip_great: "Besonders gut gemacht",
     chip_cheated: "Geschummelt", chip_agreement: "Absprache nicht eingehalten",
-    history: "Letzte Einträge", no_history: "Noch keine Einträge.",
+    history: "Letzte Einträge", no_history: "Noch keine Einträge.", stmt: "🛍️ Kontoauszug", stmt_opening: "Übertrag", stmt_closing: "Stand", stmt_task: "Aufgaben", stmt_bonus: "Bonus", stmt_birthday: "Geburtstag", stmt_penalty: "Abzüge", stmt_refund: "Erstattung", stmt_empty: "Noch keine Buchungen.", stmt_loading: "Lade ...", stmt_error: "Kontoauszug konnte nicht geladen werden.",
     type_task: "Aufgabe", type_bonus: "Bonus", type_penalty: "Abzug", type_birthday: "Geburtstag",
     toast_approved: "Freigegeben: +{n} für {name}", toast_not_done: "Wieder auf der Liste", toast_cheated: "−{n} bei {name} abgezogen",
     toast_gone: "Wurde schon bearbeitet", toast_clamped: "Nur −{n} abgezogen ({name} hatte nicht mehr Punkte)",
@@ -301,6 +301,7 @@ class FamilyMissionParents extends HTMLElement {
     this._unsubEvents = null;
     this._busy = new Set();       // pending ids / actions in flight
     this._open = new Set();       // kids whose history is expanded
+    this._stmt = {};              // wallet statements by kid id: {data, error}
     this._sheet = null;           // { kidId, sign, amount, reason }
     this._confirm = null;         // pending id of the "cheated" dialog
     this._undo = null;            // history id of the "undo" dialog
@@ -524,6 +525,8 @@ class FamilyMissionParents extends HTMLElement {
       this.me = data.me || null;
       this.partner = data.partner || null;
       this._fetched = true;
+      // An open wallet statement follows new bookings
+      for (const key of this._open) if (key.startsWith('stmt:')) this._loadStatement(key.slice(5));
       this._render();
       if (this._skip || this._pickKid) this._renderLayer();
       return true;
@@ -636,6 +639,11 @@ class FamilyMissionParents extends HTMLElement {
     if (!el || !el.dataset) return;
     if (el.dataset.det !== undefined) {
       if (el.open) this._open.add('det:' + el.dataset.det); else this._open.delete('det:' + el.dataset.det);
+      return;
+    }
+    if (el.dataset.kidStmt !== undefined) {
+      const key = 'stmt:' + el.dataset.kidStmt;
+      if (el.open) { this._open.add(key); this._loadStatement(el.dataset.kidStmt); } else this._open.delete(key);
       return;
     }
     if (el.dataset.kidHistory === undefined) return;
@@ -2774,7 +2782,7 @@ class FamilyMissionParents extends HTMLElement {
     const kid = kids.find(k => k.id === this._kidSel);
     const t = this._kidToday(kid);
     const showWallet = this._showWallet();
-    const pct = kid.goal > 0 ? Math.min(100, Math.round(kid.points / kid.goal * 100)) : 0;
+    const pct = kid.goal > 0 ? Math.min(100, Math.floor(kid.points / kid.goal * 100)) : 0;
     const entries = this.history.filter(h => h.user_id === kid.id && h.type !== 'parent').slice(0, 10);
     const strict = this._strictActive(kid)
       ? `<div class="strict">${escParents(this.localize('strict_until', { date: this._formatDate(kid.strict_until) }))}</div>` : '';
@@ -2815,12 +2823,62 @@ class FamilyMissionParents extends HTMLElement {
           ${this._renderCareHistory(kid)}
           <div class="quick">${quick}</div>
           <button class="praise-btn" data-action="praise-open" data-kid="${escParents(kid.id)}">❤️ ${escParents(this.localize('praise_btn'))}</button>
+          ${showWallet ? this._renderStatement(kid) : ''}
           <details class="hist" data-kid-history="${escParents(kid.id)}" ${this._open.has(kid.id) ? 'open' : ''}>
             <summary>${escParents(this.localize('history'))}</summary>
             ${entries.length ? entries.map(h => this._renderEntry(h)).join('') : `<div class="empty small">${escParents(this.localize('no_history'))}</div>`}
           </details>
         </article>
       </section>`;
+  }
+
+  /** Load the monthly wallet statement of a kid (6 months) and re-render. */
+  async _loadStatement(kidId) {
+    if (!this._hass) return;
+    const prev = this._stmt[kidId];
+    if (prev && prev.loading) return;
+    this._stmt[kidId] = { ...(prev || {}), loading: true };
+    let entry;
+    try {
+      entry = { data: await this._hass.callWS({ type: 'family_mission/wallet_statement', kid_id: kidId, months: 6 }), error: false };
+    } catch (err) {
+      console.error('FamilyMission Parents: could not load the statement', err);
+      entry = { data: null, error: true };
+    }
+    this._stmt[kidId] = entry;
+    if (this._open.has('stmt:' + kidId)) this._render();
+  }
+
+  _renderStatement(kid) {
+    const st = this._stmt[kid.id];
+    let body;
+    if (!st || (!st.data && !st.error)) body = `<div class="empty small">${escParents(this.localize('stmt_loading'))}</div>`;
+    else if (st.error) body = `<div class="empty small">${escParents(this.localize('stmt_error'))}</div>`;
+    else {
+      const lang = (this._hass && this._hass.language) || undefined;
+      const sign = (n) => (n > 0 ? '+' : '−') + fmtParents(Math.abs(n));
+      const day = (d) => new Date(d + 'T12:00:00').toLocaleDateString(lang, { day: '2-digit', month: '2-digit' });
+      const label = (l) => l.name !== undefined
+        ? `${l.type === 'refund' ? escParents(this.localize('stmt_refund')) + ': ' : ''}${escParents(l.name)} <small>${escParents(day(l.date))}</small>`
+        : `${escParents(this.localize('stmt_' + l.type))} <small>${l.count}×</small>`;
+      const line = (l) => `<div class="st-line ${l.points > 0 ? 'plus' : 'minus'}"><span>${label(l)}</span><b>${sign(l.points)}</b></div>`;
+      body = (st.data.months || []).map(m => {
+        const [y, mo] = m.month.split('-').map(Number);
+        const name = new Date(y, mo - 1, 1).toLocaleString(lang, { month: 'long', year: 'numeric' });
+        return `
+          <div class="st-month">
+            <div class="st-head">${escParents(name)}</div>
+            <div class="st-line sum"><span>${escParents(this.localize('stmt_opening'))}</span><b>${fmtParents(m.opening)}</b></div>
+            ${m.credits.map(line).join('')}${m.debits.map(line).join('')}
+            <div class="st-line total"><span>${escParents(this.localize('stmt_closing'))}</span><b>${fmtParents(m.closing)}</b></div>
+          </div>`;
+      }).join('') || `<div class="empty small">${escParents(this.localize('stmt_empty'))}</div>`;
+    }
+    return `
+      <details class="hist" data-kid-stmt="${escParents(kid.id)}" ${this._open.has('stmt:' + kid.id) ? 'open' : ''}>
+        <summary>${escParents(this.localize('stmt'))}</summary>
+        ${body}
+      </details>`;
   }
 
   // ---- tab "Mehr" --------------------------------------------------------------
@@ -3144,6 +3202,15 @@ class FamilyMissionParents extends HTMLElement {
       .praise-big { font-size: 56px; line-height: 1.1; text-align: center; margin: 0 0 4px; }
       #praise-input { width: 100%; height: 48px; padding: 0 14px; border-radius: 12px; border: 2px solid var(--p-line); background: var(--primary-background-color, #fafafa); color: var(--primary-text-color); font-size: 16px; font-family: inherit; margin-bottom: 4px; }
       .hist summary { cursor: pointer; font-size: 14px; font-weight: 600; color: var(--p-sub); min-height: 32px; display: flex; align-items: center; }
+      .st-month { display: flex; flex-direction: column; padding: 6px 0; border-top: 1px solid var(--p-line); }
+      .st-head { font-weight: 700; font-size: 14px; padding-bottom: 2px; }
+      .st-line { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 1px 0; }
+      .st-line small { color: var(--p-sub); }
+      .st-line b { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+      .st-line.plus b { color: var(--p-ok); }
+      .st-line.minus b { color: var(--p-danger); }
+      .st-line.sum { color: var(--p-sub); }
+      .st-line.total b, .st-line.total span { font-weight: 700; }
       .entry { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-top: 1px solid var(--p-line); font-size: 14px; }
       .e-icon { flex: none; width: 24px; text-align: center; }
       .e-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
