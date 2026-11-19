@@ -99,7 +99,7 @@ const I18N_KIDS = {
     abs_sick_badge: "🤒 sick", abs_away_badge: "🎒 away",
     shop: "Shop", shop_title: "Reward shop", shop_balance: "You have", shop_empty: "No rewards available yet.",
     shop_redeem: "Redeem", shop_need: "{n} ⭐ to go", shop_goal: "Savings goal", shop_goal_on: "Savings goal ✓",
-    shop_confirm: "Redeem {emoji} {name} for ⭐ {cost}?", shop_waiting: "waiting for mom or dad",
+    shop_confirm: "Redeem {emoji} {name} for ⭐ {cost}?", stmt_btn: "Statement", stmt_title: "My star account", stmt_opening: "Carried over", stmt_closing: "Balance", stmt_task: "Tasks", stmt_bonus: "Bonus", stmt_birthday: "Birthday", stmt_penalty: "Deductions", stmt_refund: "Back", stmt_empty: "No bookings yet.", stmt_close: "Close", stmt_loading: "Loading ...", shop_waiting: "waiting for mom or dad",
     shop_ready_hint: "Ready to redeem!", shop_done: "Great! Ask mom or dad for your reward.",
     goal_left: "{n} ⭐ to go for {emoji}", goal_ready: "{emoji} ready!",
     err_not_enough_points: "You do not have enough stars for this yet.", err_unknown_reward: "This reward does not exist any more.",
@@ -192,7 +192,7 @@ const I18N_KIDS = {
     abs_sick_badge: "🤒 krank", abs_away_badge: "🎒 weg",
     shop: "Shop", shop_title: "Belohnungs-Shop", shop_balance: "Du hast", shop_empty: "Noch keine Belohnungen vorhanden.",
     shop_redeem: "Einlösen", shop_need: "noch {n} ⭐", shop_goal: "Sparziel", shop_goal_on: "Sparziel ✓",
-    shop_confirm: "{emoji} {name} für ⭐ {cost} einlösen?", shop_waiting: "wartet auf Mama oder Papa",
+    shop_confirm: "{emoji} {name} für ⭐ {cost} einlösen?", stmt_btn: "Kontoauszug", stmt_title: "Mein Sternekonto", stmt_opening: "Übertrag", stmt_closing: "Stand", stmt_task: "Aufgaben", stmt_bonus: "Bonus", stmt_birthday: "Geburtstag", stmt_penalty: "Abzüge", stmt_refund: "Zurück", stmt_empty: "Noch keine Buchungen.", stmt_close: "Schließen", stmt_loading: "Lade ...", shop_waiting: "wartet auf Mama oder Papa",
     shop_ready_hint: "Bereit zum Einlösen!", shop_done: "Super! Frag Mama oder Papa nach deiner Belohnung.",
     goal_left: "noch {n} ⭐ bis {emoji}", goal_ready: "{emoji} bereit!",
     err_not_enough_points: "Dafür reichen deine Sterne noch nicht.", err_unknown_reward: "Diese Belohnung gibt es nicht mehr.",
@@ -1386,13 +1386,57 @@ class FamilyMissionKids extends HTMLElement {
       <div class="kv-body shopview">
         <section class="col col-shop">
           <h2>🛍️ ${escKids(this.localize('shop_title'))}</h2>
-          <div class="wallet-big"><span>${escKids(this.localize('shop_balance'))}</span> <b>⭐ ${fmtKids(kid.wallet)}</b></div>
+          <div class="wallet-row"><div class="wallet-big"><span>${escKids(this.localize('shop_balance'))}</span> <b>⭐ ${fmtKids(kid.wallet)}</b></div><button class="stmt-btn" data-action="stmt-open">📒 ${escKids(this.localize('stmt_btn'))}</button></div>
           <div class="col-scroll">
             ${waitHtml}
             <div class="reward-grid">${cards || `<div class="empty-state small">${escKids(this.localize('shop_empty'))}</div>`}</div>
           </div>
         </section>
       </div>`;
+  }
+
+  /** Wallet statement ("Kontoauszug"): monthly summary, loaded from the backend. */
+  async _openStatement() {
+    const kid = this._sessionKid();
+    if (!kid || !this._hass) return;
+    const sheet = { type: 'statement', data: null, error: false };
+    this._sheet = sheet;
+    this._render();
+    try {
+      sheet.data = await this._hass.callWS({ type: 'family_mission/wallet_statement', kid_id: kid.id, months: 3 });
+    } catch (err) {
+      console.error('FamilyMission Kids: could not load the statement', err);
+      sheet.error = true;
+    }
+    if (this._sheet === sheet) this._render();
+  }
+
+  _renderStatement(sheet) {
+    const close = `<div class="sheet-btns"><button class="sbtn ok" data-action="sheet-cancel">${escKids(this.localize('stmt_close'))}</button></div>`;
+    const title = `<div class="sheet-title">📒 ${escKids(this.localize('stmt_title'))}</div>`;
+    if (sheet.error) return title + `<div class="sheet-hint">${escKids(this.localize('err_generic'))}</div>` + close;
+    if (!sheet.data) return title + `<div class="sheet-hint">${escKids(this.localize('stmt_loading'))}</div>` + close;
+    const lang = (this._hass && this._hass.language) || undefined;
+    const sign = (n) => (n > 0 ? '+' : '−') + fmtKids(Math.abs(n));
+    const day = (d) => new Date(d + 'T12:00:00').toLocaleDateString(lang, { day: 'numeric', month: 'numeric' });
+    const label = (l) => {
+      if (l.name !== undefined) return `${l.type === 'refund' ? escKids(this.localize('stmt_refund')) + ': ' : ''}${escKids(l.name)} <small>${escKids(day(l.date))}</small>`;
+      return `${escKids(this.localize('stmt_' + l.type))} <small>${l.count}×</small>`;
+    };
+    const line = (l) => `<div class="st-line ${l.points > 0 ? 'plus' : 'minus'}"><span>${label(l)}</span><b>${sign(l.points)}</b></div>`;
+    const months = sheet.data.months || [];
+    const body = months.map(m => {
+      const [y, mo] = m.month.split('-').map(Number);
+      const name = new Date(y, mo - 1, 1).toLocaleString(lang, { month: 'long', year: 'numeric' });
+      return `
+        <div class="st-month">
+          <div class="st-head">${escKids(name)}</div>
+          <div class="st-line sum"><span>${escKids(this.localize('stmt_opening'))}</span><b>⭐ ${fmtKids(m.opening)}</b></div>
+          ${m.credits.map(line).join('')}${m.debits.map(line).join('')}
+          <div class="st-line total"><span>${escKids(this.localize('stmt_closing'))}</span><b>⭐ ${fmtKids(m.closing)}</b></div>
+        </div>`;
+    }).join('');
+    return title + `<div class="stmt">${body || `<div class="sheet-hint">${escKids(this.localize('stmt_empty'))}</div>`}</div>` + close;
   }
 
   _openRedeem(rewardId) {
@@ -1759,6 +1803,7 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'shop-close') { this._shop = false; this._sheet = null; this._render(); }
     else if (action === 'shop-redeem') this._openRedeem(el.dataset.reward);
     else if (action === 'shop-goal') this._toggleGoal(el.dataset.reward);
+    else if (action === 'stmt-open') this._openStatement();
   }
 
   // ---------------------------------------------------------------------------
@@ -1909,7 +1954,9 @@ class FamilyMissionKids extends HTMLElement {
     const kid = this._sessionKid();
     const cancel = `<button class="sbtn" data-action="sheet-cancel">${escKids(this.localize('pa_cancel'))}</button>`;
     let body;
-    if (sheet.type === 'redeem') {
+    if (sheet.type === 'statement') {
+      body = this._renderStatement(sheet);
+    } else if (sheet.type === 'redeem') {
       const r = sheet.reward;
       body = `
         <div class="sheet-title">🛍️ ${escKids(this.localize('shop_confirm', { emoji: r.emoji || '🎁', name: r.name, cost: fmtKids(r.cost) }))}</div>
@@ -3935,6 +3982,19 @@ class FamilyMissionKids extends HTMLElement {
       /* adults: one column only when there is no open bonus task to show */
       .kidview.adult.solo .kv-body { grid-template-columns: minmax(0, 1fr); }
       .shopview .col-shop { grid-column: 1 / -1; }
+      .wallet-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: -4px 0 12px; }
+      .wallet-row .wallet-big { margin: 0; }
+      .stmt-btn { min-height: 52px; padding: 0 22px; border-radius: 26px; font-size: 20px; font-weight: 800; background: color-mix(in srgb, var(--k-sub) 14%, var(--k-card)); border: 3px solid var(--k-line); color: var(--k-text); cursor: pointer; }
+      .stmt { max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+      .st-month { display: flex; flex-direction: column; gap: 4px; }
+      .st-head { font-size: 22px; font-weight: 900; text-transform: capitalize; }
+      .st-line { display: flex; justify-content: space-between; gap: 12px; font-size: 19px; font-weight: 700; padding: 2px 0; }
+      .st-line small { color: var(--k-sub); font-weight: 600; }
+      .st-line b { white-space: nowrap; font-variant-numeric: tabular-nums; }
+      .st-line.plus b { color: var(--k-good); }
+      .st-line.minus b { color: #E53935; }
+      .st-line.sum { color: var(--k-sub); }
+      .st-line.total { border-top: 2px solid var(--k-line); padding-top: 6px; font-weight: 900; }
       .wallet-big { font-size: 28px; font-weight: 700; color: var(--k-sub); margin: -4px 0 12px; }
       .wallet-big b { font-size: 56px; color: var(--k-text); font-weight: 900; vertical-align: middle; margin-left: 8px; }
       .reward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
@@ -4115,6 +4175,10 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .goal-text { font-size: 13px; }
       :host([narrow]) .goal-track { height: 10px; }
       :host([narrow]) .wallet-big { font-size: 18px; margin-bottom: 8px; }
+      :host([narrow]) .wallet-row { margin-bottom: 8px; }
+      :host([narrow]) .stmt-btn { min-height: 44px; font-size: 15px; padding: 0 14px; }
+      :host([narrow]) .st-line { font-size: 15px; }
+      :host([narrow]) .st-head { font-size: 17px; }
       :host([narrow]) .wallet-big b { font-size: 34px; }
       :host([narrow]) .reward-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
       :host([narrow]) .reward { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 2px 12px; padding: 10px 12px; border-radius: 20px; border-width: 3px; text-align: left; align-items: center; }

@@ -81,7 +81,7 @@ Les enfants qui ont besoin de beaucoup de structure profitent surtout d'horaires
 - **Terminé :** donne tout de suite des points, des confettis et un son, ou attend votre validation.
 - **👫 Ensemble :** là où c'est autorisé, plusieurs enfants font une tâche ensemble. Les points sont partagés, avec un bonus d'équipe en plus.
 - **Bonus :** des tâches supplémentaires facultatives. Celui qui touche « Prendre » la réserve pour quelques minutes.
-- **Boutique :** échanger le solde contre des récompenses et choisir un objectif d'épargne.
+- **Boutique :** échanger le solde contre des récompenses et choisir un objectif d'épargne. **📒 Relevé** (« Kontoauszug ») montre par mois : report, tâches, bonus, anniversaire, déductions, chaque échange séparément et le solde (aussi dans le tableau des parents sous l'enfant : « 🛍️ Kontoauszug », 6 mois).
 
 **Ce que vous faites :**
 

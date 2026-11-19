@@ -841,3 +841,83 @@ def test_care_stock_low_threshold_is_seven_days():
     assert kids.care_stock_low({"stock": 7}, thursday) and not kids.care_stock_low({"stock": 8}, thursday)
     assert not kids.care_stock_low({"label": "no tracking"}, thursday)
     assert not kids.care_stock_low({"stock": 6, "weekdays": [0, 2, 4]}, thursday)
+
+
+# ---------------------------------------------------------------------------
+# Wallet statement ("Kontoauszug")
+# ---------------------------------------------------------------------------
+
+def _h(uid, kind, pts, ts, **kw):
+    return {"user_id": uid, "type": kind, "points": pts, "timestamp": ts, **kw}
+
+
+def _day(value):
+    return value[:10] if isinstance(value, str) else None
+
+
+def test_statement_months_wraps_year():
+    assert kids.statement_months(datetime(2026, 2, 10).date(), 3) == ["2025-12", "2026-01", "2026-02"]
+    assert kids.statement_months(datetime(2026, 11, 19).date(), 1) == ["2026-11"]
+
+
+def test_wallet_delta_types_and_wallet_points():
+    assert kids.wallet_delta(_h("a", "task", 2.5, "")) == 2.5
+    assert kids.wallet_delta({"user_id": "a", "points": 1, "timestamp": ""}) == 1  # no type = task
+    assert kids.wallet_delta(_h("a", "penalty", -3, "", wallet_points=-5)) == -5
+    assert kids.wallet_delta(_h("a", "parent", 4, "")) == 0
+    assert kids.wallet_delta(_h("a", "praise", 0, "")) == 0
+    assert kids.wallet_delta(_h("a", "redeem", -20, "")) == -20
+    assert kids.wallet_delta(_h("a", "task", "x", "")) == 0
+
+
+def test_wallet_statement_example_carry_over():
+    """Thorin: 21 carried over from October, 144.8 earned, 20 + 80 redeemed -> 65.8."""
+    hist = [
+        _h("t", "task", 21, "2026-10-28T10:00:00"),
+        _h("t", "task", 131.8, "2026-11-05T10:00:00"),
+        _h("t", "bonus", 13, "2026-11-06T10:00:00"),
+        _h("t", "redeem", -20, "2026-11-01T16:57:00", task_name="🍨 Nachtisch aussuchen"),
+        _h("t", "redeem", -80, "2026-11-14T13:41:00", task_name="🚲 kleine Fahrradtour"),
+        _h("t", "parent", 5, "2026-11-07T10:00:00"),
+        _h("x", "task", 99, "2026-11-07T10:00:00"),
+    ]
+    res = kids.wallet_statement(hist, "t", 65.8, ["2026-09", "2026-10", "2026-11"], _day)
+    assert [m["month"] for m in res] == ["2026-11", "2026-10"]  # September: no bookings, dropped
+    nov, octo = res
+    assert nov["opening"] == 21.0 and nov["closing"] == 65.8
+    assert nov["credits"] == [{"type": "task", "count": 1, "points": 131.8}, {"type": "bonus", "count": 1, "points": 13.0}]
+    assert [d["name"] for d in nov["debits"]] == ["🍨 Nachtisch aussuchen", "🚲 kleine Fahrradtour"]
+    assert nov["debits"][0] == {"type": "redeem", "name": "🍨 Nachtisch aussuchen", "date": "2026-11-01", "points": -20.0}
+    assert octo["opening"] == 0.0 and octo["closing"] == 21.0
+
+
+def test_wallet_statement_stops_before_shop_start():
+    """Points of a month before the shop existed never reached the wallet."""
+    hist = [_h("t", "task", 30, "2026-09-10T10:00:00"), _h("t", "task", 10, "2026-10-10T10:00:00")]
+    # Wallet started in October with 10 -> September would open at -30
+    res = kids.wallet_statement(hist, "t", 10, ["2026-09", "2026-10"], _day)
+    assert [m["month"] for m in res] == ["2026-10"]
+    assert res[0]["opening"] == 0.0
+
+
+def test_wallet_statement_penalty_and_refund():
+    hist = [
+        _h("t", "task", 10, "2026-11-02T10:00:00"),
+        _h("t", "penalty", -2, "2026-11-03T10:00:00"),
+        _h("t", "penalty", -1, "2026-11-04T10:00:00"),
+        _h("t", "redeem", -5, "2026-11-05T10:00:00", task_name="🎲 Spiel"),
+        _h("t", "refund", 5, "2026-11-06T10:00:00", task_name="🎲 Spiel"),
+    ]
+    (nov,) = kids.wallet_statement(hist, "t", 7, ["2026-11"], _day)
+    assert nov["opening"] == 0.0
+    assert nov["credits"] == [{"type": "task", "count": 1, "points": 10.0},
+                              {"type": "refund", "name": "🎲 Spiel", "date": "2026-11-06", "points": 5.0}]
+    assert nov["debits"] == [{"type": "penalty", "count": 2, "points": -3.0},
+                             {"type": "redeem", "name": "🎲 Spiel", "date": "2026-11-05", "points": -5.0}]
+
+
+def test_wallet_statement_empty_current_month_kept_with_balance():
+    res = kids.wallet_statement([], "t", 12.5, ["2026-10", "2026-11"], _day)
+    assert res == [{"month": "2026-11", "opening": 12.5, "closing": 12.5, "credits": [], "debits": []},
+                   {"month": "2026-10", "opening": 12.5, "closing": 12.5, "credits": [], "debits": []}]
+    assert kids.wallet_statement([], "t", 0, ["2026-11"], _day) == []

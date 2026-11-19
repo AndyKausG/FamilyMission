@@ -1744,6 +1744,111 @@ def wallet_add(wallet: dict, uid: str, delta: float) -> float:
     return wallet[uid]
 
 
+# Wallet statement ("Kontoauszug"): monthly summary of the shop balance
+STATEMENT_MONTHS_DEFAULT = 3
+STATEMENT_MONTHS_MAX = 12
+# Summed per month (count + points); shop entries are listed one by one
+STATEMENT_GROUPED_TYPES = (TYPE_TASK, TYPE_BONUS, TYPE_BIRTHDAY, TYPE_PENALTY)
+STATEMENT_ITEM_TYPES = (TYPE_REDEEM, TYPE_REFUND)
+
+
+def wallet_delta(entry: dict) -> float:
+    """Amount a history entry moved the wallet (``wallet_points`` when it differs from ``points``)."""
+    if not isinstance(entry, dict) or entry.get("type", TYPE_TASK) not in STATEMENT_GROUPED_TYPES + STATEMENT_ITEM_TYPES:
+        return 0.0
+    raw = entry["wallet_points"] if "wallet_points" in entry else entry.get("points", 0)
+    try:
+        value = float(raw or 0)
+    except (TypeError, ValueError):
+        return 0.0
+    return value if value == value else 0.0
+
+
+def statement_months(today: date, count: int) -> list[str]:
+    """The ``count`` month keys (``YYYY-MM``) up to and including the month of ``today``, oldest first."""
+    year, month = today.year, today.month
+    keys = []
+    for _ in range(max(1, count)):
+        keys.append(f"{year:04d}-{month:02d}")
+        month -= 1
+        if month == 0:
+            year, month = year - 1, 12
+    return keys[::-1]
+
+
+def wallet_statement(
+    history: Iterable[dict],
+    uid: str,
+    balance: float,
+    months: list[str],
+    day_of: Callable[[Any], str | None],
+) -> list[dict]:
+    """Monthly wallet statement of ``uid``, newest month first.
+
+    ``months`` are the month keys to show (oldest first, the last one is the
+    current month), ``day_of`` maps an entry timestamp to its local day
+    (``YYYY-MM-DD``). The closing balance of the current month is ``balance``;
+    every opening balance is derived backwards from it, so the statement always
+    adds up to the real wallet. Months before the shop existed (opening balance
+    would be negative) and leading months without bookings are left out.
+    Each month: ``month``, ``opening``, ``closing``, ``credits`` and ``debits``;
+    a line is ``{type, count, points}`` (summed types) or ``{type, name, date,
+    points}`` (redemptions / refunds).
+    """
+    wanted = set(months)
+    per_month: dict[str, list[tuple[str, dict, float]]] = {key: [] for key in months}
+    for entry in history or ():
+        if not isinstance(entry, dict) or entry.get("user_id") != uid:
+            continue
+        delta = wallet_delta(entry)
+        if not delta:
+            continue
+        day = day_of(entry.get("timestamp"))
+        if not day or day[:7] not in wanted:
+            continue
+        per_month[day[:7]].append((day, entry, delta))
+
+    result: list[dict] = []
+    closing = round(float(balance or 0), 1)
+    for key in reversed(months):
+        rows = sorted(per_month[key], key=lambda row: (row[0], str(row[1].get("timestamp") or "")))
+        total = round(sum(delta for _day, _entry, delta in rows), 1)
+        opening = round(closing - total, 1)
+        if opening < -0.05:
+            break  # before the shop started: the wallet did not count these points
+        groups: dict[str, dict] = {}
+        items: list[dict] = []
+        for day, entry, delta in rows:
+            kind = entry.get("type", TYPE_TASK)
+            if kind in STATEMENT_ITEM_TYPES:
+                items.append({"type": kind, "name": str(entry.get("task_name") or ""), "date": day,
+                              "points": round(delta, 1)})
+            else:
+                group = groups.setdefault(kind, {"type": kind, "count": 0, "points": 0.0})
+                group["count"] += 1
+                group["points"] += delta
+        credits: list[dict] = []
+        debits: list[dict] = []
+        for kind in STATEMENT_GROUPED_TYPES:
+            group = groups.get(kind)
+            if not group:
+                continue
+            group["points"] = round(group["points"], 1)
+            if group["points"] > 0:
+                credits.append(group)
+            elif group["points"] < 0:
+                debits.append(group)
+        for item in items:
+            (credits if item["points"] > 0 else debits).append(item)
+        result.append({"month": key, "opening": max(0.0, opening), "closing": closing,
+                       "credits": credits, "debits": debits})
+        closing = max(0.0, opening)
+    # Leading months (oldest) without bookings and without balance say nothing
+    while result and not result[-1]["credits"] and not result[-1]["debits"] and result[-1]["opening"] == 0:
+        result.pop()
+    return result
+
+
 def _int_in(value: Any, low: int, high: int) -> int | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)) or value != value or value != int(value):
         return None

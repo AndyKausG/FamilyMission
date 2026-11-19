@@ -81,7 +81,7 @@ Kinder, die viel Struktur brauchen, profitieren besonders von festen Zeiten, wen
 - **Fertig:** gibt sofort Punkte, Konfetti und Ton, oder wartet auf eure Freigabe.
 - **👫 Zusammen:** Wo erlaubt, machen mehrere Kinder eine Aufgabe gemeinsam. Die Punkte werden geteilt, dazu gibt es einen Team-Bonus.
 - **Bonus:** freiwillige Zusatzaufgaben. Wer „Übernehmen“ tippt, reserviert sie für ein paar Minuten.
-- **Shop:** Guthaben gegen Belohnungen tauschen und ein Sparziel wählen.
+- **Shop:** Guthaben gegen Belohnungen tauschen und ein Sparziel wählen. **📒 Kontoauszug** zeigt pro Monat Übertrag, Aufgaben, Bonus, Geburtstag, Abzüge, jede Einlösung einzeln und den Stand (auch im Eltern-Board unter dem Kind: „🛍️ Kontoauszug“, 6 Monate).
 
 **Was ihr tut:**
 

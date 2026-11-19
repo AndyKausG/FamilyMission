@@ -70,7 +70,7 @@ const HELP_CONTENT = {
           "**Fertig:** gibt sofort Punkte, Konfetti und Ton, oder wartet auf eure Freigabe.",
           "**👫 Zusammen:** Wo erlaubt, machen mehrere Kinder eine Aufgabe gemeinsam. Die Punkte werden geteilt, dazu gibt es einen Team-Bonus.",
           "**Bonus:** freiwillige Zusatzaufgaben. Wer „Übernehmen“ tippt, reserviert sie für ein paar Minuten.",
-          "**Shop:** Guthaben gegen Belohnungen tauschen und ein Sparziel wählen."
+          "**Shop:** Guthaben gegen Belohnungen tauschen und ein Sparziel wählen. **📒 Kontoauszug** zeigt pro Monat Übertrag, Aufgaben, Bonus, Geburtstag, Abzüge, jede Einlösung einzeln und den Stand (auch im Eltern-Board unter dem Kind: „🛍️ Kontoauszug“, 6 Monate)."
         ],
         "**Was ihr tut:**",
         [
@@ -253,7 +253,7 @@ const HELP_CONTENT = {
           "**Terminé :** donne tout de suite des points, des confettis et un son, ou attend votre validation.",
           "**👫 Ensemble :** là où c'est autorisé, plusieurs enfants font une tâche ensemble. Les points sont partagés, avec un bonus d'équipe en plus.",
           "**Bonus :** des tâches supplémentaires facultatives. Celui qui touche « Prendre » la réserve pour quelques minutes.",
-          "**Boutique :** échanger le solde contre des récompenses et choisir un objectif d'épargne."
+          "**Boutique :** échanger le solde contre des récompenses et choisir un objectif d'épargne. **📒 Relevé** (« Kontoauszug ») montre par mois : report, tâches, bonus, anniversaire, déductions, chaque échange séparément et le solde (aussi dans le tableau des parents sous l'enfant : « 🛍️ Kontoauszug », 6 mois)."
         ],
         "**Ce que vous faites :**",
         [
@@ -436,7 +436,7 @@ const HELP_CONTENT = {
           "**Done:** gives points, confetti and a sound right away, or waits for your approval.",
           "**👫 Together:** where allowed, several kids do a task together. The points are shared, plus a team bonus.",
           "**Bonus:** voluntary extra tasks. Whoever taps “Take it” reserves it for a few minutes.",
-          "**Shop:** exchange the balance for rewards and choose a savings goal."
+          "**Shop:** exchange the balance for rewards and choose a savings goal. **📒 Statement** shows per month: carried over, tasks, bonus, birthday, deductions, every redemption on its own and the balance (also in the parents' board below the kid: “🛍️ Wallet statement”, 6 months)."
         ],
         "**What you do:**",
         [

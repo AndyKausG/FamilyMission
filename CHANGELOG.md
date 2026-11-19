@@ -1,8 +1,10 @@
 # Changelog
 
-## [2.12.1] - 2026-11-19
+## [2.13.0] - 2026-11-19
 
+- **Wallet statement ("Kontoauszug").** Kids' shop: button "📒 Kontoauszug" opens "Mein Sternekonto" with the last 3 months; parents' board: "🛍️ Kontoauszug" below the kid (6 months, only when the shop is in use). Per month: carried-over balance, tasks / bonus / birthday / deductions summed with their count, every redemption and refund with its date, and the closing balance. The current month closes with the real wallet and the opening balances are derived backwards, so it always adds up; months before the shop existed are left out. Explains why the shop balance differs from the monthly points (unspent stars of earlier months are carried over). New read-only command `family_mission/wallet_statement` (`kid_id`, `months` 1-12).
 - **Fix: trophy and full ring shown just below the monthly goal.** The goal percentage was rounded, so e.g. 144.8 / 145 ⭐ counted as 100 %: the kids view showed the 🏆 and a closed ring, the parents' card a full bar. Percentages are now rounded down, 100 % only when the goal is really reached. Same for the savings-goal bar on the kid tile.
+- README, parents' guides (de/en/fr) and in-app help updated. Tests: `tests/test_wallet_statement_ws.py`, statement tests in `tests/test_kids_helpers.py`.
 
 ## [2.12.0] - 2026-11-12
 

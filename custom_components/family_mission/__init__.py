@@ -112,6 +112,7 @@ from .const import (
     WS_TYPE_SET_REWARDS,
     WS_TYPE_KID_REDEEM,
     WS_TYPE_KID_SET_GOAL,
+    WS_TYPE_WALLET_STATEMENT,
     WS_TYPE_REDEMPTION_RESOLVE,
     WS_TYPE_SEND_PRAISE,
     WS_TYPE_TEST_PUSH,
@@ -197,6 +198,10 @@ from .kids import (
     normalize_rewards,
     normalize_reminder_target,
     wallet_add,
+    wallet_statement,
+    statement_months,
+    STATEMENT_MONTHS_DEFAULT,
+    STATEMENT_MONTHS_MAX,
     PinLimiter,
     birthday_bonus_points,
     birthday_duty_free,
@@ -3483,6 +3488,30 @@ async def ws_kid_set_goal(hass: HomeAssistant, connection: websocket_api.ActiveC
         connection.send_result(msg["id"], result)
         return
     connection.send_result(msg["id"], _set_goal(hass, msg["kid_id"], msg["reward_id"], settings))
+
+
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_WALLET_STATEMENT,
+    vol.Required("kid_id"): str,
+    vol.Optional("months", default=STATEMENT_MONTHS_DEFAULT): vol.All(int, vol.Range(min=1, max=STATEMENT_MONTHS_MAX)),
+})
+@callback
+def ws_wallet_statement(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Monthly wallet statement of one participant (read-only, same data as get_data)."""
+    data = hass.data[DOMAIN]["data"]
+    kid_id = msg["kid_id"]
+    balance = float((data.get("wallet") or {}).get(kid_id, 0) or 0)
+
+    def day_of(value):
+        dt = parse_dt(value)
+        return dt_util.as_local(dt).date().isoformat() if dt else None
+
+    months = statement_months(dt_util.now().date(), msg["months"])
+    connection.send_result(msg["id"], {
+        "kid_id": kid_id,
+        "balance": round(balance, 1),
+        "months": wallet_statement(data.get("history") or [], kid_id, balance, months, day_of),
+    })
 
 
 def _set_goal(hass: HomeAssistant, kid_id: str, reward_id: str | None, settings: dict) -> dict:
@@ -7892,6 +7921,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     
     # Register websocket API commands
     websocket_api.async_register_command(hass, ws_get_data)
+    websocket_api.async_register_command(hass, ws_wallet_statement)
     websocket_api.async_register_command(hass, ws_complete_task)
     websocket_api.async_register_command(hass, ws_add_task)
     websocket_api.async_register_command(hass, ws_edit_task)
