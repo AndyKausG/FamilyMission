@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.12.1] - 2026-11-19
+
+- **Fix: trophy and full ring shown just below the monthly goal.** The goal percentage was rounded, so e.g. 144.8 / 145 ⭐ counted as 100 %: the kids view showed the 🏆 and a closed ring, the parents' card a full bar. Percentages are now rounded down, 100 % only when the goal is really reached. Same for the savings-goal bar on the kid tile.
+
 ## [2.12.0] - 2026-11-12
 
 - **Bonus triggers: optional follow-up action `on_done`.** Each trigger can carry the entity id of a `script.*`, `automation.*`, `scene.*`, `button.*` or `input_button.*` entity. When the task of the trigger is completed, FamilyMission starts it (`script.turn_on`, `automation.trigger` without the automation's conditions, `scene.turn_on`, `button.press` / `input_button.press`). Same moment as `family_mission_task_completed` (with approval only when a parent approves), on every completion of that task, undoing does not reverse it. Several triggers of the same task with the same `on_done` start it once. Off by default; errors are logged and never break the completion; not affected by night mode. `family_mission/set_bonus_triggers` rejects other domains with `invalid_done_action`. Settings card, tab "Aufgaben & Punkte", section "Bonus-Auslöser": select "Beim Erledigen starten (optional)" in the add form and on every trigger row. The wizard does not offer it but keeps an existing `on_done`.

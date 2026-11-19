@@ -2774,7 +2774,7 @@ class FamilyMissionParents extends HTMLElement {
     const kid = kids.find(k => k.id === this._kidSel);
     const t = this._kidToday(kid);
     const showWallet = this._showWallet();
-    const pct = kid.goal > 0 ? Math.min(100, Math.round(kid.points / kid.goal * 100)) : 0;
+    const pct = kid.goal > 0 ? Math.min(100, Math.floor(kid.points / kid.goal * 100)) : 0;
     const entries = this.history.filter(h => h.user_id === kid.id && h.type !== 'parent').slice(0, 10);
     const strict = this._strictActive(kid)
       ? `<div class="strict">${escParents(this.localize('strict_until', { date: this._formatDate(kid.strict_until) }))}</div>` : '';

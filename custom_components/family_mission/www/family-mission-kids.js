@@ -1003,7 +1003,7 @@ class FamilyMissionKids extends HTMLElement {
         goal_reward: p.goal_reward || null
       };
       // pctRaw may exceed 100 (bonus points): the ring draws further laps on top
-      kid.pctRaw = kid.goal > 0 ? Math.round((kid.points / kid.goal) * 100) : 0;
+      kid.pctRaw = kid.goal > 0 ? Math.floor((kid.points / kid.goal) * 100) : 0;
       kid.pct = Math.min(100, kid.pctRaw);
       kid.age = this._age(kid);
       kid.isBirthday = this._isBirthday(kid);
@@ -1352,7 +1352,7 @@ class FamilyMissionKids extends HTMLElement {
     const reward = this._goalReward(kid);
     if (!reward) return '';
     const left = Math.max(0, reward.cost - kid.wallet);
-    const pct = Math.min(100, Math.round((kid.wallet / reward.cost) * 100));
+    const pct = Math.min(100, Math.floor((kid.wallet / reward.cost) * 100));
     const text = left <= 0
       ? this.localize('goal_ready', { emoji: reward.emoji || '🎁' })
       : this.localize('goal_left', { n: fmtKids(left), emoji: reward.emoji || '🎁' });
