@@ -106,6 +106,8 @@ Some tasks need your approval (set per task, plus optional spot checks per kid).
 - **Not done:** well meant but not quite finished, or forgotten. The task is open again, **without a deduction**.
 - **Cheated:** only for **deliberate** cheating (ticked but not done). There is a deduction equal to the task points (adjustable) and a strict phase.
 
+**Approval list:** sorted by kid and task. Every completion shows day and time (“Yesterday 17:42”, “Wed, 11/18 08:10”). A daily task left open on several days appears once with all its days (e.g. “3×”). If the task name repeats the kid's name (“Juri: Homework Juri”), it is hidden. **Approve all** exists per kid and per task with several days: the first tap asks “Really approve all …?”, the second approves. This applies to the parents card and to “My tasks” on your own phone.
+
 **Important:** a deduction only for deliberate cheating, **never for forgetting**. Deductions are **private**: they only appear in the kid's own view, never on the home screen or in front of siblings. The **strict phase** (default: 7 days, every task needs approval) **ends automatically**.
 
 **Approval push:** when a task waits for approval, all adults get a push message (“✅ Clara is done”, “Clara & David are done” for a task done together) with the buttons **Approve** and **Not done**, straight from the lock screen. “Cheated” is deliberately only in the app. Once handled (wherever), a second tap does nothing. Can be switched off with `approval_push` (settings, “Notifications” tab). Handled pushes disappear from the other devices (silent `clear_notification` command, visible in the Companion app history); switch off “Remove handled pushes from the other devices” if you do not want that.

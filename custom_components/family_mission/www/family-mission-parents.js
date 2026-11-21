@@ -29,6 +29,8 @@ const I18N_PARENTS = {
     chip_cheated: "Cheated", chip_agreement: "Agreement not kept",
     history: "Latest entries", no_history: "No entries yet.", stmt: "🛍️ Wallet statement", stmt_opening: "Carried over", stmt_closing: "Balance", stmt_task: "Tasks", stmt_bonus: "Bonus", stmt_birthday: "Birthday", stmt_penalty: "Deductions", stmt_refund: "Refund", stmt_empty: "No bookings yet.", stmt_loading: "Loading ...", stmt_error: "Could not load the statement.",
     type_task: "Task", type_bonus: "Bonus", type_penalty: "Deduction", type_birthday: "Birthday",
+    ap_waiting: "{n} waiting", ap_with: "with {names}", ap_all: "Approve all {n}", ap_all_confirm: "Really approve all {n}?",
+    toast_approved_many: "{n} approved", toast_approved_some: "{n} of {m} approved",
     toast_approved: "Approved: +{n} for {name}", toast_not_done: "Back on the list", toast_cheated: "Deducted −{n} from {name}",
     toast_gone: "Already handled", toast_clamped: "Only −{n} deducted ({name} had no more points)",
     toast_adjusted: "Saved", err: "Could not save: ", title_lbl: "Title",
@@ -137,6 +139,8 @@ const I18N_PARENTS = {
     chip_cheated: "Geschummelt", chip_agreement: "Absprache nicht eingehalten",
     history: "Letzte Einträge", no_history: "Noch keine Einträge.", stmt: "🛍️ Kontoauszug", stmt_opening: "Übertrag", stmt_closing: "Stand", stmt_task: "Aufgaben", stmt_bonus: "Bonus", stmt_birthday: "Geburtstag", stmt_penalty: "Abzüge", stmt_refund: "Erstattung", stmt_empty: "Noch keine Buchungen.", stmt_loading: "Lade ...", stmt_error: "Kontoauszug konnte nicht geladen werden.",
     type_task: "Aufgabe", type_bonus: "Bonus", type_penalty: "Abzug", type_birthday: "Geburtstag",
+    ap_waiting: "{n} warten", ap_with: "mit {names}", ap_all: "Alle {n} freigeben", ap_all_confirm: "Wirklich alle {n} freigeben?",
+    toast_approved_many: "{n} freigegeben", toast_approved_some: "{n} von {m} freigegeben",
     toast_approved: "Freigegeben: +{n} für {name}", toast_not_done: "Wieder auf der Liste", toast_cheated: "−{n} bei {name} abgezogen",
     toast_gone: "Wurde schon bearbeitet", toast_clamped: "Nur −{n} abgezogen ({name} hatte nicht mehr Punkte)",
     toast_adjusted: "Gespeichert", err: "Speichern fehlgeschlagen: ", title_lbl: "Titel",
@@ -270,6 +274,62 @@ function escParents(value) {
 function fmtParents(value) {
   const n = Math.round((parseFloat(value) || 0) * 10) / 10;
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+/**
+ * Approval list helpers (duplicated in the kids' card).
+ * Drops a kid's name that the task name repeats: "Juri: Homework", "Homework Juri",
+ * "Homework (Juri)", "Homework - Juri" -> "Homework". Keeps the name if nothing remains.
+ */
+function apStripParents(task, kidName) {
+  const t = String(task || '').trim();
+  const n = String(kidName || '').trim();
+  if (!n) return t;
+  const e = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const out = t.replace(new RegExp(`^${e}\\s*[:\\-–]\\s*`, 'i'), '')
+    .replace(new RegExp(`\\s+(?:[\\-–]\\s*)?\\(?${e}\\)?$`, 'i'), '').trim();
+  return out || t;
+}
+
+/**
+ * Groups pending completions (oldest first) by kid, then by task (same task and helpers),
+ * so a daily task left over from several days shows up once with all its days.
+ * Returns [{ kidId, ids, tasks: [{ key, first, items, samePoints }] }], oldest kid first.
+ */
+function apGroupParents(list) {
+  const kids = new Map();
+  for (const p of list) {
+    let g = kids.get(p.kid_id);
+    if (!g) { g = { kidId: p.kid_id, ids: [], tasks: new Map() }; kids.set(p.kid_id, g); }
+    const key = (p.task_id || p.task_name || '') + '|' + (Array.isArray(p.helpers) ? p.helpers.slice().sort().join(',') : '');
+    let t = g.tasks.get(key);
+    if (!t) { t = { key: p.kid_id + '|' + key, first: p, items: [] }; g.tasks.set(key, t); }
+    t.items.push(p);
+    g.ids.push(p.id);
+  }
+  return Array.from(kids.values()).map(g => {
+    const tasks = Array.from(g.tasks.values());
+    tasks.forEach(t => { t.samePoints = t.items.every(i => parseFloat(i.points) === parseFloat(t.first.points)); });
+    return { kidId: g.kidId, ids: g.ids, tasks };
+  });
+}
+
+/** Day and time of a completion: "Today 17:42", "Yesterday 08:10", "Wed, 18/11 17:42". */
+function apWhenParents(timestamp, lang, now = new Date()) {
+  const d = new Date(timestamp);
+  if (isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+  const day0 = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day0(now) - day0(d)) / 86400000);
+  let day = '';
+  if (diff === 0 || diff === 1) {
+    try {
+      day = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }).format(-diff, 'day');
+      day = day.charAt(0).toUpperCase() + day.slice(1);
+    } catch (err) { day = ''; }
+  }
+  if (!day) day = d.toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'numeric' });
+  return `${day} ${time}`;
 }
 
 /**
@@ -409,6 +469,8 @@ class FamilyMissionParents extends HTMLElement {
   }
 
   disconnectedCallback() {
+    clearTimeout(this._armTimer);
+    this._arm = null;
     if (this._unsubEvents) {
       this._unsubEvents.then(unsub => unsub());
       this._unsubEvents = null;
@@ -719,6 +781,7 @@ class FamilyMissionParents extends HTMLElement {
     const action = el.dataset.action;
     if (action === 'approve') this._approve(el.dataset.id);
     else if (action === 'not-done') this._reject(el.dataset.id, 'not_done');
+    else if (action === 'approve-all') this._onApproveAll(el.dataset.key, (el.dataset.ids || '').split(' ').filter(Boolean));
     else if (action === 'cheated') { this._confirm = el.dataset.id; this._renderLayer(); }
     else if (action === 'cheated-confirm') { const id = this._confirm; this._confirm = null; this._renderLayer(); this._reject(id, 'cheated'); }
     else if (action === 'dialog-close') { this._confirm = null; this._sheet = null; this._undo = null; this._adhoc = null; this._rw = null; this._praise = null; this._pickKid = null; this._skip = null; this._own = null; this._todo = null; this._nt = null; this._del = null; this._picker = null; this._abs = null; this._later = null; this._plan = null; this._renderLayer(); }
@@ -2551,27 +2614,98 @@ class FamilyMissionParents extends HTMLElement {
     return `<section id="appr-section"><h2>${escParents(this.localize('approvals'))} <span class="count">${n}</span></h2><div class="appr-list">${items}</div></section>`;
   }
 
+  /**
+   * Approvals grouped by kid and task: each task once, with day and time of every completion
+   * (a daily task left over from several days shows all its days), "approve all" per kid
+   * and per task (two taps).
+   */
   _approvalItems() {
-    return this._pendingList().map(p => {
-      const kid = this._kid(p.kid_id);
-      const busy = this._busy.has(p.id) ? 'disabled' : '';
+    const lang = (this._hass && this._hass.language) || undefined;
+    return apGroupParents(this._pendingList()).map(g => {
+      const kid = this._kid(g.kidId);
+      const multiTask = g.tasks.length > 1;
+      const tasks = g.tasks.map(t => {
+        const p = t.first;
+        const helpers = (p.helpers || []).map(h => this._kid(h).name);
+        const rows = t.items.map(i => {
+          const busy = this._busy.has(i.id) ? 'disabled' : '';
+          return `
+            <div class="apg-row">
+              <span class="apg-when">${escParents(apWhenParents(i.timestamp, lang))}${t.samePoints ? '' : ` · ⭐ ${fmtParents(i.points)}`}</span>
+              <span class="apg-btns">
+                <button class="btn ok sm" data-action="approve" data-id="${escParents(i.id)}" ${busy}>✅ ${escParents(this.localize('approve'))}</button>
+                <button class="btn neutral sm icon" data-action="not-done" data-id="${escParents(i.id)}" title="${escParents(this.localize('not_done'))}" aria-label="${escParents(this.localize('not_done'))}" ${busy}>↩️</button>
+                <button class="btn danger sm icon" data-action="cheated" data-id="${escParents(i.id)}" title="${escParents(this.localize('cheated'))}" aria-label="${escParents(this.localize('cheated'))}" ${busy}>🚫</button>
+              </span>
+            </div>`;
+        }).join('');
+        return `
+          <div class="apg-task">
+            <div class="apg-head">
+              <span class="apg-name">${escParents(apStripParents(p.task_name, kid.name))}</span>
+              ${t.items.length > 1 ? `<span class="apg-n">${t.items.length}×</span>` : ''}
+              ${t.samePoints ? `<span class="apg-pts">⭐ ${fmtParents(p.points)}</span>` : ''}
+            </div>
+            ${helpers.length ? `<div class="appr-meta">${escParents(this.localize('ap_with', { names: helpers.join(' & ') }))}</div>` : ''}
+            ${rows}
+            ${multiTask && t.items.length > 1 ? this._bulkBtn('t:' + t.key, t.items.map(i => i.id), 'link') : ''}
+          </div>`;
+      }).join('');
       return `
-        <article class="appr" style="--kc:${kid.color}">
+        <article class="appr apg" style="--kc:${kid.color}">
           <div class="appr-top">
             ${this._avatar(kid)}
             <div class="appr-main">
-              <div class="appr-task">${escParents(p.task_name)}</div>
-              <div class="appr-meta">${escParents([kid.name].concat((p.helpers || []).map(h => this._kid(h).name)).join(' & '))} · ${escParents(this._ago(p.timestamp))}</div>
+              <div class="appr-task">${escParents(kid.name)}</div>
+              <div class="appr-meta">${escParents(this.localize('ap_waiting', { n: g.ids.length }))}</div>
             </div>
-            <div class="appr-pts">⭐ ${fmtParents(p.points)}</div>
           </div>
-          <div class="appr-actions">
-            <button class="btn ok" data-action="approve" data-id="${escParents(p.id)}" ${busy}>✅ ${escParents(this.localize('approve'))}</button>
-            <button class="btn neutral" data-action="not-done" data-id="${escParents(p.id)}" ${busy}>↩️ ${escParents(this.localize('not_done'))}</button>
-            <button class="btn danger" data-action="cheated" data-id="${escParents(p.id)}" ${busy}>🚫 ${escParents(this.localize('cheated'))}</button>
-          </div>
+          ${tasks}
+          ${g.ids.length > 1 ? this._bulkBtn('k:' + g.kidId, g.ids, 'kid') : ''}
         </article>`;
     }).join('');
+  }
+
+  /** "Approve all n" button; the first tap arms it ("Really all n?"), the second approves. */
+  _bulkBtn(key, ids, kind) {
+    const armed = this._arm && this._arm.key === key;
+    const busy = ids.some(id => this._busy.has(id)) ? 'disabled' : '';
+    const label = this.localize(armed ? 'ap_all_confirm' : 'ap_all', { n: ids.length });
+    return `<button class="btn ok ${kind === 'link' ? 'sm apg-all-task' : 'solid apg-all'} ${armed ? 'armed' : ''}" data-action="approve-all" data-key="${escParents(key)}" data-ids="${escParents(ids.join(' '))}" ${busy}>✅ ${escParents(label)}</button>`;
+  }
+
+  /** Two-tap "approve all": arm on the first tap (4 s), approve one after the other on the second. */
+  _onApproveAll(key, ids) {
+    if (!this._arm || this._arm.key !== key) {
+      clearTimeout(this._armTimer);
+      this._arm = { key };
+      this._armTimer = setTimeout(() => { this._arm = null; this._render(); }, 4000);
+      this._render();
+      return;
+    }
+    clearTimeout(this._armTimer);
+    this._arm = null;
+    this._approveMany(ids);
+  }
+
+  async _approveMany(ids) {
+    const todo = ids.filter(id => this.pending[id] && !this._busy.has(id));
+    if (!todo.length) return;
+    todo.forEach(id => this._busy.add(id));
+    this._render();
+    let ok = 0;
+    for (const id of todo) {
+      try {
+        const res = await this._hass.callWS({ type: 'family_mission/approve', pending_id: id });
+        if (res && res.success) ok++;
+      } catch (err) {
+        console.error('FamilyMission Parents: could not approve', id, err);
+      }
+      this._busy.delete(id);
+    }
+    this._toast(ok === todo.length ? this.localize('toast_approved_many', { n: ok })
+      : this.localize('toast_approved_some', { n: ok, m: todo.length }));
+    this._fetchData();
   }
 
   _redemptionItems() {
@@ -3164,6 +3298,20 @@ class FamilyMissionParents extends HTMLElement {
       .appr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
       .appr-actions .ok { grid-column: 1 / -1; }
       .appr-actions.two .ok { grid-column: auto; }
+      .apg { gap: 8px; }
+      .apg-task { border-top: 1px solid var(--p-line); padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+      .apg-head { display: flex; align-items: baseline; gap: 8px; }
+      .apg-name { flex: 1; min-width: 0; font-size: 16px; font-weight: 700; overflow-wrap: anywhere; }
+      .apg-n { flex: none; padding: 0 8px; border-radius: 10px; font-size: 13px; font-weight: 800; background: color-mix(in srgb, var(--kc) 24%, transparent); }
+      .apg-pts { flex: none; font-size: 16px; font-weight: 800; }
+      .apg-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+      .apg-when { font-size: 14px; color: var(--p-sub); font-variant-numeric: tabular-nums; }
+      .apg-btns { display: flex; gap: 6px; margin-left: auto; }
+      .apg .btn.sm { min-height: 40px; padding: 0 12px; font-size: 14px; }
+      .apg .btn.sm.icon { min-width: 44px; padding: 0 8px; }
+      .apg-all { width: 100%; margin-top: 4px; }
+      .apg-all-task { align-self: flex-end; }
+      .btn.armed { outline: 3px solid var(--p-danger); outline-offset: 1px; }
       .kid-pts .wal { font-weight: 700; color: var(--primary-text-color); }
       .rw-btn { margin: 12px 0 0; }
       .rw-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }

@@ -64,6 +64,8 @@ const I18N_KIDS = {
     pending_cheer: "Great! Mom or Dad will take a quick look.",
     ap_title: "✅ {n} approvals waiting", ap_title_one: "✅ 1 approval waiting", ap_approve: "Approve", ap_not_done: "Not done",
     ap_toast_ok: "Approved", ap_toast_back: "Back on the list",
+    ap_with: "with {names}", ap_all: "Approve all {n}", ap_all_confirm: "Really approve all {n}?",
+    ap_toast_many: "{n} approved", ap_toast_some: "{n} of {m} approved",
     strict_note: "🔍 This week Mom and Dad check everything",
     penalty_line: "−{n} points: {reason}", points_pending: "pending",
     from_time: "from {t}", countdown: "{n} min to go", window_over: "Over for today - new chance tomorrow",
@@ -157,6 +159,8 @@ const I18N_KIDS = {
     pending_cheer: "Super! Mama oder Papa schauen noch drauf.",
     ap_title: "✅ {n} Freigaben warten", ap_title_one: "✅ 1 Freigabe wartet", ap_approve: "Freigeben", ap_not_done: "Nicht fertig",
     ap_toast_ok: "Freigegeben", ap_toast_back: "Wieder auf der Liste",
+    ap_with: "mit {names}", ap_all: "Alle {n} freigeben", ap_all_confirm: "Wirklich alle {n} freigeben?",
+    ap_toast_many: "{n} freigegeben", ap_toast_some: "{n} von {m} freigegeben",
     strict_note: "🔍 Diese Woche schauen Mama und Papa bei allem drüber",
     penalty_line: "−{n} Punkte: {reason}", points_pending: "offen",
     from_time: "ab {t}", countdown: "noch {n} min", window_over: "Heute vorbei – morgen neue Chance",
@@ -228,6 +232,62 @@ function escKids(value) {
 function fmtKids(value) {
   const n = Math.round((parseFloat(value) || 0) * 10) / 10;
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
+/**
+ * Approval list helpers (duplicated in the parents' card).
+ * Drops a kid's name that the task name repeats: "Juri: Homework", "Homework Juri",
+ * "Homework (Juri)", "Homework - Juri" -> "Homework". Keeps the name if nothing remains.
+ */
+function apStripKids(task, kidName) {
+  const t = String(task || '').trim();
+  const n = String(kidName || '').trim();
+  if (!n) return t;
+  const e = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const out = t.replace(new RegExp(`^${e}\\s*[:\\-–]\\s*`, 'i'), '')
+    .replace(new RegExp(`\\s+(?:[\\-–]\\s*)?\\(?${e}\\)?$`, 'i'), '').trim();
+  return out || t;
+}
+
+/**
+ * Groups pending completions (oldest first) by kid, then by task (same task and helpers),
+ * so a daily task left over from several days shows up once with all its days.
+ * Returns [{ kidId, ids, tasks: [{ key, first, items, samePoints }] }], oldest kid first.
+ */
+function apGroupKids(list) {
+  const kids = new Map();
+  for (const p of list) {
+    let g = kids.get(p.kid_id);
+    if (!g) { g = { kidId: p.kid_id, ids: [], tasks: new Map() }; kids.set(p.kid_id, g); }
+    const key = (p.task_id || p.task_name || '') + '|' + (Array.isArray(p.helpers) ? p.helpers.slice().sort().join(',') : '');
+    let t = g.tasks.get(key);
+    if (!t) { t = { key: p.kid_id + '|' + key, first: p, items: [] }; g.tasks.set(key, t); }
+    t.items.push(p);
+    g.ids.push(p.id);
+  }
+  return Array.from(kids.values()).map(g => {
+    const tasks = Array.from(g.tasks.values());
+    tasks.forEach(t => { t.samePoints = t.items.every(i => parseFloat(i.points) === parseFloat(t.first.points)); });
+    return { kidId: g.kidId, ids: g.ids, tasks };
+  });
+}
+
+/** Day and time of a completion: "Today 17:42", "Yesterday 08:10", "Wed, 18/11 17:42". */
+function apWhenKids(timestamp, lang, now = new Date()) {
+  const d = new Date(timestamp);
+  if (isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+  const day0 = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day0(now) - day0(d)) / 86400000);
+  let day = '';
+  if (diff === 0 || diff === 1) {
+    try {
+      day = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }).format(-diff, 'day');
+      day = day.charAt(0).toUpperCase() + day.slice(1);
+    } catch (err) { day = ''; }
+  }
+  if (!day) day = d.toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'numeric' });
+  return `${day} ${time}`;
 }
 
 /** Parses "HH:MM" into minutes since midnight; returns the fallback for anything else. */
@@ -589,6 +649,8 @@ class FamilyMissionKids extends HTMLElement {
   }
 
   disconnectedCallback() {
+    clearTimeout(this._apArmTimer);
+    this._apArm = null;
     if (this._unsubEvents) {
       this._unsubEvents.then(unsub => unsub());
       this._unsubEvents = null;
@@ -1772,6 +1834,7 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'care-answer') this._careAnswer(el.dataset.care, el.dataset.status);
     else if (action === 'ap-approve') this._apAct(el.dataset.id, true);
     else if (action === 'ap-not-done') this._apAct(el.dataset.id, false);
+    else if (action === 'ap-all') this._apAll(el.dataset.key, (el.dataset.ids || '').split(' ').filter(Boolean));
     else if (action === 'close-bonus') this._closeBonus(el.dataset.task);
     else if (action === 'qa-open' && this._isMine()) this._qaOpen();
     else if (action === 'qa-close') this._qaClose();
@@ -3562,22 +3625,84 @@ class FamilyMissionKids extends HTMLElement {
     const list = Object.values(this.pending || {}).sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
     if (!list.length) return '';
     const title = list.length === 1 ? this.localize('ap_title_one') : this.localize('ap_title', { n: list.length });
+    const lang = (this._hass && this._hass.language) || undefined;
+    const nameOf = id => (persons[id] && persons[id].name) || id;
+    const busyOf = id => (this._apBusy && this._apBusy.has(id) ? 'disabled' : '');
+    const groups = apGroupKids(list).map(g => {
+      const kidName = nameOf(g.kidId);
+      const multiTask = g.tasks.length > 1;
+      const tasks = g.tasks.map(t => {
+        const p = t.first;
+        const helpers = (p.helpers || []).map(nameOf);
+        const rows = t.items.map(i => `
+          <div class="ap-row">
+            <span class="ap-when">${escKids(apWhenKids(i.timestamp, lang))}${t.samePoints ? '' : ` · ⭐ ${fmtKids(i.points)}`}</span>
+            <span class="ap-actions">
+              <button class="ap-btn ok" data-action="ap-approve" data-id="${escKids(i.id)}" ${busyOf(i.id)}>${escKids(this.localize('ap_approve'))}</button>
+              <button class="ap-btn" data-action="ap-not-done" data-id="${escKids(i.id)}" ${busyOf(i.id)}>${escKids(this.localize('ap_not_done'))}</button>
+            </span>
+          </div>`).join('');
+        return `
+          <div class="ap-task">
+            <div class="ap-head">
+              <span class="wait-name">${escKids(apStripKids(p.task_name, kidName))}${helpers.length ? ` <span class="ap-with">${escKids(this.localize('ap_with', { names: helpers.join(' & ') }))}</span>` : ''}</span>
+              ${t.items.length > 1 ? `<span class="ap-n">${t.items.length}×</span>` : ''}
+              ${t.samePoints ? `<span class="wait-pts">⭐ ${fmtKids(p.points)}</span>` : ''}
+            </div>
+            ${rows}
+            ${multiTask && t.items.length > 1 ? this._apBulkBtn('t:' + t.key, t.items.map(i => i.id), true) : ''}
+          </div>`;
+      }).join('');
+      return `
+        <div class="ap-kid">
+          <div class="ap-kid-name">${escKids(kidName)} <span class="count">${g.ids.length}</span></div>
+          ${tasks}
+          ${g.ids.length > 1 ? this._apBulkBtn('k:' + g.kidId, g.ids, false) : ''}
+        </div>`;
+    }).join('');
     return `
       <div class="waiting parent-appr">
         <div class="wait-title">${escKids(title)}</div>
-        ${list.map(p => {
-          const names = [p.kid_id].concat(p.helpers || []).map(id => (persons[id] && persons[id].name) || id).join(' & ');
-          const busy = this._apBusy && this._apBusy.has(p.id) ? 'disabled' : '';
-          return `
-          <div class="wait-item ap-item">
-            <div class="wait-name">${escKids(names)}: ${escKids(p.task_name)} <span class="wait-pts">⭐ ${fmtKids(p.points)}</span></div>
-            <div class="ap-actions">
-              <button class="ap-btn ok" data-action="ap-approve" data-id="${escKids(p.id)}" ${busy}>${escKids(this.localize('ap_approve'))}</button>
-              <button class="ap-btn" data-action="ap-not-done" data-id="${escKids(p.id)}" ${busy}>${escKids(this.localize('ap_not_done'))}</button>
-            </div>
-          </div>`;
-        }).join('')}
+        ${groups}
       </div>`;
+  }
+
+  /** "Approve all n" button; the first tap arms it ("Really all n?"), the second approves. */
+  _apBulkBtn(key, ids, small) {
+    const armed = this._apArm === key;
+    const busy = ids.some(id => this._apBusy && this._apBusy.has(id)) ? 'disabled' : '';
+    const label = this.localize(armed ? 'ap_all_confirm' : 'ap_all', { n: ids.length });
+    return `<button class="ap-btn ok ap-all ${small ? 'small' : ''} ${armed ? 'armed' : ''}" data-action="ap-all" data-key="${escKids(key)}" data-ids="${escKids(ids.join(' '))}" ${busy}>✅ ${escKids(label)}</button>`;
+  }
+
+  /** Two-tap "approve all": arm on the first tap (4 s), approve one after the other on the second. */
+  async _apAll(key, ids) {
+    if (this._apArm !== key) {
+      clearTimeout(this._apArmTimer);
+      this._apArm = key;
+      this._apArmTimer = setTimeout(() => { this._apArm = null; this._render(); }, 4000);
+      this._render();
+      return;
+    }
+    clearTimeout(this._apArmTimer);
+    this._apArm = null;
+    this._apBusy = this._apBusy || new Set();
+    const todo = ids.filter(id => this.pending && this.pending[id] && !this._apBusy.has(id));
+    if (!todo.length) { this._render(); return; }
+    todo.forEach(id => this._apBusy.add(id));
+    this._render();
+    let ok = 0;
+    for (const id of todo) {
+      try {
+        const res = await this._hass.callWS({ type: 'family_mission/approve', pending_id: id });
+        if (res && res.success) ok++;
+      } catch (err) {
+        console.error("FamilyMission Kids: could not approve", id, err);
+      }
+      this._apBusy.delete(id);
+    }
+    this._showToast(ok === todo.length ? this.localize('ap_toast_many', { n: ok }) : this.localize('ap_toast_some', { n: ok, m: todo.length }));
+    this._render();
   }
 
   /** Approve / "not done" a kid's completion (same commands as the parents' card). */
@@ -4099,10 +4224,24 @@ class FamilyMissionKids extends HTMLElement {
       .wait-title .count { min-width: 36px; height: 36px; padding: 0 10px; border-radius: 18px; display: inline-grid; place-items: center; font-size: 22px; background: color-mix(in srgb, var(--k-sub) 30%, var(--k-card)); }
       .wait-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 4px; font-size: 24px; font-weight: 700; color: var(--k-sub); border-top: 2px solid var(--k-line); margin-top: 6px; }
       .wait-name { overflow-wrap: anywhere; }
-      .ap-item { flex-wrap: wrap; }
       .ap-actions { display: flex; gap: 8px; flex-wrap: wrap; }
       .ap-btn { min-height: 48px; padding: 0 18px; border-radius: 24px; border: 2px solid var(--k-line); background: var(--k-card); color: var(--k-sub); font: inherit; font-size: 20px; font-weight: 800; cursor: pointer; }
       .ap-btn.ok { background: #2E7D32; border-color: #2E7D32; color: #fff; }
+      .ap-kid { border-top: 2px solid var(--k-line); margin-top: 8px; padding-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+      .ap-kid-name { font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+      .ap-kid-name .count { min-width: 30px; height: 30px; padding: 0 8px; border-radius: 15px; display: inline-grid; place-items: center; font-size: 18px; background: color-mix(in srgb, var(--k-sub) 30%, var(--k-card)); }
+      .ap-task { display: flex; flex-direction: column; gap: 4px; padding: 6px 4px; color: var(--k-sub); }
+      .ap-head { display: flex; align-items: baseline; gap: 10px; font-size: 22px; font-weight: 700; }
+      .ap-head .wait-name { flex: 1; min-width: 0; }
+      .ap-with { font-weight: 600; opacity: 0.8; }
+      .ap-n { flex: none; padding: 0 8px; border-radius: 10px; font-size: 0.8em; font-weight: 800; background: color-mix(in srgb, var(--k-sub) 25%, var(--k-card)); }
+      .ap-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+      .ap-row .ap-actions { flex-wrap: nowrap; }
+      .ap-when { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+      .ap-row .ap-btn { min-height: 40px; padding: 0 14px; font-size: 17px; }
+      .ap-all { align-self: stretch; }
+      .ap-all.small { align-self: flex-end; min-height: 36px; font-size: 15px; }
+      .ap-btn.armed { outline: 3px solid #C62828; outline-offset: 1px; }
       .wait-pts { flex: none; opacity: 0.6; filter: grayscale(1); font-weight: 800; }
       .wait-hint { font-size: 20px; font-weight: 700; color: var(--k-sub); margin-top: 4px; }
       .private { flex: none; padding: 6px 8px 2px; font-size: 20px; font-weight: 700; color: var(--k-sub); }
@@ -4225,6 +4364,12 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .waiting { padding: 8px 10px; border-radius: 18px; }
       :host([narrow]) .wait-title { font-size: 17px; }
       :host([narrow]) .wait-item { font-size: 16px; }
+      :host([narrow]) .ap-kid-name { font-size: 17px; }
+      :host([narrow]) .ap-head { font-size: 15px; }
+      :host([narrow]) .ap-when { font-size: 13px; }
+      :host([narrow]) .ap-row .ap-btn { min-height: 36px; padding: 0 12px; font-size: 14px; }
+      :host([narrow]) .ap-btn.ap-all { font-size: 15px; min-height: 40px; }
+      :host([narrow]) .ap-all.small { font-size: 13px; min-height: 34px; }
       :host([narrow]) .wait-hint, :host([narrow]) .private { font-size: 14px; }
       /* PIN pad and overlays on phones */
       :host([narrow]) .pin-dialog { flex-direction: column; gap: 14px; padding: 16px 18px; border-radius: 28px; border-width: 4px; }

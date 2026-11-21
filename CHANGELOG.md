@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.14.0] - 2026-11-21
+
+- **Approval list: day, time and grouping.** Parents card and "Meine Aufgaben" (kids card, `mode: mine`) group pending approvals by kid and task. Every completion shows day and time ("Heute 17:42", "Gestern 08:10", "Mi., 18.11. 08:10") instead of nothing (kids card) or "vor 3 Std." (parents card). A daily task left open on several days appears once with all its days and a "3×" badge. A kid's name repeated in the task name ("Juri: Hausaufgaben / Lernzeit Juri") is hidden. Helpers are shown as "mit Juri".
+- **Approve all.** Per kid ("Alle 5 freigeben") and per task with several days; the first tap arms the button ("Wirklich alle 5 freigeben?", 4 s), the second approves the entries one after the other. "Not done" and "Cheated" stay per entry. The parents card shows "Not done" / "Cheated" as compact icon buttons.
+- README, parents' guides (de/en/fr) and in-app help updated.
+
 ## [2.13.0] - 2026-11-19
 
 - **Wallet statement ("Kontoauszug").** Kids' shop: button "📒 Kontoauszug" opens "Mein Sternekonto" with the last 3 months; parents' board: "🛍️ Kontoauszug" below the kid (6 months, only when the shop is in use). Per month: carried-over balance, tasks / bonus / birthday / deductions summed with their count, every redemption and refund with its date, and the closing balance. The current month closes with the real wallet and the opening balances are derived backwards, so it always adds up; months before the shop existed are left out. Explains why the shop balance differs from the monthly points (unspent stars of earlier months are carried over). New read-only command `family_mission/wallet_statement` (`kid_id`, `months` 1-12).
