@@ -29,8 +29,11 @@ def test_i18n_and_settings_keys():
 def test_step_emoji_and_time_pie():
     code = _block("const KIDS_STEP_EMOJI", "/** Parses \"HH:MM\"") + r"""
 const out = {};
-out.emoji = ['🪥 Zähne putzen', 'Hände waschen', 'Schlafanzug anziehen', 'Get dressed', 'Ritual X', '👩‍👧 Kuscheln']
-  .map(t => kidsStepEmoji(t));
+out.emoji = ['🪥 Zähne putzen', 'Hände waschen', 'Schlafanzug anziehen', 'Get dressed', 'Ritual X', '👩‍👧 Kuscheln',
+  'Schreibtisch frei', 'Tisch decken'].map(t => kidsStepEmoji(t));
+out.chosen = kidsStepEmoji('🪥 Zähne putzen', { emoji: '🦷' });
+out.mapped = kidsStepEmoji('Arbeitsplatz frei', { map: { 'arbeitsplatz frei': '🗂️' } });
+out.mapLoses = kidsStepEmoji('Arbeitsplatz frei', { emoji: '✨', map: { 'arbeitsplatz frei': '🗂️' } });
 out.pie = [
   kidsTimePie(400, 460, 450),     // 10 of 60 min left
   kidsTimePie(400, 460, 420),     // 40 of 60
@@ -46,9 +49,13 @@ console.log(JSON.stringify(out));
     out = json.loads(res.stdout)
     assert out["emoji"] == [
         {"emoji": "🪥", "title": "Zähne putzen"}, {"emoji": "🧼", "title": "Hände waschen"},
-        {"emoji": "👚", "title": "Schlafanzug anziehen"}, {"emoji": "👕", "title": "Get dressed"},
+        {"emoji": "🌙", "title": "Schlafanzug anziehen"}, {"emoji": "👕", "title": "Get dressed"},
         {"emoji": "", "title": "Ritual X"}, {"emoji": "👩‍👧", "title": "Kuscheln"},
+        {"emoji": "🗂️", "title": "Schreibtisch frei"}, {"emoji": "🍽️", "title": "Tisch decken"},
     ]
+    assert out["chosen"] == {"emoji": "🦷", "title": "Zähne putzen"}
+    assert out["mapped"] == {"emoji": "🗂️", "title": "Arbeitsplatz frei"}
+    assert out["mapLoses"]["emoji"] == "✨"
     p = out["pie"]
     assert p[0]["left"] == 10 and p[0]["color"] == "#E53935"
     assert p[1]["left"] == 40 and p[1]["color"] == "#43A047"

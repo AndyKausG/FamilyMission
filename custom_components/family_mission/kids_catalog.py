@@ -81,6 +81,99 @@ def _st(de: str, en: str, min_age: int = 0, requires: str | None = None) -> dict
     return {"title_de": de, "title_en": en, "min_age": min_age, "requires": requires}
 
 
+# 2.16: picture of every catalog step (German title -> emoji) for the picture mode of the kids card.
+# Looked up by title (German or English) on the tablet, so existing tasks get it without a wizard run.
+STEP_EMOJI = {
+    "15 min lesen oder üben": "📖",
+    "Altes Streu raus": "🪣",
+    "Anziehen": "👕",
+    "Arbeitsplatz frei": "🗂️",
+    "Ausräumen": "📤",
+    "Aussaugen": "🧹",
+    "Ausschütteln & aufhängen": "👚",
+    "Becken & Armatur putzen": "🚰",
+    "Besen zurück": "🧹",
+    "Besteck": "🍴",
+    "Bett machen": "🛏️",
+    "Beutel zubinden": "🪢",
+    "Bezüge abziehen": "🛏️",
+    "Boden frei": "🧸",
+    "Bon an Mama/Papa": "🧾",
+    "Brotdose & Trinkflasche einpacken": "🍱",
+    "Bücher ins Regal": "📚",
+    "Einsprühen & wischen": "🧴",
+    "Falten": "👕",
+    "Falten & verteilen": "👚",
+    "Fensterbank frei": "🪟",
+    "Flaschen sammeln & sortieren": "🍾",
+    "Flusensieb leeren": "🌀",
+    "Frisches Wasser": "💧",
+    "Frühstücken": "🥣",
+    "Futter": "🥫",
+    "Fußmatten ausschütteln": "🚗",
+    "Gemüse waschen": "🥕",
+    "Geschirr zur Spüle": "🍽️",
+    "Getränke auf den Tisch": "🥤",
+    "Gießen": "🪴",
+    "Gläser": "🥛",
+    "Hausaufgaben erledigt": "✏️",
+    "Hausaufgabenheft abhaken": "📒",
+    "Hände waschen": "🧼",
+    "In den Schrank": "🚪",
+    "In den Wäschekorb": "🧺",
+    "In die Tonne": "🗑️",
+    "Kabel & Socken weg": "🧦",
+    "Kleidung für morgen rauslegen": "👖",
+    "Kleidung in Schrank oder Wäschekorb": "🧺",
+    "Kleidung in den Schrank": "🚪",
+    "Korb zurück": "🧺",
+    "Kühlsachen zuerst": "🧊",
+    "Laub & Dreck zusammenkehren": "🍂",
+    "Mama/Papa kurz zeigen": "👀",
+    "Mit aufräumen": "🤝",
+    "Müll raus": "🗑️",
+    "Neu beziehen": "🛏️",
+    "Neuen Beutel einlegen": "🛍️",
+    "Neues Streu rein": "🐈",
+    "Oben: Gläser & Tassen": "☕",
+    "Oberkorb": "☕",
+    "Rausbringen": "🚪",
+    "Regal ordnen": "📚",
+    "Rest einräumen": "📥",
+    "Reste abdecken & in den Kühlschrank": "🥡",
+    "Reste abkratzen": "🥄",
+    "Schlafanzug an": "🌙",
+    "Schlafanzug weg": "👚",
+    "Schmutzwäsche in den Korb": "🧺",
+    "Schneiden": "🔪",
+    "Schreibtisch frei": "🗂️",
+    "Schuhe & Jacke an ihren Platz": "👟",
+    "Schulranzen packen": "🎒",
+    "Servietten": "🧻",
+    "Socken paaren": "🧦",
+    "Spiegel wischen": "🪞",
+    "Spielzeug in die Kisten": "📦",
+    "Spielzeug/Sachen in die Kisten": "📦",
+    "Staub wischen": "🪶",
+    "Staubsaugen": "🧹",
+    "Stühle hoch": "🪑",
+    "Tab rein & starten": "🫧",
+    "Taschen weg": "👜",
+    "Teller": "🍽️",
+    "Tisch abwischen": "🧽",
+    "Trocken nachwischen": "🧻",
+    "Unkraut zupfen": "🌱",
+    "Unten: Teller & Töpfe": "🍲",
+    "Unterkorb": "🍲",
+    "Untersetzer prüfen (nicht überlaufen)": "🔍",
+    "Welke Blätter abzupfen": "🍂",
+    "Werkzeug zurück": "🧰",
+    "Zahnputzbecher spülen": "🫗",
+    "Zurückgeben": "♻️",
+    "Zähne putzen": "🪥",
+}
+
+
 def _entry(
     key: str, name_de: str, name_en: str, icon: str, points: int, minutes: int,
     min_age: int, interval: int, category: str, mode: str,
@@ -979,3 +1072,15 @@ def legacy_customized_fields(
     if task.get("rotation"):
         result.add("rotation")
     return sorted(result)
+
+
+def step_emoji_map() -> dict[str, str]:
+    """``{lowercase step title (de and en): emoji}`` of all catalog steps (picture mode of the kids card)."""
+    result: dict[str, str] = {}
+    for entry in CATALOG:
+        for st in entry["subtasks"]:
+            emoji = STEP_EMOJI.get(st["title_de"])
+            if emoji:
+                result.setdefault(st["title_de"].strip().lower(), emoji)
+                result.setdefault(st["title_en"].strip().lower(), emoji)
+    return result

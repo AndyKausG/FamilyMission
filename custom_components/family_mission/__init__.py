@@ -405,6 +405,7 @@ async def ws_get_data(hass: HomeAssistant, connection: websocket_api.ActiveConne
     await _async_goal_refresh(hass)
     response_data["family_goal_info"] = _goal_info(hass)
     response_data["care_today"] = _care_today(hass)
+    response_data["step_emoji"] = _STEP_EMOJI_MAP
     response_data["care_log"] = _care_log_recent(hass)
     response_data["absences"] = _absence_view(data)
     response_data["tasks"] = _tasks_for_client(hass, data)
@@ -1136,7 +1137,7 @@ async def ws_add_task(hass: HomeAssistant, connection: websocket_api.ActiveConne
         "due_date": due_date, 
         "paused_until": msg.get("paused_until"),
         "override_overdue_days": msg.get("override_overdue_days"),
-        "subtasks": msg.get("subtasks", [])
+        "subtasks": kidslib.clean_step_emoji(msg.get("subtasks", []))
     }
     _apply_schedule(hass, new_task, msg)
     _align_due_to_weekdays(new_task, dt_util.now().date() if not custom_due_date_str else None)
@@ -1200,7 +1201,9 @@ async def ws_edit_task(hass: HomeAssistant, connection: websocket_api.ActiveConn
     task_ref = data["tasks"][task_id]
     before = _task_definition(task_ref)
     keys_to_update = ["name", "description", "area", "interval", "assignees", "complexity", "icon", "subtasks"]
-    
+    if "subtasks" in msg:
+        kidslib.clean_step_emoji(msg["subtasks"])
+
     for key in keys_to_update:
         if key in msg: 
             task_ref[key] = msg[key]
@@ -1237,6 +1240,9 @@ async def ws_edit_task(hass: HomeAssistant, connection: websocket_api.ActiveConn
     await hass.data[DOMAIN]["store"].async_save(data)
     hass.bus.async_fire(EVENT_TASK_UPDATED)
     connection.send_result(msg["id"], {"success": True})
+
+
+_STEP_EMOJI_MAP = kids_catalog.step_emoji_map()    # static: pictures of the catalog steps for the kids card
 
 
 def _task_definition(task: dict) -> dict:
@@ -1702,7 +1708,7 @@ async def ws_add_template(hass: HomeAssistant, connection: websocket_api.ActiveC
         "reminder_target": normalize_reminder_target(msg.get("reminder_target")),
         "interval": msg.get("interval"),
         "assignees": msg.get("assignees"),
-        "subtasks": msg.get("subtasks", []),
+        "subtasks": kidslib.clean_step_emoji(msg.get("subtasks", [])),
     }
     _apply_schedule(hass, new_template, msg)
 
@@ -1753,7 +1759,9 @@ async def ws_edit_template(hass: HomeAssistant, connection: websocket_api.Active
         
     template_ref = data["templates"][template_id]
     keys_to_update = ["name", "description", "area", "complexity", "icon", "interval", "assignees", "subtasks"]
-    
+    if "subtasks" in msg:
+        kidslib.clean_step_emoji(msg["subtasks"])
+
     for key in keys_to_update:
         if key in msg: 
             template_ref[key] = msg[key]
@@ -4095,8 +4103,12 @@ def _wizard_update_task(task: dict, item: dict) -> None:
     custom = set(task.get("customized") or [])
     if "subtasks" not in custom:
         progress = {st.get("title"): bool(st.get("done")) for st in task.get("subtasks") or [] if isinstance(st, dict)}
+        # a picture chosen for a step is no customization of the definition: it survives the refresh
+        emojis = {st.get("title"): st["emoji"] for st in task.get("subtasks") or [] if isinstance(st, dict) and st.get("emoji")}
         task["subtasks"] = [
-            {**st, "done": progress.get(st.get("title"), False)} for st in copy.deepcopy(item["subtasks"])
+            {**st, "done": progress.get(st.get("title"), False),
+             **({"emoji": emojis[st.get("title")]} if st.get("title") in emojis else {})}
+            for st in copy.deepcopy(item["subtasks"])
         ]
     if "name" not in custom:
         task["name"] = item["name"]

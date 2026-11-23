@@ -560,3 +560,17 @@ def test_legacy_customized_fields_tolerances():
     assert kc.legacy_customized_fields({**evening, "subtasks": evening["subtasks"][1:]}) == []
     # an unknown catalog key is customized completely
     assert kc.legacy_customized_fields({"wizard_key": "gone:person.x"}) == sorted(kc.CUSTOM_FIELDS)
+
+
+# 2.16: pictures of the catalog steps (picture mode of the kids card)
+def test_every_catalog_step_has_a_picture():
+    titles = {st["title_de"] for entry in kc.CATALOG for st in entry["subtasks"]}
+    assert titles and not [t for t in titles if not kc.STEP_EMOJI.get(t)]
+    assert not set(kc.STEP_EMOJI) - titles          # no stale entries
+
+
+def test_step_emoji_map_has_both_languages():
+    mp = kc.step_emoji_map()
+    assert mp["zähne putzen"] == "🪥" and mp["brush teeth"] == "🪥"
+    assert mp["schreibtisch frei"] == "🗂️" and mp["mama/papa kurz zeigen"] == "👀"
+    assert all(k == k.lower() for k in mp)

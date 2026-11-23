@@ -33,7 +33,8 @@
       every_l: "Every", days_unit: "days", date_l: "On", date_hint: "Empty = due right away.", tpl_once_hint: "The date is chosen when a task is created from this template.",
       window: "Time window", from: "from", until: "until", window_hint: "Empty = the whole day.", clear_window: "Whole day",
       we_switch: "Different on the weekend", we_lbl: "Saturday / Sunday",
-      sec_steps: "Steps", step_ph: "New step …", add: "Add", step_title: "Step {n}", move: "Move step", move_up: "Move up", move_down: "Move down", remove: "Remove step",
+      sec_steps: "Steps", step_ph: "New step …", add: "Add", pic_btn: "Picture for step {n}", pic_auto: "Automatic", pic_hint: "Shown in the picture mode on the kids' tablet. Automatic = picture from the step's name.",
+      pics: { bath: "Bathroom", dress: "Clothes", food: "Food", school: "School & play", tidy: "Tidying up", home: "Pets, garden & more", other: "Other" }, step_title: "Step {n}", move: "Move step", move_up: "Move up", move_down: "Move down", remove: "Remove step",
       badge_age: "from {n}", badge_school: "School day", care_row: "Medication appears here", care_after: "after \"{t}\"", care_end: "at the end",
       sec_reward: "Reward", points: "Points", approval: "Parents approve", approval_sub: "The kid reports it, a parent confirms it.",
       together: "Doing it together allowed", together_sub: "Several kids may do it as a team.", routine: "Bonus only after the kid's due duties",
@@ -61,7 +62,8 @@
       every_l: "Alle", days_unit: "Tage", date_l: "Am", date_hint: "Leer = sofort fällig.", tpl_once_hint: "Das Datum wählst du, wenn aus der Vorlage eine Aufgabe wird.",
       window: "Zeitfenster", from: "von", until: "bis", window_hint: "Leer = ganztägig.", clear_window: "Ganztägig",
       we_switch: "Am Wochenende anders", we_lbl: "Samstag / Sonntag",
-      sec_steps: "Schritte", step_ph: "Neuer Schritt …", add: "Hinzufügen", step_title: "Schritt {n}", move: "Schritt verschieben", move_up: "Nach oben", move_down: "Nach unten", remove: "Schritt entfernen",
+      sec_steps: "Schritte", step_ph: "Neuer Schritt …", add: "Hinzufügen", pic_btn: "Bild für Schritt {n}", pic_auto: "Automatisch", pic_hint: "Erscheint im Bildmodus am Kinder-Tablet. Automatisch = Bild passend zum Namen des Schritts.",
+      pics: { bath: "Bad", dress: "Anziehen", food: "Essen", school: "Schule & Spiel", tidy: "Aufräumen", home: "Tiere, Garten & mehr", other: "Sonstiges" }, step_title: "Schritt {n}", move: "Schritt verschieben", move_up: "Nach oben", move_down: "Nach unten", remove: "Schritt entfernen",
       badge_age: "ab {n}", badge_school: "Schultag", care_row: "Hier erscheint das Medikament", care_after: "nach „{t}“", care_end: "am Ende",
       sec_reward: "Belohnung", points: "Punkte", approval: "Eltern geben frei", approval_sub: "Das Kind meldet es, ein Elternteil bestätigt.",
       together: "Gemeinsam erledigen erlaubt", together_sub: "Mehrere Kinder dürfen es als Team machen.", routine: "Bonus erst nach den fälligen Pflichten",
@@ -87,6 +89,17 @@
     ['👕', 'mdi:tshirt-crew', 'shirt'], ['🌅', 'mdi:weather-sunny', 'sun'], ['🌙', 'mdi:weather-night', 'moon'], ['🧽', 'mdi:spray-bottle', 'spray'],
     ['🚗', 'mdi:car', 'car'], ['🍳', 'mdi:chef-hat', 'cook'], ['🧸', 'mdi:teddy-bear', 'toy'], ['🎹', 'mdi:piano', 'music'],
     ['💊', 'mdi:pill', 'pill'], ['🥪', 'mdi:food', 'lunch'], ['🚲', 'mdi:bike', 'bike'], ['🍴', 'mdi:table-furniture', 'table'], ['🪟', 'mdi:window-closed-variant', 'window']
+  ];
+
+  /** Pictures for mission steps (picture mode of the kids card, 2.16), grouped by theme. */
+  const STEP_PICS = [
+    ['bath', ['🪥', '🧼', '🚽', '🛁', '🚿', '💇', '🧴', '🫗', '🪞']],
+    ['dress', ['👕', '👖', '👚', '🧦', '👟', '🧥', '🧢', '🧤', '🌙']],
+    ['food', ['🥣', '🍞', '🥪', '🍎', '🥕', '🥛', '🥤', '🍱', '🍴', '🍽️', '🥄', '☕']],
+    ['school', ['🎒', '✏️', '📒', '📖', '📚', '🗂️', '🖍️', '🎹', '⚽']],
+    ['tidy', ['🧸', '📦', '🧹', '🧽', '🪣', '🗑️', '🧺', '🛏️', '🪑', '🚪', '🪟', '🪶']],
+    ['home', ['🐕', '🐈', '🐾', '🥫', '💧', '🪴', '🌱', '🍂', '🧰', '🚗', '🛒', '♻️']],
+    ['other', ['👀', '🤝', '💊', '⏰', '💡', '🔍', '⭐', '❤️', '✅', '🙌', '😴', '🎉']]
   ];
 
   const P = {
@@ -227,6 +240,14 @@
     .step input.st:focus { background: var(--_soft); border-radius: 8px; }
     .badge { flex: none; padding: 1px 8px; border-radius: 10px; background: color-mix(in srgb, var(--_warn) 18%, transparent); color: var(--_warn); font-size: 12px; font-weight: 700; white-space: nowrap; }
     .step .ibtn { width: 44px; height: 44px; }
+    .spic { flex: none; width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--_line); background: var(--_bg); font-size: 24px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+    .spic.auto { opacity: .45; border-style: dashed; filter: grayscale(.6); }
+    .spic.open { border-color: var(--_primary); opacity: 1; filter: none; }
+    .picker { padding: 10px; border: 1px solid var(--_line); border-radius: 14px; background: var(--_soft); display: flex; flex-direction: column; gap: 8px; }
+    .pic-head { font-size: 12px; font-weight: 700; color: var(--_sub); text-transform: uppercase; letter-spacing: .04em; margin: 2px 2px 4px; }
+    .pic-auto { align-self: flex-start; height: 40px; padding: 0 14px; border-radius: 20px; border: 2px solid var(--_line); background: var(--_bg); font-weight: 700; }
+    .pic-auto.on { border-color: var(--_primary); color: var(--_primary); }
+    .pic-hint { margin: 0; font-size: 13px; color: var(--_sub); }
     .care { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 14px; border: 2px dashed var(--_line); border-radius: 12px; color: var(--_sub); font-size: 14px; }
     .addrow { display: flex; gap: 8px; }
     .addrow .fld { flex: 1; }
@@ -710,11 +731,20 @@
         if (st.requires === 'school') badges.push(this._t('badge_school'));
         items.push(`<li class="step" data-i="${i}">
           <button type="button" class="grip" data-grip="${i}" aria-label="${esc(this._t('move'))}" tabindex="-1">${svg(P.grip, 22)}</button>
+          <button type="button" class="spic ${st.emoji ? '' : 'auto'} ${this._pick === i ? 'open' : ''}" data-act="step-pic" data-v="${i}" aria-expanded="${this._pick === i}" aria-label="${esc(this._t('pic_btn', { n: i + 1 }))}" title="${esc(this._t('pic_btn', { n: i + 1 }))}">${esc(st.emoji || '🖼️')}</button>
           <input class="st" data-k="step" data-i="${i}" type="text" maxlength="100" autocomplete="off" aria-label="${esc(this._t('step_title', { n: i + 1 }))}" value="${esc(st.title)}">
           ${badges.map(b => `<span class="badge">${esc(b)}</span>`).join('')}
           <button type="button" class="ibtn" data-act="step-up" data-v="${i}" aria-label="${esc(this._t('move_up'))}" ${i === 0 ? 'disabled' : ''}>${svg(P.arrowUp, 20)}</button>
           <button type="button" class="ibtn" data-act="step-down" data-v="${i}" aria-label="${esc(this._t('move_down'))}" ${i === s.steps.length - 1 ? 'disabled' : ''}>${svg(P.arrowDown, 20)}</button>
           <button type="button" class="ibtn" data-act="step-del" data-v="${i}" aria-label="${esc(this._t('remove'))}">${svg(P.close, 20)}</button></li>`);
+        if (this._pick === i) {
+          const pics = this._t('pics');
+          items.push(`<li class="picker" role="group" aria-label="${esc(this._t('pic_btn', { n: i + 1 }))}">
+            <button type="button" class="pic-auto ${st.emoji ? '' : 'on'}" data-act="step-pic-clear" aria-pressed="${!st.emoji}">✨ ${esc(this._t('pic_auto'))}</button>
+            ${STEP_PICS.map(([key, list]) => `<div class="pic-group"><div class="pic-head">${esc((pics && pics[key]) || key)}</div>
+              <div class="emojis">${list.map(e => `<button type="button" class="emoji" data-act="step-emoji" data-v="${esc(e)}" aria-pressed="${st.emoji === e}">${e}</button>`).join('')}</div></div>`).join('')}
+            <p class="pic-hint">${esc(this._t('pic_hint'))}</p></li>`);
+        }
       });
       if (ci !== null && ci >= s.steps.length) items.push(careRow());
       const steps = `
@@ -857,9 +887,12 @@
         case 'adv-toggle': s.advOpen = !s.advOpen; break;
         case 'note-open': s.noteOpen = true; break;
         case 'step-add': this._addStep(); break;
-        case 'step-del': s.steps.splice(parseInt(v), 1); break;
-        case 'step-up': this._moveStep(parseInt(v), parseInt(v) - 1); break;
-        case 'step-down': this._moveStep(parseInt(v), parseInt(v) + 1); break;
+        case 'step-del': s.steps.splice(parseInt(v), 1); this._pick = null; break;
+        case 'step-up': this._moveStep(parseInt(v), parseInt(v) - 1); this._pick = null; break;
+        case 'step-down': this._moveStep(parseInt(v), parseInt(v) + 1); this._pick = null; break;
+        case 'step-pic': this._pick = this._pick === parseInt(v) ? null : parseInt(v); break;
+        case 'step-emoji': { const st = s.steps[this._pick]; if (st) st.emoji = v; this._pick = null; break; }
+        case 'step-pic-clear': { const st = s.steps[this._pick]; if (st) delete st.emoji; this._pick = null; break; }
         case 'tpl': this._emit('fm-editor-template', { id: v }); return;
         default: return;
       }
