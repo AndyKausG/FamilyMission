@@ -425,9 +425,8 @@ class FamilyMissionCard extends HTMLElement {
     const container = this.shadowRoot.getElementById('sub-completion-list');
     if (!container) return;
     container.innerHTML = this._completionSubtasks.map((st, index) => `
-        <ha-formfield label="${st.title}">
-            <ha-checkbox class="sub-complete-check" data-index="${index}" ${st.done ? 'checked' : ''}></ha-checkbox>
-        </ha-formfield>
+        <div class="fm-field">
+            <ha-checkbox class="sub-complete-check" data-index="${index}" ${st.done ? 'checked' : ''}></ha-checkbox><span class="fm-field-lbl">${st.title}</span></div>
     `).join('');
   }
 
@@ -1386,18 +1385,14 @@ class FamilyMissionCardEditor extends HTMLElement {
         <ha-input label="${this.localize('items_per_page_lbl')}" type="number" value="${this._config.items_per_page || 10}" configValue="items_per_page"></ha-input>
         
         <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 16px;">
-          <ha-formfield label="${this.localize('show_search_lbl')}">
-            <ha-checkbox ${this._config.show_search !== false ? 'checked' : ''} configValue="show_search"></ha-checkbox>
-          </ha-formfield>
-          <ha-formfield label="${this.localize('show_add_lbl')}">
-            <ha-checkbox ${this._config.show_add !== false ? 'checked' : ''} configValue="show_add"></ha-checkbox>
-          </ha-formfield>
-          <ha-formfield label="${this.localize('show_edit_lbl')}">
-            <ha-checkbox ${this._config.show_edit !== false ? 'checked' : ''} configValue="show_edit"></ha-checkbox>
-          </ha-formfield>
-          <ha-formfield label="${this.localize('show_delete_lbl')}">
-            <ha-checkbox ${this._config.show_delete !== false ? 'checked' : ''} configValue="show_delete"></ha-checkbox>
-          </ha-formfield>
+          <div class="fm-field">
+            <ha-checkbox ${this._config.show_search !== false ? 'checked' : ''} configValue="show_search"></ha-checkbox><span class="fm-field-lbl">${this.localize('show_search_lbl')}</span></div>
+          <div class="fm-field">
+            <ha-checkbox ${this._config.show_add !== false ? 'checked' : ''} configValue="show_add"></ha-checkbox><span class="fm-field-lbl">${this.localize('show_add_lbl')}</span></div>
+          <div class="fm-field">
+            <ha-checkbox ${this._config.show_edit !== false ? 'checked' : ''} configValue="show_edit"></ha-checkbox><span class="fm-field-lbl">${this.localize('show_edit_lbl')}</span></div>
+          <div class="fm-field">
+            <ha-checkbox ${this._config.show_delete !== false ? 'checked' : ''} configValue="show_delete"></ha-checkbox><span class="fm-field-lbl">${this.localize('show_delete_lbl')}</span></div>
         </div>
 
         <ha-input label="${this.localize('sort_by_lbl')}" placeholder="${this.localize('sort_by_placeholder')}" value="${this._config.sort_by || 'due_date'}" configValue="sort_by" style="width: 100%; margin-top: 16px;"></ha-input>
@@ -1409,10 +1404,7 @@ class FamilyMissionCardEditor extends HTMLElement {
           display: block;
           margin-bottom: 8px;
         }
-        ha-formfield {
-          display: flex;
-          align-items: center;
-        }
+        .fm-field { display: flex; align-items: center; gap: 4px; min-height: 40px; } .fm-field-lbl { cursor: pointer; -webkit-user-select: none; user-select: none; }
       </style>
     `;
 
@@ -1464,3 +1456,19 @@ class FamilyMissionCardEditor extends HTMLElement {
 
 customElements.define('family-mission-card-editor', FamilyMissionCardEditor);
 customElements.define('family-mission-card', FamilyMissionCard);
+
+/**
+ * Label next to a ha-checkbox / ha-switch (2.15.1). Replaces <ha-formfield label>, whose label
+ * newer Home Assistant versions no longer render. A tap on the text toggles the control
+ * (one document listener for all FamilyMission cards, shadow DOM included).
+ */
+if (!window.__familyMissionFieldClick) {
+  window.__familyMissionFieldClick = true;
+  document.addEventListener('click', (ev) => {
+    const path = ev.composedPath ? ev.composedPath() : [];
+    const lbl = path.find(e => e && e.classList && e.classList.contains('fm-field-lbl'));
+    if (!lbl || !lbl.parentElement) return;
+    const control = lbl.parentElement.querySelector('ha-checkbox, ha-switch');
+    if (control && !control.disabled) control.click();
+  });
+}

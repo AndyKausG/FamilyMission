@@ -4798,26 +4798,21 @@ class FamilyMissionKidsEditor extends HTMLElement {
         <ha-input label="${this.localize('title_lbl')}" value="${escKids(this._config.title || this.localize('title'))}" configValue="title"></ha-input>
         <ha-input label="${this.localize('timeout_lbl')}" type="number" value="${this._config.timeout || 90}" configValue="timeout"></ha-input>
         <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 16px;">
-          <ha-formfield label="${this.localize('sound_lbl')}">
-            <ha-checkbox configValue="sound"></ha-checkbox>
-          </ha-formfield>
-          <ha-formfield label="${this.localize('show_family_goal_lbl')}">
-            <ha-checkbox configValue="show_family_goal"></ha-checkbox>
-          </ha-formfield>
-          <ha-formfield label="${this.localize('show_bonus_board_lbl')}">
-            <ha-checkbox configValue="show_bonus_board"></ha-checkbox>
-          </ha-formfield>
-          <ha-formfield label="${this.localize('return_home_lbl')}">
-            <ha-checkbox configValue="return_home_after_done"></ha-checkbox>
-          </ha-formfield>
-          <ha-formfield label="${this.localize('mode_mine_lbl')}">
-            <ha-checkbox configValue="mode_mine"></ha-checkbox>
-          </ha-formfield>
+          <div class="fm-field">
+            <ha-checkbox configValue="sound"></ha-checkbox><span class="fm-field-lbl">${this.localize('sound_lbl')}</span></div>
+          <div class="fm-field">
+            <ha-checkbox configValue="show_family_goal"></ha-checkbox><span class="fm-field-lbl">${this.localize('show_family_goal_lbl')}</span></div>
+          <div class="fm-field">
+            <ha-checkbox configValue="show_bonus_board"></ha-checkbox><span class="fm-field-lbl">${this.localize('show_bonus_board_lbl')}</span></div>
+          <div class="fm-field">
+            <ha-checkbox configValue="return_home_after_done"></ha-checkbox><span class="fm-field-lbl">${this.localize('return_home_lbl')}</span></div>
+          <div class="fm-field">
+            <ha-checkbox configValue="mode_mine"></ha-checkbox><span class="fm-field-lbl">${this.localize('mode_mine_lbl')}</span></div>
         </div>
       </div>
       <style>
         .card-config ha-input { display: block; margin-bottom: 8px; }
-        ha-formfield { display: flex; align-items: center; }
+        .fm-field { display: flex; align-items: center; gap: 4px; min-height: 40px; } .fm-field-lbl { cursor: pointer; -webkit-user-select: none; user-select: none; }
       </style>
     `;
     this._rendered = true;
@@ -4872,3 +4867,19 @@ class FamilyMissionKidsEditor extends HTMLElement {
 
 customElements.define('family-mission-kids-editor', FamilyMissionKidsEditor);
 customElements.define('family-mission-kids', FamilyMissionKids);
+
+/**
+ * Label next to a ha-checkbox / ha-switch (2.15.1). Replaces <ha-formfield label>, whose label
+ * newer Home Assistant versions no longer render. A tap on the text toggles the control
+ * (one document listener for all FamilyMission cards, shadow DOM included).
+ */
+if (!window.__familyMissionFieldClick) {
+  window.__familyMissionFieldClick = true;
+  document.addEventListener('click', (ev) => {
+    const path = ev.composedPath ? ev.composedPath() : [];
+    const lbl = path.find(e => e && e.classList && e.classList.contains('fm-field-lbl'));
+    if (!lbl || !lbl.parentElement) return;
+    const control = lbl.parentElement.querySelector('ha-checkbox, ha-switch');
+    if (control && !control.disabled) control.click();
+  });
+}
