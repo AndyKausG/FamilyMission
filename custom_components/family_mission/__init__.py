@@ -101,6 +101,7 @@ from .const import (
     WS_TYPE_MY_CLAIM_TASK,
     WS_TYPE_KID_TOGGLE_STEP,
     WS_TYPE_MY_TOGGLE_STEP,
+    WS_TYPE_KID_SPEAK_STEP,
     WS_TYPE_KID_CARE_ANSWER,
     WS_TYPE_MY_CARE_ANSWER,
     WS_TYPE_CARE_CONFIRM,
@@ -3352,6 +3353,70 @@ async def ws_kid_toggle_step(hass: HomeAssistant, connection: websocket_api.Acti
     connection.send_result(msg["id"], result)
 
 
+@websocket_api.websocket_command({
+    vol.Required("type"): WS_TYPE_KID_SPEAK_STEP,
+    vol.Required("task_id"): str,
+    vol.Required("kid_id"): str,
+    vol.Optional("pin"): vol.Any(None, str),
+    vol.Optional("index"): vol.All(int, vol.Range(min=0, max=99)),
+    vol.Optional("care_id"): str,
+})
+@websocket_api.async_response
+async def ws_kid_speak_step(hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict):
+    """Read a mission step aloud on the kids' tablet (profile aid ``speak_steps``, PIN like ``kid_toggle_step``).
+
+    Without ``index`` / ``care_id`` the next open step is read ("Juri, jetzt: ..."), with them
+    exactly that step. Uses the voice announcement settings; one request per kid every
+    ``SPEAK_COOLDOWN`` seconds. The result carries the text, so the tablet can show it, too:
+    ``{success, spoken, reason (off / night / busy / None), text, title, all_done}``.
+    """
+    error, ctx = _kid_task_precheck(hass, msg)
+    if error:
+        connection.send_result(msg["id"], error)
+        return
+    kid_id, task = ctx["kid_id"], ctx["task"]
+    profile = (ctx["settings"].get("kids") or {}).get(kid_id) or {}
+    if not kidslib.normalize_aids(profile.get("aids")).get("speak_steps"):
+        connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_ELIGIBLE})
+        return
+    attached = _care_attached(hass, kid_id, msg["task_id"])
+    all_done = False
+    if "index" in msg:
+        subtasks = task.get("subtasks") or []
+        if msg["index"] >= len(subtasks) or not isinstance(subtasks[msg["index"]], dict):
+            connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+            return
+        title = subtasks[msg["index"]].get("title") or ""
+        text = kidslib.step_readout(title)
+    elif "care_id" in msg:
+        step = next((a["step"] for a in attached if a["step"]["care_id"] == msg["care_id"]), None)
+        if step is None:
+            connection.send_result(msg["id"], {"success": False, "error": ERR_NOT_FOUND})
+            return
+        title = step["title"]
+        text = kidslib.step_readout(title)
+    else:
+        anchor = attached[0]["item"].get("anchor", "") if attached else ""
+        school_free = kidslib.school_holiday(kid_id, dt_util.now().date(), _absences(hass.data[DOMAIN]["data"]))
+        title, all_done = kidslib.next_open_step(task.get("subtasks"), [a["step"] for a in attached], anchor, school_free)
+        text = kidslib.step_announcement(_participant_name(hass, kid_id), title, _lang(hass))
+    result = {"success": True, "spoken": False, "reason": None, "text": text, "title": title, "all_done": all_done}
+    reason = _announce_block(hass, ANNOUNCE_STEP)
+    last = hass.data[DOMAIN].setdefault("speak_last", {})
+    now = time.monotonic()
+    if reason is None and now - last.get(kid_id, -SPEAK_COOLDOWN) < SPEAK_COOLDOWN:
+        reason = SPEAK_BUSY
+    if reason is None and text:
+        last[kid_id] = now
+        _cancel_step_announce(hass, kid_id)    # the kid asked: no extra automatic announcement on top
+        conf = _announce_settings(_get_entry(hass).options)
+        hass.async_create_task(_async_speak(hass, conf["announce_tts"], conf["announce_players"], text))
+        result["spoken"] = True
+    else:
+        result["reason"] = reason
+    connection.send_result(msg["id"], result)
+
+
 async def _async_toggle_step(hass: HomeAssistant, ctx: dict, index: int, done: bool) -> dict:
     subtasks = ctx["task"].get("subtasks") or []
     if index >= len(subtasks) or not isinstance(subtasks[index], dict):
@@ -5897,6 +5962,10 @@ ANNOUNCE_KINDS = (ANNOUNCE_ADHOC, ANNOUNCE_WASTE, ANNOUNCE_TRIGGER, ANNOUNCE_GOA
 # 2.15: "next step" of a mission; switched on per kid (profile aid ``speak_steps``), not in ``announce_events``
 ANNOUNCE_STEP = "step"
 STEP_ANNOUNCE_DELAY = 2.5    # seconds: ticking several steps quickly gives one announcement
+SPEAK_COOLDOWN = 3.0         # seconds between two read-aloud requests of the same kid
+SPEAK_OFF = "off"            # voice announcement switched off / not configured
+SPEAK_NIGHT = "night"        # night mode: silent
+SPEAK_BUSY = "busy"          # read-aloud requested again too quickly
 MAX_ANNOUNCE_NAME = 30
 MAX_ANNOUNCE_PLAYERS = 10
 _TTS_RE = re.compile(r"^tts\.[a-z0-9_]{1,100}$")
@@ -5949,20 +6018,28 @@ async def _async_speak(hass: HomeAssistant, tts: str, players: list[str], messag
     return None
 
 
-async def _async_announce(hass: HomeAssistant, kind: str, message: str) -> bool:
-    """Announce ``message`` if switched on for ``kind`` (not at night unless allowed). True when spoken."""
-    if DOMAIN not in hass.data or not message:
-        return False
+def _announce_block(hass: HomeAssistant, kind: str) -> str | None:
+    """Why ``kind`` may not be announced right now (``off`` / ``night``), None when it may."""
+    if DOMAIN not in hass.data:
+        return SPEAK_OFF
     if _trip_today(hass.data[DOMAIN]["data"]):
-        return False    # family trip: the house stays quiet
+        return SPEAK_OFF    # family trip: the house stays quiet
     options = _get_entry(hass).options
     conf = _announce_settings(options)
     if not conf["announce_enabled"] or (kind != ANNOUNCE_STEP and kind not in conf["announce_events"]):
-        return False
+        return SPEAK_OFF
     if not conf["announce_tts"] or not conf["announce_players"]:
-        return False
+        return SPEAK_OFF
     if _announce_quiet_now(options, conf):
+        return SPEAK_NIGHT
+    return None
+
+
+async def _async_announce(hass: HomeAssistant, kind: str, message: str) -> bool:
+    """Announce ``message`` if switched on for ``kind`` (not at night unless allowed). True when spoken."""
+    if not message or _announce_block(hass, kind):
         return False
+    conf = _announce_settings(_get_entry(hass).options)
     return await _async_speak(hass, conf["announce_tts"], conf["announce_players"], message) is None
 
 
@@ -5976,12 +6053,12 @@ def _cancel_step_announce(hass: HomeAssistant, kid_id: str) -> None:
 def _schedule_step_announce(hass: HomeAssistant, kid_id: str, task_id: str) -> None:
     """Announce the next step of a mission shortly after a step was ticked on the kids' tablet.
 
-    Only for kids with the profile aid ``speak_steps``; uses the voice announcement settings
+    Only for kids with the profile aid ``speak_auto``; uses the voice announcement settings
     (master switch, TTS entity, speakers, night mode). A new tick restarts the delay, so a
     kid ticking several steps hears one announcement.
     """
     profile = (_get_entry(hass).options.get("kids") or {}).get(kid_id)
-    if not isinstance(profile, dict) or not kidslib.normalize_aids(profile.get("aids")).get("speak_steps"):
+    if not isinstance(profile, dict) or not kidslib.normalize_aids(profile.get("aids")).get("speak_auto"):
         return
     _cancel_step_announce(hass, kid_id)
 
@@ -8007,6 +8084,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websocket_api.async_register_command(hass, ws_kid_complete_task)
     websocket_api.async_register_command(hass, ws_kid_claim_task)
     websocket_api.async_register_command(hass, ws_kid_toggle_step)
+    websocket_api.async_register_command(hass, ws_kid_speak_step)
     websocket_api.async_register_command(hass, ws_my_toggle_step)
     websocket_api.async_register_command(hass, ws_my_close_bonus)
     websocket_api.async_register_command(hass, ws_wizard_catalog)

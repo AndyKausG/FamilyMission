@@ -68,7 +68,8 @@ const I18N_KIDS = {
     ap_toast_many: "{n} approved", ap_toast_some: "{n} of {m} approved",
     strict_note: "🔍 This week Mom and Dad check everything",
     penalty_line: "−{n} points: {reason}", points_pending: "pending",
-    from_time: "from {t}", countdown: "{n} min to go", pie_left: "{n} min left", window_over: "Over for today - new chance tomorrow",
+    from_time: "from {t}", countdown: "{n} min to go", pie_left: "{n} min left",
+    speak_btn: "Read aloud: what's next?", speak_tile: "What's next?", speak_done: "Now press Done!", speak_night: "Quiet at night", speak_off: "No speaker", window_over: "Over for today - new chance tomorrow",
     until_time: "until {t}",
     err_not_yet: "Not yet! This task starts a little later.",
     err_too_late: "Too late for today. New chance tomorrow!", err_steps_open: "Tick all steps first!", err_together_not_allowed: "This task is a solo job.",
@@ -163,7 +164,8 @@ const I18N_KIDS = {
     ap_toast_many: "{n} freigegeben", ap_toast_some: "{n} von {m} freigegeben",
     strict_note: "🔍 Diese Woche schauen Mama und Papa bei allem drüber",
     penalty_line: "−{n} Punkte: {reason}", points_pending: "offen",
-    from_time: "ab {t}", countdown: "noch {n} min", pie_left: "noch {n} min", window_over: "Heute vorbei – morgen neue Chance",
+    from_time: "ab {t}", countdown: "noch {n} min", pie_left: "noch {n} min",
+    speak_btn: "Vorlesen: Was kommt jetzt?", speak_tile: "Was kommt jetzt?", speak_done: "Jetzt Fertig drücken!", speak_night: "Nachts leise", speak_off: "Kein Lautsprecher", window_over: "Heute vorbei – morgen neue Chance",
     until_time: "bis {t}",
     err_not_yet: "Noch nicht dran! Die Aufgabe startet etwas später.",
     err_too_late: "Heute zu spät. Morgen gibt es eine neue Chance!", err_steps_open: "Hake zuerst alle Schritte ab!", err_together_not_allowed: "Diese Aufgabe machst du allein.",
@@ -541,7 +543,12 @@ class FamilyMissionKids extends HTMLElement {
       if (d && d.dataset && d.dataset.fold) d.open ? this._openFolds.add(d.dataset.fold) : this._openFolds.delete(d.dataset.fold);
     }, true);
     this.shadowRoot.addEventListener('click', (ev) => this._onClick(ev));
-    this.shadowRoot.addEventListener('pointerdown', () => this._onPointerDown());
+    this.shadowRoot.addEventListener('pointerdown', (ev) => { this._onPointerDown(); this._lpStart(ev); });
+    this.shadowRoot.addEventListener('pointerup', () => this._lpCancel());
+    this.shadowRoot.addEventListener('pointercancel', () => this._lpCancel());
+    this.shadowRoot.addEventListener('pointermove', (ev) => this._lpMove(ev));
+    // no context menu / text selection on a long press of a step that is read aloud
+    this.shadowRoot.addEventListener('contextmenu', (ev) => { if (ev.target.closest && ev.target.closest('.sub.speakable')) ev.preventDefault(); });
     this.shadowRoot.addEventListener('change', (ev) => this._onChange(ev));
     // scroll events do not bubble: capture them to keep the "more below" hints current
     this.shadowRoot.addEventListener('scroll', () => this._updateScrollHints(), true);
@@ -1871,7 +1878,12 @@ class FamilyMissionKids extends HTMLElement {
     else if (action === 'pin-delete') this._pinDelete();
     else if (action === 'pin-cancel' && this._helperMode()) this._helperCancel();
     else if (action === 'pin-cancel' || action === 'back') this._goHome();
-    else if (action === 'toggle-sub') this._toggleSubtask(el.dataset.task, parseInt(el.dataset.idx));
+    else if (action === 'toggle-sub') {
+      // the click that ends a long press (read aloud) must not tick the step
+      if (this._lpFired && Date.now() - this._lpFired < 900) { this._lpFired = 0; return; }
+      this._toggleSubtask(el.dataset.task, parseInt(el.dataset.idx));
+    }
+    else if (action === 'speak') this._speakStep(el.dataset.task);
     else if (action === 'care-answer') this._careAnswer(el.dataset.care, el.dataset.status);
     else if (action === 'ap-approve') this._apAct(el.dataset.id, true);
     else if (action === 'ap-not-done') this._apAct(el.dataset.id, false);
@@ -2410,6 +2422,89 @@ class FamilyMissionKids extends HTMLElement {
       this._goHome();
     }
     this._fetchData();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Read aloud (kid aid "speak_steps"): 🔊 button = next step, long press on a step = that step
+  // ---------------------------------------------------------------------------
+
+  /** True when the kid in the current tablet session may have steps read aloud. */
+  _canSpeak(kid) {
+    return !!(kid && kid.aids && kid.aids.speak_steps && this._session && !this._session.mine);
+  }
+
+  _lpStart(ev) {
+    const tile = ev.target && ev.target.closest ? ev.target.closest('.sub.speakable') : null;
+    if (!tile || tile.disabled) return;
+    this._lpCancel();
+    this._lp = { tile, x: ev.clientX, y: ev.clientY, task: tile.dataset.task, idx: parseInt(tile.dataset.idx) };
+    tile.classList.add('pressing');
+    this._lp.timer = setTimeout(() => {
+      const lp = this._lp;
+      this._lp = null;
+      if (!lp) return;
+      lp.tile.classList.remove('pressing');
+      this._lpFired = Date.now();
+      if (navigator.vibrate) { try { navigator.vibrate(30); } catch (err) { /* not supported */ } }
+      this._speakStep(lp.task, lp.idx);
+    }, 550);
+  }
+
+  _lpMove(ev) {
+    if (this._lp && Math.hypot(ev.clientX - this._lp.x, ev.clientY - this._lp.y) > 12) this._lpCancel();
+  }
+
+  _lpCancel() {
+    if (!this._lp) return;
+    clearTimeout(this._lp.timer);
+    this._lp.tile.classList.remove('pressing');
+    this._lp = null;
+  }
+
+  /** Asks the backend to read a step aloud and shows it in a speech bubble (also when it stays silent). */
+  async _speakStep(taskId, index) {
+    if (!this._session || this._session.mine || !taskId) return;
+    const extra = { task_id: taskId };
+    if (Number.isInteger(index)) extra.index = index;
+    try {
+      const res = await this._hass.callWS(this._kidCmd('speak_step', extra));
+      if (!res || res.success === false) { if (res) this._handleActionError(res); return; }
+      clearTimeout(this._speechTimer);
+      this._speech = { taskId, index: Number.isInteger(index) ? index : null, title: res.title || '', allDone: !!res.all_done,
+        spoken: !!res.spoken, reason: res.reason || null, fresh: true };
+      this._speechTimer = setTimeout(() => { this._speech = null; this._render(); }, 4200);
+      this._render();
+    } catch (err) {
+      console.error("FamilyMission Kids: could not read the step aloud", err);
+    }
+  }
+
+  /** First tile of the steps: big speaker button in the kid's colour, "What's next?" read aloud. */
+  _renderSpeakTile(task) {
+    const talking = this._speech && this._speech.taskId === task.id && this._speech.index === null && this._speech.spoken;
+    return `
+      <button class="speak-btn ${talking ? 'talking' : ''}" data-action="speak" data-task="${escKids(task.id)}" aria-label="${escKids(this.localize('speak_btn'))}">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path class="spk" d="M6 18h8l11-9v30l-11-9H6z"/><path class="w1" d="M30 17c3 2 4.5 4.5 4.5 7s-1.5 5-4.5 7"/><path class="w2" d="M35 11.5c5 3.5 7.5 8 7.5 12.5s-2.5 9-7.5 12.5"/></svg>
+        <span class="speak-label">${escKids(this.localize('speak_tile'))}</span>
+      </button>`;
+  }
+
+  /** Speech bubble below the task header: big picture of the step, its name, sound bars while spoken. */
+  _renderSpeech(task) {
+    const sp = this._speech;
+    if (!sp || sp.taskId !== task.id) return '';
+    const pic = sp.allDone ? { emoji: '🏁', title: this.localize('speak_done') } : kidsStepEmoji(sp.title);
+    const fresh = sp.fresh ? 'pop' : '';
+    sp.fresh = false;
+    const hint = sp.reason === 'night' ? `<span class="speech-hint">🌙 ${escKids(this.localize('speak_night'))}</span>`
+      : sp.reason === 'off' ? `<span class="speech-hint">🔇 ${escKids(this.localize('speak_off'))}</span>` : '';
+    const bars = sp.spoken ? '<span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>' : '';
+    return `
+      <div class="speech ${fresh} ${sp.index === null ? 'from-btn' : ''}" role="status" aria-live="polite">
+        <span class="speech-pic" aria-hidden="true">${escKids(pic.emoji || '🔊')}</span>
+        <span class="speech-text">${escKids(pic.title)}</span>
+        ${bars}${hint}
+      </div>`;
   }
 
   /** Toggles a subtask (same mechanism as the main card: edit_task with the subtasks list). */
@@ -3336,7 +3431,25 @@ class FamilyMissionKids extends HTMLElement {
       if (dots) dots.classList.add('shake');
     }
     this._updateScrollHints();
+    if (this._speech) this._placeSpeechTail(app);
     if (this._fetched && this._isMine() && this._session) this._maybeShowPraise();
+  }
+
+  /** Points the tail of the speech bubble at the speaker button (or the step that is read). */
+  _placeSpeechTail(app) {
+    const bubble = app.querySelector('.speech');
+    if (!bubble) return;
+    const card = bubble.closest('.task');
+    const target = card && (card.querySelector('.sub.talking') || card.querySelector('.speak-btn'));
+    if (!target) return;
+    // layout offsets (getBoundingClientRect would include the pop-in scale of the bubble)
+    const pos = (el) => { let x = 0, y = 0; for (let e = el; e && e !== card; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return { x, y }; };
+    const b = pos(bubble);
+    const t = pos(target);
+    if (!bubble.offsetWidth || !target.offsetWidth) return;
+    const x = Math.max(22, Math.min(bubble.offsetWidth - 22, t.x + target.offsetWidth / 2 - b.x));
+    bubble.style.setProperty('--tail-x', `${Math.round(x)}px`);
+    if (t.y > b.y) bubble.classList.add('tail-down');
   }
 
   /** Marks columns that have more content below (shows a fade + bouncing arrow). */
@@ -3850,16 +3963,18 @@ class FamilyMissionKids extends HTMLElement {
     const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length;
     const aids = (kid && kid.aids) || {};
     const pic = !!aids.picture_steps;
+    const speak = this._canSpeak(kid) && mode !== 'window' && mode !== 'locked' && (hasSubs || careSteps.length);
     let stepNo = 0;
     const subs = mode !== 'window' && (hasSubs || careSteps.length)
-      ? `<div class="subs ${pic ? 'pic' : ''}">${this._missionSteps(hasSubs ? task.subtasks : [], careSteps).filter(item => item.care || !this._schoolFree(task, kid, item.sub)).map(item => {
+      ? `<div class="subs ${pic ? 'pic' : ''}">${speak ? this._renderSpeakTile(task) : ''}${this._missionSteps(hasSubs ? task.subtasks : [], careSteps).filter(item => item.care || !this._schoolFree(task, kid, item.sub)).map(item => {
           stepNo++;
           if (item.care) return this._renderCareStep(item.care, mode === 'locked');
           const dis = mode === 'locked' || mode === 'window' ? 'disabled' : '';
+          const talk = speak ? `speakable ${this._speech && this._speech.taskId === task.id && this._speech.index === item.index ? 'talking' : ''}` : '';
           if (pic) {
             const p = kidsStepEmoji(item.sub.title);
             return `
-          <button class="sub pic ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
+          <button class="sub pic ${talk} ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
                   ${dis} aria-pressed="${item.sub.done ? 'true' : 'false'}" aria-label="${escKids(p.title)}">
             <span class="pic-emoji ${p.emoji ? '' : 'num'}" aria-hidden="true">${escKids(p.emoji || String(stepNo))}</span>
             <span class="sub-title">${escKids(p.title)}</span>
@@ -3867,7 +3982,7 @@ class FamilyMissionKids extends HTMLElement {
           </button>`;
           }
           return `
-          <button class="sub ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
+          <button class="sub ${talk} ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
                   ${dis} aria-pressed="${item.sub.done ? 'true' : 'false'}">
             <span class="box">${item.sub.done ? '✓' : ''}</span><span class="sub-title">${escKids(item.sub.title)}</span>
           </button>`;
@@ -3923,6 +4038,7 @@ class FamilyMissionKids extends HTMLElement {
           </div>
           <div class="t-action">${action}</div>
         </div>
+        ${speak ? this._renderSpeech(task) : ''}
         ${subs}
         ${this._isParent() ? this._renderParentRow(task, kid) : ''}
       </article>`;
@@ -4112,6 +4228,46 @@ class FamilyMissionKids extends HTMLElement {
       .t-icon.pie { border-radius: 50%; background: conic-gradient(var(--pie-c) var(--pie-deg), color-mix(in srgb, var(--k-sub) 22%, var(--k-card)) 0); padding: 7px; box-sizing: border-box; }
       .t-icon.pie .pie-in { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--kc) 28%, var(--k-card)); }
       .pie-left { color: var(--pie-c); font-weight: 800; }
+      /* read aloud: first step tile in the kid's colour, sound rings while speaking */
+      .speak-btn { position: relative; grid-column: 1 / -1; min-height: 64px; border: none; border-radius: 22px; padding: 8px 16px; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer;
+        color: #fff; font: inherit; font-size: 22px; font-weight: 800; background: linear-gradient(160deg, color-mix(in srgb, var(--kc) 60%, #fff), var(--kc));
+        box-shadow: 0 5px 0 color-mix(in srgb, var(--kc) 55%, #000), 0 8px 16px rgba(0,0,0,0.16); transition: transform 0.12s ease, box-shadow 0.12s ease;
+        touch-action: manipulation; -webkit-tap-highlight-color: transparent; text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+      .subs.pic .speak-btn { grid-column: auto; flex-direction: column; min-height: 150px; font-size: 18px; gap: 6px; }
+      .speak-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 color-mix(in srgb, var(--kc) 55%, #000), 0 2px 6px rgba(0,0,0,0.16); }
+      .speak-btn svg { width: 40px; height: 40px; flex: none; overflow: visible; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.25)); }
+      .subs.pic .speak-btn svg { width: 64px; height: 64px; }
+      .speak-btn .spk { fill: #fff; }
+      .speak-btn .w1, .speak-btn .w2 { fill: none; stroke: #fff; stroke-width: 4; stroke-linecap: round; }
+      .speak-btn::before, .speak-btn::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 4px solid var(--kc); opacity: 0; pointer-events: none; }
+      .speak-btn.talking::before { animation: spk-ring 1.2s ease-out infinite; }
+      .speak-btn.talking::after { animation: spk-ring 1.2s ease-out 0.6s infinite; }
+      .speak-btn.talking .w1 { animation: spk-wave 0.6s ease-in-out infinite alternate; }
+      .speak-btn.talking .w2 { animation: spk-wave 0.6s ease-in-out 0.3s infinite alternate; }
+      @keyframes spk-ring { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.12, 1.25); opacity: 0; } }
+      @keyframes spk-wave { from { opacity: 0.25; } to { opacity: 1; } }
+      /* speech bubble: what is read aloud, with a big picture (also when the speaker stays silent) */
+      .speech { position: relative; display: flex; align-items: center; gap: 14px; padding: 10px 18px; margin: 2px 0 0 auto; max-width: 100%; width: fit-content;
+        background: var(--k-card); border: 4px solid var(--kc); border-radius: 26px; box-shadow: 0 6px 16px rgba(0,0,0,0.14); }
+      .speech::before { content: ""; position: absolute; top: -15px; left: calc(var(--tail-x, 50%) - 13px); width: 22px; height: 22px; background: var(--k-card);
+        border-left: 4px solid var(--kc); border-top: 4px solid var(--kc); transform: rotate(45deg); border-radius: 4px 0 0 0; }
+      .speech.tail-down::before { top: auto; bottom: -15px; transform: rotate(225deg); }
+      .speech:not(.from-btn) { margin: 2px auto 0; }
+      .speech.pop { animation: speech-pop 0.35s cubic-bezier(.2,1.4,.4,1); transform-origin: 80% 0; }
+      @keyframes speech-pop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+      .speech-pic { font-size: 56px; line-height: 1; }
+      .speech-text { font-size: 26px; font-weight: 800; overflow-wrap: anywhere; }
+      .speech-hint { font-size: 16px; font-weight: 700; color: var(--k-sub); white-space: nowrap; }
+      .eq { display: inline-flex; align-items: flex-end; gap: 4px; height: 28px; }
+      .eq i { width: 6px; height: 100%; border-radius: 3px; background: var(--kc); transform-origin: bottom; animation: eq 0.8s ease-in-out infinite; }
+      .eq i:nth-child(2) { animation-delay: -0.2s; } .eq i:nth-child(3) { animation-delay: -0.45s; } .eq i:nth-child(4) { animation-delay: -0.65s; }
+      @keyframes eq { 0%, 100% { transform: scaleY(0.25); } 50% { transform: scaleY(1); } }
+      /* long press on a step: a bar fills the tile, then the tile glows while it is read */
+      .sub.speakable { position: relative; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+      .sub.speakable::after { content: ""; position: absolute; left: 0; bottom: 0; height: 6px; width: 100%; background: var(--kc); transform: scaleX(0); transform-origin: left; pointer-events: none; }
+      .sub.speakable.pressing::after { transform: scaleX(1); transition: transform 0.55s linear; }
+      .sub.speakable.talking { border-color: var(--kc); box-shadow: 0 0 0 4px color-mix(in srgb, var(--kc) 35%, transparent); animation: tile-talk 0.9s ease-in-out 3; }
+      @keyframes tile-talk { 50% { transform: scale(1.04); } }
       .subs.pic { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
       .sub.pic { position: relative; flex-direction: column; justify-content: center; min-height: 150px; padding: 10px 8px 12px; gap: 6px; text-align: center; font-size: 18px; }
       .sub.pic .pic-emoji { font-size: 64px; line-height: 1; }
@@ -4423,6 +4579,15 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .sub.pic .pic-emoji.num { width: 52px; height: 52px; font-size: 28px; }
       :host([narrow]) .sub.pic .box { width: 28px; height: 28px; font-size: 18px; }
       :host([narrow]) .t-main { order: 1; min-width: 0; }
+      :host([narrow]) .speak-btn { min-height: 48px; font-size: 17px; border-radius: 16px; gap: 8px; }
+      :host([narrow]) .subs.pic .speak-btn { min-height: 110px; font-size: 14px; }
+      :host([narrow]) .speak-btn svg { width: 30px; height: 30px; }
+      :host([narrow]) .subs.pic .speak-btn svg { width: 46px; height: 46px; }
+      :host([narrow]) .speech { order: 2; grid-column: 1 / -1; padding: 8px 14px; gap: 10px; border-width: 3px; }
+      :host([narrow]) .speech::before { top: -12px; left: calc(var(--tail-x, 50%) - 11px); width: 18px; height: 18px; border-width: 3px; }
+      :host([narrow]) .speech.tail-down::before { top: auto; bottom: -12px; }
+      :host([narrow]) .speech-pic { font-size: 40px; }
+      :host([narrow]) .speech-text { font-size: 18px; }
       :host([narrow]) .subs { order: 2; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); gap: 6px; }
       :host([narrow]) .t-action { order: 3; grid-column: 1 / -1; }
       :host([narrow]) .t-action .btn { width: 100%; min-height: 52px; font-size: 21px; border-radius: 26px; }
@@ -4597,6 +4762,7 @@ class FamilyMissionKids extends HTMLElement {
         .sb-z .sb-z3 { transform: translate(28px, -44px); }
         #fx .sleep-layer[data-phase] .sb-eyes-half { display: none; }
         .tile, .btn, .key, .back, .sub { transition: none; }
+        .speak-btn::before, .speak-btn::after, .speak-btn .w1, .speak-btn .w2, .eq i, .speech.pop, .sub.speakable.talking { animation: none; }
         .refresh-btn.spin svg { animation: none; }
       }
     `;

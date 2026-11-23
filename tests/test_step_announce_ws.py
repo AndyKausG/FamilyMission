@@ -1,4 +1,4 @@
-"""FamilyMission 2.15: aids for young kids in the profile and the spoken "next step" on the kids' tablet."""
+"""FamilyMission 2.15: aids for young kids in the profile, read aloud on demand and the automatic "next step"."""
 
 from datetime import datetime, timedelta, timezone
 
@@ -101,7 +101,7 @@ async def test_profile_aids_validated_and_public(hass, hass_ws_client, freezer):
 
 
 async def test_next_step_is_spoken_once_after_quick_ticks(hass, hass_ws_client, freezer):
-    ws, speak, tid = await _setup(hass, hass_ws_client, freezer, aids={"speak_steps": True})
+    ws, speak, tid = await _setup(hass, hass_ws_client, freezer, aids={"speak_auto": True})
     await _tick(hass, ws, tid, 0)
     await _wait(hass, freezer, 1)
     assert speak == []                                  # still inside the delay
@@ -116,7 +116,7 @@ async def test_next_step_is_spoken_once_after_quick_ticks(hass, hass_ws_client, 
 
 
 async def test_untick_and_completion_stay_silent(hass, hass_ws_client, freezer):
-    ws, speak, tid = await _setup(hass, hass_ws_client, freezer, aids={"speak_steps": True})
+    ws, speak, tid = await _setup(hass, hass_ws_client, freezer, aids={"speak_auto": True})
     await _tick(hass, ws, tid, 0, done=False)
     await _wait(hass, freezer)
     assert speak == []
@@ -137,15 +137,71 @@ async def test_no_announcement_without_aid_or_voice_or_at_night(hass, hass_ws_cl
 
 async def test_no_announcement_when_voice_switched_off(hass, hass_ws_client, freezer):
     ws, speak, tid = await _setup(hass, hass_ws_client, freezer, options={"announce_enabled": False},
-                                  aids={"speak_steps": True})
+                                  aids={"speak_auto": True})
     await _tick(hass, ws, tid, 0)
     await _wait(hass, freezer)
     assert speak == []
 
 
 async def test_no_announcement_at_night(hass, hass_ws_client, freezer):
-    ws, speak, tid = await _setup(hass, hass_ws_client, freezer, aids={"speak_steps": True})
+    ws, speak, tid = await _setup(hass, hass_ws_client, freezer, aids={"speak_auto": True})
     freezer.move_to(NIGHT)
     await _tick(hass, ws, tid, 0)
     await _wait(hass, freezer)
+    assert speak == []
+
+
+async def _speak(ws, task_id, **kw):
+    res = await _call(ws, "family_mission/kid_speak_step", task_id=task_id, kid_id=ANNA, pin="1234", **kw)
+    assert res["success"], res
+    return res["result"]
+
+
+async def test_read_aloud_next_step_and_single_step(hass, hass_ws_client, freezer):
+    ws, speak, tid = await _setup(hass, hass_ws_client, freezer, aids={"speak_steps": True})
+    await _tick(hass, ws, tid, 0)
+    await _wait(hass, freezer)
+    assert speak == []                                  # no automatic announcement without speak_auto
+    res = await _speak(ws, tid)
+    await hass.async_block_till_done()
+    assert res == {"success": True, "spoken": True, "reason": None, "text": "Anna, Jetzt: Zähne putzen.",
+                   "title": "Zähne putzen", "all_done": False}
+    assert speak[-1].data["message"] == "Anna, Jetzt: Zähne putzen."
+    # a second request right away: shown on the tablet, but not spoken again
+    res = await _speak(ws, tid, index=0)
+    assert res["spoken"] is False and res["reason"] == "busy" and res["title"] == "🛏️ Bett machen"
+    await _wait(hass, freezer)
+    freezer.tick(timedelta(seconds=4))
+    res = await _speak(ws, tid, index=0)
+    await hass.async_block_till_done()
+    assert res["spoken"] is True and res["text"] == "Bett machen."
+    assert speak[-1].data["message"] == "Bett machen."
+    assert len(speak) == 2
+
+
+async def test_read_aloud_needs_aid_and_valid_step(hass, hass_ws_client, freezer):
+    ws, _speak_calls, tid = await _setup(hass, hass_ws_client, freezer)
+    res = await _speak(ws, tid)
+    assert res == {"success": False, "error": "not_eligible"}
+    await _call(ws, "family_mission/set_kid_profile", participant_id=ANNA, avatar="🦊", color="#ff8800",
+                birth_year=2020, aids={"speak_steps": True})
+    await hass.async_block_till_done()
+    assert (await _speak(ws, tid, index=7))["error"] == "not_found"
+    assert (await _speak(ws, tid, care_id="nope"))["error"] == "not_found"
+    res = await _call(ws, "family_mission/kid_speak_step", task_id=tid, kid_id=ANNA, pin="0000")
+    assert res["result"]["success"] is False             # wrong PIN
+
+
+async def test_read_aloud_reports_night_and_voice_off(hass, hass_ws_client, freezer):
+    ws, speak, tid = await _setup(hass, hass_ws_client, freezer, options={"announce_tts": ""},
+                                  aids={"speak_steps": True})
+    res = await _speak(ws, tid)
+    assert res["spoken"] is False and res["reason"] == "off" and res["title"] == "🛏️ Bett machen"
+    entry = hass.config_entries.async_entries("family_mission")[0]
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "announce_tts": "tts.piper"})
+    await hass.async_block_till_done()
+    freezer.move_to(NIGHT)
+    res = await _speak(ws, tid)
+    assert res["spoken"] is False and res["reason"] == "night"
+    await hass.async_block_till_done()
     assert speak == []

@@ -971,6 +971,13 @@ def test_next_open_step_follows_display_order():
     assert kids.next_open_step([], [], "") == (None, False)
 
 
+def test_speak_auto_is_a_known_aid_and_readout_text():
+    assert kids.normalize_aids({"speak_auto": True, "speak_steps": True}) == {"speak_steps": True, "speak_auto": True}
+    assert kids.step_readout("🪥 Zähne putzen") == "Zähne putzen."
+    assert kids.step_readout("Bett machen!") == "Bett machen!"
+    assert kids.step_readout("💊") == ""
+
+
 def test_step_announcement_texts():
     assert kids.step_announcement("Juri", "🪥 Zähne putzen", "de") == "Juri, Jetzt: Zähne putzen."
     assert kids.step_announcement("Juri", None, "de") == "Juri, Alle Schritte geschafft! Jetzt auf Fertig drücken."

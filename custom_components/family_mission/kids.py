@@ -731,7 +731,8 @@ def normalize_sample_rate(value: Any) -> int:
 
 
 # 2.15: aids for young kids, per kid profile (all off by default)
-KID_AIDS = ("time_pie", "picture_steps", "speak_steps")
+# speak_steps: read aloud on demand (🔊 button / long press on a step); speak_auto: after every tick
+KID_AIDS = ("time_pie", "picture_steps", "speak_steps", "speak_auto")
 
 
 def normalize_aids(value: Any) -> dict:
@@ -773,6 +774,12 @@ def next_open_step(
         if not step.get("done"):
             return step.get("title") or None, False
     return None, has_steps
+
+
+def step_readout(title: Any) -> str:
+    """Spoken text of one step read aloud on demand (long press on the step)."""
+    step = spoken_step(title)
+    return f"{step}." if step and step[-1] not in ".!?" else step
 
 
 def step_announcement(kid_name: str, title: str | None, lang: str) -> str:

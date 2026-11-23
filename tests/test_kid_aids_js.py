@@ -17,10 +17,11 @@ def _block(start_marker, end_marker):
 
 
 def test_i18n_and_settings_keys():
-    assert JS.count('pie_left: "') == 2
+    for key in ("pie_left", "speak_btn", "speak_tile", "speak_done", "speak_night", "speak_off"):
+        assert JS.count(f'{key}: "') == 2, key
     settings = (Path(__file__).resolve().parents[1] / "custom_components" / "family_mission" / "www"
                 / "family-mission-settings.js").read_text(encoding="utf-8")
-    for key in ("kid_aids", "kid_aid_time_pie", "kid_aid_picture_steps", "kid_aid_speak_steps", "kid_aid_speak_hint"):
+    for key in ("kid_aids", "kid_aid_time_pie", "kid_aid_picture_steps", "kid_aid_speak_steps", "kid_aid_speak_auto", "kid_aid_speak_hint"):
         assert settings.count(f'{key}: "') == 2, key
 
 

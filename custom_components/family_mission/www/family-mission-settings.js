@@ -56,8 +56,9 @@ const I18N_SETTINGS = {
     kid_sample_hint: "Share of completions that a parent checks at random before points are awarded (0 = none).",
     kid_aids: "Aids for younger kids (wall tablet)", kid_aid_time_pie: "Time pie: show how much time is left for a task",
     kid_aid_picture_steps: "Picture mode: steps as big pictures (for kids who cannot read yet)",
-    kid_aid_speak_steps: "Announce the next step by voice after each tick",
-    kid_aid_speak_hint: "Needs the voice announcement (tab “Notifications”: switched on, TTS and speakers). Silent at night.",
+    kid_aid_speak_steps: "Read aloud: 🔊 button (next step) and long press on a step",
+    kid_aid_speak_auto: "Also announce the next step automatically after every tick",
+    kid_aid_speak_hint: "Reading aloud uses the voice announcement (tab “Notifications”: switched on, TTS and speakers). Silent at night.",
     care_title: "💊 Medication", care_hint: "A daily tablet, drops or an inhaler: shown to the kid as a step of the morning / evening mission (or at a fixed time). Never any points; \"not today\" counts as answered.",
     care_add: "+ Add medication", care_remove: "Remove", care_label: "Name", care_emoji: "Emoji", care_anchor: "Shown with",
     care_anchor_morning: "Morning mission", care_anchor_evening: "Evening mission", care_anchor_time: "Fixed time", care_time: "At",
@@ -178,8 +179,9 @@ claim_minutes: "Bonus reservation (minutes)",
     kid_sample_hint: "Anteil der Erledigungen, die Mama oder Papa zufällig prüfen, bevor Punkte gutgeschrieben werden (0 = keine).",
     kid_aids: "Hilfen für jüngere Kinder (Wand-Tablet)", kid_aid_time_pie: "Zeit-Torte: zeigt, wie viel Zeit für eine Aufgabe bleibt",
     kid_aid_picture_steps: "Bildmodus: Schritte als große Bilder (für Kinder, die noch nicht lesen)",
-    kid_aid_speak_steps: "Nächsten Schritt nach jedem Abhaken ansagen",
-    kid_aid_speak_hint: "Braucht die Sprachausgabe (Reiter „Benachrichtigungen“: eingeschaltet, TTS und Lautsprecher). Nachts still.",
+    kid_aid_speak_steps: "Vorlesen: 🔊-Knopf (nächster Schritt) und langes Drücken auf einen Schritt",
+    kid_aid_speak_auto: "Zusätzlich nach jedem Abhaken den nächsten Schritt automatisch ansagen",
+    kid_aid_speak_hint: "Vorlesen nutzt die Sprachausgabe (Reiter „Benachrichtigungen“: eingeschaltet, TTS und Lautsprecher). Nachts still.",
     care_title: "💊 Medikamente", care_hint: "Eine Tablette, Tropfen oder ein Inhalator pro Tag: erscheint beim Kind als Schritt der Morgen- / Abend-Mission (oder zu einer festen Uhrzeit). Nie Punkte; \"Heute nicht\" zählt als beantwortet.",
     care_add: "+ Medikament hinzufügen", care_remove: "Entfernen", care_label: "Name", care_emoji: "Emoji", care_anchor: "Erscheint bei",
     care_anchor_morning: "Morgen-Mission", care_anchor_evening: "Abend-Mission", care_anchor_time: "Feste Uhrzeit", care_time: "Um",
@@ -653,7 +655,7 @@ class FamilyMissionSettings extends HTMLElement {
         const rate = Math.max(0, Math.min(100, parseInt(d.approval_sample_rate) || 0));
         const old = stored[uid];
         const careChanged = JSON.stringify(d.care || []) !== JSON.stringify((old && old.care) || []);
-        const aidKeys = ['time_pie', 'picture_steps', 'speak_steps'];
+        const aidKeys = ['time_pie', 'picture_steps', 'speak_steps', 'speak_auto'];
         const aids = {};
         aidKeys.forEach(a => { if (d.aids && d.aids[a]) aids[a] = true; });
         const aidsChanged = aidKeys.some(a => !!aids[a] !== !!(old && old.aids && old.aids[a]));
@@ -1273,6 +1275,7 @@ class FamilyMissionSettings extends HTMLElement {
         .kid-hint { font-size: 11px; opacity: 0.8; }
         .kid-aids { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
         .kid-aids-title { font-size: 13px; font-weight: 600; }
+        .kid-aid-sub { margin-left: 28px; }
         .kid-field input[type="date"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; box-sizing: border-box; }
         .kid-emojis { display: flex; flex-wrap: wrap; gap: 4px; }
         .care-editor { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--divider-color); padding-top: 8px; }
@@ -1563,8 +1566,8 @@ class FamilyMissionSettings extends HTMLElement {
             </label>
             <div class="kid-aids">
               <div class="kid-aids-title">${this.localize('kid_aids')}</div>
-              ${['time_pie', 'picture_steps', 'speak_steps'].map(a => `
-                <ha-formfield label="${esc(this.localize('kid_aid_' + a))}">
+              ${['time_pie', 'picture_steps', 'speak_steps', 'speak_auto'].map(a => `
+                <ha-formfield class="${a === 'speak_auto' ? 'kid-aid-sub' : ''}" label="${esc(this.localize('kid_aid_' + a))}">
                   <ha-checkbox class="kid-aid" data-uid="${esc(uid)}" data-aid="${a}" ${d.aids && d.aids[a] ? 'checked' : ''} ${dis}></ha-checkbox>
                 </ha-formfield>`).join('')}
               <span class="kid-hint">${this.localize('kid_aid_speak_hint')}</span>
