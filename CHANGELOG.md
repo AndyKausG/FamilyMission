@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.0] - 2026-11-23
+
+- **Picture mode: a hand-picked picture for every quick-start step.** All 87 catalog steps have a fixed emoji (`kids_catalog.STEP_EMOJI`), e.g. "Arbeitsplatz frei" 🗂️, "Hausaufgabenheft abhaken" 📒, "Mama/Papa kurz zeigen" 👀, "Boden frei" 🧸. Looked up by title (German or English) via the new `get_data.step_emoji`, so existing tasks show them right away, no wizard run needed.
+- **Own picture per step.** Task editor: a picture box left of each step opens a picker grouped by theme (bathroom, clothes, food, school & play, tidying up, pets & garden, other); "Automatisch" goes back to the automatic picture. Stored as `emoji` on the step (validated in `add_task` / `edit_task` / templates, at most 16 characters), it wins over everything else and survives a wizard re-run (no customization).
+- **Better automatic pictures for own steps.** "Schreibtisch" is no longer matched as "Tisch" (🍽️); new keywords for desk, floor, shelf and "show". "Schlafanzug" now shows 🌙.
+- README, parents' guides (de/en/fr) and in-app help updated. Tests: `tests/test_step_emoji_ws.py`, picture tests in `tests/test_kids_catalog.py`, `tests/test_kids_helpers.py`, `tests/test_kid_aids_js.py`.
+
 ## [2.15.1] - 2026-11-23
 
 - **Fix: checkboxes and switches without text.** Newer Home Assistant versions no longer show the label of `ha-formfield`, so options like "Hilfen für jüngere Kinder", "Kind aktivieren", "PIN löschen", the medication options, the export choices and the card editors' options appeared as bare boxes. All FamilyMission cards now draw the text themselves; a tap on the text toggles the box as before.

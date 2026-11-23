@@ -293,27 +293,33 @@ function apWhenKids(timestamp, lang, now = new Date()) {
 }
 
 /**
- * Picture mode (2.15): emoji of a mission step for kids who cannot read yet.
- * A leading emoji in the title wins ("🪥 Zähne putzen"), else a keyword list (de / en).
- * Returns { emoji, title } with the title stripped of the leading emoji; emoji '' = none found.
+ * Picture mode (2.15, 2.16): emoji of a mission step for kids who cannot read yet. Order:
+ * the picture chosen for the step in the task editor (`step.emoji`), a leading emoji in the title
+ * ("🪥 Zähne putzen"), the picture of the catalog step with that title (`map`, from get_data.step_emoji),
+ * a keyword list (de / en) for own steps. Returns { emoji, title } with the title stripped of a leading
+ * emoji; emoji '' = none found (the tile shows the step number).
  */
 const KIDS_STEP_EMOJI = [
-  [/schlafanzug|pyjama|pajama/, '👚'], [/zähne|zahn|teeth|tooth/, '🪥'], [/toilette|\bklo\b|pipi|toilet|potty/, '🚽'],
-  [/hände|hands|gesicht|\bface\b|wasch|wash/, '🧼'], [/dusch|baden|bad\b|shower|bath/, '🛁'], [/haare|kämm|\bhair\b|comb/, '💇'],
-  [/frühstück|breakfast|essen|\beat\b|lunch\b(?!.*box)|dinner|abendbrot/, '🥣'], [/bett|\bbed\b/, '🛏️'],
-  [/anzieh|kleid|klamotten|dress|clothes|get dressed/, '👕'], [/schuhe|shoes/, '👟'], [/jacke|mantel|jacket|coat/, '🧥'],
+  [/schlafanzug|pyjama|pajama/, '🌙'], [/zähne|zahn|teeth|tooth/, '🪥'], [/toilette|\bklo\b|pipi|toilet|potty/, '🚽'],
+  [/hände|hands|gesicht|\bface\b|wasch|wash/, '🧼'], [/dusch|baden|\bbad\b|shower|bath/, '🛁'], [/haare|kämm|\bhair\b|comb/, '💇'],
+  [/frühstück|breakfast|mittagessen|abendessen|abendbrot|dinner|\beat\b|essen\b/, '🥣'], [/bett|\bbed\b/, '🛏️'],
+  [/schreibtisch|arbeitsplatz|\bdesk\b/, '🗂️'], [/zeigen|\bshow\b/, '👀'],
+  [/anzieh|kleid|klamotten|dress|clothes/, '👕'], [/schuhe|shoes/, '👟'], [/jacke|mantel|jacket|coat/, '🧥'],
   [/ranzen|schultasche|school ?bag|backpack|rucksack/, '🎒'], [/brotdose|lunch ?box/, '🍱'],
-  [/trinkflasche|water bottle|trinken|\bdrink/, '🥤'], [/hausaufgabe|homework|lernzeit/, '✏️'], [/lesen|buch|\bread|book/, '📖'],
+  [/trinkflasche|water bottle|trinken|\bdrink/, '🥤'], [/hausaufgabe|homework|lernzeit/, '✏️'], [/lesen|buch|bücher|\bread|book/, '📖'],
   [/medikament|medizin|tablette|medicine|pill/, '💊'], [/sonnencreme|sunscreen/, '🧴'],
-  [/tisch|table|geschirr|dishes|spülmaschine|dishwasher/, '🍽️'], [/wäsche|laundry/, '🧺'], [/müll|trash|bins|garbage/, '🗑️'],
-  [/füttern|haustier|\bfeed|\bpet\b/, '🐾'], [/gießen|pflanze|plants/, '🪴'], [/licht|light/, '💡'],
-  [/aufräum|spielzeug|tidy|toys|kuscheltier|teddy/, '🧸'], [/zimmer|room/, '🏠']
+  [/(^|\s)tisch|\btable\b/, '🍽️'], [/geschirr|dishes|spülmaschine|dishwasher/, '🍽️'], [/wäsche|laundry/, '🧺'],
+  [/müll|trash|bins|garbage/, '🗑️'], [/füttern|haustier|\bfeed|\bpet\b/, '🐾'], [/gießen|pflanze|plants/, '🪴'], [/licht|light/, '💡'],
+  [/boden|\bfloor\b/, '🧸'], [/regal|shelf/, '📚'], [/aufräum|spielzeug|tidy|toys|kuscheltier|teddy/, '📦'], [/zimmer|room/, '🏠']
 ];
-function kidsStepEmoji(title) {
+function kidsStepEmoji(title, opts = {}) {
   const text = String(title || '').trim();
   const m = /^(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*)\s*/u.exec(text);
-  if (m) return { emoji: m[1], title: text.slice(m[0].length) || text };
+  const clean = m ? (text.slice(m[0].length) || text) : text;
+  if (opts.emoji) return { emoji: String(opts.emoji), title: clean };
+  if (m) return { emoji: m[1], title: clean };
   const low = text.toLowerCase();
+  if (opts.map && opts.map[low]) return { emoji: opts.map[low], title: text };
   const hit = KIDS_STEP_EMOJI.find(([re]) => re.test(low));
   return { emoji: hit ? hit[1] : '', title: text };
 }
@@ -837,6 +843,7 @@ class FamilyMissionKids extends HTMLElement {
     return this._hass.callWS({ type: 'family_mission/get_data' }).then((data) => {
       this.tasks = data.tasks || {};
       this.careToday = data.care_today || {};
+      this.stepEmoji = (data.step_emoji && typeof data.step_emoji === 'object') ? data.step_emoji : {};
       this.absences = Array.isArray(data.absences) ? data.absences : [];
       this.points = data.points || {};
       this.settings = data.settings || {};
@@ -2493,7 +2500,10 @@ class FamilyMissionKids extends HTMLElement {
   _renderSpeech(task) {
     const sp = this._speech;
     if (!sp || sp.taskId !== task.id) return '';
-    const pic = sp.allDone ? { emoji: '🏁', title: this.localize('speak_done') } : kidsStepEmoji(sp.title);
+    const subs = (this.tasks[sp.taskId] || {}).subtasks || [];
+    const step = sp.index !== null ? subs[sp.index] : subs.find(st => st && st.title === sp.title);
+    const pic = sp.allDone ? { emoji: '🏁', title: this.localize('speak_done') }
+      : kidsStepEmoji(sp.title, { emoji: step && step.emoji, map: this.stepEmoji });
     const fresh = sp.fresh ? 'pop' : '';
     sp.fresh = false;
     const hint = sp.reason === 'night' ? `<span class="speech-hint">🌙 ${escKids(this.localize('speak_night'))}</span>`
@@ -3972,7 +3982,7 @@ class FamilyMissionKids extends HTMLElement {
           const dis = mode === 'locked' || mode === 'window' ? 'disabled' : '';
           const talk = speak ? `speakable ${this._speech && this._speech.taskId === task.id && this._speech.index === item.index ? 'talking' : ''}` : '';
           if (pic) {
-            const p = kidsStepEmoji(item.sub.title);
+            const p = kidsStepEmoji(item.sub.title, { emoji: item.sub.emoji, map: this.stepEmoji });
             return `
           <button class="sub pic ${talk} ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
                   ${dis} aria-pressed="${item.sub.done ? 'true' : 'false'}" aria-label="${escKids(p.title)}">

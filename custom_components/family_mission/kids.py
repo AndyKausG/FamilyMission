@@ -742,6 +742,21 @@ def normalize_aids(value: Any) -> dict:
     return {key: True for key in KID_AIDS if value.get(key) is True}
 
 
+MAX_STEP_EMOJI = 16
+
+
+def clean_step_emoji(subtasks: Any) -> Any:
+    """Validate the optional ``emoji`` of each step in place (2.16): a short non-empty string, else dropped."""
+    for st in subtasks if isinstance(subtasks, list) else ():
+        if isinstance(st, dict) and "emoji" in st:
+            emoji = st.get("emoji")
+            if isinstance(emoji, str) and emoji.strip() and len(emoji.strip()) <= MAX_STEP_EMOJI and "<" not in emoji:
+                st["emoji"] = emoji.strip()
+            else:
+                st.pop("emoji", None)
+    return subtasks
+
+
 def spoken_step(title: Any) -> str:
     """A step title for text-to-speech: without leading / trailing emoji and symbols."""
     text = str(title or "").strip()

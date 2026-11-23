@@ -982,3 +982,12 @@ def test_step_announcement_texts():
     assert kids.step_announcement("Juri", "🪥 Zähne putzen", "de") == "Juri, Jetzt: Zähne putzen."
     assert kids.step_announcement("Juri", None, "de") == "Juri, Alle Schritte geschafft! Jetzt auf Fertig drücken."
     assert kids.step_announcement("", "Brush teeth", "en") == "Next: Brush teeth."
+
+
+def test_clean_step_emoji():
+    steps = [{"title": "a", "emoji": " 🪥 "}, {"title": "b", "emoji": ""}, {"title": "c", "emoji": 5},
+             {"title": "d", "emoji": "x" * 17}, {"title": "e", "emoji": "<img>"}, {"title": "f"}, "g"]
+    assert kids.clean_step_emoji(steps) is steps
+    assert steps[0]["emoji"] == "🪥"
+    assert all("emoji" not in st for st in steps[1:6])
+    assert kids.clean_step_emoji(None) is None
