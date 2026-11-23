@@ -758,12 +758,12 @@ class FamilyMissionStatsEditor extends HTMLElement {
            <option value="burndown" ${this._config.report_type === 'burndown' ? 'selected' : ''}>${this.localize('report_burndown')}</option>
         </select>
         
-        <ha-formfield label="${this.localize('show_user_select_lbl')}">
-          <ha-checkbox ${this._config.show_user_select !== false ? 'checked' : ''} configValue="show_user_select"></ha-checkbox>
-        </ha-formfield>
+        <div class="fm-field">
+          <ha-checkbox ${this._config.show_user_select !== false ? 'checked' : ''} configValue="show_user_select"></ha-checkbox><span class="fm-field-lbl">${this.localize('show_user_select_lbl')}</span></div>
 
       </div>
       <style>
+        .fm-field { display: flex; align-items: center; gap: 4px; min-height: 40px; } .fm-field-lbl { cursor: pointer; -webkit-user-select: none; user-select: none; }
         .card-config ha-input {
           display: block;
           margin-bottom: 8px;
@@ -823,3 +823,19 @@ class FamilyMissionStatsEditor extends HTMLElement {
 
 customElements.define('family-mission-stats-editor', FamilyMissionStatsEditor);
 customElements.define('family-mission-stats', FamilyMissionStats);
+
+/**
+ * Label next to a ha-checkbox / ha-switch (2.15.1). Replaces <ha-formfield label>, whose label
+ * newer Home Assistant versions no longer render. A tap on the text toggles the control
+ * (one document listener for all FamilyMission cards, shadow DOM included).
+ */
+if (!window.__familyMissionFieldClick) {
+  window.__familyMissionFieldClick = true;
+  document.addEventListener('click', (ev) => {
+    const path = ev.composedPath ? ev.composedPath() : [];
+    const lbl = path.find(e => e && e.classList && e.classList.contains('fm-field-lbl'));
+    if (!lbl || !lbl.parentElement) return;
+    const control = lbl.parentElement.querySelector('ha-checkbox, ha-switch');
+    if (control && !control.disabled) control.click();
+  });
+}

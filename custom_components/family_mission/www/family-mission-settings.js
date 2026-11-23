@@ -1276,6 +1276,7 @@ class FamilyMissionSettings extends HTMLElement {
         .kid-aids { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
         .kid-aids-title { font-size: 13px; font-weight: 600; }
         .kid-aid-sub { margin-left: 28px; }
+        .fm-field { display: flex; align-items: center; gap: 4px; min-height: 40px; } .fm-field-lbl { cursor: pointer; -webkit-user-select: none; user-select: none; }
         .kid-field input[type="date"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; box-sizing: border-box; }
         .kid-emojis { display: flex; flex-wrap: wrap; gap: 4px; }
         .care-editor { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--divider-color); padding-top: 8px; }
@@ -1450,13 +1451,11 @@ class FamilyMissionSettings extends HTMLElement {
               <input type="number" class="care-perdose" ${at} min="1" max="20" step="1" value="${esc(c.per_dose || 1)}" ${dis}></label>`}
           </div>
           <p class="kids-note">${this.localize('care_stock_d')}</p>
-          <ha-formfield label="${esc(this.localize('care_notify'))}">
-            <ha-checkbox class="care-notify" ${at} ${c.notify_parents !== false ? 'checked' : ''} ${dis}></ha-checkbox>
-          </ha-formfield>
+          <div class="fm-field">
+            <ha-checkbox class="care-notify" ${at} ${c.notify_parents !== false ? 'checked' : ''} ${dis}></ha-checkbox><span class="fm-field-lbl">${esc(this.localize('care_notify'))}</span></div>
           <div class="care-alert-row">
-            <ha-formfield label="${esc(this.localize('care_alert'))}">
-              <ha-checkbox class="care-alert" ${at} ${alert.enabled ? 'checked' : ''} ${dis}></ha-checkbox>
-            </ha-formfield>
+            <div class="fm-field">
+              <ha-checkbox class="care-alert" ${at} ${alert.enabled ? 'checked' : ''} ${dis}></ha-checkbox><span class="fm-field-lbl">${esc(this.localize('care_alert'))}</span></div>
             ${alert.enabled ? `<input type="number" class="care-alert-count" ${at} min="1" max="30" value="${esc(alert.count || 3)}" ${dis}> ${this.localize('care_alert_count')}
               <input type="number" class="care-alert-days" ${at} min="1" max="60" value="${esc(alert.days || 7)}" ${dis}> ${this.localize('care_alert_days')}` : ''}
           </div>
@@ -1525,9 +1524,8 @@ class FamilyMissionSettings extends HTMLElement {
         <div class="kid-row" style="${d.enabled ? `border-left-color: ${esc(d.color)};` : ''}">
           <div class="kid-head">
             <span>${d.enabled ? `<span class="kid-avatar-preview">${esc(d.avatar)}</span>` : ''}${esc(name)}</span>
-            <ha-formfield label="${this.localize('kid_enable')}">
-              <ha-switch class="kid-enabled" data-uid="${esc(uid)}" ${d.enabled ? 'checked' : ''} ${dis}></ha-switch>
-            </ha-formfield>
+            <div class="fm-field">
+              <ha-switch class="kid-enabled" data-uid="${esc(uid)}" ${d.enabled ? 'checked' : ''} ${dis}></ha-switch><span class="fm-field-lbl">${this.localize('kid_enable')}</span></div>
           </div>
           ${d.enabled ? `
             <div class="kid-emojis">
@@ -1555,9 +1553,8 @@ class FamilyMissionSettings extends HTMLElement {
                        placeholder="${hasPin ? this.localize('kid_pin_set') : this.localize('kid_pin_none')}" ${dis}>
               </label>
               ${hasPin ? `
-                <ha-formfield label="${this.localize('kid_pin_clear')}">
-                  <ha-checkbox class="kid-clear-pin" data-uid="${esc(uid)}" ${d.clear_pin ? 'checked' : ''} ${dis}></ha-checkbox>
-                </ha-formfield>` : ''}
+                <div class="fm-field">
+                  <ha-checkbox class="kid-clear-pin" data-uid="${esc(uid)}" ${d.clear_pin ? 'checked' : ''} ${dis}></ha-checkbox><span class="fm-field-lbl">${this.localize('kid_pin_clear')}</span></div>` : ''}
             </div>
             <label class="kid-field kid-slider" title="${esc(this.localize('kid_sample_hint'))}">
               <span class="kid-sample-label">${this.localize('kid_sample').replace('{n}', `<b>${d.approval_sample_rate}</b>`)}</span>
@@ -1567,9 +1564,8 @@ class FamilyMissionSettings extends HTMLElement {
             <div class="kid-aids">
               <div class="kid-aids-title">${this.localize('kid_aids')}</div>
               ${['time_pie', 'picture_steps', 'speak_steps', 'speak_auto'].map(a => `
-                <ha-formfield class="${a === 'speak_auto' ? 'kid-aid-sub' : ''}" label="${esc(this.localize('kid_aid_' + a))}">
-                  <ha-checkbox class="kid-aid" data-uid="${esc(uid)}" data-aid="${a}" ${d.aids && d.aids[a] ? 'checked' : ''} ${dis}></ha-checkbox>
-                </ha-formfield>`).join('')}
+                <div class="fm-field ${a === 'speak_auto' ? 'kid-aid-sub' : ''}">
+                  <ha-checkbox class="kid-aid" data-uid="${esc(uid)}" data-aid="${a}" ${d.aids && d.aids[a] ? 'checked' : ''} ${dis}></ha-checkbox><span class="fm-field-lbl">${esc(this.localize('kid_aid_' + a))}</span></div>`).join('')}
               <span class="kid-hint">${this.localize('kid_aid_speak_hint')}</span>
             </div>
             ${this._renderCareEditor(uid, d, dis, esc)}` : ''}
@@ -1660,9 +1656,8 @@ class FamilyMissionSettings extends HTMLElement {
                   <input type="number" id="bday-bonus" min="0" max="50" step="1" value="${this._optVal('bday_bonus', 'birthday_bonus_points', 10)}">
                 </label>
               </div>
-              <ha-formfield label="${this.localize('birthday_duty_free')}">
-                <ha-switch id="bday-free" ${(fd.bday_free !== undefined ? fd.bday_free : this.settings.birthday_duty_free !== false) ? 'checked' : ''}></ha-switch>
-              </ha-formfield>`;
+              <div class="fm-field">
+                <ha-switch id="bday-free" ${(fd.bday_free !== undefined ? fd.bday_free : this.settings.birthday_duty_free !== false) ? 'checked' : ''}></ha-switch><span class="fm-field-lbl">${this.localize('birthday_duty_free')}</span></div>`;
   }
 
   /** Bonus reservation time. */
@@ -1679,9 +1674,8 @@ class FamilyMissionSettings extends HTMLElement {
   _renderExpireBody() {
     const fd = this._familyDraft;
     return `
-              <ha-formfield label="${this.localize('expire_missed')}">
-                <ha-switch id="expire-missed" ${(fd.expire_missed !== undefined ? fd.expire_missed : this.settings.expire_missed !== false) ? 'checked' : ''}></ha-switch>
-              </ha-formfield>`;
+              <div class="fm-field">
+                <ha-switch id="expire-missed" ${(fd.expire_missed !== undefined ? fd.expire_missed : this.settings.expire_missed !== false) ? 'checked' : ''}></ha-switch><span class="fm-field-lbl">${this.localize('expire_missed')}</span></div>`;
   }
 
   /**
@@ -2547,18 +2541,14 @@ class FamilyMissionSettings extends HTMLElement {
             <p class="kids-note">${this.localize('adv_note')}</p>
             <h4>${this.localize('import_export')}</h4>
             <div style="display: flex; gap: 16px; margin-bottom: 8px; flex-wrap: wrap;">
-              <ha-formfield label="${this.localize('export_tasks_cb')}">
-                <ha-checkbox id="cb-export-tasks" checked></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_templates_cb')}">
-                <ha-checkbox id="cb-export-templates" checked></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_history_cb')}">
-                <ha-checkbox id="cb-export-history"></ha-checkbox>
-              </ha-formfield>
-              <ha-formfield label="${this.localize('export_settings_cb')}">
-                <ha-checkbox id="cb-export-settings" checked></ha-checkbox>
-              </ha-formfield>
+              <div class="fm-field">
+                <ha-checkbox id="cb-export-tasks" checked></ha-checkbox><span class="fm-field-lbl">${this.localize('export_tasks_cb')}</span></div>
+              <div class="fm-field">
+                <ha-checkbox id="cb-export-templates" checked></ha-checkbox><span class="fm-field-lbl">${this.localize('export_templates_cb')}</span></div>
+              <div class="fm-field">
+                <ha-checkbox id="cb-export-history"></ha-checkbox><span class="fm-field-lbl">${this.localize('export_history_cb')}</span></div>
+              <div class="fm-field">
+                <ha-checkbox id="cb-export-settings" checked></ha-checkbox><span class="fm-field-lbl">${this.localize('export_settings_cb')}</span></div>
             </div>
             <div style="display: flex; gap: 10px; width: 100%;">
               <button class="btn btn-export" id="btn-export" title="${this.localize('export_hover')}">${this.localize('export_btn')}</button>
@@ -2780,3 +2770,19 @@ class FamilyMissionSettingsEditor extends HTMLElement {
 
 customElements.define('family-mission-settings-editor', FamilyMissionSettingsEditor);
 customElements.define('family-mission-settings', FamilyMissionSettings);
+
+/**
+ * Label next to a ha-checkbox / ha-switch (2.15.1). Replaces <ha-formfield label>, whose label
+ * newer Home Assistant versions no longer render. A tap on the text toggles the control
+ * (one document listener for all FamilyMission cards, shadow DOM included).
+ */
+if (!window.__familyMissionFieldClick) {
+  window.__familyMissionFieldClick = true;
+  document.addEventListener('click', (ev) => {
+    const path = ev.composedPath ? ev.composedPath() : [];
+    const lbl = path.find(e => e && e.classList && e.classList.contains('fm-field-lbl'));
+    if (!lbl || !lbl.parentElement) return;
+    const control = lbl.parentElement.querySelector('ha-checkbox, ha-switch');
+    if (control && !control.disabled) control.click();
+  });
+}

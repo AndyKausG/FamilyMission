@@ -1,5 +1,9 @@
 # Changelog
 
+## [2.15.1] - 2026-11-23
+
+- **Fix: checkboxes and switches without text.** Newer Home Assistant versions no longer show the label of `ha-formfield`, so options like "Hilfen für jüngere Kinder", "Kind aktivieren", "PIN löschen", the medication options, the export choices and the card editors' options appeared as bare boxes. All FamilyMission cards now draw the text themselves; a tap on the text toggles the box as before.
+
 ## [2.15.0] - 2026-11-23
 
 - **Aids for younger kids, per kid (settings card, tab "Familie", "Hilfen für jüngere Kinder"; all off by default).** Stored as `aids` in the kid profile (`set_kid_profile`, validated: only `time_pie`, `picture_steps`, `speak_steps`, `speak_auto` with `true`), also taken over by the import.
