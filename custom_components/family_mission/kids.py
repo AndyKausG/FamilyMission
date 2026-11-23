@@ -730,6 +730,70 @@ def normalize_sample_rate(value: Any) -> int:
     return int(max(0, min(100, round(value))))
 
 
+# 2.15: aids for young kids, per kid profile (all off by default)
+# speak_steps: read aloud on demand (🔊 button / long press on a step); speak_auto: after every tick
+KID_AIDS = ("time_pie", "picture_steps", "speak_steps", "speak_auto")
+
+
+def normalize_aids(value: Any) -> dict:
+    """``{aid: True}`` for the switched-on aids of ``KID_AIDS``; anything else is dropped."""
+    if not isinstance(value, dict):
+        return {}
+    return {key: True for key in KID_AIDS if value.get(key) is True}
+
+
+def spoken_step(title: Any) -> str:
+    """A step title for text-to-speech: without leading / trailing emoji and symbols."""
+    text = str(title or "").strip()
+    text = re.sub(r"^[^\w(\"„]+", "", text)
+    text = re.sub(r"[^\w).!?\"“]+$", "", text)
+    return text.strip()
+
+
+def next_open_step(
+    subtasks: Iterable[Any], care_steps: Iterable[dict] | None = None, anchor: str = "", school_free: bool = False,
+) -> tuple[str | None, bool]:
+    """``(title, all_done)`` of a mission in display order (same order as the kids card).
+
+    ``title`` is the first step that is not ticked (stored step) / not answered (medication
+    step), skipping school steps while ``school_free``; ``None`` when nothing is left.
+    ``all_done`` is True when the mission has steps and none is left.
+    """
+    merged = care_merge_steps(subtasks, list(care_steps or ()), anchor)
+    has_steps = False
+    for item in merged:
+        step = item["step"]
+        if item["kind"] == "care":
+            has_steps = True
+            if not step.get("answer"):
+                return step.get("title") or None, False
+            continue
+        if not isinstance(step, dict) or (school_free and is_school_step(step)):
+            continue
+        has_steps = True
+        if not step.get("done"):
+            return step.get("title") or None, False
+    return None, has_steps
+
+
+def step_readout(title: Any) -> str:
+    """Spoken text of one step read aloud on demand (long press on the step)."""
+    step = spoken_step(title)
+    return f"{step}." if step and step[-1] not in ".!?" else step
+
+
+def step_announcement(kid_name: str, title: str | None, lang: str) -> str:
+    """Spoken text after a step: the next step, or the hint to press "Done" when all are ticked."""
+    de = lang == "de"
+    name = str(kid_name or "").strip()
+    step = spoken_step(title) if title else ""
+    if step:
+        text = f"Jetzt: {step}." if de else f"Next: {step}."
+    else:
+        text = "Alle Schritte geschafft! Jetzt auf Fertig drücken." if de else "All steps done! Now press Done."
+    return f"{name}, {text}" if name else text
+
+
 def strict_active(profile: dict | None, today: date) -> bool:
     """True while the kid is in strict mode (``today`` is before ``strict_until``)."""
     until = parse_birthday((profile or {}).get("strict_until"))
@@ -976,6 +1040,7 @@ def public_kids(kids: dict | None) -> dict:
             "strict_until": profile.get("strict_until"),
             "goal_reward": profile.get("goal_reward"),
             "care": normalize_care(profile.get("care")),
+            "aids": normalize_aids(profile.get("aids")),
             "has_pin": bool(profile.get("pin_hash") and profile.get("pin_salt")),
         }
         result[kid_id] = entry
@@ -1024,6 +1089,12 @@ def merge_imported_kids(existing: dict | None, incoming: Any) -> dict:
             target["strict_until"] = strict.isoformat()
         if "care" in profile:
             target["care"] = normalize_care(profile.get("care"))
+        if "aids" in profile:
+            aids = normalize_aids(profile.get("aids"))
+            if aids:
+                target["aids"] = aids
+            else:
+                target.pop("aids", None)
         target.setdefault("avatar", DEFAULT_KID_AVATAR)
         target.setdefault("color", DEFAULT_KID_COLOR)
         target.setdefault("birth_year", None)
@@ -1043,6 +1114,7 @@ def build_kid_profile(
     birthday: Any = _UNSET,
     approval_sample_rate: Any = _UNSET,
     care: Any = _UNSET,
+    aids: Any = _UNSET,
 ) -> dict:
     """Return the new stored profile. An empty ``pin`` keeps the old one.
 
@@ -1076,6 +1148,12 @@ def build_kid_profile(
             profile["care"] = entries
         else:
             profile.pop("care", None)
+    if aids is not _UNSET:
+        clean = normalize_aids(aids)
+        if clean:
+            profile["aids"] = clean
+        else:
+            profile.pop("aids", None)
     if clear_pin:
         profile.pop("pin_hash", None)
         profile.pop("pin_salt", None)

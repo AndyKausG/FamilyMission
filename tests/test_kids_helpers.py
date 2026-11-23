@@ -921,3 +921,64 @@ def test_wallet_statement_empty_current_month_kept_with_balance():
     assert res == [{"month": "2026-11", "opening": 12.5, "closing": 12.5, "credits": [], "debits": []},
                    {"month": "2026-10", "opening": 12.5, "closing": 12.5, "credits": [], "debits": []}]
     assert kids.wallet_statement([], "t", 0, ["2026-11"], _day) == []
+
+
+# ---------------------------------------------------------------------------
+# 2.15: aids for young kids (time pie, picture mode, spoken next step)
+# ---------------------------------------------------------------------------
+
+def test_normalize_aids_keeps_only_known_true_flags():
+    assert kids.normalize_aids({"time_pie": True, "picture_steps": False, "speak_steps": "yes", "x": True}) == {"time_pie": True}
+    assert kids.normalize_aids(None) == {}
+    assert kids.normalize_aids(["time_pie"]) == {}
+
+
+def test_build_kid_profile_aids_stored_only_when_on():
+    p = kids.build_kid_profile(None, "🦊", "#ff8800", 2020, aids={"speak_steps": True, "bogus": True})
+    assert p["aids"] == {"speak_steps": True}
+    p = kids.build_kid_profile(p, "🦊", "#ff8800", 2020)          # not passed: kept
+    assert p["aids"] == {"speak_steps": True}
+    p = kids.build_kid_profile(p, "🦊", "#ff8800", 2020, aids={})
+    assert "aids" not in p
+    assert kids.public_kids({"a": {"aids": {"time_pie": True, "z": 1}}})["a"]["aids"] == {"time_pie": True}
+
+
+def test_merge_imported_kids_validates_aids():
+    merged = kids.merge_imported_kids({}, {"a": {"aids": {"picture_steps": True, "evil": True}}})
+    assert merged["a"]["aids"] == {"picture_steps": True}
+    merged = kids.merge_imported_kids(merged, {"a": {"aids": {"picture_steps": False}}})
+    assert "aids" not in merged["a"]
+
+
+def test_spoken_step_strips_emoji_and_symbols():
+    assert kids.spoken_step("🪥 Zähne putzen") == "Zähne putzen"
+    assert kids.spoken_step("Bett machen ✅") == "Bett machen"
+    assert kids.spoken_step("Bett machen!") == "Bett machen!"
+    assert kids.spoken_step("  ") == ""
+
+
+def test_next_open_step_follows_display_order():
+    subs = [{"title": "Frühstücken", "done": True}, {"title": "Schulranzen packen"}, {"title": "Zähne putzen"}]
+    care = [{"title": "Tablette", "answer": None}]          # default position: after breakfast
+    assert kids.next_open_step(subs, care, "morning") == ("Tablette", False)
+    care[0]["answer"] = "taken"
+    assert kids.next_open_step(subs, care, "morning") == ("Schulranzen packen", False)
+    # school holiday: the school bag step is skipped
+    assert kids.next_open_step(subs, care, "morning", school_free=True) == ("Zähne putzen", False)
+    for st in subs:
+        st["done"] = True
+    assert kids.next_open_step(subs, care, "morning") == (None, True)
+    assert kids.next_open_step([], [], "") == (None, False)
+
+
+def test_speak_auto_is_a_known_aid_and_readout_text():
+    assert kids.normalize_aids({"speak_auto": True, "speak_steps": True}) == {"speak_steps": True, "speak_auto": True}
+    assert kids.step_readout("🪥 Zähne putzen") == "Zähne putzen."
+    assert kids.step_readout("Bett machen!") == "Bett machen!"
+    assert kids.step_readout("💊") == ""
+
+
+def test_step_announcement_texts():
+    assert kids.step_announcement("Juri", "🪥 Zähne putzen", "de") == "Juri, Jetzt: Zähne putzen."
+    assert kids.step_announcement("Juri", None, "de") == "Juri, Alle Schritte geschafft! Jetzt auf Fertig drücken."
+    assert kids.step_announcement("", "Brush teeth", "en") == "Next: Brush teeth."

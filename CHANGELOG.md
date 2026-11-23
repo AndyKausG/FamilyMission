@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.15.0] - 2026-11-23
+
+- **Aids for younger kids, per kid (settings card, tab "Familie", "Hilfen für jüngere Kinder"; all off by default).** Stored as `aids` in the kid profile (`set_kid_profile`, validated: only `time_pie`, `picture_steps`, `speak_steps`, `speak_auto` with `true`), also taken over by the import.
+- **Time pie (`time_pie`).** A task with an open time window that has an end shows a shrinking ring around its icon (green / yellow / red) and "noch 12 min". For kids who cannot read the clock yet.
+- **Picture mode (`picture_steps`).** Mission steps as big picture tiles: emoji at the start of the step title, else recognised from the words (de / en), else the step number.
+- **Read aloud on demand (`speak_steps`).** The first tile of the steps is a speaker button "Was kommt jetzt?" (next step, "Juri, jetzt: Zähne putzen."); a long press on a step reads that step without ticking it. A speech bubble with the step's picture shows what is read, also when the speaker stays silent (night, voice off). One request per kid every 3 s. New command `family_mission/kid_speak_step`.
+- **Announce the next step automatically (`speak_auto`, sub-option).** After a tick (or a medication answer) on the kids' tablet the speakers announce the next open step 2.5 s later ("Juri, jetzt: Zähne putzen."), at the end "Alle Schritte geschafft! Jetzt auf Fertig drücken." Quick ticks give one announcement; unticking, the own-device view and a completed mission stay silent. Uses the voice announcement settings (master switch, TTS, speakers, night mode), independent of `announce_events`.
+- README, parents' guides (de/en/fr) and in-app help updated. Tests: `tests/test_step_announce_ws.py`, `tests/test_kid_aids_js.py`, aid tests in `tests/test_kids_helpers.py`.
+
 ## [2.14.0] - 2026-11-21
 
 - **Approval list: day, time and grouping.** Parents card and "Meine Aufgaben" (kids card, `mode: mine`) group pending approvals by kid and task. Every completion shows day and time ("Heute 17:42", "Gestern 08:10", "Mi., 18.11. 08:10") instead of nothing (kids card) or "vor 3 Std." (parents card). A daily task left open on several days appears once with all its days and a "3×" badge. A kid's name repeated in the task name ("Juri: Hausaufgaben / Lernzeit Juri") is hidden. Helpers are shown as "mit Juri".
