@@ -54,6 +54,10 @@ const I18N_SETTINGS = {
     kids_save_error: "Could not save the kid profiles: ",
     kid_birthday: "Birthday", kid_birth_year_fallback: "Birth year (if no birthday)", kid_sample: "Spot checks by parents: {n} %",
     kid_sample_hint: "Share of completions that a parent checks at random before points are awarded (0 = none).",
+    kid_aids: "Aids for younger kids (wall tablet)", kid_aid_time_pie: "Time pie: show how much time is left for a task",
+    kid_aid_picture_steps: "Picture mode: steps as big pictures (for kids who cannot read yet)",
+    kid_aid_speak_steps: "Announce the next step by voice after each tick",
+    kid_aid_speak_hint: "Needs the voice announcement (tab “Notifications”: switched on, TTS and speakers). Silent at night.",
     care_title: "💊 Medication", care_hint: "A daily tablet, drops or an inhaler: shown to the kid as a step of the morning / evening mission (or at a fixed time). Never any points; \"not today\" counts as answered.",
     care_add: "+ Add medication", care_remove: "Remove", care_label: "Name", care_emoji: "Emoji", care_anchor: "Shown with",
     care_anchor_morning: "Morning mission", care_anchor_evening: "Evening mission", care_anchor_time: "Fixed time", care_time: "At",
@@ -172,6 +176,10 @@ claim_minutes: "Bonus reservation (minutes)",
     kids_save_error: "Kinder-Profile konnten nicht gespeichert werden: ",
     kid_birthday: "Geburtstag", kid_birth_year_fallback: "Geburtsjahr (falls kein Geburtstag)", kid_sample: "Stichproben durch Eltern: {n} %",
     kid_sample_hint: "Anteil der Erledigungen, die Mama oder Papa zufällig prüfen, bevor Punkte gutgeschrieben werden (0 = keine).",
+    kid_aids: "Hilfen für jüngere Kinder (Wand-Tablet)", kid_aid_time_pie: "Zeit-Torte: zeigt, wie viel Zeit für eine Aufgabe bleibt",
+    kid_aid_picture_steps: "Bildmodus: Schritte als große Bilder (für Kinder, die noch nicht lesen)",
+    kid_aid_speak_steps: "Nächsten Schritt nach jedem Abhaken ansagen",
+    kid_aid_speak_hint: "Braucht die Sprachausgabe (Reiter „Benachrichtigungen“: eingeschaltet, TTS und Lautsprecher). Nachts still.",
     care_title: "💊 Medikamente", care_hint: "Eine Tablette, Tropfen oder ein Inhalator pro Tag: erscheint beim Kind als Schritt der Morgen- / Abend-Mission (oder zu einer festen Uhrzeit). Nie Punkte; \"Heute nicht\" zählt als beantwortet.",
     care_add: "+ Medikament hinzufügen", care_remove: "Entfernen", care_label: "Name", care_emoji: "Emoji", care_anchor: "Erscheint bei",
     care_anchor_morning: "Morgen-Mission", care_anchor_evening: "Abend-Mission", care_anchor_time: "Feste Uhrzeit", care_time: "Um",
@@ -588,6 +596,7 @@ class FamilyMissionSettings extends HTMLElement {
         birth_year: (k && k.birth_year) || '',
         birthday: (k && k.birthday) || '',
         approval_sample_rate: (k && parseInt(k.approval_sample_rate)) || 0,
+        aids: Object.assign({}, (k && k.aids) || {}),
         care: JSON.parse(JSON.stringify((k && Array.isArray(k.care)) ? k.care : [])),
         pin: '',
         clear_pin: false
@@ -644,9 +653,13 @@ class FamilyMissionSettings extends HTMLElement {
         const rate = Math.max(0, Math.min(100, parseInt(d.approval_sample_rate) || 0));
         const old = stored[uid];
         const careChanged = JSON.stringify(d.care || []) !== JSON.stringify((old && old.care) || []);
+        const aidKeys = ['time_pie', 'picture_steps', 'speak_steps'];
+        const aids = {};
+        aidKeys.forEach(a => { if (d.aids && d.aids[a]) aids[a] = true; });
+        const aidsChanged = aidKeys.some(a => !!aids[a] !== !!(old && old.aids && old.aids[a]));
         const changed = !old || old.avatar !== d.avatar || old.color !== d.color ||
           (old.birth_year || null) !== birthYear || (old.birthday || null) !== (birthday || null) ||
-          (parseInt(old.approval_sample_rate) || 0) !== rate || !!d.pin || d.clear_pin || careChanged;
+          (parseInt(old.approval_sample_rate) || 0) !== rate || !!d.pin || d.clear_pin || careChanged || aidsChanged;
         if (changed) {
           const payload = {
             type: 'family_mission/set_kid_profile',
@@ -658,6 +671,7 @@ class FamilyMissionSettings extends HTMLElement {
             approval_sample_rate: rate
           };
           if (careChanged) payload.care = d.care || [];
+          if (aidsChanged || !old) payload.aids = aids;
           if (d.pin) payload.pin = d.pin;
           if (d.clear_pin) payload.clear_pin = true;
           calls.push(payload);
@@ -1257,6 +1271,8 @@ class FamilyMissionSettings extends HTMLElement {
         .kid-slider input[type="range"] { width: 100%; accent-color: var(--primary-color); }
         .kid-slider b { color: var(--primary-text-color); }
         .kid-hint { font-size: 11px; opacity: 0.8; }
+        .kid-aids { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+        .kid-aids-title { font-size: 13px; font-weight: 600; }
         .kid-field input[type="date"] { width: 100%; height: 36px; padding: 4px 8px; border: 1px solid var(--divider-color); border-radius: 6px; background: var(--primary-background-color); color: var(--primary-text-color); font-size: 14px; box-sizing: border-box; }
         .kid-emojis { display: flex; flex-wrap: wrap; gap: 4px; }
         .care-editor { display: flex; flex-direction: column; gap: 8px; border-top: 1px dashed var(--divider-color); padding-top: 8px; }
@@ -1545,6 +1561,14 @@ class FamilyMissionSettings extends HTMLElement {
               <input type="range" class="kid-sample" data-uid="${esc(uid)}" min="0" max="100" step="5" value="${esc(d.approval_sample_rate)}" ${dis}>
               <span class="kid-hint">${this.localize('kid_sample_hint')}</span>
             </label>
+            <div class="kid-aids">
+              <div class="kid-aids-title">${this.localize('kid_aids')}</div>
+              ${['time_pie', 'picture_steps', 'speak_steps'].map(a => `
+                <ha-formfield label="${esc(this.localize('kid_aid_' + a))}">
+                  <ha-checkbox class="kid-aid" data-uid="${esc(uid)}" data-aid="${a}" ${d.aids && d.aids[a] ? 'checked' : ''} ${dis}></ha-checkbox>
+                </ha-formfield>`).join('')}
+              <span class="kid-hint">${this.localize('kid_aid_speak_hint')}</span>
+            </div>
             ${this._renderCareEditor(uid, d, dis, esc)}` : ''}
         </div>`;
     }).join('');
@@ -2409,6 +2433,11 @@ class FamilyMissionSettings extends HTMLElement {
     }));
     root.querySelectorAll('.kid-clear-pin').forEach(el => el.addEventListener('change', (ev) => {
       this._kidDraft(el.dataset.uid).clear_pin = !!ev.target.checked;
+    }));
+    root.querySelectorAll('.kid-aid').forEach(el => el.addEventListener('change', (ev) => {
+      const d = this._kidDraft(el.dataset.uid);
+      d.aids = Object.assign({}, d.aids || {}, { [el.dataset.aid]: !!ev.target.checked });
+      this._markDirty();
     }));
     this._bindCareInputs(root);
     root.querySelectorAll('.user-goal-input').forEach(el => el.addEventListener('input', (ev) => {

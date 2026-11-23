@@ -20,6 +20,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import (
+    async_call_later,
     async_track_state_change_event,
     async_track_time_change,
     async_track_time_interval,
@@ -1829,6 +1830,7 @@ def _update_kids(hass: HomeAssistant, kids: dict) -> None:
     vol.Optional("birthday"): vol.Any(None, str),
     vol.Optional("approval_sample_rate"): vol.All(int, vol.Range(min=0, max=100)),
     vol.Optional("care"): list,
+    vol.Optional("aids"): dict,
     vol.Optional("pin"): vol.Any(None, str),
     vol.Optional("clear_pin", default=False): bool,
 })
@@ -1866,6 +1868,8 @@ async def ws_set_kid_profile(hass: HomeAssistant, connection: websocket_api.Acti
         extra["birthday"] = birthday
     if "approval_sample_rate" in msg:
         extra["approval_sample_rate"] = msg["approval_sample_rate"]
+    if "aids" in msg:
+        extra["aids"] = msg["aids"]    # validated in build_kid_profile (unknown keys / non-True values dropped)
     kids = copy.deepcopy(_get_entry(hass).options.get("kids") or {})
     live_stock: dict[str, dict] = {}
     if "care" in msg:
@@ -2033,6 +2037,7 @@ async def ws_kid_complete_task(hass: HomeAssistant, connection: websocket_api.Ac
 
 async def _async_kid_complete(hass: HomeAssistant, task_id: str, ctx: dict, helpers: list) -> dict:
     """Complete a task for the identified kid / person (shared by kid_complete_task and my_complete_task)."""
+    _cancel_step_announce(hass, ctx["kid_id"])    # a pending "next step" would name the first step of the next day
     care_attached = _care_attached(hass, ctx["kid_id"], task_id)
     school_free = kidslib.school_holiday(ctx["kid_id"], dt_util.now().date(), _absences(hass.data[DOMAIN]["data"]))
     if open_required_steps(ctx["task"], [i["step"] for i in care_attached], school_free):
@@ -2247,7 +2252,12 @@ async def ws_kid_care_answer(hass: HomeAssistant, connection: websocket_api.Acti
     if not result["success"]:
         connection.send_result(msg["id"], result)
         return
-    connection.send_result(msg["id"], await _async_care_answer(hass, msg["kid_id"], msg["care_id"], msg["status"]))
+    result = await _async_care_answer(hass, msg["kid_id"], msg["care_id"], msg["status"])
+    if result.get("success"):
+        mission = next((i["mission_task_id"] for i in _care_items(hass, msg["kid_id"]) if i["id"] == msg["care_id"]), None)
+        if mission:
+            _schedule_step_announce(hass, msg["kid_id"], mission)
+    connection.send_result(msg["id"], result)
 
 
 @websocket_api.websocket_command({
@@ -3336,7 +3346,10 @@ async def ws_kid_toggle_step(hass: HomeAssistant, connection: websocket_api.Acti
     if error:
         connection.send_result(msg["id"], error)
         return
-    connection.send_result(msg["id"], await _async_toggle_step(hass, ctx, msg["index"], msg["done"]))
+    result = await _async_toggle_step(hass, ctx, msg["index"], msg["done"])
+    if result.get("success") and msg["done"]:
+        _schedule_step_announce(hass, ctx["kid_id"], msg["task_id"])
+    connection.send_result(msg["id"], result)
 
 
 async def _async_toggle_step(hass: HomeAssistant, ctx: dict, index: int, done: bool) -> dict:
@@ -5881,6 +5894,9 @@ ANNOUNCE_WASTE = "waste"
 ANNOUNCE_TRIGGER = "trigger"
 ANNOUNCE_GOAL = "goal"
 ANNOUNCE_KINDS = (ANNOUNCE_ADHOC, ANNOUNCE_WASTE, ANNOUNCE_TRIGGER, ANNOUNCE_GOAL)
+# 2.15: "next step" of a mission; switched on per kid (profile aid ``speak_steps``), not in ``announce_events``
+ANNOUNCE_STEP = "step"
+STEP_ANNOUNCE_DELAY = 2.5    # seconds: ticking several steps quickly gives one announcement
 MAX_ANNOUNCE_NAME = 30
 MAX_ANNOUNCE_PLAYERS = 10
 _TTS_RE = re.compile(r"^tts\.[a-z0-9_]{1,100}$")
@@ -5941,13 +5957,58 @@ async def _async_announce(hass: HomeAssistant, kind: str, message: str) -> bool:
         return False    # family trip: the house stays quiet
     options = _get_entry(hass).options
     conf = _announce_settings(options)
-    if not conf["announce_enabled"] or kind not in conf["announce_events"]:
+    if not conf["announce_enabled"] or (kind != ANNOUNCE_STEP and kind not in conf["announce_events"]):
         return False
     if not conf["announce_tts"] or not conf["announce_players"]:
         return False
     if _announce_quiet_now(options, conf):
         return False
     return await _async_speak(hass, conf["announce_tts"], conf["announce_players"], message) is None
+
+
+def _cancel_step_announce(hass: HomeAssistant, kid_id: str) -> None:
+    """Drop a pending "next step" announcement of the kid."""
+    cancel = hass.data.get(DOMAIN, {}).get("step_announce", {}).pop(kid_id, None)
+    if cancel is not None:
+        cancel()
+
+
+def _schedule_step_announce(hass: HomeAssistant, kid_id: str, task_id: str) -> None:
+    """Announce the next step of a mission shortly after a step was ticked on the kids' tablet.
+
+    Only for kids with the profile aid ``speak_steps``; uses the voice announcement settings
+    (master switch, TTS entity, speakers, night mode). A new tick restarts the delay, so a
+    kid ticking several steps hears one announcement.
+    """
+    profile = (_get_entry(hass).options.get("kids") or {}).get(kid_id)
+    if not isinstance(profile, dict) or not kidslib.normalize_aids(profile.get("aids")).get("speak_steps"):
+        return
+    _cancel_step_announce(hass, kid_id)
+
+    @callback
+    def _fire(_now) -> None:
+        hass.data.get(DOMAIN, {}).get("step_announce", {}).pop(kid_id, None)
+        hass.async_create_task(_async_step_announce(hass, kid_id, task_id))
+
+    hass.data[DOMAIN].setdefault("step_announce", {})[kid_id] = async_call_later(hass, STEP_ANNOUNCE_DELAY, _fire)
+
+
+async def _async_step_announce(hass: HomeAssistant, kid_id: str, task_id: str) -> bool:
+    """Speak the next open step of the mission (or "press Done" once all are ticked). True when spoken."""
+    if DOMAIN not in hass.data:
+        return False
+    data = hass.data[DOMAIN]["data"]
+    task = (data.get("tasks") or {}).get(task_id)
+    if not isinstance(task, dict):
+        return False
+    attached = _care_attached(hass, kid_id, task_id)
+    anchor = attached[0]["item"].get("anchor", "") if attached else ""
+    school_free = kidslib.school_holiday(kid_id, dt_util.now().date(), _absences(data))
+    title, all_done = kidslib.next_open_step(task.get("subtasks"), [a["step"] for a in attached], anchor, school_free)
+    if title is None and not all_done:
+        return False
+    message = kidslib.step_announcement(_participant_name(hass, kid_id), title, _lang(hass))
+    return await _async_announce(hass, ANNOUNCE_STEP, message)
 
 
 def _announce_quiet_now(options, conf: dict) -> bool:
@@ -8088,5 +8149,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         unsub = hass.data[DOMAIN].pop("bonus_unsub", None)
         if unsub is not None:
             unsub()
+        for cancel in hass.data[DOMAIN].pop("step_announce", {}).values():
+            cancel()
         hass.data.pop(DOMAIN)
     return unload_ok

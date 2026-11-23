@@ -68,7 +68,7 @@ const I18N_KIDS = {
     ap_toast_many: "{n} approved", ap_toast_some: "{n} of {m} approved",
     strict_note: "🔍 This week Mom and Dad check everything",
     penalty_line: "−{n} points: {reason}", points_pending: "pending",
-    from_time: "from {t}", countdown: "{n} min to go", window_over: "Over for today - new chance tomorrow",
+    from_time: "from {t}", countdown: "{n} min to go", pie_left: "{n} min left", window_over: "Over for today - new chance tomorrow",
     until_time: "until {t}",
     err_not_yet: "Not yet! This task starts a little later.",
     err_too_late: "Too late for today. New chance tomorrow!", err_steps_open: "Tick all steps first!", err_together_not_allowed: "This task is a solo job.",
@@ -163,7 +163,7 @@ const I18N_KIDS = {
     ap_toast_many: "{n} freigegeben", ap_toast_some: "{n} von {m} freigegeben",
     strict_note: "🔍 Diese Woche schauen Mama und Papa bei allem drüber",
     penalty_line: "−{n} Punkte: {reason}", points_pending: "offen",
-    from_time: "ab {t}", countdown: "noch {n} min", window_over: "Heute vorbei – morgen neue Chance",
+    from_time: "ab {t}", countdown: "noch {n} min", pie_left: "noch {n} min", window_over: "Heute vorbei – morgen neue Chance",
     until_time: "bis {t}",
     err_not_yet: "Noch nicht dran! Die Aufgabe startet etwas später.",
     err_too_late: "Heute zu spät. Morgen gibt es eine neue Chance!", err_steps_open: "Hake zuerst alle Schritte ab!", err_together_not_allowed: "Diese Aufgabe machst du allein.",
@@ -288,6 +288,46 @@ function apWhenKids(timestamp, lang, now = new Date()) {
   }
   if (!day) day = d.toLocaleDateString(lang, { weekday: 'short', day: 'numeric', month: 'numeric' });
   return `${day} ${time}`;
+}
+
+/**
+ * Picture mode (2.15): emoji of a mission step for kids who cannot read yet.
+ * A leading emoji in the title wins ("🪥 Zähne putzen"), else a keyword list (de / en).
+ * Returns { emoji, title } with the title stripped of the leading emoji; emoji '' = none found.
+ */
+const KIDS_STEP_EMOJI = [
+  [/schlafanzug|pyjama|pajama/, '👚'], [/zähne|zahn|teeth|tooth/, '🪥'], [/toilette|\bklo\b|pipi|toilet|potty/, '🚽'],
+  [/hände|hands|gesicht|\bface\b|wasch|wash/, '🧼'], [/dusch|baden|bad\b|shower|bath/, '🛁'], [/haare|kämm|\bhair\b|comb/, '💇'],
+  [/frühstück|breakfast|essen|\beat\b|lunch\b(?!.*box)|dinner|abendbrot/, '🥣'], [/bett|\bbed\b/, '🛏️'],
+  [/anzieh|kleid|klamotten|dress|clothes|get dressed/, '👕'], [/schuhe|shoes/, '👟'], [/jacke|mantel|jacket|coat/, '🧥'],
+  [/ranzen|schultasche|school ?bag|backpack|rucksack/, '🎒'], [/brotdose|lunch ?box/, '🍱'],
+  [/trinkflasche|water bottle|trinken|\bdrink/, '🥤'], [/hausaufgabe|homework|lernzeit/, '✏️'], [/lesen|buch|\bread|book/, '📖'],
+  [/medikament|medizin|tablette|medicine|pill/, '💊'], [/sonnencreme|sunscreen/, '🧴'],
+  [/tisch|table|geschirr|dishes|spülmaschine|dishwasher/, '🍽️'], [/wäsche|laundry/, '🧺'], [/müll|trash|bins|garbage/, '🗑️'],
+  [/füttern|haustier|\bfeed|\bpet\b/, '🐾'], [/gießen|pflanze|plants/, '🪴'], [/licht|light/, '💡'],
+  [/aufräum|spielzeug|tidy|toys|kuscheltier|teddy/, '🧸'], [/zimmer|room/, '🏠']
+];
+function kidsStepEmoji(title) {
+  const text = String(title || '').trim();
+  const m = /^(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic}|\p{Emoji_Modifier})*)\s*/u.exec(text);
+  if (m) return { emoji: m[1], title: text.slice(m[0].length) || text };
+  const low = text.toLowerCase();
+  const hit = KIDS_STEP_EMOJI.find(([re]) => re.test(low));
+  return { emoji: hit ? hit[1] : '', title: text };
+}
+
+/**
+ * Time pie (2.15): how much of a task's time window is left, at minute `now` (0-1439).
+ * `from` / `until` in minutes or null; without `from` the pie covers the last hour.
+ * Returns { left, frac, color } or null when the window has no end.
+ */
+function kidsTimePie(from, until, now) {
+  if (until === null || until === undefined) return null;
+  const left = (until - now + 1440) % 1440;
+  const total = (from !== null && from !== undefined && from !== until) ? (until - from + 1440) % 1440 : 60;
+  if (!total || left === 0) return null;
+  const frac = Math.max(0, Math.min(1, left / total));
+  return { left, frac, color: frac > 0.5 ? '#43A047' : frac > 0.2 ? '#F9A825' : '#E53935' };
 }
 
 /** Parses "HH:MM" into minutes since midnight; returns the fallback for anything else. */
@@ -1062,7 +1102,8 @@ class FamilyMissionKids extends HTMLElement {
         points: parseFloat(this.points[id]) || 0,
         goal: parseFloat(goals[id]) || 0,
         wallet: parseFloat((this.wallet || {})[id]) || 0,
-        goal_reward: p.goal_reward || null
+        goal_reward: p.goal_reward || null,
+        aids: (p.aids && typeof p.aids === 'object') ? p.aids : {}
       };
       // pctRaw may exceed 100 (bonus points): the ring draws further laps on top
       kid.pctRaw = kid.goal > 0 ? Math.floor((kid.points / kid.goal) * 100) : 0;
@@ -3807,15 +3848,37 @@ class FamilyMissionKids extends HTMLElement {
 
     const careSteps = mode === 'window' ? [] : this._careSteps(kid, task);
     const hasSubs = Array.isArray(task.subtasks) && task.subtasks.length;
+    const aids = (kid && kid.aids) || {};
+    const pic = !!aids.picture_steps;
+    let stepNo = 0;
     const subs = mode !== 'window' && (hasSubs || careSteps.length)
-      ? `<div class="subs">${this._missionSteps(hasSubs ? task.subtasks : [], careSteps).filter(item => item.care || !this._schoolFree(task, kid, item.sub)).map(item => item.care
-          ? this._renderCareStep(item.care, mode === 'locked')
-          : `
+      ? `<div class="subs ${pic ? 'pic' : ''}">${this._missionSteps(hasSubs ? task.subtasks : [], careSteps).filter(item => item.care || !this._schoolFree(task, kid, item.sub)).map(item => {
+          stepNo++;
+          if (item.care) return this._renderCareStep(item.care, mode === 'locked');
+          const dis = mode === 'locked' || mode === 'window' ? 'disabled' : '';
+          if (pic) {
+            const p = kidsStepEmoji(item.sub.title);
+            return `
+          <button class="sub pic ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
+                  ${dis} aria-pressed="${item.sub.done ? 'true' : 'false'}" aria-label="${escKids(p.title)}">
+            <span class="pic-emoji ${p.emoji ? '' : 'num'}" aria-hidden="true">${escKids(p.emoji || String(stepNo))}</span>
+            <span class="sub-title">${escKids(p.title)}</span>
+            <span class="box" aria-hidden="true">${item.sub.done ? '✓' : ''}</span>
+          </button>`;
+          }
+          return `
           <button class="sub ${item.sub.done ? 'done' : ''}" data-action="toggle-sub" data-task="${escKids(task.id)}" data-idx="${item.index}"
-                  ${mode === 'locked' || mode === 'window' ? 'disabled' : ''} aria-pressed="${item.sub.done ? 'true' : 'false'}">
+                  ${dis} aria-pressed="${item.sub.done ? 'true' : 'false'}">
             <span class="box">${item.sub.done ? '✓' : ''}</span><span class="sub-title">${escKids(item.sub.title)}</span>
-          </button>`).join('')}</div>`
+          </button>`;
+        }).join('')}</div>`
       : '';
+    // Time pie around the task icon: share of the time window that is left (kid aid "time_pie")
+    let pie = null;
+    if (aids.time_pie && win.state === 'open') {
+      const now = new Date();
+      pie = kidsTimePie(this._hhmm(win.from), this._hhmm(win.until), now.getHours() * 60 + now.getMinutes());
+    }
 
     const cat = this._category(task);
     if (task.parent_task) {
@@ -3843,7 +3906,9 @@ class FamilyMissionKids extends HTMLElement {
     return `
       <article class="task ${mode} cat-${cat} ${claimedByMe ? 'mine' : ''}">
         <div class="t-top">
-          <div class="t-icon"><ha-icon icon="${escKids(task.icon || 'mdi:star')}"></ha-icon></div>
+          ${pie
+            ? `<div class="t-icon pie" style="--pie-deg:${Math.round(pie.frac * 360)}deg;--pie-c:${pie.color}" role="img" aria-label="${escKids(this.localize('pie_left', { n: pie.left }))}"><span class="pie-in"><ha-icon icon="${escKids(task.icon || 'mdi:star')}"></ha-icon></span></div>`
+            : `<div class="t-icon"><ha-icon icon="${escKids(task.icon || 'mdi:star')}"></ha-icon></div>`}
           <div class="t-main">
             <div class="t-name">${escKids(task.name)}</div>
             <div class="t-meta">
@@ -3851,6 +3916,7 @@ class FamilyMissionKids extends HTMLElement {
               ${task.rotation && task.rotation.members && mode !== 'bonus' ? `<span class="age rot-turn">🔁 ${escKids(this.localize('rotation_turn'))}</span>` : ''}
               ${minAge > 0 ? `<span class="age">${escKids(this.localize('min_age_badge', { age: minAge }))}</span>` : ''}
               ${task.expires_at ? `<span class="age">⏳ ${escKids(this.localize('until_time', { t: this._clockText(task.expires_at) }))}</span>` : ''}
+              ${pie ? `<span class="age pie-left" style="--pie-c:${pie.color}">⏳ ${escKids(this.localize('pie_left', { n: pie.left }))}</span>` : ''}
               ${claimedByMe ? `<span class="mine-tag">${escKids(this.localize('claimed_mine'))}</span>` : ''}
             </div>
             ${note}
@@ -4043,6 +4109,15 @@ class FamilyMissionKids extends HTMLElement {
       .sub.done .box { background: var(--k-good); border-color: var(--k-good); }
       .sub.done .sub-title { text-decoration: line-through; text-decoration-thickness: 3px; }
       .sub-title { overflow-wrap: anywhere; }
+      .t-icon.pie { border-radius: 50%; background: conic-gradient(var(--pie-c) var(--pie-deg), color-mix(in srgb, var(--k-sub) 22%, var(--k-card)) 0); padding: 7px; box-sizing: border-box; }
+      .t-icon.pie .pie-in { width: 100%; height: 100%; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--kc) 28%, var(--k-card)); }
+      .pie-left { color: var(--pie-c); font-weight: 800; }
+      .subs.pic { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+      .sub.pic { position: relative; flex-direction: column; justify-content: center; min-height: 150px; padding: 10px 8px 12px; gap: 6px; text-align: center; font-size: 18px; }
+      .sub.pic .pic-emoji { font-size: 64px; line-height: 1; }
+      .sub.pic .pic-emoji.num { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; font-size: 40px; font-weight: 900; background: color-mix(in srgb, var(--kc) 28%, var(--k-card)); }
+      .sub.pic .box { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; font-size: 24px; border-width: 3px; }
+      .sub.pic.done .pic-emoji { opacity: 0.45; }
       .care-step { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 14px; border-radius: 22px; border: 3px solid var(--k-line); font-size: 23px; font-weight: 700; }
       .care-title { overflow-wrap: anywhere; }
       .care-btns { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -4341,6 +4416,12 @@ class FamilyMissionKids extends HTMLElement {
       :host([narrow]) .task { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px 10px; padding: 10px 12px; border-width: 3px; border-radius: 20px; }
       :host([narrow]) .t-top { display: contents; }
       :host([narrow]) .t-icon { width: 44px; height: 44px; border-radius: 14px; --mdc-icon-size: 26px; order: 1; }
+      :host([narrow]) .t-icon.pie { border-radius: 50%; padding: 5px; }
+      :host([narrow]) .subs.pic { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+      :host([narrow]) .sub.pic { min-height: 110px; font-size: 14px; }
+      :host([narrow]) .sub.pic .pic-emoji { font-size: 44px; }
+      :host([narrow]) .sub.pic .pic-emoji.num { width: 52px; height: 52px; font-size: 28px; }
+      :host([narrow]) .sub.pic .box { width: 28px; height: 28px; font-size: 18px; }
       :host([narrow]) .t-main { order: 1; min-width: 0; }
       :host([narrow]) .subs { order: 2; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); gap: 6px; }
       :host([narrow]) .t-action { order: 3; grid-column: 1 / -1; }
